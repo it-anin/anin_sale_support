@@ -39,7 +39,7 @@ const DEFAULT_THERMAL_SETTINGS: ThermalSettings = {
   cols: 4, rows: 5,
   offsetTop: 0, offsetLeft: 2,
   gapX: 2, gapY: 2,
-  qrSize: 6,  
+  qrSize: 8,  
   fontSize: 4.5, skuSize: 4.5,
 };
 
