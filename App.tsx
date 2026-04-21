@@ -652,7 +652,7 @@ ${sheetsHtml}
       <div className="hero-header">
         <div className="hero-content">
           <h1 className="logo-premium">
-            ANIN LABEL AND BARCODE
+            ANIN Price Tag and QR CODE
           </h1>
           <div className="tagline-row">
             {lastUpdated ? (
