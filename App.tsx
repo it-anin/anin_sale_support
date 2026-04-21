@@ -308,7 +308,9 @@ const App: React.FC = () => {
   const visibleProducts = useMemo(() => {
     //  search term  show only filteredProducts
     if (searchTerm.trim()) {
-      return filteredProducts.map((p, i) => ({ ...p, rowIndex: i }));
+      return filteredProducts
+        .filter((p: Product) => !hiddenKeys.has(`${p.sku}-${p.unit}`))
+        .map((p: Product, i: number) => ({ ...p, rowIndex: i }));
     }
     // No search term: show scannedHistory (scan mode)
     const map = new Map<string, Product>();

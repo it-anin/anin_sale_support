@@ -34,14 +34,17 @@ Single-file React app — all logic lives in `App.tsx`, all styles in `App.css`.
 
 ## CSV Format
 
-Columns (zero-indexed): A=Barcode, E=SKU, F=Name, G=Unit, I=Price. Row 0 is header, parsing starts from row 1.
+Columns (zero-indexed): A=Barcode(0), B=Price(1), C=Category(2), E=SKU(4), F=Name(5), G=Unit(6). Row 0 is header, parsing starts from row 1.
 
 ## Search Behavior
 
-- Queries Supabase on every keystroke (debounced 150ms)
-- Matches: `name ilike %search%` OR `sku ilike %search%` OR `barcode ilike %search%`
+- Numeric input (digits only): auto-search when ≥ 6 digits; < 6 digits → clear results, wait
+- Non-numeric input: debounced 150ms auto-search
+- Enter key forces search immediately
+- 6-digit exact → `sku.eq(search)` (exact SKU match)
+- Other queries → `.or('name.ilike.%x%,barcode.ilike.%x%')` (no sku in OR for non-6-digit)
 - Limit 30 results
-- Empty search → no results shown
+- Empty search → no results shown (shows scannedHistory instead)
 - On new search → hiddenKeys reset automatically
 - Barcode exact match → auto-add to cart + scannedHistory (scanner workflow)
 - Manual search → must press 🛒 to add (no auto-add)
@@ -82,7 +85,7 @@ Do NOT modify without explicit user instruction:
 ## FIXED_THERMAL (hardcoded, do not change without explicit instruction)
 
 ```ts
-const FIXED_THERMAL = { sheetW: 80, sheetH: 50, cols: 4, rows: 5, gapX: 0, gapY: 0, offsetTop: 0, offsetLeft: 0 };
+const FIXED_THERMAL = { sheetW: 90, sheetH: 62, cols: 4, rows: 5, gapX: 2, gapY: 2, offsetTop: 0, offsetLeft: 1 };
 ```
 Only `qrSize`, `fontSize`, `skuSize` are user-adjustable (via Live Preview sliders, persisted to localStorage).
 
@@ -104,19 +107,16 @@ Gold gradient: `linear-gradient(135deg, #d4af37, #f2d98d)`, border `1.5px solid 
 
 ## UI — Live Preview Cards
 
-Two cards side-by-side (flex row) in `.live-preview-panel`:
-1. **ป้ายราคา** — always renders ruler + label-preview frame (empty when no product hovered)
-2. **ป้ายบาร์โค้ด** — always renders sticker box + size label + 3 sliders (QR/ชื่อ/SKU)
+Two separate `.live-preview-panel` blocks, each rendered **conditionally**:
+1. **ป้ายราคา** — shows only when `previewPriceProduct != null` (click 🔍 in ปริ้นป้ายราคา column)
+2. **ป้ายบาร์โค้ด** — shows only when `previewBarcodeProduct != null` (click 🔍 in ปริ้นป้ายบาร์โค้ด column)
 
-Both cards always show at full height regardless of product hover state.
+Each panel has a close (✕) button and includes product name in subheader.
 
 ## UI — Misc
 
-- Hero header: `font-family: 'Noto Serif Thai', serif` — logo split 4 บรรทัด (ANIN / LABEL / AND / BARCODE) ตัว **A** แนวเดียวกันทุกบรรทัด
-  - JSX: `.logo-line` + `.logo-slot` (width 0.6em) + `.logo-a` per line
-  - Structure: `[slot]ANIN` / `L[A]BEL` / `[slot]AND` / `B[A]RCODE`
-- Admin panel shows R05.106 label, Enter key to verify password, version badge (v1.0), Last Updated badge
-- `.btn-upload-inline` has pulse-glow animation
+- Hero header: `<h1 className="logo-premium">ANIN LABEL AND BARCODE</h1>` — single line, no split logo structure
+- Admin panel shows R05.106 label, Enter key to verify password, Last Updated badge (no version badge)
 
 ## Backup Files
 
