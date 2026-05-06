@@ -89,12 +89,28 @@ const FIXED_THERMAL = { sheetW: 90, sheetH: 62, cols: 4, rows: 5, gapX: 2, gapY:
 ```
 Only `qrSize`, `fontSize`, `skuSize` are user-adjustable (via Live Preview sliders, persisted to localStorage).
 
+## localStorage Persistence
+
+Cart and scan history survive browser close / power loss — no need to re-scan after reopening.
+
+| Key | Type | Content |
+|---|---|---|
+| `cartItems` | `[string, SelectedProduct][]` | รายการที่เลือก (🛒) พร้อม quantity |
+| `scannedHistory` | `[string, Product][]` | ประวัติสินค้าที่สแกนบาร์โค้ด |
+| `thermalSettings` | object | qrSize / fontSize / skuSize |
+| `qrSettings` | object | QR sheet settings |
+
+**Load:** `loadCartFromStorage()` / `loadHistoryFromStorage()` — called as `useState` initializer (runs once on mount).  
+**Save:** `useEffect` on each state change → `localStorage.setItem(...)`.  
+**Clear:** `clearCart` removes `cartItems`; `clearAll` removes both `cartItems` + `scannedHistory`.  
+**Serialize:** Map ↔ `Array.from(map.entries())` / `new Map(entries)` — JSON cannot stringify Map directly.
+
 ## Scanner Workflow
 
-- `scannedHistory: Map<string, Product>` — accumulates barcode-scanned products across searches
+- `scannedHistory: Map<string, Product>` — accumulates barcode-scanned products across searches, **persisted to localStorage**
 - `lastAutoAddedBarcode: useRef<string>` — prevents double auto-add
 - `visibleProducts` = merge of scannedHistory + filteredProducts (deduplicated by sku-unit key)
-- `clearAll` also resets scannedHistory
+- `clearAll` also resets scannedHistory and removes its localStorage entry
 
 ## UI — Button Styles — FROZEN ⚠️
 

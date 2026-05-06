@@ -96,11 +96,29 @@ function loadQrSettings(): QrSettings {
 }
 
 
+function loadCartFromStorage(): Map<string, SelectedProduct> {
+  try {
+    const s = localStorage.getItem('cartItems');
+    if (!s) return new Map();
+    const entries: [string, SelectedProduct][] = JSON.parse(s);
+    return new Map(entries);
+  } catch { return new Map(); }
+}
+
+function loadHistoryFromStorage(): Map<string, Product> {
+  try {
+    const s = localStorage.getItem('scannedHistory');
+    if (!s) return new Map();
+    const entries: [string, Product][] = JSON.parse(s);
+    return new Map(entries);
+  } catch { return new Map(); }
+}
+
 const App: React.FC = () => {
-  const [selectedProducts, setSelectedProducts] = useState<Map<string, SelectedProduct>>(new Map());
+  const [selectedProducts, setSelectedProducts] = useState<Map<string, SelectedProduct>>(loadCartFromStorage);
   const [searchInput, setSearchInput] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-  const [scannedHistory, setScannedHistory] = useState<Map<string, Product>>(new Map());
+  const [scannedHistory, setScannedHistory] = useState<Map<string, Product>>(loadHistoryFromStorage);
   const [showPreview, setShowPreview] = useState(false);
   const [previewQrSrc, setPreviewQrSrc] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
@@ -149,6 +167,15 @@ const App: React.FC = () => {
     setThermalSettings(enforced);
     localStorage.setItem('thermalSettings', JSON.stringify({ qrSize: enforced.qrSize, fontSize: enforced.fontSize, skuSize: enforced.skuSize }));
   };
+
+  // บันทึก cart และ scannedHistory ลง localStorage ทุกครั้งที่เปลี่ยน
+  useEffect(() => {
+    localStorage.setItem('cartItems', JSON.stringify(Array.from(selectedProducts.entries())));
+  }, [selectedProducts]);
+
+  useEffect(() => {
+    localStorage.setItem('scannedHistory', JSON.stringify(Array.from(scannedHistory.entries())));
+  }, [scannedHistory]);
 
   // Parse CSV และ push ขึ้น Supabase (Admin only)
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -398,6 +425,7 @@ const App: React.FC = () => {
   // ล้างเฉพาะตะกร้า ไม่กระทบ search
   const clearCart = () => {
     setSelectedProducts(new Map());
+    localStorage.removeItem('cartItems');
   };
 
   //  clearAll: cart + search + hidden
@@ -407,6 +435,8 @@ const App: React.FC = () => {
     setSearchInput('');
     setSearchTerm('');
     setScannedHistory(new Map());
+    localStorage.removeItem('cartItems');
+    localStorage.removeItem('scannedHistory');
   };
 
   // Generate barcode
