@@ -365,7 +365,7 @@ export function DrugLabelPage({ onGoPriceTag, onGoDrugLabel }: Props) {
             <form className="search-premium" onSubmit={handleSearch}>
               <input className="search-input-premium" type="text" autoFocus
                 placeholder="ค้นหา SKU / บาร์โค้ด / ชื่อยา"
-                value={searchInput} onChange={e => setSearchInput(e.target.value)} disabled={loading} />
+                value={searchInput} onChange={e => setSearchInput(e.target.value)} />
               <button className="search-btn-premium" type="submit" disabled={loading}>{loading ? '...' : '🔍'}</button>
             </form>
             <button className="page-nav-card" onClick={onGoPriceTag} type="button" title="ไปหน้าป้ายราคา">
