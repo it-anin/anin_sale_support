@@ -13,16 +13,26 @@ npx vercel --prod # Deploy to Vercel
 
 ## Architecture
 
-Single-file React app — all logic lives in `App.tsx`, all styles in `App.css`.
+Two-page React app sharing the same `App.css` and Supabase project.
 
-**Key files:**
-- `App.tsx` — entire application: types, state, Supabase fetch, search, QR generation, print logic, JSX
-- `App.css` — all styles including `@media print` rules
-- `supabase.ts` — Supabase client (root dir, not src/)
+**Key files — ป้ายราคา (Price Tag):**
+- `App.tsx` — entire price-tag app: types, state, Supabase fetch, search, QR generation, print logic, JSX
+- `App.css` — all styles for both pages including `@media print` rules
+- `supabase.ts` — shared Supabase client (root dir, not src/)
 - `vite.config.ts` — Vite config with `host: '0.0.0.0'` for LAN access
 - `main.tsx` — React entry point
 - `index.html` — HTML shell
 - `.env` — VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, VITE_ADMIN_PASSWORD
+
+**Key files — ฉลากยา (Drug Label):**
+- `druglabel/DrugLabelPage.tsx` — main page: search, preview, add/edit/delete modals, print, admin unlock
+- `druglabel/Label.tsx` — label render component (95×65 mm), supports 6 languages
+- `druglabel/ResultList.tsx` — search result list
+- `druglabel/SearchBar.tsx` — search bar component
+- `druglabel/supabase.ts` — read client (public views) + write client (schema: `label`)
+- `druglabel/types.ts` — `Lang`, `LANGS`, `Medicine`, `ShopSettings` types
+- `druglabel/translate.ts` — calls Edge Function `translate-medicine` via Groq API
+- `druglabel/format.ts` — `formatBeDate()` Thai Buddhist Era date formatter
 
 ## Database (Supabase)
 
@@ -133,6 +143,56 @@ Each panel has a close (✕) button and includes product name in subheader.
 
 - Hero header: `<h1 className="logo-premium">ANIN LABEL AND BARCODE</h1>` — single line, no split logo structure
 - Admin panel shows R05.106 label, Enter key to verify password, Last Updated badge (no version badge)
+
+## Drug Label — Database (Supabase)
+
+Schema: `label`
+
+| Table | Columns |
+|---|---|
+| `medicines` | id, sku, barcode, usage_ref |
+| `medicine_translations` | medicine_id, lang, trade_name, generic_name, usage, indication, warning, storage |
+| `shop_settings` | id, shop_name_th, shop_name_en, phone, line_id, logo_text |
+
+Public views (read via anon key, public schema):
+- `dl_medicines` → `label.medicines`
+- `dl_medicine_translations` → `label.medicine_translations`
+- `dl_settings` → `label.shop_settings`
+
+Supabase permissions required:
+- SELECT: via public views (anon)
+- INSERT/UPSERT: `GRANT INSERT, UPDATE ON label.medicines, label.medicine_translations TO anon`
+- DELETE: `GRANT DELETE ON label.medicines, label.medicine_translations TO anon` + RLS policy "public delete"
+
+## Drug Label — Languages
+
+6 ภาษา: `th` ไทย · `en` อังกฤษ · `zh` จีน · `ja` ญี่ปุ่น · `my` พม่า · `km` กัมพูชา
+
+## Drug Label — Branches
+
+3 สาขา (hardcoded ใน `BRANCH_PROFILES`):
+- `hq` — สาขาชากค้อ / Chak Kho Branch / 082-0311590
+- `nine-kilo` — สาขาเก้ากิโล / Kao Ki Lo Branch / 098-8201512
+- `suan-suea` — สาขาสวนเสือศรีราชา / Suan Suea SiRacha Branch / 092-2469002
+
+## Drug Label — Print
+
+- `handlePrint()` เปิด `window.open('', '_blank', 'width=420,height=320,left=-1000,top=-1000')` — popup นอกจอเพื่อไม่ให้กระพริบ
+- Label size: `@page { size: 95mm 65mm; margin: 0; }`
+- ดึง `<style>` และ `<link rel="stylesheet">` จาก parent head มาใส่ใน popup (รวม App.css)
+
+## Drug Label — Delete SKU
+
+- ปุ่ม 🔐 มุมขวาบน preview panel → ใส่ `VITE_ADMIN_PASSWORD` → unlock เป็น 🔓
+- เมื่อ unlock แล้วจะเห็นปุ่ม 🗑️ ลบ ข้าง ✏️ แก้ไขข้อมูล
+- ลบ `label.medicine_translations` ก่อน แล้วจึงลบ `label.medicines`
+- Supabase ต้องมี: `GRANT DELETE ON label.medicine_translations TO anon` และ `GRANT DELETE ON label.medicines TO anon` + RLS policy "public delete" บน `label.medicines`
+
+## Drug Label — Translation Rate Limit
+
+- ใช้ Groq API (`llama-3.3-70b-versatile`) ผ่าน Edge Function `translate-medicine`
+- Free tier limit: 100,000 tokens/day — เมื่อถึง limit แสดง "ถึง rate limit — รอประมาณ xx นาที"
+- Edge Function คืน `{ error: { type: 'rate_limit', retry_minutes: N } }` status 200 (ไม่ใช่ 500)
 
 ## Backup Files
 

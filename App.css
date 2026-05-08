@@ -2513,6 +2513,38 @@ body.pulse-b .cart-inline-btn.in-cart {
   transform: translateY(-2px);
   box-shadow: 0 5px 0 rgba(0,0,0,0.25), 0 0 16px rgba(45,42,38,0.12);
 }
+.dl-btn-delete {
+  padding: 10px 14px;
+  border-radius: 50px;
+  border: 1.5px solid #e05c5c;
+  background: #fff;
+  color: #c0392b;
+  font-family: 'Mitr', sans-serif;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 3px 0 rgba(192,57,43,0.2);
+}
+.dl-btn-delete:hover { background: #fdf0f0; transform: translateY(-2px); box-shadow: 0 5px 0 rgba(192,57,43,0.25); }
+.dl-btn-delete-confirm {
+  padding: 10px 20px;
+  border-radius: 50px;
+  border: none;
+  background: #c0392b;
+  color: #fff;
+  font-family: 'Mitr', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.dl-btn-delete-confirm:disabled { opacity: 0.5; cursor: not-allowed; }
+.dl-btn-delete-confirm:not(:disabled):hover { background: #a93226; }
+.dl-modal-sm { max-width: 360px; }
+.dl-admin-lock-btn { background: none; border: none; font-size: 16px; cursor: pointer; padding: 2px 4px; border-radius: 6px; opacity: 0.45; transition: opacity 0.2s; line-height: 1; }
+.dl-admin-lock-btn:hover { opacity: 0.9; }
+.dl-admin-lock-btn.unlocked { opacity: 1; }
+.dl-delete-warn { margin: 0 0 1rem; color: #c0392b; font-size: 13px; line-height: 1.5; }
 
 /* Drug label 90×65 mm */
 .dl-label {

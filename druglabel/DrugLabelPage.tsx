@@ -64,12 +64,20 @@ export function DrugLabelPage({ onGoPriceTag, onGoDrugLabel }: Props) {
   const [addError,       setAddError]       = useState('');
   const [translating,    setTranslating]    = useState(false);
   const [translateError, setTranslateError] = useState('');
-  const [showEditModal,  setShowEditModal]  = useState(false);
-  const [editFormLang,   setEditFormLang]   = useState<Lang>('th');
-  const [editForm,       setEditForm]       = useState<AddForm>(emptyForm);
-  const [editSaving,     setEditSaving]     = useState(false);
-  const [editLoading,    setEditLoading]    = useState(false);
-  const [editError,      setEditError]      = useState('');
+  const [showEditModal,   setShowEditModal]   = useState(false);
+  const [editFormLang,    setEditFormLang]    = useState<Lang>('th');
+  const [editForm,        setEditForm]        = useState<AddForm>(emptyForm);
+  const [editSaving,      setEditSaving]      = useState(false);
+  const [editLoading,     setEditLoading]     = useState(false);
+  const [editError,       setEditError]       = useState('');
+  const [showDeleteModal,  setShowDeleteModal]  = useState(false);
+  const [deletePassword,   setDeletePassword]   = useState('');
+  const [deleting,         setDeleting]         = useState(false);
+  const [deleteError,      setDeleteError]      = useState('');
+  const [isAdminUnlocked,  setIsAdminUnlocked]  = useState(false);
+  const [showAdminModal,   setShowAdminModal]   = useState(false);
+  const [adminPwInput,     setAdminPwInput]     = useState('');
+  const [adminPwError,     setAdminPwError]     = useState('');
 
   const printRootRef    = useRef<HTMLDivElement>(null);
   const overlayDownRef  = useRef(false);
@@ -303,6 +311,33 @@ export function DrugLabelPage({ onGoPriceTag, onGoDrugLabel }: Props) {
     }
   }
 
+  async function handleDeleteMedicine() {
+    if (!selected) return;
+    if (!supabaseLabelWrite) { setDeleteError('Supabase write client ไม่พร้อม'); return; }
+    if (deletePassword !== (import.meta.env.VITE_ADMIN_PASSWORD || 'admin1234')) {
+      setDeleteError('รหัส Admin ไม่ถูกต้อง'); return;
+    }
+    setDeleting(true); setDeleteError('');
+    try {
+      const { error: trErr } = await supabaseLabelWrite
+        .from('medicine_translations').delete().eq('medicine_id', selected.id);
+      if (trErr) throw trErr;
+      const { error: medErr } = await supabaseLabelWrite
+        .from('medicines').delete().eq('id', selected.id);
+      if (medErr) throw medErr;
+      setShowDeleteModal(false);
+      setSelected(null);
+      setResults(prev => prev.filter(m => m.id !== selected.id));
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message
+        : (err as { message?: string })?.message
+        ?? JSON.stringify(err);
+      setDeleteError(msg);
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   function setEditTrField(trgLang: Lang, field: keyof TrForm, value: string) {
     setEditForm((f) => ({
       ...f,
@@ -400,6 +435,16 @@ export function DrugLabelPage({ onGoPriceTag, onGoDrugLabel }: Props) {
         <aside className="dl-preview-panel">
           <div className="dl-preview-panel-header">
             <span>Preview ฉลากยา · 90×65 mm</span>
+            <button
+              className={`dl-admin-lock-btn${isAdminUnlocked ? ' unlocked' : ''}`}
+              type="button"
+              title={isAdminUnlocked ? 'Admin (ล็อก)' : 'Admin'}
+              onClick={() => {
+                if (isAdminUnlocked) { setIsAdminUnlocked(false); }
+                else { setAdminPwInput(''); setAdminPwError(''); setShowAdminModal(true); }
+              }}>
+              {isAdminUnlocked ? '🔓' : '🔐'}
+            </button>
             <div className="dl-lang-selector">
               {LANGS.map(({ code, label }) => (
                 <button key={code} className={`dl-lang-btn${lang === code ? ' active' : ''}`}
@@ -421,6 +466,9 @@ export function DrugLabelPage({ onGoPriceTag, onGoDrugLabel }: Props) {
               <div className="dl-print-actions">
                 <button className="dl-btn-print" onClick={handlePrint} type="button">🖨️ พิมพ์ฉลากยา</button>
                 <button className="dl-btn-edit" onClick={handleOpenEditModal} type="button">✏️ แก้ไขข้อมูล</button>
+                {isAdminUnlocked && (
+                  <button className="dl-btn-delete" onClick={() => { setDeletePassword(''); setDeleteError(''); setShowDeleteModal(true); }} type="button">🗑️ ลบ</button>
+                )}
               </div>
             </>
           ) : (
@@ -582,6 +630,77 @@ export function DrugLabelPage({ onGoPriceTag, onGoDrugLabel }: Props) {
               <button className="dl-btn-cancel" type="button" onClick={() => setShowEditModal(false)}>ยกเลิก</button>
               <button className="dl-btn-save" type="button" disabled={editSaving || editLoading} onClick={handleUpdateMedicine}>
                 {editSaving ? 'กำลังบันทึก...' : '💾 บันทึกการแก้ไข'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Admin Unlock Modal */}
+      {showAdminModal && (
+        <div className="dl-modal-overlay"
+          onMouseDown={e => { overlayDownRef.current = e.target === e.currentTarget; }}
+          onClick={() => { if (overlayDownRef.current) setShowAdminModal(false); }}>
+          <div className="dl-modal dl-modal-sm">
+            <div className="dl-modal-header">
+              <span>🔐 Admin</span>
+              <button className="dl-modal-close" onClick={() => setShowAdminModal(false)} type="button">✕</button>
+            </div>
+            <div className="dl-modal-body">
+              <div className="dl-add-field">
+                <label>รหัส Admin</label>
+                <input className="dl-add-input" type="password" placeholder="ใส่รหัส Admin"
+                  value={adminPwInput}
+                  onChange={e => { setAdminPwInput(e.target.value); setAdminPwError(''); }}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      if (adminPwInput === (import.meta.env.VITE_ADMIN_PASSWORD || 'admin1234')) {
+                        setIsAdminUnlocked(true); setShowAdminModal(false);
+                      } else { setAdminPwError('รหัสไม่ถูกต้อง'); }
+                    }
+                  }}
+                  autoFocus />
+              </div>
+              {adminPwError && <div className="dl-add-error">{adminPwError}</div>}
+            </div>
+            <div className="dl-modal-footer">
+              <button className="dl-btn-cancel" type="button" onClick={() => setShowAdminModal(false)}>ยกเลิก</button>
+              <button className="dl-btn-save" type="button" onClick={() => {
+                if (adminPwInput === (import.meta.env.VITE_ADMIN_PASSWORD || 'admin1234')) {
+                  setIsAdminUnlocked(true); setShowAdminModal(false);
+                } else { setAdminPwError('รหัสไม่ถูกต้อง'); }
+              }}>ยืนยัน</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Medicine Modal */}
+      {showDeleteModal && selected && (
+        <div className="dl-modal-overlay"
+          onMouseDown={e => { overlayDownRef.current = e.target === e.currentTarget; }}
+          onClick={() => { if (overlayDownRef.current) setShowDeleteModal(false); }}>
+          <div className="dl-modal dl-modal-sm">
+            <div className="dl-modal-header">
+              <span>🗑️ ลบ SKU: {selected.sku}</span>
+              <button className="dl-modal-close" onClick={() => setShowDeleteModal(false)} type="button">✕</button>
+            </div>
+            <div className="dl-modal-body">
+              <p className="dl-delete-warn">⚠️ ลบ SKU และข้อมูลทุกภาษาออกถาวร ไม่สามารถกู้คืนได้</p>
+              <div className="dl-add-field">
+                <label>รหัส Admin</label>
+                <input className="dl-add-input" type="password" placeholder="ใส่รหัส Admin"
+                  value={deletePassword}
+                  onChange={e => { setDeletePassword(e.target.value); setDeleteError(''); }}
+                  onKeyDown={e => { if (e.key === 'Enter') void handleDeleteMedicine(); }}
+                  autoFocus />
+              </div>
+              {deleteError && <div className="dl-add-error">{deleteError}</div>}
+            </div>
+            <div className="dl-modal-footer">
+              <button className="dl-btn-cancel" type="button" onClick={() => setShowDeleteModal(false)}>ยกเลิก</button>
+              <button className="dl-btn-delete-confirm" type="button"
+                disabled={deleting || !deletePassword} onClick={handleDeleteMedicine}>
+                {deleting ? 'กำลังลบ...' : '🗑️ ยืนยันลบ'}
               </button>
             </div>
           </div>

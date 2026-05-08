@@ -63,7 +63,7 @@ Required JSON format:
         const match = errText.match(/try again in (\d+)m[\d.]+s/);
         const minutes = match ? parseInt(match[1]) + 1 : null;
         return new Response(
-          JSON.stringify({ error: { type: 'rate_limit', retry_minutes: minutes } }),
+          JSON.stringify({ rate_limit: true, retry_minutes: minutes }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
         );
       }
