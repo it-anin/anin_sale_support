@@ -456,11 +456,6 @@ export function DrugLabelPage({ onGoPriceTag, onGoDrugLabel }: Props) {
                   <input className="dl-add-input" type="text" placeholder="รหัสสินค้า"
                     value={addForm.sku} onChange={e => setAddForm(f => ({ ...f, sku: e.target.value }))} />
                 </div>
-                <div className="dl-add-field">
-                  <label>Barcode</label>
-                  <input className="dl-add-input" type="text" placeholder="บาร์โค้ด (ถ้ามี)"
-                    value={addForm.barcode} onChange={e => setAddForm(f => ({ ...f, barcode: e.target.value }))} />
-                </div>
               </div>
 
               {/* Language tabs + auto-translate */}
