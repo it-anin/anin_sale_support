@@ -2,11 +2,11 @@ export type Lang = 'th' | 'en' | 'zh' | 'ja' | 'my' | 'km';
 
 export const LANGS: { code: Lang; label: string }[] = [
   { code: 'th', label: 'ไทย' },
-  { code: 'en', label: 'English' },
-  { code: 'zh', label: '中文' },
-  { code: 'ja', label: '日本語' },
-  { code: 'my', label: 'မြန်မာ' },
-  { code: 'km', label: 'ខ្មែរ' },
+  { code: 'en', label: 'อังกฤษ' },
+  { code: 'zh', label: 'จีน' },
+  { code: 'ja', label: 'ญี่ปุ่น' },
+  { code: 'my', label: 'พม่า' },
+  { code: 'km', label: 'กัมพูชา' },
 ];
 
 export interface Medicine {
