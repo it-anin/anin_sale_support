@@ -326,7 +326,7 @@ export function DrugLabelPage({ onGoPriceTag, onGoDrugLabel }: Props) {
     const labelMarkup = printRootRef.current.innerHTML;
     const headMarkup  = Array.from(document.head.querySelectorAll('style, link[rel="stylesheet"]'))
       .map(n => n.outerHTML).join('\n');
-    const win = window.open('', '_blank', 'width=420,height=320');
+    const win = window.open('', '_blank', 'width=420,height=320,left=-1000,top=-1000');
     if (!win) { setError('ไม่สามารถเปิดหน้าต่างพิมพ์ได้ — กรุณาอนุญาต pop-ups'); return; }
     win.document.open();
     win.document.write(`<!doctype html><html lang="th"><head>
