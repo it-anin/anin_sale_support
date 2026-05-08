@@ -453,7 +453,7 @@ export function DrugLabelPage({ onGoPriceTag, onGoDrugLabel }: Props) {
               <div className="dl-add-row">
                 <div className="dl-add-field">
                   <label>SKU <span className="dl-add-required">*</span></label>
-                  <input className="dl-add-input" type="text" placeholder="รหัสสินค้า"
+                  <input className="dl-add-input" type="text"
                     value={addForm.sku} onChange={e => setAddForm(f => ({ ...f, sku: e.target.value }))} />
                 </div>
               </div>
@@ -494,7 +494,6 @@ export function DrugLabelPage({ onGoPriceTag, onGoDrugLabel }: Props) {
                     <div key={field} className="dl-add-field">
                       <label>{label}</label>
                       <textarea className="dl-add-textarea" rows={field === 'trade_name' || field === 'generic_name' ? 1 : 2}
-                        placeholder={label}
                         value={addForm.translations[l.code][field]}
                         onChange={e => setTrField(l.code, field, e.target.value)} />
                     </div>
