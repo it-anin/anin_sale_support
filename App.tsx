@@ -5,6 +5,7 @@ import QRCode from 'qrcode';
 import { supabase } from './supabase';
 import { DrugLabelPage } from './druglabel/DrugLabelPage';
 import { StockCheckPage } from './StockCheckPage';
+import { CustomerHistoryPage } from './CustomerHistoryPage';
 import './App.css';
 
 // Types
@@ -142,7 +143,7 @@ const App: React.FC = () => {
   const [rowQty, setRowQty] = useState<Map<string, number>>(new Map());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const lastAutoAddedBarcode = useRef<string>('');
-  const [currentPage, setCurrentPage] = useState<'pricetag' | 'druglabel' | 'stockcheck'>('pricetag');
+  const [currentPage, setCurrentPage] = useState<'pricetag' | 'druglabel' | 'stockcheck' | 'customerhistory'>('pricetag');
 
   // โหลดวันที่ update ล่าสุดจาก Supabase ตอน mount
   useEffect(() => {
@@ -719,7 +720,7 @@ ${sheetsHtml}
               onClick={() => setCurrentPage('druglabel')}
               title="สลับหน้าฉลากยา"
             >
-              <span className="page-nav-icon">📝</span>
+              <span className="page-nav-icon">📰</span>
               <span className="page-nav-label">ฉลากยา</span>
             </button>
             <button
@@ -729,6 +730,14 @@ ${sheetsHtml}
             >
               <span className="page-nav-icon">📦</span>
               <span className="page-nav-label">สต๊อค</span>
+            </button>
+            <button
+              className="page-nav-card"
+              onClick={() => setCurrentPage('customerhistory')}
+              title="ประวัติลูกค้า"
+            >
+              <span className="page-nav-icon">👤</span>
+              <span className="page-nav-label">ประวัติ</span>
             </button>
           </div>
         </div>
@@ -1014,6 +1023,17 @@ ${sheetsHtml}
           onGoPriceTag={() => setCurrentPage('pricetag')}
           onGoDrugLabel={() => setCurrentPage('druglabel')}
           onGoStockCheck={() => setCurrentPage('stockcheck')}
+          onGoCustomerHistory={() => setCurrentPage('customerhistory')}
+        />
+      )}
+
+      {/* Customer History Page */}
+      {currentPage === 'customerhistory' && (
+        <CustomerHistoryPage
+          onGoPriceTag={() => setCurrentPage('pricetag')}
+          onGoDrugLabel={() => setCurrentPage('druglabel')}
+          onGoStockCheck={() => setCurrentPage('stockcheck')}
+          onGoCustomerHistory={() => setCurrentPage('customerhistory')}
         />
       )}
 
@@ -1023,6 +1043,7 @@ ${sheetsHtml}
           onGoPriceTag={() => setCurrentPage('pricetag')}
           onGoDrugLabel={() => setCurrentPage('druglabel')}
           onGoStockCheck={() => setCurrentPage('stockcheck')}
+          onGoCustomerHistory={() => setCurrentPage('customerhistory')}
         />
       )}
 

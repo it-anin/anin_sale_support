@@ -13,8 +13,8 @@ npx vercel --prod # Deploy to Vercel
 
 ## Architecture
 
-Three-page React app sharing the same `App.css` and Supabase project.  
-`currentPage` state in `App.tsx`: `'pricetag' | 'druglabel' | 'stockcheck'`
+Four-page React app sharing the same `App.css` and Supabase project.  
+`currentPage` state in `App.tsx`: `'pricetag' | 'druglabel' | 'stockcheck' | 'customerhistory'`
 
 **Key files — ป้ายราคา (Price Tag):**
 - `App.tsx` — entire price-tag app: types, state, Supabase fetch, search, QR generation, print logic, JSX
@@ -42,6 +42,13 @@ Three-page React app sharing the same `App.css` and Supabase project.
 - `stock-setup.sql` — SQL สำหรับสร้างตาราง `stock` ใน Supabase
 - `วิธีติดตั้ง-task-scheduler.md` — คู่มือตั้งค่า Task Scheduler แบบ step-by-step
 
+**Key files — ประวัติลูกค้า (Customer History):**
+- `CustomerHistoryPage.tsx` — customer history page: search by name/phone/product, table display
+- `upload-customer-history.mjs` — Node.js script: reads CSV → uploads to Supabase `customer_history` table
+- `customer-history-setup.sql` — SQL สำหรับสร้างตาราง `customer_history` ใน Supabase
+- `deduplicate-customer.mjs` — script กรองแถวซ้ำระหว่าง 2 ไฟล์ CSV
+- `วิธีใช้-deduplicate-customer.md` — คู่มือ deduplicate + delete/truncate + อัพเดทลูกค้าใหม่
+
 ## Database (Supabase)
 
 **Table: `products`** (barcode, sku, name, unit, price, category, updated_at)
@@ -56,6 +63,13 @@ Three-page React app sharing the same `App.css` and Supabase project.
 - Upload: ผ่าน `upload-stock.mjs` (Node.js script) — ไม่ผ่านเว็บ
 - ไม่มี web upload UI — ใช้ Task Scheduler รัน script ทุก 5 นาทีแทน
 
+**Table: `customer_history`** (id, phone, first_name, last_name, sku, product_name, uploaded_at)
+- RLS: `public read customer_history` (SELECT) + `public write customer_history` (ALL)
+- สร้างด้วย `customer-history-setup.sql`
+- Upload: ผ่าน `upload-customer-history.mjs` (Node.js script) — รันมือหรือ Task Scheduler
+- script เติม 0 นำหน้าเบอร์โทรอัตโนมัติถ้า 8 หรือ 9 หลัก
+- Deduplicate: ใช้ `deduplicate-customer.mjs` กรองแถวซ้ำก่อน import ข้อมูลย้อนหลัง
+
 ## CSV Format
 
 **Products CSV** (Admin upload via web):  
@@ -65,6 +79,11 @@ Columns (zero-indexed): A=Barcode(0), B=Price(1), C=Category(2), E=SKU(4), F=Nam
 Columns (zero-indexed): D=Branch(3), E=SKU(4), F=Name(5), G=จำนวน(6), H=หน่วย(7), I=ราคาต่อหน่วย(8). Row 0 = header.  
 Branch mapping (case-insensitive): `Warehouse`→คลังสินค้า, `Front Store`→SRC, `Main KKL`→KKL, `Main SSS`→SSS  
 ชื่อไฟล์: `All_stock.csv` — path กำหนดใน `upload-stock.mjs` บรรทัด `CSV_PATH`  
+
+**Customer History CSV** (→ `upload-customer-history.mjs`):  
+Columns (zero-indexed): B=Phone(1), C=ชื่อ(2), D=นามสกุล(3), I=SKU(8), J=ชื่อสินค้า(9). Row 0 = header.  
+ชื่อไฟล์: `customer_history.csv` — path: `C:\Users\Arm\Documents\update_stock\customer_history.csv`  
+Phone: เติม 0 อัตโนมัติถ้า 8 หรือ 9 หลัก (Excel ตัด 0 นำหน้าออก)
 Parser: custom `parseCSV()` — `"` เริ่ม quoted mode เฉพาะตอน `field === ''` เพื่อรองรับ inch symbol `2"` กลางชื่อสินค้า
 
 ## Search Behavior

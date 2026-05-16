@@ -16,9 +16,10 @@ interface Props {
   onGoPriceTag: () => void;
   onGoDrugLabel: () => void;
   onGoStockCheck: () => void;
+  onGoCustomerHistory: () => void;
 }
 
-export function StockCheckPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck }: Props) {
+export function StockCheckPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGoCustomerHistory }: Props) {
   const [results,      setResults]      = useState<StockItem[]>([]);
   const [activeTab,    setActiveTab]    = useState<string>('คลังสินค้า');
   const [search,       setSearch]       = useState('');
@@ -113,6 +114,10 @@ export function StockCheckPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck }: 
             <button className="page-nav-card page-nav-card--active" onClick={onGoStockCheck} title="เช็คสต๊อค">
               <span className="page-nav-icon">📦</span>
               <span className="page-nav-label">สต๊อค</span>
+            </button>
+            <button className="page-nav-card" onClick={onGoCustomerHistory} title="ประวัติลูกค้า">
+              <span className="page-nav-icon">👤</span>
+              <span className="page-nav-label">ประวัติ</span>
             </button>
           </div>
         </div>
