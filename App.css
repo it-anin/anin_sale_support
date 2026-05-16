@@ -165,10 +165,10 @@ body {
 }
 
 .page-nav-label {
-  font-size: 9px;
-  font-weight: 600;
+  font-size: 10px;
+  font-weight: 400;
   letter-spacing: 0.3px;
-  font-family: 'Mitr', sans-serif;
+  font-family: 'Noto Sans Thai', sans-serif;
 }
 
 .search-premium {

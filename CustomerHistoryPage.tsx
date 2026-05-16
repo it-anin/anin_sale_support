@@ -109,7 +109,7 @@ export function CustomerHistoryPage({ onGoPriceTag, onGoDrugLabel, onGoStockChec
               <span className="page-nav-label">สต๊อค</span>
             </button>
             <button className="page-nav-card page-nav-card--active" onClick={onGoCustomerHistory} title="ประวัติลูกค้า">
-              <span className="page-nav-icon">👤</span>
+              <span className="page-nav-icon">🪪</span>
               <span className="page-nav-label">ประวัติ</span>
             </button>
           </div>
@@ -163,7 +163,7 @@ export function CustomerHistoryPage({ onGoPriceTag, onGoDrugLabel, onGoStockChec
 
         {!searched && (
           <div className="stock-empty-state">
-            <div className="stock-empty-icon">👤</div>
+            <div className="stock-empty-icon">🔍</div>
             <div>พิมพ์ชื่อหรือนามสกุลลูกค้าในช่องค้นหาด้านบน</div>
           </div>
         )}
