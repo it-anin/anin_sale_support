@@ -29,5 +29,5 @@ export async function translateMedicineLabel(
 }
 
 export function getTargetLangs(sourceLang: Lang): Lang[] {
-  return (['th', 'en', 'zh', 'ja', 'my', 'km'] as Lang[]).filter(l => l !== sourceLang);
+  return (['th', 'en', 'zh', 'ja', 'my', 'km', 'ko'] as Lang[]).filter(l => l !== sourceLang);
 }

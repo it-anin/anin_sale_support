@@ -10,6 +10,7 @@ const LANG_NAMES: Record<string, string> = {
   ja: 'Japanese',
   my: 'Burmese (Myanmar)',
   km: 'Khmer (Cambodian)',
+  ko: 'Korean',
 };
 
 Deno.serve(async (req) => {

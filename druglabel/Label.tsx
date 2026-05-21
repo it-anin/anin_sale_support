@@ -9,6 +9,7 @@ const FIELD_LABELS: Record<Lang, { trade_name: string; generic_name: string; usa
   ja: { trade_name: '商品名',       generic_name: '一般名',        usage: '用法・用量',   indication: '効能・効果',    warning: '注意事項',         storage: '保管方法',        patient: '患者名'          },
   my: { trade_name: 'ကုန်အမှတ်',   generic_name: 'အမည်တွင်',    usage: 'အသုံးပြုနည်း', indication: 'အကြောင်းပြချက်', warning: 'သတိပြုရန်',    storage: 'သိမ်းဆည်းနည်း', patient: 'လူနာအမည်'      },
   km: { trade_name: 'ឈ្មោះពាណិជ្ជ', generic_name: 'ឈ្មោះទូទៅ',  usage: 'របៀបប្រើ',   indication: 'សញ្ញាបង្ហាញ',  warning: 'ការព្រមាន',      storage: 'ការរក្សាទុក',   patient: 'ឈ្មោះអ្នកជំងឺ' },
+  ko: { trade_name: '상품명',       generic_name: '일반명',        usage: '복용법',       indication: '적응증',         warning: '주의사항',         storage: '보관방법',        patient: '환자명'          },
 };
 
 const ANIN_LOGO  = 'https://raw.githubusercontent.com/it-anin/anin-label/main/src/assets/anin-logo.png';

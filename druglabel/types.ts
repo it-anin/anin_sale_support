@@ -1,4 +1,4 @@
-export type Lang = 'th' | 'en' | 'zh' | 'ja' | 'my' | 'km';
+export type Lang = 'th' | 'en' | 'zh' | 'ja' | 'my' | 'km' | 'ko';
 
 export const LANGS: { code: Lang; label: string }[] = [
   { code: 'th', label: 'ไทย' },
@@ -7,6 +7,7 @@ export const LANGS: { code: Lang; label: string }[] = [
   { code: 'ja', label: 'ญี่ปุ่น' },
   { code: 'my', label: 'พม่า' },
   { code: 'km', label: 'กัมพูชา' },
+  { code: 'ko', label: 'เกาหลี' },
 ];
 
 export interface Medicine {
