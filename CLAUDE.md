@@ -206,7 +206,12 @@ Supabase permissions required:
 
 ## Drug Label — Languages
 
-6 ภาษา: `th` ไทย · `en` อังกฤษ · `zh` จีน · `ja` ญี่ปุ่น · `my` พม่า · `km` กัมพูชา
+7 ภาษา: `th` ไทย · `en` อังกฤษ · `zh` จีน · `ja` ญี่ปุ่น · `my` พม่า · `km` กัมพูชา · `ko` เกาหลี
+
+เพิ่มภาษาใหม่ต้องแก้ 3 จุด:
+1. `druglabel/types.ts` — เพิ่ม lang code ใน `LANGS` array และ `Lang` type
+2. `druglabel/Label.tsx` — เพิ่ม `FIELD_LABELS` mapping ของภาษาใหม่
+3. SQL migration — เพิ่ม lang code ใน `CHECK` constraint ของ `label.medicine_translations`
 
 ## Drug Label — Branches
 
@@ -227,6 +232,23 @@ Supabase permissions required:
 - เมื่อ unlock แล้วจะเห็นปุ่ม 🗑️ ลบ ข้าง ✏️ แก้ไขข้อมูล
 - ลบ `label.medicine_translations` ก่อน แล้วจึงลบ `label.medicines`
 - Supabase ต้องมี: `GRANT DELETE ON label.medicine_translations TO anon` และ `GRANT DELETE ON label.medicines TO anon` + RLS policy "public delete" บน `label.medicines`
+
+## Drug Label — Auto Translate
+
+ทั้ง Add modal และ Edit modal มีปุ่ม "✨ แปลด้วย AI"
+
+**Add modal:** แปลทุกภาษา (ยกเว้น source lang) จากแท็บที่เลือก
+
+**Edit modal (`handleEditAutoTranslate`):**
+- แปลเฉพาะภาษาที่ยังว่างอยู่ (ทุก field เป็น empty string) — ไม่เขียนทับภาษาที่มีข้อมูลแล้ว
+- ถ้าทุกภาษามีข้อมูลแล้ว → แสดง error "ทุกภาษามีข้อมูลอยู่แล้ว"
+- dot indicator บนแท็บ: สีเขียว = มีข้อมูล, สีส้ม (`.dl-lang-dot--missing`) = ยังว่าง
+
+**Flow เพิ่มคำแปลภาษาใหม่ให้ SKU เดิม:**
+1. ค้นหา SKU → เลือกรายการ → กด ✏️ แก้ไขข้อมูล
+2. คลิกแท็บภาษาที่มีข้อมูลครบ (แนะนำ ไทย หรือ อังกฤษ)
+3. กด "✨ แปลด้วย AI" → ระบบแปลเฉพาะแท็บ dot สีส้ม
+4. กด 💾 บันทึกการแก้ไข
 
 ## Drug Label — Translation Rate Limit
 
