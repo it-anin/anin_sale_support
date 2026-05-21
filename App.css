@@ -2608,6 +2608,8 @@ body.pulse-b .cart-inline-btn.in-cart {
 .dl-add-lang-tab.active { background: linear-gradient(135deg,#d4af37,#f2d98d); border-color: #f2d98d; color: #2d2a26; font-weight: 700; }
 .dl-lang-dot { position: absolute; top: 2px; right: 3px; width: 6px; height: 6px; border-radius: 50%; background: #3db87a; border: 1px solid #fff; pointer-events: none; }
 .dl-add-lang-tab.active .dl-lang-dot { background: #1a7a4a; border-color: rgba(255,255,255,0.6); }
+.dl-lang-dot--missing { background: #e07b2a; }
+.dl-add-lang-tab.active .dl-lang-dot--missing { background: #b85e1a; }
 .dl-translate-btn { flex-shrink: 0; padding: 6px 14px; border-radius: 999px; border: 1.5px solid #d4af37; background: #fff; color: #a07d10; font-size: 12px; font-weight: 700; font-family: 'Noto Sans Thai','Noto Sans',sans-serif; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
 .dl-translate-btn:hover { background: linear-gradient(135deg,#d4af37,#f2d98d); color: #2d2a26; box-shadow: 0 2px 8px rgba(212,175,55,0.4); }
 .dl-translate-btn:active { background: linear-gradient(135deg,#b8940f,#d4af37); color: #2d2a26; transform: scale(0.97); }

@@ -72,6 +72,8 @@ export function DrugLabelPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onG
   const [editSaving,      setEditSaving]      = useState(false);
   const [editLoading,     setEditLoading]     = useState(false);
   const [editError,       setEditError]       = useState('');
+  const [editTranslating,    setEditTranslating]    = useState(false);
+  const [editTranslateError, setEditTranslateError] = useState('');
   const [showDeleteModal,  setShowDeleteModal]  = useState(false);
   const [deletePassword,   setDeletePassword]   = useState('');
   const [deleting,         setDeleting]         = useState(false);
@@ -213,6 +215,31 @@ export function DrugLabelPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onG
       setTranslateError(err instanceof Error ? err.message : 'แปลภาษาไม่สำเร็จ');
     } finally {
       setTranslating(false);
+    }
+  }
+
+  async function handleEditAutoTranslate() {
+    const tr = editForm.translations[editFormLang];
+    if (!tr.trade_name.trim()) { setEditTranslateError('กรุณากรอกชื่อการค้าในแท็บที่เลือกก่อน'); return; }
+    const missingLangs = LANGS
+      .filter(l => l.code !== editFormLang)
+      .filter(l => {
+        const t = editForm.translations[l.code];
+        return !t.trade_name && !t.generic_name && !t.usage && !t.indication && !t.warning && !t.storage;
+      })
+      .map(l => l.code as Lang);
+    if (missingLangs.length === 0) {
+      setEditTranslateError('ทุกภาษามีข้อมูลอยู่แล้ว — แก้ไขแต่ละภาษาได้โดยตรง');
+      return;
+    }
+    setEditTranslating(true); setEditTranslateError('');
+    try {
+      const result = await translateMedicineLabel(editFormLang, tr, missingLangs);
+      setEditForm(f => ({ ...f, translations: { ...f.translations, ...result } }));
+    } catch (err: unknown) {
+      setEditTranslateError(err instanceof Error ? err.message : 'แปลภาษาไม่สำเร็จ');
+    } finally {
+      setEditTranslating(false);
     }
   }
 
@@ -602,15 +629,26 @@ export function DrugLabelPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onG
 
                   <div className="dl-add-lang-tabs-row">
                     <div className="dl-add-lang-tabs">
-                      {LANGS.map(l => (
-                        <button key={l.code} type="button"
-                          className={`dl-add-lang-tab${editFormLang === l.code ? ' active' : ''}`}
-                          onClick={() => setEditFormLang(l.code)}>
-                          {l.label}
-                        </button>
-                      ))}
+                      {LANGS.map(l => {
+                        const t = editForm.translations[l.code];
+                        const isEmpty = !t.trade_name && !t.generic_name && !t.usage && !t.indication && !t.warning && !t.storage;
+                        return (
+                          <button key={l.code} type="button"
+                            className={`dl-add-lang-tab${editFormLang === l.code ? ' active' : ''}`}
+                            onClick={() => setEditFormLang(l.code)}>
+                            {l.label}
+                            {isEmpty && l.code !== editFormLang && <span className="dl-lang-dot dl-lang-dot--missing" />}
+                            {!isEmpty && <span className="dl-lang-dot" />}
+                          </button>
+                        );
+                      })}
                     </div>
+                    <button className="dl-translate-btn" type="button"
+                      disabled={editTranslating} onClick={handleEditAutoTranslate}>
+                      {editTranslating ? '⏳ กำลังแปล...' : '✨ แปลด้วย AI'}
+                    </button>
                   </div>
+                  {editTranslateError && <div className="dl-add-error">{editTranslateError}</div>}
 
                   {LANGS.filter(l => l.code === editFormLang).map(l => (
                     <div key={l.code} className="dl-add-lang-fields">
