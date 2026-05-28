@@ -12,9 +12,9 @@ const FIELD_LABELS: Record<Lang, { trade_name: string; generic_name: string; usa
   ko: { trade_name: '상품명',       generic_name: '일반명',        usage: '복용법',       indication: '적응증',         warning: '주의사항',         storage: '보관방법',        patient: '환자명'          },
 };
 
-const ANIN_LOGO  = 'https://raw.githubusercontent.com/it-anin/anin-label/main/src/assets/anin-logo.png';
-const LINE_ICON  = 'https://raw.githubusercontent.com/it-anin/anin-label/main/src/assets/line-icon.png';
-const PHONE_ICON = 'https://raw.githubusercontent.com/it-anin/anin-label/main/src/assets/phone-icon.png';
+const ANIN_LOGO  = '/anin.png';
+const LINE_ICON  = '/line-icon.png';
+const PHONE_ICON = '/phone-icon.png';
 
 interface Props {
   medicine: Medicine;
