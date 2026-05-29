@@ -192,12 +192,16 @@ Schema: `label`
 |---|---|
 | `medicines` | id, sku, barcode, usage_ref |
 | `medicine_translations` | medicine_id, lang, trade_name, generic_name, usage, indication, warning, storage |
-| `shop_settings` | id, shop_name_th, shop_name_en, phone, line_id, logo_text |
+| `settings` | id, shop_name_th, shop_name_en, phone, line_id, logo_text |
+
+> ⚠️ ชื่อตารางจริงคือ `label.settings` (ไม่ใช่ `shop_settings`)  
+> ข้อมูลร้าน เช่น ชื่อร้าน, เบอร์โทร, LINE ID (`@anin`) — ทั้งหมดเก็บใน Supabase ไม่ได้ hardcode ในโค้ด  
+> แก้ไขผ่าน SQL: `UPDATE label.settings SET line_id = '@anin' WHERE id = 1;`
 
 Public views (read via anon key, public schema):
 - `dl_medicines` → `label.medicines`
 - `dl_medicine_translations` → `label.medicine_translations`
-- `dl_settings` → `label.shop_settings`
+- `dl_settings` → `label.settings`
 
 Supabase permissions required:
 - SELECT: via public views (anon)
