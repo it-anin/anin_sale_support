@@ -69,6 +69,8 @@ Four-page React app sharing the same `App.css` and Supabase project.
 - Upload: ผ่าน `upload-customer-history.mjs` (Node.js script) — รันมือหรือ Task Scheduler
 - script เติม 0 นำหน้าเบอร์โทรอัตโนมัติถ้า 8 หรือ 9 หลัก
 - Deduplicate: ใช้ `deduplicate-customer.mjs` กรองแถวซ้ำก่อน import ข้อมูลย้อนหลัง
+- **Chunked delete** — script ลบของเก่าทีละ 1000 แถวเพื่อเลี่ยง Supabase statement timeout (ตาราง 100K+ แถวลบในคำสั่งเดียวจะ timeout)
+- **Multi-machine CSV path** — `CSV_CANDIDATES` array เช็คหลาย path ตามลำดับ ใช้ path แรกที่เจอ (รองรับเครื่อง Arm + BigYa-spare)
 
 ## CSV Format
 
@@ -82,9 +84,31 @@ Branch mapping (case-insensitive): `Warehouse`→คลังสินค้า,
 
 **Customer History CSV** (→ `upload-customer-history.mjs`):  
 Columns (zero-indexed): B=Phone(1), C=ชื่อ(2), D=นามสกุล(3), I=SKU(8), J=ชื่อสินค้า(9). Row 0 = header.  
-ชื่อไฟล์: `customer_history.csv` — path: `C:\Users\Arm\Documents\update_stock\customer_history.csv`  
+ชื่อไฟล์: `customer_history.csv` — script เช็คหลาย path ตามลำดับ ใช้ path แรกที่เจอ:
+1. `C:\Users\Arm\Documents\update_stock\customer_history.csv` (เครื่อง Arm)
+2. `C:\Users\BigYa-spare\Documents\update_stock\customer_history.csv` (เครื่อง BigYa-spare)
+3. `C:\Users\BigYa-spare\Documents\update_stock\customer_history.CSV` (เครื่อง BigYa-spare, ตัวพิมพ์ใหญ่)
+
 Phone: เติม 0 อัตโนมัติถ้า 8 หรือ 9 หลัก (Excel ตัด 0 นำหน้าออก)
 Parser: custom `parseCSV()` — `"` เริ่ม quoted mode เฉพาะตอน `field === ''` เพื่อรองรับ inch symbol `2"` กลางชื่อสินค้า
+
+## Multi-Machine Sync — ข้อควรระวังเมื่อ pull โค้ดข้ามเครื่อง
+
+โปรเจกต์นี้ใช้งานบน 2 เครื่อง: **Arm** (`C:\Users\Arm\Desktop\anin-label 16-5-2026\anin_pricetag_qrcode`) และ **BigYa-spare** (`c:\Users\BigYa-spare\Desktop\SaleSupport`) sync ผ่าน GitHub repo `it-anin/anin_sale_support`
+
+**ขั้นตอนแนะนำเวลา pull โค้ดใหม่:**
+```bash
+git status                  # เช็คของค้าง — ถ้ามี modified files ให้ commit/stash ก่อน
+git pull origin master      # ดึงโค้ดใหม่
+npm install                 # sync dependencies ให้ตรง package-lock.json ใหม่
+```
+
+**ข้อควรระวัง:**
+1. **Working changes ค้าง** — ถ้า `git status` มี modified files → `git pull` จะติด conflict
+   - ทางเลือก: `git stash` → `git pull` → `git stash pop`
+2. **`package-lock.json` ที่ pull มาจะทับของเก่า** — ต้องรัน `npm install` หลัง pull เพื่อ sync `node_modules` ให้ตรง
+3. **CSV path ไม่ต้องแก้** — `CSV_CANDIDATES` ใน `upload-customer-history.mjs` รองรับทั้ง 2 เครื่องอยู่แล้ว
+4. **`package-lock.json` ต่างเครื่องอาจ diff กัน** จาก node/npm version ต่างกัน — best practice ให้ commit ลง git เสมอ ถ้า conflict ให้ฝั่งที่รัน `npm install` ล่าสุด commit ทับ
 
 ## Search Behavior
 
