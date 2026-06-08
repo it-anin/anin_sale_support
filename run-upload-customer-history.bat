@@ -1,14 +1,14 @@
 @echo off
-title Upload Stock
+title Upload Customer History
 chcp 65001 > nul
 cd /d "%~dp0"
 
 echo ========================================
-echo   Upload Stock
+echo   Upload Customer History
 echo ========================================
 echo.
 
-node upload-stock.mjs
+node upload-customer-history.mjs
 
 echo.
 if %errorlevel% == 0 (

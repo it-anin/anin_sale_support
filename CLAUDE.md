@@ -38,13 +38,14 @@ Four-page React app sharing the same `App.css` and Supabase project.
 **Key files — เช็คสต๊อค (Stock Check):**
 - `StockCheckPage.tsx` — stock check page: search-first query, branch tabs, table display
 - `upload-stock.mjs` — Node.js script: reads CSV → uploads to Supabase `stock` table (ใช้กับ Task Scheduler)
-- `run-upload-stock.bat` — batch wrapper สำหรับ Task Scheduler
+- `run-upload-stock.bat` — batch wrapper สำหรับ Task Scheduler: แสดง progress บนหน้าจอ ปิดอัตโนมัติเมื่อเสร็จ
 - `stock-setup.sql` — SQL สำหรับสร้างตาราง `stock` ใน Supabase
 - `วิธีติดตั้ง-task-scheduler.md` — คู่มือตั้งค่า Task Scheduler แบบ step-by-step
 
 **Key files — ประวัติลูกค้า (Customer History):**
 - `CustomerHistoryPage.tsx` — customer history page: search by name/phone/product, table display
 - `upload-customer-history.mjs` — Node.js script: reads CSV → uploads to Supabase `customer_history` table
+- `run-upload-customer-history.bat` — batch wrapper สำหรับ Task Scheduler: แสดง progress บนหน้าจอ ปิดอัตโนมัติเมื่อเสร็จ
 - `customer-history-setup.sql` — SQL สำหรับสร้างตาราง `customer_history` ใน Supabase
 - `deduplicate-customer.mjs` — script กรองแถวซ้ำระหว่าง 2 ไฟล์ CSV
 - `วิธีใช้-deduplicate-customer.md` — คู่มือ deduplicate + delete/truncate + อัพเดทลูกค้าใหม่
@@ -67,6 +68,7 @@ Four-page React app sharing the same `App.css` and Supabase project.
 - RLS: `public read customer_history` (SELECT) + `public write customer_history` (ALL)
 - สร้างด้วย `customer-history-setup.sql`
 - Upload: ผ่าน `upload-customer-history.mjs` (Node.js script) — รันมือหรือ Task Scheduler
+- **`--append` flag** — `node upload-customer-history.mjs --append` เพิ่มข้อมูลใหม่โดยไม่ลบของเก่า (ค่าเริ่มต้นคือลบทั้งหมดแล้ว insert ใหม่)
 - script เติม 0 นำหน้าเบอร์โทรอัตโนมัติถ้า 8 หรือ 9 หลัก
 - Deduplicate: ใช้ `deduplicate-customer.mjs` กรองแถวซ้ำก่อน import ข้อมูลย้อนหลัง
 - **Chunked delete** — script ลบของเก่าทีละ 1000 แถวเพื่อเลี่ยง Supabase statement timeout (ตาราง 100K+ แถวลบในคำสั่งเดียวจะ timeout)

@@ -85,20 +85,26 @@ async function main() {
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-  console.log('   ลบข้อมูลเก่า (chunked)...');
-  let deleted = 0;
-  while (true) {
-    const { data: batch, error: selErr } = await supabase
-      .from('customer_history').select('id').limit(1000);
-    if (selErr) { console.error('❌ select ids ไม่สำเร็จ:', selErr.message); process.exit(1); }
-    if (!batch || batch.length === 0) break;
-    const ids = batch.map(r => r.id);
-    const { error: delErr } = await supabase.from('customer_history').delete().in('id', ids);
-    if (delErr) { console.error('❌ ลบข้อมูลเก่าไม่สำเร็จ:', delErr.message); process.exit(1); }
-    deleted += ids.length;
-    if (deleted % 10000 === 0) console.log(`   ลบไปแล้ว ${deleted} แถว`);
+  const appendMode = process.argv.includes('--append');
+
+  if (!appendMode) {
+    console.log('   ลบข้อมูลเก่า (chunked)...');
+    let deleted = 0;
+    while (true) {
+      const { data: batch, error: selErr } = await supabase
+        .from('customer_history').select('id').limit(1000);
+      if (selErr) { console.error('❌ select ids ไม่สำเร็จ:', selErr.message); process.exit(1); }
+      if (!batch || batch.length === 0) break;
+      const ids = batch.map(r => r.id);
+      const { error: delErr } = await supabase.from('customer_history').delete().in('id', ids);
+      if (delErr) { console.error('❌ ลบข้อมูลเก่าไม่สำเร็จ:', delErr.message); process.exit(1); }
+      deleted += ids.length;
+      if (deleted % 10000 === 0) console.log(`   ลบไปแล้ว ${deleted} แถว`);
+    }
+    console.log(`   ลบเก่าทั้งหมด ${deleted} แถว`);
+  } else {
+    console.log('   โหมด --append: ข้ามการลบข้อมูลเก่า');
   }
-  console.log(`   ลบเก่าทั้งหมด ${deleted} แถว`);
 
   const CHUNK = 500;
   for (let i = 0; i < items.length; i += CHUNK) {
