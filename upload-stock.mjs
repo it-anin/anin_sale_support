@@ -9,12 +9,35 @@ import { createClient } from '@supabase/supabase-js';
 import { readFileSync, existsSync } from 'fs';
 
 // ─── CONFIG ───────────────────────────────────────────────
-// แก้ CSV_PATH ให้ตรงกับ network path ของเครื่อง POS
-// Windows network path รูปแบบ: \\PCNAME\Users\Username\Documents\update_stock\All_stock.csv
-const CSV_PATH = '\\\\PCNAME\\Users\\Username\\Documents\\update_stock\\All_stock.csv';
+// ลองไฟล์ CSV จากหลาย path ตามลำดับ — ใช้ path แรกที่เจอ
+const CSV_CANDIDATES = [
+  'C:\\Users\\Arm\\Documents\\update_stock\\All_stock.csv',
+  'C:\\Users\\BigYa-spare\\Documents\\update_stock\\All_stock.csv',
+  'C:\\Users\\BigYa-spare\\Documents\\update_stock\\All_stock.CSV',
+];
+
+let CSV_PATH;
+for (const candidate of CSV_CANDIDATES) {
+  if (existsSync(candidate)) {
+    CSV_PATH = candidate;
+    break;
+  }
+}
 
 const SUPABASE_URL = 'https://eogqnedbdpjuptwlqudn.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVvZ3FuZWRiZHBqdXB0d2xxdWRuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4MTc5MzUsImV4cCI6MjA5MTM5MzkzNX0.M9g4iCV7T0xoWdStNO4DNiT15m5dsEWcKc3ZV1TMlhE';
+
+// service_role key — bypass RLS (ใช้ฝั่ง server เท่านั้น ห้าม commit ลง git)
+// อ่านจาก env SUPABASE_SERVICE_KEY ก่อน ถ้าไม่มีลองอ่านจากไฟล์ .env ข้างสคริปต์
+function getServiceKey() {
+  if (process.env.SUPABASE_SERVICE_KEY) return process.env.SUPABASE_SERVICE_KEY.trim();
+  try {
+    const envText = readFileSync(new URL('./.env', import.meta.url), 'utf-8');
+    const m = envText.match(/^\s*SUPABASE_SERVICE_KEY\s*=\s*(.+)\s*$/m);
+    if (m) return m[1].trim();
+  } catch { /* ไม่มีไฟล์ .env ก็ข้าม */ }
+  return null;
+}
+const SUPABASE_KEY = getServiceKey();
 // ──────────────────────────────────────────────────────────
 
 const BRANCH_MAP = {
@@ -52,9 +75,18 @@ async function main() {
   const timestamp = new Date().toLocaleString('th-TH');
   console.log(`[${timestamp}] เริ่มต้นอัพโหลดสต๊อค...`);
 
+  if (!SUPABASE_KEY) {
+    console.error('❌ ไม่พบ service_role key — ตั้งค่า SUPABASE_SERVICE_KEY ใน env หรือไฟล์ .env');
+    console.error('   เอา key จาก: Supabase Dashboard → Settings → API → service_role');
+    process.exit(1);
+  }
+
+  console.log(`   ใช้ไฟล์: ${CSV_PATH}`);
+
   // ตรวจสอบไฟล์
-  if (!existsSync(CSV_PATH)) {
-    console.error(`❌ ไม่พบไฟล์: ${CSV_PATH}`);
+  if (!CSV_PATH) {
+    console.error(`❌ ไม่พบไฟล์ All_stock.csv ในเส้นทาง:`);
+    CSV_CANDIDATES.forEach(p => console.error(`   - ${p}`));
     process.exit(1);
   }
 

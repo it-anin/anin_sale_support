@@ -59,15 +59,15 @@ Four-page React app sharing the same `App.css` and Supabase project.
 - Admin upload: CSV → PapaParse → delete all → insert in 500-row chunks
 
 **Table: `stock`** (id, branch, sku, name, qty, unit, price, uploaded_at)
-- RLS: `public read stock` (SELECT) + `public write stock` (ALL)
-- สร้างด้วย `stock-setup.sql`
-- Upload: ผ่าน `upload-stock.mjs` (Node.js script) — ไม่ผ่านเว็บ
+- RLS: `public read stock` (SELECT) เท่านั้น — **ไม่มี public write** (anon เขียนไม่ได้)
+- สร้างด้วย `stock-setup.sql` · ตัด write policy ด้วย `lock-rls-readonly.sql`
+- Upload: ผ่าน `upload-stock.mjs` (Node.js script) — ไม่ผ่านเว็บ — ใช้ **service_role key** (env `SUPABASE_SERVICE_KEY` หรือ `.env`)
 - ไม่มี web upload UI — ใช้ Task Scheduler รัน script ทุก 5 นาทีแทน
 
 **Table: `customer_history`** (id, phone, first_name, last_name, sku, product_name, uploaded_at)
-- RLS: `public read customer_history` (SELECT) + `public write customer_history` (ALL)
-- สร้างด้วย `customer-history-setup.sql`
-- Upload: ผ่าน `upload-customer-history.mjs` (Node.js script) — รันมือหรือ Task Scheduler
+- RLS: `public read customer_history` (SELECT) เท่านั้น — **ไม่มี public write** (มี PII: เบอร์โทร/ชื่อลูกค้า)
+- สร้างด้วย `customer-history-setup.sql` · ตัด write policy ด้วย `lock-rls-readonly.sql`
+- Upload: ผ่าน `upload-customer-history.mjs` (Node.js script) — รันมือหรือ Task Scheduler — ใช้ **service_role key** (env `SUPABASE_SERVICE_KEY` หรือ `.env`)
 - **`--append` flag** — `node upload-customer-history.mjs --append` เพิ่มข้อมูลใหม่โดยไม่ลบของเก่า (ค่าเริ่มต้นคือลบทั้งหมดแล้ว insert ใหม่)
 - script เติม 0 นำหน้าเบอร์โทรอัตโนมัติถ้า 8 หรือ 9 หลัก
 - Deduplicate: ใช้ `deduplicate-customer.mjs` กรองแถวซ้ำก่อน import ข้อมูลย้อนหลัง

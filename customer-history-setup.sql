@@ -9,5 +9,10 @@ CREATE TABLE IF NOT EXISTS customer_history (
 );
 
 ALTER TABLE customer_history ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "public read customer_history"  ON customer_history FOR SELECT USING (true);
-CREATE POLICY "public write customer_history" ON customer_history FOR ALL    USING (true);
+
+-- อนุญาต read สาธารณะ (anon อ่านได้)
+CREATE POLICY "public read customer_history" ON customer_history FOR SELECT USING (true);
+
+-- ❌ ไม่เปิด public write — มี PII (เบอร์โทร/ชื่อลูกค้า)
+-- การอัพโหลดทำผ่าน service_role key ใน upload-customer-history.mjs เท่านั้น
+-- (service_role bypass RLS ไม่ต้องมี write policy)
