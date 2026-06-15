@@ -82,14 +82,15 @@ Columns (zero-indexed): A=Barcode(0), B=Price(1), C=Category(2), E=SKU(4), F=Nam
 **Stock CSV** (export จาก POS → `upload-stock.mjs`):  
 Columns (zero-indexed): D=Branch(3), E=SKU(4), F=Name(5), G=จำนวน(6), H=หน่วย(7), I=ราคาต่อหน่วย(8). Row 0 = header.  
 Branch mapping (case-insensitive): `Warehouse`→คลังสินค้า, `Front Store`→SRC, `Main KKL`→KKL, `Main SSS`→SSS  
-ชื่อไฟล์: `All_stock.csv` — path กำหนดใน `upload-stock.mjs` บรรทัด `CSV_PATH`  
+ชื่อไฟล์: `All_stock.csv` — `CSV_CANDIDATES` ใน `upload-stock.mjs` เช็คหลาย path ใช้ path แรกที่เจอ (เครื่อง Server `C:\Users\AninMainPC\Desktop\run-upload-stock\` ก่อน → Arm → BigYa-spare)  
 
 **Customer History CSV** (→ `upload-customer-history.mjs`):  
 Columns (zero-indexed): B=Phone(1), C=ชื่อ(2), D=นามสกุล(3), I=SKU(8), J=ชื่อสินค้า(9). Row 0 = header.  
 ชื่อไฟล์: `customer_history.csv` — script เช็คหลาย path ตามลำดับ ใช้ path แรกที่เจอ:
-1. `C:\Users\Arm\Documents\update_stock\customer_history.csv` (เครื่อง Arm)
-2. `C:\Users\BigYa-spare\Documents\update_stock\customer_history.csv` (เครื่อง BigYa-spare)
-3. `C:\Users\BigYa-spare\Documents\update_stock\customer_history.CSV` (เครื่อง BigYa-spare, ตัวพิมพ์ใหญ่)
+1. `C:\Users\AninMainPC\Desktop\run-upload-stock\customer_history.csv` (เครื่อง Server — ตัวหลักปัจจุบัน)
+2. `C:\Users\Arm\Documents\update_stock\customer_history.csv` (เครื่อง Arm)
+3. `C:\Users\BigYa-spare\Documents\update_stock\customer_history.csv` (เครื่อง BigYa-spare)
+4. `C:\Users\BigYa-spare\Documents\update_stock\customer_history.CSV` (เครื่อง BigYa-spare, ตัวพิมพ์ใหญ่)
 
 Phone: เติม 0 อัตโนมัติถ้า 8 หรือ 9 หลัก (Excel ตัด 0 นำหน้าออก)
 Parser: custom `parseCSV()` — `"` เริ่ม quoted mode เฉพาะตอน `field === ''` เพื่อรองรับ inch symbol `2"` กลางชื่อสินค้า
@@ -164,6 +165,11 @@ Do NOT modify without explicit user instruction:
 const FIXED_THERMAL = { sheetW: 90, sheetH: 62, cols: 4, rows: 5, gapX: 2, gapY: 2, offsetTop: 0, offsetLeft: 1 };
 ```
 Only `qrSize`, `fontSize`, `skuSize` are user-adjustable (via Live Preview sliders, persisted to localStorage).
+
+**Default values (current):** `qrSize: 7mm`, `fontSize: 3.5pt`, `skuSize: 3.5pt`
+
+**Version-based reset:** `THERMAL_SETTINGS_VERSION = 2` — ถ้า localStorage มี version เก่ากว่า จะ reset เป็น default ใหม่อัตโนมัติ  
+ต้องการ force reset ทุกเครื่องอีกรอบ → เพิ่ม `THERMAL_SETTINGS_VERSION` เป็น 3 (แล้วอัพเดท default ด้วย)
 
 ## localStorage Persistence
 
