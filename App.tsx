@@ -42,8 +42,8 @@ const DEFAULT_THERMAL_SETTINGS: ThermalSettings = {
   cols: 4, rows: 5,
   offsetTop: 0, offsetLeft: 2,
   gapX: 2, gapY: 2,
-  qrSize: 8,  
-  fontSize: 4.5, skuSize: 4.5,
+  qrSize: 7,
+  fontSize: 3.5, skuSize: 3.5,
 };
 
 // Sheet/Grid ค่าตายตัว — ห้ามแก้ไขโดยไม่ได้รับอนุญาต
@@ -54,11 +54,15 @@ const FIXED_THERMAL: Pick<ThermalSettings, 'sheetW'|'sheetH'|'cols'|'rows'|'gapX
   offsetTop: 0, offsetLeft: 1,
 };
 
+const THERMAL_SETTINGS_VERSION = 2;
+
 function loadThermalSettings(): ThermalSettings {
   try {
     const s = localStorage.getItem('thermalSettings');
     const saved = s ? JSON.parse(s) : {};
-    // โหลดเฉพาะ qrSize, fontSize, skuSize จาก localStorage — sheet/grid ใช้ค่าตายตัวเสมอ
+    if (saved.version !== THERMAL_SETTINGS_VERSION) {
+      return { ...DEFAULT_THERMAL_SETTINGS, ...FIXED_THERMAL };
+    }
     return {
       ...DEFAULT_THERMAL_SETTINGS,
       ...FIXED_THERMAL,
@@ -169,7 +173,7 @@ const App: React.FC = () => {
   const saveThermalSettings = (s: ThermalSettings) => {
     const enforced = { ...s, ...FIXED_THERMAL };
     setThermalSettings(enforced);
-    localStorage.setItem('thermalSettings', JSON.stringify({ qrSize: enforced.qrSize, fontSize: enforced.fontSize, skuSize: enforced.skuSize }));
+    localStorage.setItem('thermalSettings', JSON.stringify({ version: THERMAL_SETTINGS_VERSION, qrSize: enforced.qrSize, fontSize: enforced.fontSize, skuSize: enforced.skuSize }));
   };
 
   // บันทึก cart และ scannedHistory ลง localStorage ทุกครั้งที่เปลี่ยน
