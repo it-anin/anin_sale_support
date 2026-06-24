@@ -419,7 +419,7 @@ export function DrugLabelPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onG
       {/* Hero Header */}
       <div className="hero-header dl-hero-header">
         <div className="hero-content">
-          <h1 className="logo-premium"><AnimatedLogoText text="LABEL" /></h1>
+          <h1 className="logo-premium"><AnimatedLogoText text="DRUG LABEL" /></h1>
           <div className="tagline-row">
             {BRANCH_PROFILES.map(b => (
               <button key={b.id} className={`dl-branch-btn${selectedBranch === b.id ? ' active' : ''}`}
