@@ -9,7 +9,7 @@ export function AnimatedLogoText({ text }: AnimatedLogoTextProps) {
   return (
     <>
       {[...text].map((ch, i) => (
-        <span key={i} className="logo-letter" style={{ animationDelay: `${i * 0.035}s` }}>
+        <span key={i} className="logo-letter" style={{ animationDelay: `${i * 0.02}s` }}>
           {ch === ' ' ? NBSP : ch}
         </span>
       ))}
