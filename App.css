@@ -232,6 +232,15 @@ body {
   font-size: 20px;
   cursor: pointer;
   transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.search-btn-icon {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
 }
 
 .search-btn-premium:hover {
