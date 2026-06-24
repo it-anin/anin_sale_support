@@ -283,6 +283,18 @@ body {
   max-width: 1800px;
   margin: 0 auto;
   padding: 3rem 2rem;
+  animation: fadeInSlideUp 0.4s ease-out;
+}
+
+@keyframes fadeInSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Stats Bar */
@@ -2269,6 +2281,7 @@ body.pulse-b .cart-inline-btn.in-cart {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+  animation: fadeInSlideUp 0.4s ease-out;
 }
 
 .dl-top-bar {
