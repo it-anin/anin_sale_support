@@ -129,8 +129,8 @@ body {
 /* Page Nav Icon Card */
 .page-nav-card {
   flex-shrink: 0;
-  width: 62px;
-  height: 56px;
+  width: 70px;
+  height: 64px;
   border-radius: 16px;
   border: 2px solid rgba(255, 255, 255, 0.3);
   background: rgba(255, 255, 255, 0.1);
@@ -140,7 +140,7 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: 4px;
   transition: all 0.2s;
   backdrop-filter: blur(4px);
 }
