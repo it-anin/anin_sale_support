@@ -177,7 +177,7 @@ export function StockCheckPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, on
 
         {!searched && (
           <div className="stock-empty-state">
-            <div className="stock-empty-icon">🔍</div>
+            <div className="stock-empty-icon"><img className="stock-empty-icon-img" src="/stock.png" alt="ค้นหา" /></div>
             <div>พิมพ์ SKU หรือชื่อสินค้าในช่องค้นหาด้านบน</div>
           </div>
         )}

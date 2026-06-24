@@ -2840,8 +2840,8 @@ body.pulse-b .cart-inline-btn.in-cart {
 }
 
 .stock-empty-icon-img {
-  width: 72px;
-  height: 72px;
+  width: 256px;
+  height: 256px;
   object-fit: contain;
 }
 
