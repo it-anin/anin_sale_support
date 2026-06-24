@@ -1247,7 +1247,7 @@ body.pulse-b .cart-inline-btn.in-cart {
 /* Product Table */
 .product-table-wrap {
   background: white;
-  border-radius: 0px;
+  border-radius: 16px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.08);
   overflow: auto;
   margin-bottom: 2rem;
