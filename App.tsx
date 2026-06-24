@@ -6,6 +6,7 @@ import { supabase } from './supabase';
 import { DrugLabelPage } from './druglabel/DrugLabelPage';
 import { StockCheckPage } from './StockCheckPage';
 import { CustomerHistoryPage } from './CustomerHistoryPage';
+import { AnimatedLogoText } from './AnimatedLogo';
 import './App.css';
 
 // Types
@@ -690,7 +691,7 @@ ${sheetsHtml}
       {currentPage === 'pricetag' && (<div className="hero-header">
         <div className="hero-content">
           <h1 className="logo-premium">
-            Price Tag and QR CODE
+            <AnimatedLogoText text="Price Tag and QR CODE" />
           </h1>
           <div className="tagline-row">
             {lastUpdated ? (

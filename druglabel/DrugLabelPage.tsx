@@ -4,6 +4,7 @@ import { LANGS, type Lang, type Medicine, type ShopSettings } from './types';
 import { Label } from './Label';
 import { DLResultList } from './ResultList';
 import { translateMedicineLabel, getTargetLangs } from './translate';
+import { AnimatedLogoText } from '../AnimatedLogo';
 
 const BRANCH_PROFILES = [
   { id: 'hq',        shop_name_th: 'สาขาชากค้อ',          shop_name_en: 'Chak Kho Branch',           phone: '082-0311590' },
@@ -418,7 +419,7 @@ export function DrugLabelPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onG
       {/* Hero Header */}
       <div className="hero-header dl-hero-header">
         <div className="hero-content">
-          <h1 className="logo-premium">LABEL</h1>
+          <h1 className="logo-premium"><AnimatedLogoText text="LABEL" /></h1>
           <div className="tagline-row">
             {BRANCH_PROFILES.map(b => (
               <button key={b.id} className={`dl-branch-btn${selectedBranch === b.id ? ' active' : ''}`}

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from './supabase';
+import { AnimatedLogoText } from './AnimatedLogo';
 
 interface StockItem {
   branch: string;
@@ -83,7 +84,7 @@ export function StockCheckPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, on
     <div className="app-container">
       <div className="hero-header">
         <div className="hero-content">
-          <h1 className="logo-premium">CHECK STOCK</h1>
+          <h1 className="logo-premium"><AnimatedLogoText text="CHECK STOCK" /></h1>
           <div className="tagline-row">
             {lastUploaded
               ? <span className="updated-badge">Last Updated : {lastUploaded}</span>

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from './supabase';
+import { AnimatedLogoText } from './AnimatedLogo';
 
 interface CustomerRecord {
   phone: string;
@@ -76,7 +77,7 @@ export function CustomerHistoryPage({ onGoPriceTag, onGoDrugLabel, onGoStockChec
     <div className="app-container">
       <div className="hero-header">
         <div className="hero-content">
-          <h1 className="logo-premium">CUSTOMER HISTORY</h1>
+          <h1 className="logo-premium"><AnimatedLogoText text="CUSTOMER HISTORY" /></h1>
           <div className="tagline-row">
             {lastUploaded
               ? <span className="updated-badge">Last Updated : {lastUploaded}</span>

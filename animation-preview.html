@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Animation Preview - Page Transitions</title>
+  <title>Animation Preview - Logo Premium</title>
+  <link href="https://fonts.googleapis.com/css2?family=Lilita+One&display=swap" rel="stylesheet">
   <style>
     * {
       margin: 0;
@@ -22,9 +23,26 @@
       padding: 2rem;
     }
 
-    h1 {
-      margin-bottom: 2rem;
+    h1.page-title {
+      margin-bottom: 0.5rem;
       color: #2d2a26;
+    }
+
+    .subtitle {
+      margin-bottom: 2rem;
+      color: #6b645a;
+      font-size: 14px;
+    }
+
+    .section-label {
+      width: 100%;
+      max-width: 900px;
+      margin: 0 auto 0.75rem;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      color: #6b645a;
+      text-transform: uppercase;
     }
 
     .controls {
@@ -32,17 +50,18 @@
       gap: 0.5rem;
       flex-wrap: wrap;
       justify-content: center;
-      margin-bottom: 2rem;
+      margin-bottom: 1.5rem;
+      max-width: 900px;
     }
 
     .btn {
-      padding: 0.75rem 1.5rem;
+      padding: 0.65rem 1.25rem;
       border: 2px solid #d4af37;
       border-radius: 8px;
       background: white;
       color: #2d2a26;
       cursor: pointer;
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 600;
       transition: all 0.2s;
     }
@@ -60,9 +79,9 @@
 
     .preview-area {
       width: 100%;
-      max-width: 800px;
-      height: 400px;
-      background: white;
+      max-width: 900px;
+      height: 220px;
+      background: linear-gradient(135deg, #2d2a26 0%, #4a443d 100%);
       border-radius: 16px;
       box-shadow: 0 4px 20px rgba(0,0,0,0.08);
       display: flex;
@@ -70,154 +89,186 @@
       justify-content: center;
       overflow: hidden;
       position: relative;
+      margin-bottom: 2.5rem;
     }
 
-    .content-box {
-      padding: 2rem;
-      background: linear-gradient(135deg, #2d2a26 0%, #4a443d 100%);
+    .logo-premium {
+      font-family: 'Lilita One', cursive;
+      font-size: 40px;
+      font-weight: 200;
+      letter-spacing: 5px;
       color: #faf8f5;
-      border-radius: 12px;
-      text-align: center;
-      min-width: 300px;
+      white-space: nowrap;
     }
 
-    .content-box h2 {
-      margin-bottom: 0.5rem;
+    /* ── 1. Glow Pulse (loop) ── */
+    .glowPulse {
+      animation: glowPulse 2.2s ease-in-out infinite;
+    }
+    @keyframes glowPulse {
+      0%, 100% { text-shadow: 0 0 4px rgba(242,217,141,0.3); }
+      50% { text-shadow: 0 0 18px rgba(242,217,141,0.9), 0 0 30px rgba(212,175,55,0.5); }
     }
 
-    .content-box p {
-      opacity: 0.9;
+    /* ── 2. Gradient Shimmer (loop) ── */
+    .shimmer {
+      background: linear-gradient(90deg, #faf8f5 0%, #f2d98d 25%, #d4af37 50%, #f2d98d 75%, #faf8f5 100%);
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      color: transparent;
+      animation: shimmer 3s linear infinite;
+    }
+    @keyframes shimmer {
+      0% { background-position: 200% center; }
+      100% { background-position: -200% center; }
     }
 
-    /* Animation 1: Fade In Slide Up (Current) */
+    /* ── 3. Gentle Float (loop) ── */
+    .float {
+      animation: float 3s ease-in-out infinite;
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+
+    /* ── 4. Letter Wave (loop, per-letter) ── */
+    .letterWave span {
+      display: inline-block;
+      animation: letterWave 1.8s ease-in-out infinite;
+    }
+    @keyframes letterWave {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+
+    /* ── 5. Neon Flicker (loop) ── */
+    .neonFlicker {
+      color: #f2d98d;
+      text-shadow: 0 0 6px #f2d98d, 0 0 14px #d4af37, 0 0 24px #d4af37;
+      animation: neonFlicker 4s infinite;
+    }
+    @keyframes neonFlicker {
+      0%, 3%, 6%, 100% { opacity: 1; }
+      4% { opacity: 0.4; }
+      5% { opacity: 0.85; }
+    }
+
+    /* ── 6. Breathing Scale (loop) ── */
+    .breathe {
+      animation: breathe 2.6s ease-in-out infinite;
+    }
+    @keyframes breathe {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.04); }
+    }
+
+    /* ── 7. Underline Sweep (loop) ── */
+    .underlineSweep {
+      position: relative;
+      display: inline-block;
+    }
+    .underlineSweep::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      bottom: -8px;
+      height: 2px;
+      width: 100%;
+      background: linear-gradient(90deg, transparent, #f2d98d, transparent);
+      animation: underlineSweep 2.5s ease-in-out infinite;
+    }
+    @keyframes underlineSweep {
+      0% { transform: translateX(-100%); opacity: 0; }
+      50% { opacity: 1; }
+      100% { transform: translateX(100%); opacity: 0; }
+    }
+
+    /* ── 8. Entrance: Fade In Slide Up (once) ── */
     .fadeInSlideUp {
-      animation: fadeInSlideUp 0.4s ease-out;
+      animation: fadeInSlideUp 0.6s ease-out;
     }
-
     @keyframes fadeInSlideUp {
-      from {
-        opacity: 0;
-        transform: translateY(20px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
     }
 
-    /* Animation 2: Fade In */
-    .fadeIn {
-      animation: fadeIn 0.4s ease-out;
+    /* ── 9. Entrance: Typewriter reveal (once) ── */
+    .typewriter span {
+      display: inline-block;
+      opacity: 0;
+      animation: typewriterChar 0.4s ease-out forwards;
+    }
+    @keyframes typewriterChar {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
     }
 
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
+    /* ── 10. Entrance: Slide Up Per Letter (once) ── */
+    .slideUpLetter span {
+      display: inline-block;
+      opacity: 0;
+      animation: slideUpLetter 0.5s ease-out forwards;
+    }
+    @keyframes slideUpLetter {
+      from { opacity: 0; transform: translateY(24px); }
+      to { opacity: 1; transform: translateY(0); }
     }
 
-    /* Animation 3: Slide In Right */
-    .slideInRight {
-      animation: slideInRight 0.4s ease-out;
+    /* ── 11. Entrance: Slide In From Left Per Letter (once) ── */
+    .slideLeftLetter span {
+      display: inline-block;
+      opacity: 0;
+      animation: slideLeftLetter 0.45s ease-out forwards;
+    }
+    @keyframes slideLeftLetter {
+      from { opacity: 0; transform: translateX(-16px); }
+      to { opacity: 1; transform: translateX(0); }
     }
 
-    @keyframes slideInRight {
-      from {
-        opacity: 0;
-        transform: translateX(30px);
-      }
-      to {
-        opacity: 1;
-        transform: translateX(0);
-      }
+    /* ── 12. Entrance: Scale Pop Per Letter (once) ── */
+    .scalePopLetter span {
+      display: inline-block;
+      opacity: 0;
+      animation: scalePopLetter 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    }
+    @keyframes scalePopLetter {
+      from { opacity: 0; transform: scale(0.3); }
+      to { opacity: 1; transform: scale(1); }
     }
 
-    /* Animation 4: Slide In Left */
-    .slideInLeft {
-      animation: slideInLeft 0.4s ease-out;
+    /* ── 13. Entrance: Blur Focus Per Letter (once) ── */
+    .blurLetter span {
+      display: inline-block;
+      opacity: 0;
+      filter: blur(6px);
+      animation: blurLetter 0.45s ease-out forwards;
+    }
+    @keyframes blurLetter {
+      from { opacity: 0; filter: blur(6px); }
+      to { opacity: 1; filter: blur(0); }
     }
 
-    @keyframes slideInLeft {
-      from {
-        opacity: 0;
-        transform: translateX(-30px);
-      }
-      to {
-        opacity: 1;
-        transform: translateX(0);
-      }
+    /* ── 14. Entrance: Flip Per Letter (once) ── */
+    .flipLetter span {
+      display: inline-block;
+      opacity: 0;
+      animation: flipLetter 0.5s ease-out forwards;
     }
-
-    /* Animation 5: Scale In */
-    .scaleIn {
-      animation: scaleIn 0.4s ease-out;
-    }
-
-    @keyframes scaleIn {
-      from {
-        opacity: 0;
-        transform: scale(0.9);
-      }
-      to {
-        opacity: 1;
-        transform: scale(1);
-      }
-    }
-
-    /* Animation 6: Bounce In */
-    .bounceIn {
-      animation: bounceIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-    }
-
-    @keyframes bounceIn {
-      from {
-        opacity: 0;
-        transform: scale(0.8);
-      }
-      to {
-        opacity: 1;
-        transform: scale(1);
-      }
-    }
-
-    /* Animation 7: Rotate In */
-    .rotateIn {
-      animation: rotateIn 0.5s ease-out;
-    }
-
-    @keyframes rotateIn {
-      from {
-        opacity: 0;
-        transform: rotate(-5deg) scale(0.95);
-      }
-      to {
-        opacity: 1;
-        transform: rotate(0) scale(1);
-      }
-    }
-
-    /* Animation 8: Flip */
-    .flip {
-      animation: flip 0.6s ease-out;
-    }
-
-    @keyframes flip {
-      from {
-        opacity: 0;
-        transform: perspective(400px) rotateY(-90deg);
-      }
-      to {
-        opacity: 1;
-        transform: perspective(400px) rotateY(0);
-      }
+    @keyframes flipLetter {
+      from { opacity: 0; transform: perspective(300px) rotateX(-90deg); }
+      to { opacity: 1; transform: perspective(300px) rotateX(0); }
     }
 
     .info {
-      margin-top: 2rem;
+      margin-top: 0;
       padding: 1rem 2rem;
       background: #fff9e6;
       border-radius: 8px;
       border-left: 4px solid #d4af37;
-      max-width: 800px;
+      max-width: 900px;
     }
 
     .info h3 {
@@ -232,48 +283,83 @@
   </style>
 </head>
 <body>
-  <h1>🎨 Page Transition Animations</h1>
+  <h1 class="page-title">🎨 Logo Premium Animations</h1>
+  <p class="subtitle">เลือกอนิเมชั่นสำหรับ <code>.logo-premium</code> — กลุ่ม 1-7 เล่นวนตลอด (loop) / กลุ่ม 8-14 เล่นครั้งเดียวตอนโหลดหน้า (entrance)</p>
 
+  <div class="section-label">Loop (เล่นวนตลอดเวลา)</div>
   <div class="controls">
-    <button class="btn active" onclick="playAnimation('fadeInSlideUp')">Fade In Slide Up (Current)</button>
-    <button class="btn" onclick="playAnimation('fadeIn')">Fade In</button>
-    <button class="btn" onclick="playAnimation('slideInRight')">Slide In Right</button>
-    <button class="btn" onclick="playAnimation('slideInLeft')">Slide In Left</button>
-    <button class="btn" onclick="playAnimation('scaleIn')">Scale In</button>
-    <button class="btn" onclick="playAnimation('bounceIn')">Bounce In</button>
-    <button class="btn" onclick="playAnimation('rotateIn')">Rotate In</button>
-    <button class="btn" onclick="playAnimation('flip')">Flip</button>
+    <button class="btn active" onclick="playAnimation('glowPulse', false)">1. Glow Pulse</button>
+    <button class="btn" onclick="playAnimation('shimmer', false)">2. Gradient Shimmer</button>
+    <button class="btn" onclick="playAnimation('float', false)">3. Gentle Float</button>
+    <button class="btn" onclick="playAnimation('letterWave', true)">4. Letter Wave</button>
+    <button class="btn" onclick="playAnimation('neonFlicker', false)">5. Neon Flicker</button>
+    <button class="btn" onclick="playAnimation('breathe', false)">6. Breathing Scale</button>
+    <button class="btn" onclick="playAnimation('underlineSweep', false)">7. Underline Sweep</button>
+  </div>
+
+  <div class="section-label">Entrance (เล่นครั้งเดียวตอนโหลดหน้า — กดปุ่มเพื่อ replay)</div>
+  <div class="controls">
+    <button class="btn" onclick="playAnimation('fadeInSlideUp', false)">8. Fade In Slide Up</button>
+    <button class="btn" onclick="playAnimation('typewriter', true)">9. Typewriter Reveal</button>
+    <button class="btn" onclick="playAnimation('slideUpLetter', true)">10. Slide Up Per Letter</button>
+    <button class="btn" onclick="playAnimation('slideLeftLetter', true)">11. Slide In From Left Per Letter</button>
+    <button class="btn" onclick="playAnimation('scalePopLetter', true)">12. Scale Pop Per Letter</button>
+    <button class="btn" onclick="playAnimation('blurLetter', true)">13. Blur Focus Per Letter</button>
+    <button class="btn" onclick="playAnimation('flipLetter', true)">14. Flip Per Letter</button>
   </div>
 
   <div class="preview-area">
-    <div class="content-box fadeInSlideUp" id="contentBox">
-      <h2>📄 Content Page</h2>
-      <p>This is a preview of the page transition animation</p>
-    </div>
+    <h1 class="logo-premium glowPulse" id="logoBox">ANIN LABEL AND BARCODE</h1>
   </div>
 
   <div class="info">
     <h3>ℹ️ วิธีใช้</h3>
-    <p>คลิกที่ปุ่มด้านบนเพื่อดูตัวอย่างอนิเมชั่นแต่ละแบบ หากต้องการใช้อนิเมชั่นใด ให้คัดลอก CSS จากไฟล์นี้ไปใส่ใน App.css และเปลี่ยนชื่อ class ใน animation property</p>
+    <p>คลิกปุ่มด้านบนเพื่อดูตัวอย่างอนิเมชั่นแต่ละแบบบน logo จริง (ฟอนต์ Lilita One, พื้นหลัง gradient เดียวกับ hero-header) เมื่อเลือกแบบที่ต้องการแล้ว แจ้งเลขข้อ (1-14) เพื่อนำ CSS ไปใส่ใน <code>App.css</code> ที่ class <code>.logo-premium</code> จริง</p>
   </div>
 
   <script>
-    function playAnimation(animationName) {
-      const contentBox = document.getElementById('contentBox');
-      
-      // Remove all animation classes
-      contentBox.className = 'content-box';
-      
-      // Trigger reflow to restart animation
-      void contentBox.offsetWidth;
-      
-      // Add new animation class
-      contentBox.classList.add(animationName);
-      
-      // Update button states
-      document.querySelectorAll('.btn').forEach(btn => {
-        btn.classList.remove('active');
+    const perLetterAnimations = {
+      letterWave: { class: 'letterWave', stagger: 0.08 },
+      typewriter: { class: 'typewriter', stagger: 0.05 },
+      slideUpLetter: { class: 'slideUpLetter', stagger: 0.05 },
+      slideLeftLetter: { class: 'slideLeftLetter', stagger: 0.04 },
+      scalePopLetter: { class: 'scalePopLetter', stagger: 0.05 },
+      blurLetter: { class: 'blurLetter', stagger: 0.05 },
+      flipLetter: { class: 'flipLetter', stagger: 0.05 }
+    };
+
+    function splitIntoSpans(el, text) {
+      el.innerHTML = '';
+      [...text].forEach((ch, i) => {
+        const span = document.createElement('span');
+        span.textContent = ch === ' ' ? ' ' : ch;
+        el.appendChild(span);
       });
+    }
+
+    const originalText = 'ANIN LABEL AND BARCODE';
+
+    function playAnimation(animationName, isPerLetter) {
+      const logoBox = document.getElementById('logoBox');
+
+      logoBox.className = 'logo-premium';
+      logoBox.removeAttribute('style');
+      logoBox.textContent = originalText;
+
+      void logoBox.offsetWidth;
+
+      if (isPerLetter) {
+        const cfg = perLetterAnimations[animationName];
+        splitIntoSpans(logoBox, originalText);
+        logoBox.classList.add(cfg.class);
+        [...logoBox.children].forEach((span, i) => {
+          span.style.animationDelay = (i * cfg.stagger) + 's';
+        });
+      } else {
+        logoBox.classList.add(animationName);
+      }
+
+      document.querySelectorAll('.btn').forEach(btn => btn.classList.remove('active'));
       event.target.classList.add('active');
     }
   </script>
