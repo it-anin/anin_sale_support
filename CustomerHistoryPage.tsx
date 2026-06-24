@@ -94,7 +94,7 @@ export function CustomerHistoryPage({ onGoPriceTag, onGoDrugLabel, onGoStockChec
                 onChange={e => setSearch(e.target.value)}
               />
               <button className="search-btn-premium">
-                {searching ? '⏳' : <img className="search-btn-icon" src="/test.png" alt="ค้นหา" />}
+                {searching ? '⏳' : '🔍'}
               </button>
             </div>
             <button className="page-nav-card" onClick={onGoPriceTag} title="ป้ายราคา">
@@ -164,7 +164,7 @@ export function CustomerHistoryPage({ onGoPriceTag, onGoDrugLabel, onGoStockChec
 
         {!searched && (
           <div className="stock-empty-state">
-            <div className="stock-empty-icon">🔍</div>
+            <div className="stock-empty-icon"><img className="stock-empty-icon-img" src="/test.png" alt="ค้นหา" /></div>
             <div>พิมพ์ชื่อหรือนามสกุลลูกค้าในช่องค้นหาด้านบน</div>
           </div>
         )}
