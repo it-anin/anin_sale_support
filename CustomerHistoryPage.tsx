@@ -94,7 +94,7 @@ export function CustomerHistoryPage({ onGoPriceTag, onGoDrugLabel, onGoStockChec
                 onChange={e => setSearch(e.target.value)}
               />
               <button className="search-btn-premium">
-                {searching ? '⏳' : <img className="search-btn-icon" src="/search_customer.png" alt="ค้นหา" />}
+                {searching ? '⏳' : <img className="search-btn-icon" src="/test.png" alt="ค้นหา" />}
               </button>
             </div>
             <button className="page-nav-card" onClick={onGoPriceTag} title="ป้ายราคา">
