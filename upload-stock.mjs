@@ -11,6 +11,8 @@ import { readFileSync, existsSync } from 'fs';
 // ─── CONFIG ───────────────────────────────────────────────
 // ลองไฟล์ CSV จากหลาย path ตามลำดับ — ใช้ path แรกที่เจอ
 const CSV_CANDIDATES = [
+  'C:\\Users\\AninMainPC\\Desktop\\run-upload-stock\\All_stock.csv',
+  'C:\\Users\\AninMainPC\\Desktop\\run-upload-stock\\All_stock.CSV',
   'C:\\Users\\Arm\\Documents\\update_stock\\All_stock.csv',
   'C:\\Users\\BigYa-spare\\Documents\\update_stock\\All_stock.csv',
   'C:\\Users\\BigYa-spare\\Documents\\update_stock\\All_stock.CSV',

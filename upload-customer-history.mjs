@@ -16,6 +16,8 @@ import { readFileSync, existsSync } from 'fs';
 
 // ─── CONFIG ───────────────────────────────────────────────
 const CSV_CANDIDATES = [
+  'C:\\Users\\AninMainPC\\Desktop\\run-upload-stock\\customer_history.csv',
+  'C:\\Users\\AninMainPC\\Desktop\\run-upload-stock\\customer_history.CSV',
   'C:\\Users\\Arm\\Documents\\update_stock\\customer_history.csv',
   'C:\\Users\\BigYa-spare\\Documents\\update_stock\\customer_history.csv',
   'C:\\Users\\BigYa-spare\\Documents\\update_stock\\customer_history.CSV',
