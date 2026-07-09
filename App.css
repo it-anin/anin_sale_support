@@ -2873,3 +2873,84 @@ body.pulse-b .cart-inline-btn.in-cart {
 .stock-table .cust-col-name    { width: 20%; white-space: nowrap; }
 .stock-table .cust-col-sku     { width: 15%; white-space: nowrap; }
 .stock-table .cust-col-product { width: 50%; white-space: normal; word-break: break-word; line-height: 1.4; }
+
+/* ===== Outbound Page (เบิกสินค้าด่วน) ===== */
+.outbound-table .ob-col-sku      { width: 11%; white-space: nowrap; }
+.outbound-table .ob-col-barcode  { width: 14%; white-space: nowrap; }
+.outbound-table .ob-col-name     { width: 32%; white-space: normal; word-break: break-word; line-height: 1.4; }
+.outbound-table .ob-col-unit     { width: 8%;  white-space: nowrap; }
+.outbound-table .ob-col-qty      { width: 9%;  white-space: nowrap; }
+.outbound-table .ob-col-branch   { width: 9%;  white-space: nowrap; }
+.outbound-table .ob-col-outbound { width: 14%; white-space: nowrap; text-align: center; }
+.outbound-table .ob-col-del      { width: 3%;  white-space: nowrap; text-align: center; }
+
+.outbound-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap; }
+.outbound-toolbar-btns { display: flex; gap: 0.5rem; }
+
+.outbound-input {
+  width: 100%;
+  padding: 5px 8px;
+  border: 1.5px solid #d5cbbc;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 0.9em;
+  background: #fff;
+}
+.outbound-input:focus { outline: none; border-color: #d4af37; box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.2); }
+.outbound-input:disabled { background: #f3efe8; color: #8a8272; }
+.outbound-input--qty { text-align: right; }
+.outbound-input--pw { font-size: 1em; }
+
+.outbound-select {
+  width: 100%;
+  padding: 5px 6px;
+  border: 1.5px solid #d5cbbc;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 0.9em;
+  background: #fff;
+  cursor: pointer;
+}
+.outbound-select:focus { outline: none; border-color: #d4af37; }
+.outbound-select:disabled { background: #f3efe8; color: #8a8272; cursor: default; }
+
+.outbound-approve-btn {
+  padding: 6px 14px;
+  border: 1.5px solid #f2d98d;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #d4af37, #f2d98d);
+  color: #2d2a26;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 0.85em;
+  cursor: pointer;
+  transition: box-shadow 0.15s ease;
+}
+.outbound-approve-btn:hover { box-shadow: 0 0 10px rgba(212, 175, 55, 0.6); }
+
+.outbound-row--approved td { background: #eaf7ea; }
+
+.outbound-approved-mark {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  color: #1d7a2f;
+  font-weight: 700;
+  font-size: 0.85em;
+}
+.outbound-approved-time { font-weight: 400; font-size: 0.85em; color: #4a7a52; }
+
+.outbound-del-btn {
+  border: none;
+  background: none;
+  color: #b04a3a;
+  font-size: 0.95em;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
+}
+.outbound-del-btn:hover { background: rgba(176, 74, 58, 0.12); }
+
+.outbound-notfound { color: #b04a3a; font-weight: 600; }
+.outbound-hint { color: #b0a893; font-size: 0.85em; }

@@ -44,9 +44,10 @@ interface Props {
   onGoDrugLabel: () => void;
   onGoStockCheck: () => void;
   onGoCustomerHistory: () => void;
+  onGoOutbound: () => void;
 }
 
-export function DrugLabelPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGoCustomerHistory }: Props) {
+export function DrugLabelPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGoCustomerHistory, onGoOutbound }: Props) {
   const [settings,       setSettings]       = useState<ShopSettings | null>(null);
   const [selectedBranch, setSelectedBranch] = useState<BranchId>('hq');
   const [lang,           setLang]           = useState<Lang>('th');
@@ -448,6 +449,10 @@ export function DrugLabelPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onG
             <button className="page-nav-card" onClick={onGoCustomerHistory} type="button" title="ประวัติลูกค้า">
               <span className="page-nav-icon">🪪</span>
               <span className="page-nav-label">ประวัติ</span>
+            </button>
+            <button className="page-nav-card" onClick={onGoOutbound} type="button" title="เบิกสินค้าด่วน">
+              <span className="page-nav-icon">🚚</span>
+              <span className="page-nav-label">เบิกด่วน</span>
             </button>
           </div>
         </div>

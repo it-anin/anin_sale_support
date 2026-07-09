@@ -15,9 +15,10 @@ interface Props {
   onGoDrugLabel: () => void;
   onGoStockCheck: () => void;
   onGoCustomerHistory: () => void;
+  onGoOutbound: () => void;
 }
 
-export function CustomerHistoryPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGoCustomerHistory }: Props) {
+export function CustomerHistoryPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGoCustomerHistory, onGoOutbound }: Props) {
   const [results,       setResults]       = useState<CustomerRecord[]>([]);
   const [search,        setSearch]        = useState('');
   const [searching,     setSearching]     = useState(false);
@@ -112,6 +113,10 @@ export function CustomerHistoryPage({ onGoPriceTag, onGoDrugLabel, onGoStockChec
             <button className="page-nav-card page-nav-card--active" onClick={onGoCustomerHistory} title="ประวัติลูกค้า">
               <span className="page-nav-icon">🪪</span>
               <span className="page-nav-label">ประวัติ</span>
+            </button>
+            <button className="page-nav-card" onClick={onGoOutbound} title="เบิกสินค้าด่วน">
+              <span className="page-nav-icon">🚚</span>
+              <span className="page-nav-label">เบิกด่วน</span>
             </button>
           </div>
         </div>

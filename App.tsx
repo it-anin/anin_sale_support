@@ -6,6 +6,7 @@ import { supabase } from './supabase';
 import { DrugLabelPage } from './druglabel/DrugLabelPage';
 import { StockCheckPage } from './StockCheckPage';
 import { CustomerHistoryPage } from './CustomerHistoryPage';
+import { OutboundPage } from './OutboundPage';
 import { AnimatedLogoText } from './AnimatedLogo';
 import './App.css';
 
@@ -148,7 +149,7 @@ const App: React.FC = () => {
   const [rowQty, setRowQty] = useState<Map<string, number>>(new Map());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const lastAutoAddedBarcode = useRef<string>('');
-  const [currentPage, setCurrentPage] = useState<'pricetag' | 'druglabel' | 'stockcheck' | 'customerhistory'>('pricetag');
+  const [currentPage, setCurrentPage] = useState<'pricetag' | 'druglabel' | 'stockcheck' | 'customerhistory' | 'outbound'>('pricetag');
 
   // โหลดวันที่ update ล่าสุดจาก Supabase ตอน mount
   useEffect(() => {
@@ -744,6 +745,14 @@ ${sheetsHtml}
               <span className="page-nav-icon">🪪</span>
               <span className="page-nav-label">ประวัติ</span>
             </button>
+            <button
+              className="page-nav-card"
+              onClick={() => setCurrentPage('outbound')}
+              title="เบิกสินค้าด่วน"
+            >
+              <span className="page-nav-icon">🚚</span>
+              <span className="page-nav-label">เบิกด่วน</span>
+            </button>
           </div>
         </div>
       </div>)}
@@ -1029,6 +1038,7 @@ ${sheetsHtml}
           onGoDrugLabel={() => setCurrentPage('druglabel')}
           onGoStockCheck={() => setCurrentPage('stockcheck')}
           onGoCustomerHistory={() => setCurrentPage('customerhistory')}
+          onGoOutbound={() => setCurrentPage('outbound')}
         />
       )}
 
@@ -1039,6 +1049,7 @@ ${sheetsHtml}
           onGoDrugLabel={() => setCurrentPage('druglabel')}
           onGoStockCheck={() => setCurrentPage('stockcheck')}
           onGoCustomerHistory={() => setCurrentPage('customerhistory')}
+          onGoOutbound={() => setCurrentPage('outbound')}
         />
       )}
 
@@ -1049,6 +1060,18 @@ ${sheetsHtml}
           onGoDrugLabel={() => setCurrentPage('druglabel')}
           onGoStockCheck={() => setCurrentPage('stockcheck')}
           onGoCustomerHistory={() => setCurrentPage('customerhistory')}
+          onGoOutbound={() => setCurrentPage('outbound')}
+        />
+      )}
+
+      {/* Outbound Page */}
+      {currentPage === 'outbound' && (
+        <OutboundPage
+          onGoPriceTag={() => setCurrentPage('pricetag')}
+          onGoDrugLabel={() => setCurrentPage('druglabel')}
+          onGoStockCheck={() => setCurrentPage('stockcheck')}
+          onGoCustomerHistory={() => setCurrentPage('customerhistory')}
+          onGoOutbound={() => setCurrentPage('outbound')}
         />
       )}
 
