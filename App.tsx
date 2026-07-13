@@ -745,6 +745,7 @@ ${sheetsHtml}
               <span className="page-nav-icon">🪪</span>
               <span className="page-nav-label">ประวัติ</span>
             </button>
+            {/* ซ่อนปุ่มเบิกด่วนชั่วคราว
             <button
               className="page-nav-card"
               onClick={() => setCurrentPage('outbound')}
@@ -753,6 +754,7 @@ ${sheetsHtml}
               <span className="page-nav-icon">🚚</span>
               <span className="page-nav-label">เบิกด่วน</span>
             </button>
+            */}
           </div>
         </div>
       </div>)}
