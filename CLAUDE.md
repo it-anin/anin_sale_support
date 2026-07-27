@@ -64,14 +64,16 @@ Four-page React app sharing the same `App.css` and Supabase project.
 - Upload: ผ่าน `upload-stock.mjs` (Node.js script) — ไม่ผ่านเว็บ — ใช้ **service_role key** (env `SUPABASE_SERVICE_KEY` หรือ `.env`)
 - ไม่มี web upload UI — ใช้ Task Scheduler รัน script ทุก 5 นาทีแทน
 
-**Table: `customer_history`** (id, purchase_date, phone, first_name, last_name, sku, product_name, uploaded_at)
+**Table: `customer_history`** (id, purchase_date, phone, first_name, last_name, sku, product_name, dedupe_key, uploaded_at)
 - RLS: `public read customer_history` (SELECT) เท่านั้น — **ไม่มี public write** (มี PII: เบอร์โทร/ชื่อลูกค้า)
 - สร้างด้วย `customer-history-setup.sql` · ตัด write policy ด้วย `lock-rls-readonly.sql`
 - Upload: ผ่าน `upload-customer-history.mjs` (Node.js script) — รันมือหรือ Task Scheduler — ใช้ **service_role key** (env `SUPABASE_SERVICE_KEY` หรือ `.env`)
-- **`--append` flag** — `node upload-customer-history.mjs --append` เพิ่มข้อมูลใหม่โดยไม่ลบของเก่า (ค่าเริ่มต้นคือลบทั้งหมดแล้ว insert ใหม่)
-- script เติม 0 นำหน้าเบอร์โทรอัตโนมัติถ้า 8 หรือ 9 หลัก
-- Deduplicate: ใช้ `deduplicate-customer.mjs` กรองแถวซ้ำก่อน import ข้อมูลย้อนหลัง
-- **Chunked delete** — script ลบของเก่าทีละ 1000 แถวเพื่อเลี่ยง Supabase statement timeout (ตาราง 100K+ แถวลบในคำสั่งเดียวจะ timeout)
+- Upload เป็น incremental เสมอ: เก็บเฉพาะรายการล่าสุดต่อ ลูกค้า+SKU และไม่ลบข้อมูลเก่าทั้งตาราง
+- `node upload-customer-history.mjs` ตรวจช่วงย้อนหลัง 7 วัน; `--full-scan` ตรวจทั้งไฟล์; `--append` เป็น alias ของโหมดปกติ
+- ก่อนใช้ uploader รุ่น incremental กับตารางเดิม ต้องรัน `customer-history-incremental-migration.sql` หนึ่งครั้ง
+- badge อ่านเวลาตรวจล่าสุดจาก `customer_history_sync_status`; รัน `customer-history-sync-status.sql` หนึ่งครั้ง
+- script เหลือเฉพาะตัวเลขในเบอร์โทร และเติม 0 เมื่อมี 8 หรือ 9 หลักแต่ยังไม่มี 0 นำหน้า
+- `dedupe_key` มี unique index; uploader ยุบ CSV และ upsert เฉพาะแถวใหม่/ใหม่กว่าเป็นชุดละ 500
 - **Multi-machine CSV path** — `CSV_CANDIDATES` array เช็คหลาย path ตามลำดับ ใช้ path แรกที่เจอ (รองรับเครื่อง Arm + BigYa-spare)
 
 ## Customer History — Search Behavior
@@ -106,7 +108,7 @@ Columns (zero-indexed): B=วันที่ซื้อ(1, format D/M/YYYY H:MM
 3. `C:\Users\BigYa-spare\Documents\update_stock\customer_history.csv` (เครื่อง BigYa-spare)
 4. `C:\Users\BigYa-spare\Documents\update_stock\customer_history.CSV` (เครื่อง BigYa-spare, ตัวพิมพ์ใหญ่)
 
-Phone: เติม 0 อัตโนมัติถ้า 8 หรือ 9 หลัก (Excel ตัด 0 นำหน้าออก)
+Phone: เหลือเฉพาะตัวเลข และเติม 0 อัตโนมัติเมื่อมี 8 หรือ 9 หลักแต่ยังไม่มี 0 นำหน้า
 Parser: custom `parseCSV()` — `"` เริ่ม quoted mode เฉพาะตอน `field === ''` เพื่อรองรับ inch symbol `2"` กลางชื่อสินค้า
 
 ## Multi-Machine Sync — ข้อควรระวังเมื่อ pull โค้ดข้ามเครื่อง
