@@ -166,6 +166,8 @@ node upload-stock.mjs
 
 **คอลัมน์:** `id, purchase_date, phone, first_name, last_name, sku, product_name, uploaded_at`
 
+**ที่มาของข้อมูล:** export รายงาน **R06.158** จาก Promax
+
 **วิธี upload:** Node.js script `upload-customer-history.mjs`
 ```bash
 node upload-customer-history.mjs            # ลบเก่าทั้งหมด แล้ว insert ใหม่ (default)
