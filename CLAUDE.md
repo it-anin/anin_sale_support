@@ -74,6 +74,19 @@ Four-page React app sharing the same `App.css` and Supabase project.
 - **Chunked delete** — script ลบของเก่าทีละ 1000 แถวเพื่อเลี่ยง Supabase statement timeout (ตาราง 100K+ แถวลบในคำสั่งเดียวจะ timeout)
 - **Multi-machine CSV path** — `CSV_CANDIDATES` array เช็คหลาย path ตามลำดับ ใช้ path แรกที่เจอ (รองรับเครื่อง Arm + BigYa-spare)
 
+## Customer History — Search Behavior
+
+- Debounce 200ms · ค้นหาแบบ search-first (ไม่โหลดตอน mount)
+- 2 คำขึ้นไป → `first_name ILIKE %คำแรก%` **AND** `last_name ILIKE %คำที่สอง%`
+- คำเดียว → `.or(first_name / last_name / phone ILIKE %q%)`
+- เรียง `purchase_date` จากใหม่ไปเก่า · ดึงดิบสูงสุด `ROW_LIMIT = 1000` แถว
+- **ยุบแถวซ้ำฝั่งเว็บ** — key = `phone|first_name|last_name|sku|product_name` เก็บแถวที่ `purchase_date` ล่าสุด
+  - ต้องมี phone/ชื่อ ใน key ด้วย ไม่งั้นลูกค้าคนละคนที่ซื้อสินค้าเดียวกันจะถูกยุบรวมกัน
+  - ข้อมูลจริง (ก.ค. 2569): 239,200 แถว / ลูกค้า 20,070 คน — ยุบแล้วเหลือ ~67%
+  - ลูกค้าที่มีเกิน 1000 แถวมีแค่ `เงินสด` (24,276) กับ `Grab` (1,642) ซึ่งไม่ใช่ลูกค้าจริง → limit 1000 ครบสำหรับลูกค้าจริงทุกคน
+- `truncated` state → แสดง "(จากข้อมูล 1,000 แถวล่าสุด)" เมื่อชนเพดาน
+- ระหว่างค้นหาแสดง skeleton shimmer (`.ch-skeleton` ใน App.css) — `<thead>` แสดงตลอด สลับแค่ `<tbody>` ความกว้างคอลัมน์เลยไม่กระโดด
+
 ## CSV Format
 
 **Products CSV** (Admin upload via web):  

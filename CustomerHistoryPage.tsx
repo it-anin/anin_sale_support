@@ -11,6 +11,9 @@ interface CustomerRecord {
   product_name: string;
 }
 
+/** ดึงดิบสูงสุดกี่แถวต่อการค้นหา (ยุบแถวซ้ำฝั่งเว็บหลังจากนี้) */
+const ROW_LIMIT = 1000;
+
 interface Props {
   onGoPriceTag: () => void;
   onGoDrugLabel: () => void;
@@ -26,6 +29,7 @@ export function CustomerHistoryPage({ onGoPriceTag, onGoDrugLabel, onGoStockChec
   const [searched,      setSearched]      = useState(false);
   const [lastUploaded,  setLastUploaded]  = useState('');
   const [productSearch, setProductSearch] = useState('');
+  const [truncated,     setTruncated]     = useState(false);
 
   useEffect(() => {
     supabase
@@ -51,7 +55,7 @@ export function CustomerHistoryPage({ onGoPriceTag, onGoDrugLabel, onGoStockChec
       .from('customer_history')
       .select('purchase_date, phone, first_name, last_name, sku, product_name')
       .order('purchase_date', { ascending: false })
-      .limit(300);
+      .limit(ROW_LIMIT);
     if (parts.length >= 2) {
       query = query.ilike('first_name', `%${parts[0]}%`).ilike('last_name', `%${parts[1]}%`);
     } else {
@@ -59,14 +63,23 @@ export function CustomerHistoryPage({ onGoPriceTag, onGoDrugLabel, onGoStockChec
     }
     const { data, error } = await query;
     if (!error && data) {
-      setResults(data.map(r => ({
-        purchase_date: r.purchase_date ?? null,
-        phone:        r.phone        ?? '',
-        first_name:   r.first_name   ?? '',
-        last_name:    r.last_name    ?? '',
-        sku:          r.sku          ?? '',
-        product_name: r.product_name ?? '',
-      })));
+      setTruncated(data.length === ROW_LIMIT);
+      // ลูกค้าคนเดียวกันซื้อสินค้าเดิมซ้ำ → เหลือแถวเดียว เอาวันที่ล่าสุด
+      const latest = new Map<string, CustomerRecord>();
+      for (const r of data) {
+        const rec: CustomerRecord = {
+          purchase_date: r.purchase_date ?? null,
+          phone:        r.phone        ?? '',
+          first_name:   r.first_name   ?? '',
+          last_name:    r.last_name    ?? '',
+          sku:          r.sku          ?? '',
+          product_name: r.product_name ?? '',
+        };
+        const key = `${rec.phone}|${rec.first_name}|${rec.last_name}|${rec.sku}|${rec.product_name}`;
+        const prev = latest.get(key);
+        if (!prev || (rec.purchase_date ?? '') > (prev.purchase_date ?? '')) latest.set(key, rec);
+      }
+      setResults([...latest.values()]);
     }
     setSearching(false);
   }, []);
@@ -132,7 +145,7 @@ export function CustomerHistoryPage({ onGoPriceTag, onGoDrugLabel, onGoStockChec
         {searched && (
           <div className="product-table-wrap stock-table-wrap">
             <div className="selected-table-header">
-              <span>{searching ? 'กำลังค้นหา…' : `${visible.length} รายการ ${results.length === 300 ? '(แสดงสูงสุด 300)' : ''}`}</span>
+              <span>{searching ? 'กำลังค้นหา…' : `${visible.length} รายการ ${truncated ? `(จากข้อมูล ${ROW_LIMIT.toLocaleString()} แถวล่าสุด)` : ''}`}</span>
               <input
                 type="text"
                 placeholder="ค้นหาชื่อยา..."
