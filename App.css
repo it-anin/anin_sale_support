@@ -2868,38 +2868,22 @@ body.pulse-b .cart-inline-btn.in-cart {
 .stock-table .stock-col-unit  { width: 10%;  white-space: nowrap; }
 .stock-table .stock-col-price { width: 10%;  text-align: right; white-space: nowrap; }
 
-/* Customer History — Counter Ticker (ระหว่างค้นหา) */
-.ch-searching {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  padding: 3rem 1rem;
+/* Customer History — Skeleton Shimmer (ระหว่างค้นหา) */
+.ch-skeleton span {
+  display: block;
+  height: 11px;
+  border-radius: 6px;
+  background: linear-gradient(90deg,
+    #ece7de 0%, #f7f1e4 38%, rgba(242, 217, 141, 0.55) 50%, #f7f1e4 62%, #ece7de 100%);
+  background-size: 220% 100%;
+  animation: chShimmer 1.15s linear infinite;
 }
-.ch-tick {
-  font-family: 'Lilita One', cursive;
-  font-size: 38px;
-  line-height: 1.15;
-  color: #d4af37;
-  letter-spacing: 1px;
-  font-variant-numeric: tabular-nums;
-}
-.ch-searching-label {
-  font-family: 'Mitr', sans-serif;
-  font-size: 13px;
-  color: #6b6559;
-}
-
-/* Customer History — Blur-In ผลลัพธ์ (ภาษาเดียวกับ logoLetterBlurIn) */
-.ch-results tbody tr {
-  animation: chBlurIn 0.46s ease-out backwards;
-  animation-delay: calc(var(--i, 0) * 58ms);
-}
-@keyframes chBlurIn {
-  from { opacity: 0; filter: blur(7px); transform: translateY(5px); }
+@keyframes chShimmer {
+  from { background-position: 120% 0; }
+  to   { background-position: -120% 0; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .ch-results tbody tr { animation: none; }
+  .ch-skeleton span { animation: none; }
 }
 
 /* Customer History Table */

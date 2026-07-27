@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, type CSSProperties } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from './supabase';
 import { AnimatedLogoText } from './AnimatedLogo';
 
@@ -26,16 +26,6 @@ export function CustomerHistoryPage({ onGoPriceTag, onGoDrugLabel, onGoStockChec
   const [searched,      setSearched]      = useState(false);
   const [lastUploaded,  setLastUploaded]  = useState('');
   const [productSearch, setProductSearch] = useState('');
-  const [tick,          setTick]          = useState(0);
-
-  // ตัวเลขวิ่งนับระหว่างค้นหา (Counter Ticker)
-  useEffect(() => {
-    if (!searching) return;
-    let n = 0;
-    setTick(0);
-    const t = setInterval(() => { n += Math.ceil(Math.random() * 9); setTick(n); }, 45);
-    return () => clearInterval(t);
-  }, [searching]);
 
   useEffect(() => {
     supabase
@@ -152,22 +142,29 @@ export function CustomerHistoryPage({ onGoPriceTag, onGoDrugLabel, onGoStockChec
                 style={{ fontSize: '0.82rem', padding: '4px 10px', width: '200px', marginLeft: 'auto' }}
               />
             </div>
-            {searching ? (
-              <div className="ch-searching">
-                <span className="ch-tick">{tick.toLocaleString()}</span>
-                <span className="ch-searching-label">กำลังค้นหา…</span>
-              </div>
-            ) : (
-              <table className="product-table stock-table ch-results">
-                <thead>
-                  <tr>
-                    <th className="cust-col-date">วันที่ซื้อ</th>
-                    <th className="cust-col-phone">เบอร์โทร</th>
-                    <th className="cust-col-name">ชื่อลูกค้า</th>
-                    <th className="cust-col-sku">SKU</th>
-                    <th className="cust-col-product">ชื่อสินค้า</th>
-                  </tr>
-                </thead>
+            <table className="product-table stock-table">
+              <thead>
+                <tr>
+                  <th className="cust-col-date">วันที่ซื้อ</th>
+                  <th className="cust-col-phone">เบอร์โทร</th>
+                  <th className="cust-col-name">ชื่อลูกค้า</th>
+                  <th className="cust-col-sku">SKU</th>
+                  <th className="cust-col-product">ชื่อสินค้า</th>
+                </tr>
+              </thead>
+              {searching ? (
+                <tbody className="ch-skeleton">
+                  {Array.from({ length: 6 }, (_, i) => (
+                    <tr key={i}>
+                      <td className="cust-col-date"><span /></td>
+                      <td className="cust-col-phone"><span /></td>
+                      <td className="cust-col-name"><span /></td>
+                      <td className="cust-col-sku"><span /></td>
+                      <td className="cust-col-product"><span /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              ) : (
                 <tbody>
                   {visible.length === 0 ? (
                     <tr>
@@ -177,7 +174,7 @@ export function CustomerHistoryPage({ onGoPriceTag, onGoDrugLabel, onGoStockChec
                     </tr>
                   ) : (
                     visible.map((item, i) => (
-                      <tr key={i} style={{ '--i': Math.min(i, 12) } as CSSProperties}>
+                      <tr key={i}>
                         <td className="cust-col-date">{item.purchase_date ? new Date(item.purchase_date).toLocaleDateString('th-TH') : '-'}</td>
                         <td className="cust-col-phone">{item.phone}</td>
                         <td className="cust-col-name">{item.first_name} {item.last_name}</td>
@@ -187,8 +184,8 @@ export function CustomerHistoryPage({ onGoPriceTag, onGoDrugLabel, onGoStockChec
                     ))
                   )}
                 </tbody>
-              </table>
-            )}
+              )}
+            </table>
           </div>
         )}
 
