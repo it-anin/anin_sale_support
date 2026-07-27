@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, type CSSProperties } from 'react';
 import { supabase } from './supabase';
 import { AnimatedLogoText } from './AnimatedLogo';
 
@@ -26,6 +26,16 @@ export function CustomerHistoryPage({ onGoPriceTag, onGoDrugLabel, onGoStockChec
   const [searched,      setSearched]      = useState(false);
   const [lastUploaded,  setLastUploaded]  = useState('');
   const [productSearch, setProductSearch] = useState('');
+  const [tick,          setTick]          = useState(0);
+
+  // ตัวเลขวิ่งนับระหว่างค้นหา (Counter Ticker)
+  useEffect(() => {
+    if (!searching) return;
+    let n = 0;
+    setTick(0);
+    const t = setInterval(() => { n += Math.ceil(Math.random() * 9); setTick(n); }, 45);
+    return () => clearInterval(t);
+  }, [searching]);
 
   useEffect(() => {
     supabase
@@ -50,7 +60,7 @@ export function CustomerHistoryPage({ onGoPriceTag, onGoDrugLabel, onGoStockChec
     let query = supabase
       .from('customer_history')
       .select('purchase_date, phone, first_name, last_name, sku, product_name')
-      .order('first_name')
+      .order('purchase_date', { ascending: false })
       .limit(300);
     if (parts.length >= 2) {
       query = query.ilike('first_name', `%${parts[0]}%`).ilike('last_name', `%${parts[1]}%`);
@@ -75,6 +85,8 @@ export function CustomerHistoryPage({ onGoPriceTag, onGoDrugLabel, onGoStockChec
     const t = setTimeout(() => doSearch(search), 200);
     return () => clearTimeout(t);
   }, [search]);
+
+  const visible = results.filter(r => r.product_name.toLowerCase().includes(productSearch.toLowerCase()));
 
   return (
     <div className="app-container">
@@ -130,7 +142,7 @@ export function CustomerHistoryPage({ onGoPriceTag, onGoDrugLabel, onGoStockChec
         {searched && (
           <div className="product-table-wrap stock-table-wrap">
             <div className="selected-table-header">
-              <span>{results.filter(r => r.product_name.toLowerCase().includes(productSearch.toLowerCase())).length} รายการ {results.length === 300 && '(แสดงสูงสุด 300)'}</span>
+              <span>{searching ? 'กำลังค้นหา…' : `${visible.length} รายการ ${results.length === 300 ? '(แสดงสูงสุด 300)' : ''}`}</span>
               <input
                 type="text"
                 placeholder="ค้นหาชื่อยา..."
@@ -140,36 +152,43 @@ export function CustomerHistoryPage({ onGoPriceTag, onGoDrugLabel, onGoStockChec
                 style={{ fontSize: '0.82rem', padding: '4px 10px', width: '200px', marginLeft: 'auto' }}
               />
             </div>
-            <table className="product-table stock-table">
-              <thead>
-                <tr>
-                  <th className="cust-col-date">วันที่ซื้อ</th>
-                  <th className="cust-col-phone">เบอร์โทร</th>
-                  <th className="cust-col-name">ชื่อลูกค้า</th>
-                  <th className="cust-col-sku">SKU</th>
-                  <th className="cust-col-product">ชื่อสินค้า</th>
-                </tr>
-              </thead>
-              <tbody>
-                {results.length === 0 ? (
+            {searching ? (
+              <div className="ch-searching">
+                <span className="ch-tick">{tick.toLocaleString()}</span>
+                <span className="ch-searching-label">กำลังค้นหา…</span>
+              </div>
+            ) : (
+              <table className="product-table stock-table ch-results">
+                <thead>
                   <tr>
-                    <td colSpan={5} style={{ textAlign: 'center', padding: '2rem', color: '#999' }}>
-                      ไม่พบข้อมูล
-                    </td>
+                    <th className="cust-col-date">วันที่ซื้อ</th>
+                    <th className="cust-col-phone">เบอร์โทร</th>
+                    <th className="cust-col-name">ชื่อลูกค้า</th>
+                    <th className="cust-col-sku">SKU</th>
+                    <th className="cust-col-product">ชื่อสินค้า</th>
                   </tr>
-                ) : (
-                  results.filter(r => r.product_name.toLowerCase().includes(productSearch.toLowerCase())).map((item, i) => (
-                    <tr key={i}>
-                      <td className="cust-col-date">{item.purchase_date ? new Date(item.purchase_date).toLocaleDateString('th-TH') : '-'}</td>
-                      <td className="cust-col-phone">{item.phone}</td>
-                      <td className="cust-col-name">{item.first_name} {item.last_name}</td>
-                      <td className="cust-col-sku">{item.sku}</td>
-                      <td className="cust-col-product">{item.product_name}</td>
+                </thead>
+                <tbody>
+                  {visible.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} style={{ textAlign: 'center', padding: '2rem', color: '#999' }}>
+                        ไม่พบข้อมูล
+                      </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ) : (
+                    visible.map((item, i) => (
+                      <tr key={i} style={{ '--i': Math.min(i, 12) } as CSSProperties}>
+                        <td className="cust-col-date">{item.purchase_date ? new Date(item.purchase_date).toLocaleDateString('th-TH') : '-'}</td>
+                        <td className="cust-col-phone">{item.phone}</td>
+                        <td className="cust-col-name">{item.first_name} {item.last_name}</td>
+                        <td className="cust-col-sku">{item.sku}</td>
+                        <td className="cust-col-product">{item.product_name}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            )}
           </div>
         )}
 
