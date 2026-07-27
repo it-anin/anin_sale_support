@@ -2869,10 +2869,11 @@ body.pulse-b .cart-inline-btn.in-cart {
 .stock-table .stock-col-price { width: 10%;  text-align: right; white-space: nowrap; }
 
 /* Customer History Table */
-.stock-table .cust-col-phone   { width: 15%; white-space: nowrap; }
-.stock-table .cust-col-name    { width: 20%; white-space: nowrap; }
-.stock-table .cust-col-sku     { width: 15%; white-space: nowrap; }
-.stock-table .cust-col-product { width: 50%; white-space: normal; word-break: break-word; line-height: 1.4; }
+.stock-table .cust-col-date    { width: 13%; white-space: nowrap; }
+.stock-table .cust-col-phone   { width: 13%; white-space: nowrap; }
+.stock-table .cust-col-name    { width: 18%; white-space: nowrap; }
+.stock-table .cust-col-sku     { width: 13%; white-space: nowrap; }
+.stock-table .cust-col-product { width: 43%; white-space: normal; word-break: break-word; line-height: 1.4; }
 
 /* ===== Outbound Page (เบิกสินค้าด่วน) ===== */
 .outbound-table .ob-col-sku      { width: 11%; white-space: nowrap; }

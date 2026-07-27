@@ -3,6 +3,7 @@ import { supabase } from './supabase';
 import { AnimatedLogoText } from './AnimatedLogo';
 
 interface CustomerRecord {
+  purchase_date: string | null;
   phone: string;
   first_name: string;
   last_name: string;
@@ -48,7 +49,7 @@ export function CustomerHistoryPage({ onGoPriceTag, onGoDrugLabel, onGoStockChec
     const parts = q.split(/\s+/).filter(Boolean);
     let query = supabase
       .from('customer_history')
-      .select('phone, first_name, last_name, sku, product_name')
+      .select('purchase_date, phone, first_name, last_name, sku, product_name')
       .order('first_name')
       .limit(300);
     if (parts.length >= 2) {
@@ -59,6 +60,7 @@ export function CustomerHistoryPage({ onGoPriceTag, onGoDrugLabel, onGoStockChec
     const { data, error } = await query;
     if (!error && data) {
       setResults(data.map(r => ({
+        purchase_date: r.purchase_date ?? null,
         phone:        r.phone        ?? '',
         first_name:   r.first_name   ?? '',
         last_name:    r.last_name    ?? '',
@@ -141,6 +143,7 @@ export function CustomerHistoryPage({ onGoPriceTag, onGoDrugLabel, onGoStockChec
             <table className="product-table stock-table">
               <thead>
                 <tr>
+                  <th className="cust-col-date">วันที่ซื้อ</th>
                   <th className="cust-col-phone">เบอร์โทร</th>
                   <th className="cust-col-name">ชื่อลูกค้า</th>
                   <th className="cust-col-sku">SKU</th>
@@ -150,13 +153,14 @@ export function CustomerHistoryPage({ onGoPriceTag, onGoDrugLabel, onGoStockChec
               <tbody>
                 {results.length === 0 ? (
                   <tr>
-                    <td colSpan={4} style={{ textAlign: 'center', padding: '2rem', color: '#999' }}>
+                    <td colSpan={5} style={{ textAlign: 'center', padding: '2rem', color: '#999' }}>
                       ไม่พบข้อมูล
                     </td>
                   </tr>
                 ) : (
                   results.filter(r => r.product_name.toLowerCase().includes(productSearch.toLowerCase())).map((item, i) => (
                     <tr key={i}>
+                      <td className="cust-col-date">{item.purchase_date ? new Date(item.purchase_date).toLocaleDateString('th-TH') : '-'}</td>
                       <td className="cust-col-phone">{item.phone}</td>
                       <td className="cust-col-name">{item.first_name} {item.last_name}</td>
                       <td className="cust-col-sku">{item.sku}</td>

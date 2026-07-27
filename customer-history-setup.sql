@@ -1,11 +1,17 @@
 -- สร้างตาราง customer_history ใน Supabase
-CREATE TABLE IF NOT EXISTS customer_history (
-  id           bigserial PRIMARY KEY,
-  first_name   text,
-  last_name    text,
-  sku          text,
-  product_name text,
-  uploaded_at  timestamptz NOT NULL DEFAULT now()
+-- 2026-07: schema ใหม่ — เพิ่ม purchase_date (วันที่ซื้อ) ก่อนคอลัมน์ phone
+-- รันทั้งไฟล์นี้ใน Supabase Dashboard -> SQL Editor ก่อนอัพโหลดไฟล์ CSV รูปแบบใหม่
+DROP TABLE IF EXISTS customer_history;
+
+CREATE TABLE customer_history (
+  id            bigserial PRIMARY KEY,
+  purchase_date timestamp,
+  phone         text,
+  first_name    text,
+  last_name     text,
+  sku           text,
+  product_name  text,
+  uploaded_at   timestamptz NOT NULL DEFAULT now()
 );
 
 ALTER TABLE customer_history ENABLE ROW LEVEL SECURITY;

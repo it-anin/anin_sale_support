@@ -64,7 +64,7 @@ Four-page React app sharing the same `App.css` and Supabase project.
 - Upload: ผ่าน `upload-stock.mjs` (Node.js script) — ไม่ผ่านเว็บ — ใช้ **service_role key** (env `SUPABASE_SERVICE_KEY` หรือ `.env`)
 - ไม่มี web upload UI — ใช้ Task Scheduler รัน script ทุก 5 นาทีแทน
 
-**Table: `customer_history`** (id, phone, first_name, last_name, sku, product_name, uploaded_at)
+**Table: `customer_history`** (id, purchase_date, phone, first_name, last_name, sku, product_name, uploaded_at)
 - RLS: `public read customer_history` (SELECT) เท่านั้น — **ไม่มี public write** (มี PII: เบอร์โทร/ชื่อลูกค้า)
 - สร้างด้วย `customer-history-setup.sql` · ตัด write policy ด้วย `lock-rls-readonly.sql`
 - Upload: ผ่าน `upload-customer-history.mjs` (Node.js script) — รันมือหรือ Task Scheduler — ใช้ **service_role key** (env `SUPABASE_SERVICE_KEY` หรือ `.env`)
@@ -85,7 +85,7 @@ Branch mapping (case-insensitive): `Warehouse`→คลังสินค้า,
 ชื่อไฟล์: `All_stock.csv` — `CSV_CANDIDATES` ใน `upload-stock.mjs` เช็คหลาย path ใช้ path แรกที่เจอ (เครื่อง Server `C:\Users\AninMainPC\Desktop\run-upload-stock\` ก่อน → Arm → BigYa-spare)  
 
 **Customer History CSV** (→ `upload-customer-history.mjs`):  
-Columns (zero-indexed): B=Phone(1), C=ชื่อ(2), D=นามสกุล(3), I=SKU(8), J=ชื่อสินค้า(9). Row 0 = header.  
+Columns (zero-indexed): B=วันที่ซื้อ(1, format D/M/YYYY H:MM:SS), X=SKU(23), Y=ชื่อสินค้า(24), AJ=เบอร์โทร(35), AK=ชื่อ(36), AL=นามสกุล(37). Row 0 = header.  
 ชื่อไฟล์: `customer_history.csv` — script เช็คหลาย path ตามลำดับ ใช้ path แรกที่เจอ:
 1. `C:\Users\AninMainPC\Desktop\run-upload-stock\customer_history.csv` (เครื่อง Server — ตัวหลักปัจจุบัน)
 2. `C:\Users\Arm\Documents\update_stock\customer_history.csv` (เครื่อง Arm)

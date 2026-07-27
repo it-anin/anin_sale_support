@@ -5,10 +5,12 @@
  * ตั้งเวลา: Task Scheduler ทุก 5 นาที (หรือตามต้องการ)
  *
  * CSV Columns (zero-indexed):
- *   B(1) = ชื่อ (first_name)
- *   C(2) = นามสกุล (last_name)
- *   I(8) = SKU
- *   J(9) = ชื่อสินค้า (product_name)
+ *   B(1)   = วันที่ซื้อ (purchase_date) — format D/M/YYYY H:MM:SS เช่น 14/1/2026 18:09:21
+ *   X(23)  = SKU
+ *   Y(24)  = ชื่อสินค้า (product_name)
+ *   AJ(35) = เบอร์โทร (phone)
+ *   AK(36) = ชื่อ (first_name)
+ *   AL(37) = นามสกุล (last_name)
  */
 
 import { createClient } from '@supabase/supabase-js';
@@ -39,6 +41,17 @@ function getServiceKey() {
 }
 const SUPABASE_KEY = getServiceKey();
 // ──────────────────────────────────────────────────────────
+
+function parseThaiDateTime(raw) {
+  const s = (raw || '').trim();
+  if (!s) return null;
+  const [datePart, timePart] = s.split(/\s+/);
+  const [d, m, y] = (datePart || '').split('/').map(Number);
+  if (!d || !m || !y) return null;
+  const [hh = 0, mm = 0, ss = 0] = (timePart || '').split(':').map(Number);
+  const pad = n => String(n).padStart(2, '0');
+  return `${y}-${pad(m)}-${pad(d)}T${pad(hh)}:${pad(mm)}:${pad(ss)}`;
+}
 
 function parseCSV(text) {
   const lines = [];
@@ -82,18 +95,19 @@ async function main() {
   const items = [];
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
-    if (!row || row.length < 10) continue;
+    if (!row || row.length < 38) continue;
 
-    const rawPhone     = row[1]?.trim() || '';
-    const phone        = (rawPhone.length === 8 || rawPhone.length === 9) ? '0' + rawPhone : rawPhone;
-    const first_name   = row[2]?.trim() || '';
-    const last_name    = row[3]?.trim() || '';
-    const sku          = row[8]?.trim() || '';
-    const product_name = (row[9]?.trim() || '').split(/[\r\n]/)[0].trim();
+    const purchase_date = parseThaiDateTime(row[1]);
+    const rawPhone       = row[35]?.trim() || '';
+    const phone          = (rawPhone.length === 8 || rawPhone.length === 9) ? '0' + rawPhone : rawPhone;
+    const first_name     = row[36]?.trim() || '';
+    const last_name      = row[37]?.trim() || '';
+    const sku            = row[23]?.trim() || '';
+    const product_name   = (row[24]?.trim() || '').split(/[\r\n]/)[0].trim();
 
     if (!first_name && !last_name) continue;
 
-    items.push({ phone, first_name, last_name, sku, product_name });
+    items.push({ purchase_date, phone, first_name, last_name, sku, product_name });
   }
 
   if (items.length === 0) {

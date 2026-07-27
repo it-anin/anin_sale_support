@@ -164,7 +164,7 @@ node upload-stock.mjs
 
 ## 3. ตาราง `customer_history` — ประวัติลูกค้า
 
-**คอลัมน์:** `id, phone, first_name, last_name, sku, product_name, uploaded_at`
+**คอลัมน์:** `id, purchase_date, phone, first_name, last_name, sku, product_name, uploaded_at`
 
 **วิธี upload:** Node.js script `upload-customer-history.mjs`
 ```bash
@@ -176,9 +176,10 @@ node upload-customer-history.mjs --append   # เพิ่มข้อมูล�
 **กระบวนการในสคริปต์:**
 1. หาไฟล์ CSV จาก `CSV_CANDIDATES` (ใช้ path แรกที่เจอ)
 2. parse CSV เอง
-3. เติม `0` นำหน้าเบอร์โทรอัตโนมัติถ้ายาว 8 หรือ 9 หลัก (Excel ตัด 0 หน้าออก)
-4. โหมด default: **ลบเก่าแบบ chunked ทีละ 1000 แถว** (เลี่ยง Supabase statement timeout เมื่อตารางมี 100K+ แถว) แล้ว insert ทีละ 500 แถว
-5. โหมด `--append`: ข้ามการลบ insert ต่อท้ายเลย
+3. แปลงคอลัมน์วันที่ซื้อ (`D/M/YYYY H:MM:SS`) เป็น ISO timestamp ด้วย `parseThaiDateTime()`
+4. เติม `0` นำหน้าเบอร์โทรอัตโนมัติถ้ายาว 8 หรือ 9 หลัก (Excel ตัด 0 หน้าออก)
+5. โหมด default: **ลบเก่าแบบ chunked ทีละ 1000 แถว** (เลี่ยง Supabase statement timeout เมื่อตารางมี 100K+ แถว) แล้ว insert ทีละ 500 แถว
+6. โหมด `--append`: ข้ามการลบ insert ต่อท้ายเลย
 
 **ไฟล์ CSV:** `customer_history.csv` — เช็คตามลำดับ:
 1. `C:\Users\Arm\Documents\update_stock\customer_history.csv`
@@ -189,13 +190,14 @@ node upload-customer-history.mjs --append   # เพิ่มข้อมูล�
 
 | คอลัมน์ | index | ความหมาย |
 |---|---|---|
-| B | 1 | Phone (เบอร์โทร) |
-| C | 2 | ชื่อ (first_name) |
-| D | 3 | นามสกุล (last_name) |
-| I | 8 | SKU |
-| J | 9 | ชื่อสินค้า (product_name) |
+| B | 1 | วันที่ซื้อ (purchase_date) — format `D/M/YYYY H:MM:SS` เช่น `14/1/2026 18:09:21` |
+| X | 23 | SKU |
+| Y | 24 | ชื่อสินค้า (product_name) |
+| AJ | 35 | เบอร์โทร (phone) |
+| AK | 36 | ชื่อ (first_name) |
+| AL | 37 | นามสกุล (last_name) |
 
-> แถวที่ไม่มีทั้งชื่อและนามสกุล → ข้าม
+> แถวที่ไม่มีทั้งชื่อและนามสกุล → ข้าม (ต้องมีอย่างน้อย 38 คอลัมน์ ไม่งั้นข้ามทั้งแถว)
 
 **Deduplicate:** ก่อน import ข้อมูลย้อนหลังใช้ `deduplicate-customer.mjs` กรองแถวซ้ำระหว่าง 2 ไฟล์ CSV (ดู `วิธีใช้-deduplicate-customer.md`)
 
