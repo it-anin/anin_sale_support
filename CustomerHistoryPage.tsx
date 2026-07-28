@@ -11,10 +11,6 @@ interface CustomerRecord {
   product_name: string;
 }
 
-interface CustomerSyncStatus {
-  last_checked_at: string;
-}
-
 /** ดึงดิบสูงสุดกี่แถวต่อการค้นหา (ยุบแถวซ้ำฝั่งเว็บหลังจากนี้) */
 const ROW_LIMIT = 1000;
 
@@ -35,37 +31,24 @@ export function CustomerHistoryPage({ onGoPriceTag, onGoDrugLabel, onGoStockChec
   const [productSearch, setProductSearch] = useState('');
   const [truncated,     setTruncated]     = useState(false);
 
-  const loadSyncStatus = useCallback(async () => {
+  const loadLastUploaded = useCallback(async () => {
     const { data } = await supabase
-      .from('customer_history_sync_status')
-      .select('last_checked_at')
-      .eq('id', 1)
-      .maybeSingle<CustomerSyncStatus>();
-
-    if (data?.last_checked_at) {
-      const d = new Date(data.last_checked_at);
-      setLastUploaded(d.toLocaleString('en-GB', { dateStyle: 'short', timeStyle: 'short' }));
-      return;
-    }
-
-    // รองรับช่วงก่อนสร้างตาราง sync status
-    const { data: history } = await supabase
       .from('customer_history')
       .select('uploaded_at')
       .order('uploaded_at', { ascending: false })
       .limit(1);
-    if (history?.[0]?.uploaded_at) {
-      const d = new Date(history[0].uploaded_at);
+    if (data?.[0]?.uploaded_at) {
+      const d = new Date(data[0].uploaded_at);
       setLastUploaded(d.toLocaleString('en-GB', { dateStyle: 'short', timeStyle: 'short' }));
     }
   }, []);
 
   useEffect(() => {
-    loadSyncStatus();
-    const interval = window.setInterval(loadSyncStatus, 60_000);
-    const handleFocus = () => loadSyncStatus();
+    loadLastUploaded();
+    const interval = window.setInterval(loadLastUploaded, 60_000);
+    const handleFocus = () => loadLastUploaded();
     const handleVisibility = () => {
-      if (document.visibilityState === 'visible') loadSyncStatus();
+      if (document.visibilityState === 'visible') loadLastUploaded();
     };
     window.addEventListener('focus', handleFocus);
     document.addEventListener('visibilitychange', handleVisibility);
@@ -74,7 +57,7 @@ export function CustomerHistoryPage({ onGoPriceTag, onGoDrugLabel, onGoStockChec
       window.removeEventListener('focus', handleFocus);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
-  }, [loadSyncStatus]);
+  }, [loadLastUploaded]);
 
   const doSearch = useCallback(async (term: string) => {
     const q = term.trim();
@@ -129,7 +112,7 @@ export function CustomerHistoryPage({ onGoPriceTag, onGoDrugLabel, onGoStockChec
           <h1 className="logo-premium"><AnimatedLogoText text="CUSTOMER HISTORY" /></h1>
           <div className="tagline-row">
             {lastUploaded
-              ? <span className="updated-badge">Last Checked : {lastUploaded}</span>
+              ? <span className="updated-badge">Last Updated : {lastUploaded}</span>
               : <span className="updated-badge updated-badge--loading">Loading...</span>
             }
           </div>
