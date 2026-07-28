@@ -47,6 +47,9 @@ Four-page React app sharing the same `App.css` and Supabase project.
 - `upload-customer-history.mjs` — Node.js script: reads CSV → uploads to Supabase `customer_history` table
 - `run-upload-customer-history.bat` — batch wrapper สำหรับ Task Scheduler: แสดง progress บนหน้าจอ ปิดอัตโนมัติเมื่อเสร็จ
 - `customer-history-setup.sql` — SQL สำหรับสร้างตาราง `customer_history` ใน Supabase
+- `customer-history-incremental-migration.sql` — migration ตารางเดิม: เพิ่ม/backfill `dedupe_key`, ยุบแถวซ้ำ และสร้าง unique index โดยไม่ drop table
+- `customer-history-sync-status.sql` — สร้างตารางเก็บสถิติการรัน uploader (ไม่ได้ใช้เป็นแหล่งเวลาของ badge)
+- `upload-customer-history.test.mjs` — unit tests สำหรับ parse วันที่, normalize, dedupe, incremental classification และ sync payload
 - `deduplicate-customer.mjs` — script กรองแถวซ้ำระหว่าง 2 ไฟล์ CSV
 - `วิธีใช้-deduplicate-customer.md` — คู่มือ deduplicate + delete/truncate + อัพเดทลูกค้าใหม่
 
@@ -71,7 +74,9 @@ Four-page React app sharing the same `App.css` and Supabase project.
 - Upload เป็น incremental เสมอ: เก็บเฉพาะรายการล่าสุดต่อ ลูกค้า+SKU และไม่ลบข้อมูลเก่าทั้งตาราง
 - `node upload-customer-history.mjs` ตรวจช่วงย้อนหลัง 7 วัน; `--full-scan` ตรวจทั้งไฟล์; `--append` เป็น alias ของโหมดปกติ
 - ก่อนใช้ uploader รุ่น incremental กับตารางเดิม ต้องรัน `customer-history-incremental-migration.sql` หนึ่งครั้ง
-- badge อ่านเวลาตรวจล่าสุดจาก `customer_history_sync_status`; รัน `customer-history-sync-status.sql` หนึ่งครั้ง
+- uploader บันทึกสถิติการรันลง `customer_history_sync_status`; ต้องรัน `customer-history-sync-status.sql` หนึ่งครั้ง
+- badge หน้า Customer History อ่าน `uploaded_at` ล่าสุดจาก `customer_history` โดยตรง ไม่อ่านจาก sync status
+- badge แสดงเฉพาะ `Last Updated : วันเวลา` และโหลดใหม่ทุก 60 วินาที รวมถึงเมื่อ window กลับมา focus/visible
 - script เหลือเฉพาะตัวเลขในเบอร์โทร และเติม 0 เมื่อมี 8 หรือ 9 หลักแต่ยังไม่มี 0 นำหน้า
 - `dedupe_key` มี unique index; uploader ยุบ CSV และ upsert เฉพาะแถวใหม่/ใหม่กว่าเป็นชุดละ 500
 - **Multi-machine CSV path** — `CSV_CANDIDATES` array เช็คหลาย path ตามลำดับ ใช้ path แรกที่เจอ (รองรับเครื่อง Arm + BigYa-spare)
@@ -104,12 +109,26 @@ Columns (zero-indexed): B=วันที่ซื้อ(1, format D/M/YYYY H:MM
 > ⚠️ column layout ผูกกับรูปแบบรายงาน R06.158 — ถ้า Promax เปลี่ยนคอลัมน์ในรายงานนี้ ต้องแก้ index ใน `upload-customer-history.mjs` ตาม  
 ชื่อไฟล์: `customer_history.csv` — script เช็คหลาย path ตามลำดับ ใช้ path แรกที่เจอ:
 1. `C:\Users\AninMainPC\Desktop\run-upload-stock\customer_history.csv` (เครื่อง Server — ตัวหลักปัจจุบัน)
-2. `C:\Users\Arm\Documents\update_stock\customer_history.csv` (เครื่อง Arm)
-3. `C:\Users\BigYa-spare\Documents\update_stock\customer_history.csv` (เครื่อง BigYa-spare)
-4. `C:\Users\BigYa-spare\Documents\update_stock\customer_history.CSV` (เครื่อง BigYa-spare, ตัวพิมพ์ใหญ่)
+2. `C:\Users\AninMainPC\Desktop\run-upload-stock\customer_history.CSV` (เครื่อง Server, ตัวพิมพ์ใหญ่)
+3. `C:\Users\Arm\Documents\update_stock\customer_history.csv` (เครื่อง Arm)
+4. `C:\Users\BigYa-spare\Desktop\run-upload-stock\customer_history.csv` (เครื่อง BigYa-spare Bot)
+5. `C:\Users\BigYa-spare\Desktop\run-upload-stock\customer_history.CSV` (เครื่อง BigYa-spare Bot, ตัวพิมพ์ใหญ่)
+6. `C:\Users\BigYa-spare\Documents\update_stock\customer_history.csv` (เครื่อง BigYa-spare)
+7. `C:\Users\BigYa-spare\Documents\update_stock\customer_history.CSV` (เครื่อง BigYa-spare, ตัวพิมพ์ใหญ่)
 
 Phone: เหลือเฉพาะตัวเลข และเติม 0 อัตโนมัติเมื่อมี 8 หรือ 9 หลักแต่ยังไม่มี 0 นำหน้า
 Parser: custom `parseCSV()` — `"` เริ่ม quoted mode เฉพาะตอน `field === ''` เพื่อรองรับ inch symbol `2"` กลางชื่อสินค้า
+
+## Customer History — Recent Changes (2026-07-27 ถึง 2026-07-28)
+
+- เปลี่ยน uploader จาก delete-all/insert-all เป็น incremental และ idempotent
+- ยุบข้อมูลให้เหลือรายการซื้อล่าสุดต่อ ลูกค้า+SKU; ใช้เบอร์โทรเป็น customer identity และ fallback เป็นชื่อ+นามสกุล
+- เพิ่ม strict date validation, phone normalization, fallback product key และสรุปจำนวนแถวทุกสถานะ
+- เพิ่มช่วงตรวจย้อนหลัง 7 วัน, `--full-scan`, batch read/write และ unique `dedupe_key`
+- เพิ่ม SQL migration แบบไม่ drop table พร้อม SQL สำหรับ sync status
+- เพิ่ม unit tests และ npm script `test:customer-upload`
+- เปลี่ยน badge จาก sync status มาอ่าน `customer_history.uploaded_at` โดยตรง เพื่อรองรับข้อมูลที่มาจาก uploader หลายโปรแกรม
+- ตัดข้อความจำนวน “เพิ่ม/อัปเดต” ออกจาก badge เหลือเฉพาะเวลาล่าสุด
 
 ## Multi-Machine Sync — ข้อควรระวังเมื่อ pull โค้ดข้ามเครื่อง
 
