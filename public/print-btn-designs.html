@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ปุ่มพิมพ์หน้าป้ายราคา — 10 แบบ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Mitr:wght@300;400;500;600&family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: #eef2f6;
+    font-family: 'Noto Sans Thai', sans-serif;
+    color: #24303c;
+    padding: 32px 24px 80px;
+  }
+  .page-head { max-width: 1500px; margin: 0 auto 28px; }
+  .page-head h1 { font-size: 26px; margin: 0 0 6px; font-weight: 700; }
+  .page-head p { margin: 0; font-size: 14px; color: #5c6b7a; line-height: 1.7; }
+  .page-head code { background: #dde6ee; padding: 1px 6px; border-radius: 4px; font-family: 'Outfit', monospace; font-size: 13px; }
+
+  .grid {
+    max-width: 1500px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(460px, 1fr));
+    gap: 22px;
+  }
+
+  .design {
+    background: #fff;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 3px 14px rgba(0,0,0,0.08);
+    display: flex;
+    flex-direction: column;
+  }
+  .design-head { padding: 12px 16px 10px; }
+  .design-title { font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+  .design-num {
+    width: 24px; height: 24px; flex-shrink: 0;
+    border-radius: 7px; background: #2d6cad; color: #fff;
+    font-family: 'Outfit', sans-serif; font-size: 12px; font-weight: 700;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .design-desc { font-size: 12.5px; color: #6b7a89; margin-top: 5px; line-height: 1.6; padding-left: 32px; padding-bottom: 10px; }
+
+  /* ===== แถบ footer จำลองของจริง (.footer-actions) ===== */
+  .stage { background: #faf8f5; padding: 22px 14px 26px; }
+  .footer-bar {
+    background: #fff;
+    border-top: 2px solid #e8e0d5;
+    border-radius: 0 0 12px 12px;
+    padding: 1.6rem 1.2rem;
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    box-shadow: 0 -2px 8px rgba(0,0,0,0.05);
+  }
+
+  /* ===== ปุ่มพื้นฐาน (แต่ละแบบ override ทับ) ===== */
+  .pbtn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+    padding: 14px 34px;
+    border-radius: 50px;
+    border: 1.5px solid #a9d0f5;
+    background: linear-gradient(135deg, #2d6cad, #4891db);
+    color: #fff;
+    font-family: 'Mitr', sans-serif;
+    font-weight: 500;
+    font-size: 17px;
+    letter-spacing: 0.4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+  }
+  .pbtn svg { width: 19px; height: 19px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* ============ 1. Primary + Ghost ============ */
+  .d1 .pbtn--main { border: none; box-shadow: 0 3px 10px rgba(45,108,173,.35); }
+  .d1 .pbtn--main:hover { background: linear-gradient(135deg, #24578a, #2d6cad); transform: translateY(-2px); box-shadow: 0 6px 18px rgba(45,108,173,.45); }
+  .d1 .pbtn--sub { background: #fff; color: #2d6cad; border: 1.8px solid #4891db; }
+  .d1 .pbtn--sub:hover { background: #eaf3fc; }
+
+  /* ============ 2. Soft Elevated ============ */
+  .d2 .pbtn { border: none; box-shadow: 0 4px 14px rgba(45,108,173,.32); }
+  .d2 .pbtn--sub { background: linear-gradient(135deg, #6ba3d8, #8fc0e9); }
+  .d2 .pbtn:hover { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(45,108,173,.4); }
+  .d2 .pbtn:active { transform: translateY(0); box-shadow: 0 3px 8px rgba(45,108,173,.3); }
+
+  /* ============ 3. Flat Pill ============ */
+  .d3 .pbtn { border: none; background: #2d6cad; box-shadow: none; }
+  .d3 .pbtn--sub { background: #eaf3fc; color: #2d6cad; }
+  .d3 .pbtn--main:hover { background: #24578a; }
+  .d3 .pbtn--sub:hover { background: #d5e8fb; }
+
+  /* ============ 4. Split Tone ============ */
+  .d4 .pbtn { border: none; border-radius: 14px; }
+  .d4 .pbtn--main { background: #2d6cad; box-shadow: 0 3px 8px rgba(45,108,173,.3); }
+  .d4 .pbtn--sub { background: #eaf3fc; color: #2d6cad; box-shadow: inset 0 0 0 1.5px #b8d3ee; }
+  .d4 .pbtn--main:hover { background: #1f4d7f; }
+  .d4 .pbtn--sub:hover { background: #fff; box-shadow: inset 0 0 0 1.5px #4891db; }
+
+  /* ============ 5. Icon Badge ============ */
+  .d5 .pbtn { border: none; border-radius: 14px; padding: 10px 26px 10px 10px; gap: 12px; box-shadow: 0 3px 10px rgba(45,108,173,.28); }
+  .d5 .pbtn .badge { width: 38px; height: 38px; border-radius: 11px; background: rgba(255,255,255,.22); display: flex; align-items: center; justify-content: center; }
+  .d5 .pbtn--sub { background: #fff; color: #2d6cad; box-shadow: 0 3px 10px rgba(0,0,0,.12); }
+  .d5 .pbtn--sub .badge { background: #eaf3fc; }
+  .d5 .pbtn:hover { transform: translateY(-2px); box-shadow: 0 7px 18px rgba(45,108,173,.32); }
+
+  /* ============ 6. 3D Press (โทนฟ้า) ============ */
+  .d6 .pbtn { border: none; box-shadow: 0 5px 0 #1e4d7d; }
+  .d6 .pbtn--sub { background: linear-gradient(135deg, #4891db, #6fb0e8); box-shadow: 0 5px 0 #2d6cad; }
+  .d6 .pbtn:hover { transform: translateY(-2px); box-shadow: 0 7px 0 #1e4d7d, 0 8px 16px rgba(0,0,0,.16); }
+  .d6 .pbtn--sub:hover { box-shadow: 0 7px 0 #2d6cad, 0 8px 16px rgba(0,0,0,.16); }
+  .d6 .pbtn:active { transform: translateY(5px); box-shadow: 0 0 0 #1e4d7d; transition-duration: .07s; }
+
+  /* ============ 7. Glass Frost ============ */
+  .d7 .footer-bar { background: linear-gradient(135deg, #4891db, #7bb5e4); border-top-color: rgba(255,255,255,.4); }
+  .d7 .pbtn { background: rgba(255,255,255,.2); border: 1.5px solid rgba(255,255,255,.55); backdrop-filter: blur(10px); }
+  .d7 .pbtn--sub { background: rgba(255,255,255,.92); color: #2d6cad; border-color: #fff; }
+  .d7 .pbtn--main:hover { background: rgba(255,255,255,.34); }
+  .d7 .pbtn--sub:hover { background: #fff; }
+
+  /* ============ 8. Outline Duo ============ */
+  .d8 .pbtn { background: #fff; color: #2d6cad; }
+  .d8 .pbtn--main { border: 2.5px solid #2d6cad; background: #eaf3fc; font-weight: 600; }
+  .d8 .pbtn--sub { border: 1.5px solid #b8d3ee; }
+  .d8 .pbtn--main:hover { background: #2d6cad; color: #fff; }
+  .d8 .pbtn--sub:hover { border-color: #4891db; background: #f4f9fe; }
+
+  /* ============ 9. Gradient Sweep ============ */
+  .d9 .pbtn { position: relative; overflow: hidden; background: #fff; color: #2d6cad; border: 1.8px solid #4891db; }
+  .d9 .pbtn::before {
+    content: ''; position: absolute; inset: 0; z-index: 0;
+    background: linear-gradient(135deg, #2d6cad, #4891db);
+    transform: translateX(-101%); transition: transform .32s ease;
+  }
+  .d9 .pbtn > * { position: relative; z-index: 1; }
+  .d9 .pbtn:hover { color: #fff; border-color: #2d6cad; }
+  .d9 .pbtn:hover::before { transform: translateX(0); }
+
+  /* ============ 10. Compact Segmented ============ */
+  .d10 .footer-bar { padding: 1.1rem; }
+  .d10 .pbtn { padding: 11px 24px; font-size: 15px; border-radius: 0; border: none; background: #2d6cad; }
+  .d10 .pbtn--main { border-radius: 12px 0 0 12px; }
+  .d10 .pbtn--sub { border-radius: 0 12px 12px 0; background: #4891db; box-shadow: inset 1.5px 0 0 rgba(255,255,255,.35); }
+  .d10 .footer-bar { gap: 0; }
+  .d10 .pbtn--main:hover { background: #24578a; }
+  .d10 .pbtn--sub:hover { background: #3d80c6; }
+
+  .foot {
+    max-width: 1500px; margin: 34px auto 0;
+    background: #fff; border-radius: 14px; padding: 18px 22px;
+    font-size: 14px; color: #4a5966; line-height: 1.8;
+    box-shadow: 0 3px 14px rgba(0,0,0,0.06);
+  }
+  .foot b { color: #24303c; }
+</style>
+</head>
+<body>
+
+<div class="page-head">
+  <h1>ปุ่มพิมพ์หน้าป้ายราคา — 10 แบบ</h1>
+  <p>
+    ดีไซน์ใหม่สำหรับปุ่ม <b>พิมพ์ป้ายราคา</b> (<code>.btn-premium</code>) และ <b>พิมพ์บาร์โค้ด</b> (<code>.btn-outline</code>) ในแถบล่างของหน้าป้ายราคา<br>
+    ⚠️ ของเดิม <b>ทั้ง 2 ปุ่มหน้าตาเหมือนกันเป๊ะ</b> (ฟ้าทึบ + เงาดำแข็ง <code>0 3px 0 rgba(0,0,0,.5)</code> + เรืองแสงตอน hover) — แยกไม่ออกว่าปุ่มไหนหลัก/รอง ทุกแบบด้านล่างจึงแยกลำดับความสำคัญให้ชัด<br>
+    เปลี่ยน emoji 🖨️ เป็นไอคอนเส้น SVG ให้เข้าชุดกับปุ่มนำทาง · <b>เอาเมาส์ชี้เพื่อดู hover</b> · แบบ 6 กดค้างดูจะเห็นยุบ
+  </p>
+</div>
+
+<div class="grid" id="grid"></div>
+
+<div class="foot">
+  <b>หมายเหตุ:</b> ในแกลเลอรีใช้ฟอนต์ Mitr แทน <code>DB GILL SIAM X</code> (ฟอนต์ที่ปุ่มจริงใช้ ซึ่งลงไว้เฉพาะในเครื่อง) — เวลาใส่จริงจะคงฟอนต์เดิมไว้ ตัวอักษรจะต่างจากที่เห็นเล็กน้อย<br>
+  <b>แบบ 1</b> เป็นมาตรฐาน UI ทั่วไปที่สุด (ปุ่มหลักทึบ + ปุ่มรองขอบ) · <b>แบบ 6</b> คงความรู้สึก 3 มิติของเดิมไว้แต่เปลี่ยนเงาดำเป็นฟ้าเข้ม เข้าธีมกว่าเดิมมาก
+</div>
+
+<script>
+const PRINTER = `<svg viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8" rx="1"/></svg>`;
+const BARCODE = `<svg viewBox="0 0 24 24"><path d="M3 5v14"/><path d="M7 5v14"/><path d="M11 5v14"/><path d="M14 5v14"/><path d="M18 5v14"/><path d="M21 5v14"/></svg>`;
+
+function buttons(n) {
+  if (n === 5) {
+    return `
+      <button class="pbtn pbtn--main" type="button"><span class="badge">${PRINTER}</span><span>พิมพ์ป้ายราคา (6 ป้าย)</span></button>
+      <button class="pbtn pbtn--sub" type="button"><span class="badge">${BARCODE}</span><span>พิมพ์บาร์โค้ด</span></button>`;
+  }
+  return `
+    <button class="pbtn pbtn--main" type="button">${PRINTER}<span>พิมพ์ป้ายราคา (6 ป้าย)</span></button>
+    <button class="pbtn pbtn--sub" type="button">${BARCODE}<span>พิมพ์บาร์โค้ด</span></button>`;
+}
+
+const DESIGNS = [
+  { n: 1,  name: 'Primary + Ghost',    desc: 'ป้ายราคา = ฟ้าทึบ (ปุ่มหลัก) · บาร์โค้ด = ขาวขอบฟ้า (ปุ่มรอง) — มาตรฐาน UI ที่คนคุ้นเคยที่สุด แยกลำดับชัด' },
+  { n: 2,  name: 'Soft Elevated',      desc: 'ทั้งคู่ทึบแต่ไล่น้ำหนักสี เงาฟ้านุ่มแทนเงาดำ hover ลอยขึ้น กดแล้วลงมา — นุ่มนวลทันสมัย' },
+  { n: 3,  name: 'Flat Pill',          desc: 'แบนสนิท ไม่มีเงาเลย ฟ้าเข้ม + ฟ้าอ่อน — สะอาดมาก เหมาะกับดีไซน์มินิมอล' },
+  { n: 4,  name: 'Split Tone',         desc: 'มุมมน 14px ปุ่มหลักฟ้าเข้มทึบ ปุ่มรองพื้นฟ้าอ่อนขอบใน — ดูเป็นระบบแบบ dashboard' },
+  { n: 5,  name: 'Icon Badge',         desc: 'ไอคอนอยู่ในกล่องมนโปร่งด้านซ้ายของปุ่ม — เด่น อ่านง่าย ดูพรีเมียม' },
+  { n: 6,  name: '3D Press (โทนฟ้า)',  desc: 'คงความรู้สึก 3 มิติของเดิมไว้ แต่เปลี่ยนเงาดำแข็งเป็นฟ้าเข้ม #1e4d7d — กดแล้วยุบลงจริง' },
+  { n: 7,  name: 'Glass Frost',        desc: 'แถบล่างเป็นพื้นฟ้าไล่สี ปุ่มเป็นกระจกฝ้าโปร่ง — เปลี่ยนบรรยากาศแถบล่างทั้งแถบ' },
+  { n: 8,  name: 'Outline Duo',        desc: 'ทั้งคู่เป็นขอบ ปุ่มหลักขอบหนา+พื้นฟ้าอ่อน ปุ่มรองขอบบาง — เบาตาที่สุด ไม่ดึงความสนใจจากตาราง' },
+  { n: 9,  name: 'Gradient Sweep',     desc: 'ขาวขอบฟ้า hover แล้วสีฟ้ากวาดเข้ามาจากซ้าย — มีลูกเล่น ดูมีชีวิตชีวา' },
+  { n: 10, name: 'Compact Segmented',  desc: 'ปุ่มเล็กลงและติดกันเป็นแถบเดียว ประหยัดพื้นที่แถบล่าง สื่อว่าเป็นงานพิมพ์ชุดเดียวกัน' }
+];
+
+const grid = document.getElementById('grid');
+grid.innerHTML = DESIGNS.map(d => `
+  <div class="design">
+    <div class="design-head">
+      <div class="design-title"><span class="design-num">${d.n}</span>${d.name}</div>
+      <div class="design-desc">${d.desc}</div>
+    </div>
+    <div class="stage d${d.n}">
+      <div class="footer-bar">${buttons(d.n)}</div>
+    </div>
+  </div>
+`).join('');
+</script>
+
+</body>
+</html>

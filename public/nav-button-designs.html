@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>เลือกดีไซน์ปุ่มนำทาง — 10 แบบ</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Noto Sans Thai', sans-serif;
+    background: #eef1f5;
+    color: #2d2a26;
+    padding: 2rem 1.5rem 4rem;
+  }
+  .page-title { text-align: center; font-size: 1.6rem; font-weight: 600; margin-bottom: 0.25rem; }
+  .page-sub { text-align: center; color: #8a8272; margin-bottom: 2rem; font-weight: 300; }
+
+  .card {
+    max-width: 1000px;
+    margin: 0 auto 1.5rem;
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.07);
+    overflow: hidden;
+  }
+  .card-head { display: flex; align-items: center; gap: 0.7rem; padding: 0.9rem 1.4rem 0.5rem; }
+  .card-num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; border-radius: 50%;
+    background: #2d2a26; color: #f2d98d; font-weight: 600; font-size: 0.9rem; flex-shrink: 0;
+  }
+  .card-name { font-weight: 600; font-size: 1.05rem; }
+  .card-desc { color: #8a8272; font-size: 0.82rem; font-weight: 300; margin-left: auto; }
+
+  /* พื้นหลัง header สีฟ้าจริงของแอป */
+  .stage {
+    background: #4891db;
+    padding: 1.8rem 1.4rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+  .stage button { font-family: 'Noto Sans Thai', sans-serif; cursor: pointer; }
+  .ic { line-height: 1; }
+  .lb { font-family: 'Noto Sans Thai', sans-serif; }
+
+  /* ═══════════ 1) ปัจจุบัน (Glass Card) ═══════════ */
+  .n1 { flex-shrink:0; width:70px; height:64px; border-radius:16px; border:2px solid rgba(255,255,255,0.3);
+        background:rgba(255,255,255,0.1); color:#faf8f5; display:flex; flex-direction:column; align-items:center;
+        justify-content:center; gap:4px; transition:all 0.3s cubic-bezier(0.4,0,0.2,1); backdrop-filter:blur(4px); }
+  .n1 .ic{font-size:20px;} .n1 .lb{font-size:10px;}
+  .n1:hover{ background:rgba(255,255,255,0.22); border-color:rgba(255,255,255,0.55); transform:translateY(-2px) scale(1.05); box-shadow:0 6px 16px rgba(0,0,0,0.2); }
+  .n1.active{ background:#fff; color:#2d2a26; border-color:#fff; transform:scale(1.1); }
+
+  /* ═══════════ 2) Solid ขาว เงานุ่ม (Soft Card) ═══════════ */
+  .n2 { flex-shrink:0; width:72px; height:66px; border-radius:18px; border:none; background:rgba(255,255,255,0.16);
+        color:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px;
+        transition:all 0.25s ease; }
+  .n2 .ic{font-size:21px;} .n2 .lb{font-size:10px; font-weight:500;}
+  .n2:hover{ background:#fff; color:#2d6cad; transform:translateY(-3px); box-shadow:0 8px 18px rgba(0,0,0,0.22); }
+  .n2.active{ background:#fff; color:#2d6cad; box-shadow:0 6px 16px rgba(0,0,0,0.28); }
+
+  /* ═══════════ 3) Pill แนวนอน ไอคอน+ข้อความ ═══════════ */
+  .n3 { display:inline-flex; align-items:center; gap:7px; padding:9px 16px; border-radius:999px;
+        border:1.5px solid rgba(255,255,255,0.4); background:rgba(255,255,255,0.12); color:#fff;
+        font-size:12px; font-weight:500; transition:all 0.22s ease; }
+  .n3 .ic{font-size:16px;}
+  .n3:hover{ background:rgba(255,255,255,0.25); border-color:#fff; }
+  .n3.active{ background:#fff; color:#2d6cad; border-color:#fff; }
+
+  /* ═══════════ 4) ไอคอนวงกลม + ป้ายใต้ปุ่ม ═══════════ */
+  .n4 { display:flex; flex-direction:column; align-items:center; gap:6px; border:none; background:none; color:#fff; padding:0; }
+  .n4 .ic{ display:flex; align-items:center; justify-content:center; width:52px; height:52px; border-radius:50%;
+           background:rgba(255,255,255,0.15); border:2px solid rgba(255,255,255,0.4); font-size:22px; transition:all 0.25s ease; }
+  .n4 .lb{ font-size:10px; font-weight:500; }
+  .n4:hover .ic{ background:rgba(255,255,255,0.3); transform:translateY(-3px); box-shadow:0 6px 14px rgba(0,0,0,0.25); }
+  .n4.active .ic{ background:#fff; color:#2d6cad; border-color:#fff; }
+
+  /* ═══════════ 5) Flat มินิมอล underline ═══════════ */
+  .n5 { display:flex; flex-direction:column; align-items:center; gap:5px; border:none; background:none;
+        color:rgba(255,255,255,0.85); padding:8px 10px 6px; position:relative; transition:all 0.2s ease; }
+  .n5 .ic{font-size:22px;} .n5 .lb{font-size:11px; font-weight:500;}
+  .n5::after{ content:''; position:absolute; bottom:0; left:50%; transform:translateX(-50%); width:0; height:3px; border-radius:3px; background:#fff; transition:width 0.25s ease; }
+  .n5:hover{ color:#fff; } .n5:hover::after{ width:60%; }
+  .n5.active{ color:#fff; } .n5.active::after{ width:80%; }
+
+  /* ═══════════ 6) Neumorphism นูนนุ่ม ═══════════ */
+  .n6 { flex-shrink:0; width:72px; height:66px; border-radius:18px; border:none; background:#4891db; color:#eaf2fb;
+        display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px;
+        box-shadow:6px 6px 12px rgba(28,80,140,0.55), -6px -6px 12px rgba(120,180,240,0.55); transition:all 0.2s ease; }
+  .n6 .ic{font-size:20px;} .n6 .lb{font-size:10px; font-weight:500;}
+  .n6:hover{ box-shadow:8px 8px 16px rgba(28,80,140,0.6), -8px -8px 16px rgba(120,180,240,0.6); }
+  .n6.active{ color:#fff; box-shadow:inset 4px 4px 9px rgba(28,80,140,0.6), inset -4px -4px 9px rgba(120,180,240,0.6); }
+
+  /* ═══════════ 7) กรอบทองหรู (Gold Luxe) ═══════════ */
+  .n7 { flex-shrink:0; width:72px; height:66px; border-radius:14px; border:1.5px solid rgba(242,217,141,0.6);
+        background:rgba(0,0,0,0.14); color:#f6e4ad; display:flex; flex-direction:column; align-items:center;
+        justify-content:center; gap:5px; transition:all 0.25s ease; }
+  .n7 .ic{font-size:20px;} .n7 .lb{font-size:10px; font-weight:500; letter-spacing:0.3px;}
+  .n7:hover{ border-color:#f2d98d; background:rgba(0,0,0,0.25); box-shadow:0 0 14px rgba(242,217,141,0.4); }
+  .n7.active{ background:linear-gradient(135deg,#d4af37,#f2d98d); color:#2d2a26; border-color:#f2d98d; }
+
+  /* ═══════════ 8) Chip เล็กแบน มุมมน ═══════════ */
+  .n8 { display:inline-flex; flex-direction:column; align-items:center; gap:3px; padding:8px 14px; border-radius:12px;
+        border:none; background:rgba(255,255,255,0.9); color:#3a3a3a; transition:all 0.2s ease;
+        box-shadow:0 2px 6px rgba(0,0,0,0.12); }
+  .n8 .ic{font-size:18px;} .n8 .lb{font-size:10px; font-weight:600;}
+  .n8:hover{ transform:translateY(-2px); box-shadow:0 5px 12px rgba(0,0,0,0.2); }
+  .n8.active{ background:#2d2a26; color:#f2d98d; }
+
+  /* ═══════════ 9) Gradient นูน 3D ═══════════ */
+  .n9 { flex-shrink:0; width:72px; height:64px; border-radius:16px; border:none;
+        background:linear-gradient(180deg, #ffffff, #dce9f7); color:#2d6cad;
+        display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;
+        box-shadow:0 4px 0 #a9c4e2, 0 6px 12px rgba(0,0,0,0.28); transition:all 0.12s ease; }
+  .n9 .ic{font-size:20px;} .n9 .lb{font-size:10px; font-weight:600;}
+  .n9:hover{ filter:brightness(1.03); }
+  .n9:active{ transform:translateY(3px); box-shadow:0 1px 0 #a9c4e2, 0 2px 5px rgba(0,0,0,0.28); }
+  .n9.active{ background:linear-gradient(180deg,#fff7e6,#f2d98d); color:#2d2a26; box-shadow:0 4px 0 #c9a83a, 0 6px 12px rgba(0,0,0,0.28); }
+
+  /* ═══════════ 10) Outline บาง ทันสมัย ═══════════ */
+  .n10 { flex-shrink:0; width:72px; height:64px; border-radius:14px; border:2px solid rgba(255,255,255,0.55);
+         background:transparent; color:#fff; display:flex; flex-direction:column; align-items:center;
+         justify-content:center; gap:5px; transition:all 0.22s ease; }
+  .n10 .ic{font-size:20px;} .n10 .lb{font-size:10px; font-weight:500;}
+  .n10:hover{ background:rgba(255,255,255,0.14); border-color:#fff; }
+  .n10.active{ background:#fff; color:#2d6cad; border-color:#fff; box-shadow:0 4px 12px rgba(0,0,0,0.2); }
+
+  .footer-note { text-align:center; margin-top:2.5rem; color:#8a8272; font-weight:300; }
+  .footer-note b { color:#2d6cad; font-weight:600; }
+  .badge-active { display:inline-block; font-size:0.72rem; color:#2d6cad; background:#e5eef8; padding:2px 8px; border-radius:6px; margin-left:0.5rem; font-weight:500; }
+</style>
+</head>
+<body>
+  <h1 class="page-title">🧭 ดีไซน์ปุ่มนำทาง 10 แบบ</h1>
+  <p class="page-sub">แสดงบนพื้นหลังฟ้าจริงของ header — ปุ่มที่ 3 (สต๊อค) ตั้งเป็นสถานะ <span class="badge-active">active</span> ให้ดู · ลองชี้เมาส์เพื่อดู hover</p>
+
+  <!-- 1 -->
+  <div class="card">
+    <div class="card-head"><span class="card-num">1</span><span class="card-name">ปัจจุบัน — Glass Card</span><span class="card-desc">การ์ดกระจกโปร่งใส (แบบที่ใช้อยู่)</span></div>
+    <div class="stage">
+      <button class="n1"><span class="ic">🏷️</span><span class="lb">ป้ายราคา</span></button>
+      <button class="n1"><span class="ic">📝</span><span class="lb">ฉลากยา</span></button>
+      <button class="n1 active"><span class="ic">📦</span><span class="lb">สต๊อค</span></button>
+      <button class="n1"><span class="ic">🪪</span><span class="lb">ประวัติ</span></button>
+      <button class="n1"><span class="ic">🚚</span><span class="lb">เบิกด่วน</span></button>
+    </div>
+  </div>
+
+  <!-- 2 -->
+  <div class="card">
+    <div class="card-head"><span class="card-num">2</span><span class="card-name">Soft Card ขาวเงานุ่ม</span><span class="card-desc">ยกตัวเป็นการ์ดขาวเมื่อชี้/active</span></div>
+    <div class="stage">
+      <button class="n2"><span class="ic">🏷️</span><span class="lb">ป้ายราคา</span></button>
+      <button class="n2"><span class="ic">📝</span><span class="lb">ฉลากยา</span></button>
+      <button class="n2 active"><span class="ic">📦</span><span class="lb">สต๊อค</span></button>
+      <button class="n2"><span class="ic">🪪</span><span class="lb">ประวัติ</span></button>
+      <button class="n2"><span class="ic">🚚</span><span class="lb">เบิกด่วน</span></button>
+    </div>
+  </div>
+
+  <!-- 3 -->
+  <div class="card">
+    <div class="card-head"><span class="card-num">3</span><span class="card-name">Pill แนวนอน</span><span class="card-desc">แคปซูล ไอคอน+ข้อความเรียงข้าง ประหยัดพื้นที่แนวตั้ง</span></div>
+    <div class="stage">
+      <button class="n3"><span class="ic">🏷️</span><span class="lb">ป้ายราคา</span></button>
+      <button class="n3"><span class="ic">📝</span><span class="lb">ฉลากยา</span></button>
+      <button class="n3 active"><span class="ic">📦</span><span class="lb">สต๊อค</span></button>
+      <button class="n3"><span class="ic">🪪</span><span class="lb">ประวัติ</span></button>
+      <button class="n3"><span class="ic">🚚</span><span class="lb">เบิกด่วน</span></button>
+    </div>
+  </div>
+
+  <!-- 4 -->
+  <div class="card">
+    <div class="card-head"><span class="card-num">4</span><span class="card-name">ไอคอนวงกลม + ป้ายใต้ปุ่ม</span><span class="card-desc">เหรียญกลมสไตล์แอปมือถือ</span></div>
+    <div class="stage">
+      <button class="n4"><span class="ic">🏷️</span><span class="lb">ป้ายราคา</span></button>
+      <button class="n4"><span class="ic">📝</span><span class="lb">ฉลากยา</span></button>
+      <button class="n4 active"><span class="ic">📦</span><span class="lb">สต๊อค</span></button>
+      <button class="n4"><span class="ic">🪪</span><span class="lb">ประวัติ</span></button>
+      <button class="n4"><span class="ic">🚚</span><span class="lb">เบิกด่วน</span></button>
+    </div>
+  </div>
+
+  <!-- 5 -->
+  <div class="card">
+    <div class="card-head"><span class="card-num">5</span><span class="card-name">Flat มินิมอล + Underline</span><span class="card-desc">แบนเรียบ มีขีดใต้ปุ่มที่เลือก สไตล์แท็บ</span></div>
+    <div class="stage">
+      <button class="n5"><span class="ic">🏷️</span><span class="lb">ป้ายราคา</span></button>
+      <button class="n5"><span class="ic">📝</span><span class="lb">ฉลากยา</span></button>
+      <button class="n5 active"><span class="ic">📦</span><span class="lb">สต๊อค</span></button>
+      <button class="n5"><span class="ic">🪪</span><span class="lb">ประวัติ</span></button>
+      <button class="n5"><span class="ic">🚚</span><span class="lb">เบิกด่วน</span></button>
+    </div>
+  </div>
+
+  <!-- 6 -->
+  <div class="card">
+    <div class="card-head"><span class="card-num">6</span><span class="card-name">Neumorphism นูนนุ่ม</span><span class="card-desc">นูนกลมกลืนพื้นฟ้า ปุ่ม active ยุบเข้าไป</span></div>
+    <div class="stage">
+      <button class="n6"><span class="ic">🏷️</span><span class="lb">ป้ายราคา</span></button>
+      <button class="n6"><span class="ic">📝</span><span class="lb">ฉลากยา</span></button>
+      <button class="n6 active"><span class="ic">📦</span><span class="lb">สต๊อค</span></button>
+      <button class="n6"><span class="ic">🪪</span><span class="lb">ประวัติ</span></button>
+      <button class="n6"><span class="ic">🚚</span><span class="lb">เบิกด่วน</span></button>
+    </div>
+  </div>
+
+  <!-- 7 -->
+  <div class="card">
+    <div class="card-head"><span class="card-num">7</span><span class="card-name">Gold Luxe กรอบทอง</span><span class="card-desc">หรูหรา ปุ่ม active เป็นทองเต็มใบ</span></div>
+    <div class="stage">
+      <button class="n7"><span class="ic">🏷️</span><span class="lb">ป้ายราคา</span></button>
+      <button class="n7"><span class="ic">📝</span><span class="lb">ฉลากยา</span></button>
+      <button class="n7 active"><span class="ic">📦</span><span class="lb">สต๊อค</span></button>
+      <button class="n7"><span class="ic">🪪</span><span class="lb">ประวัติ</span></button>
+      <button class="n7"><span class="ic">🚚</span><span class="lb">เบิกด่วน</span></button>
+    </div>
+  </div>
+
+  <!-- 8 -->
+  <div class="card">
+    <div class="card-head"><span class="card-num">8</span><span class="card-name">Chip แบนขาว</span><span class="card-desc">ชิปขาวกะทัดรัด active เป็นดำ-ทอง</span></div>
+    <div class="stage">
+      <button class="n8"><span class="ic">🏷️</span><span class="lb">ป้ายราคา</span></button>
+      <button class="n8"><span class="ic">📝</span><span class="lb">ฉลากยา</span></button>
+      <button class="n8 active"><span class="ic">📦</span><span class="lb">สต๊อค</span></button>
+      <button class="n8"><span class="ic">🪪</span><span class="lb">ประวัติ</span></button>
+      <button class="n8"><span class="ic">🚚</span><span class="lb">เบิกด่วน</span></button>
+    </div>
+  </div>
+
+  <!-- 9 -->
+  <div class="card">
+    <div class="card-head"><span class="card-num">9</span><span class="card-name">Gradient 3D กดได้จริง</span><span class="card-desc">นูนมีขอบหนา กดแล้วยุบ — ลองคลิกดู</span></div>
+    <div class="stage">
+      <button class="n9"><span class="ic">🏷️</span><span class="lb">ป้ายราคา</span></button>
+      <button class="n9"><span class="ic">📝</span><span class="lb">ฉลากยา</span></button>
+      <button class="n9 active"><span class="ic">📦</span><span class="lb">สต๊อค</span></button>
+      <button class="n9"><span class="ic">🪪</span><span class="lb">ประวัติ</span></button>
+      <button class="n9"><span class="ic">🚚</span><span class="lb">เบิกด่วน</span></button>
+    </div>
+  </div>
+
+  <!-- 10 -->
+  <div class="card">
+    <div class="card-head"><span class="card-num">10</span><span class="card-name">Outline บางทันสมัย</span><span class="card-desc">เส้นขอบบาง โปร่ง active เป็นขาวทึบ</span></div>
+    <div class="stage">
+      <button class="n10"><span class="ic">🏷️</span><span class="lb">ป้ายราคา</span></button>
+      <button class="n10"><span class="ic">📝</span><span class="lb">ฉลากยา</span></button>
+      <button class="n10 active"><span class="ic">📦</span><span class="lb">สต๊อค</span></button>
+      <button class="n10"><span class="ic">🪪</span><span class="lb">ประวัติ</span></button>
+      <button class="n10"><span class="ic">🚚</span><span class="lb">เบิกด่วน</span></button>
+    </div>
+  </div>
+
+  <p class="footer-note">ชอบแบบไหน บอกหมายเลข เช่น <b>"เอาแบบ 4"</b> แล้วผมจะเปลี่ยนปุ่มนำทางทุกหน้าให้เลยครับ</p>
+</body>
+</html>

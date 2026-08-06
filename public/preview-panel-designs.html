@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ดีไซน์ Preview Panel 20 แบบ (โทนฟ้า)</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&family=Mitr:wght@400;500;600&family=Outfit:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Noto Sans Thai',sans-serif; background:#eef1f5; color:#2d3a48; padding:2rem 1.5rem 4rem; }
+.page-title { text-align:center; font-size:1.7rem; font-weight:700; color:#2d6cad; margin-bottom:.3rem; }
+.page-sub { text-align:center; color:#8194a8; margin-bottom:2rem; font-weight:300; font-size:.9rem; line-height:1.6; }
+.grid { max-width:1120px; margin:0 auto; display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:18px; }
+.card { background:#eef1f5; }
+.card-head { display:flex; align-items:center; gap:.6rem; padding:0 .3rem .5rem; }
+.num { display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:50%; background:#2d6cad; color:#fff; font-weight:700; font-size:.8rem; flex-shrink:0; }
+.name { font-weight:600; font-size:.92rem; }
+
+/* ── Preview card (โครงร่วม) ── */
+.pcard { width:100%; background:#fff; border-radius:16px; box-shadow:0 4px 20px rgba(0,0,0,.1); overflow:hidden; }
+.phead { display:flex; justify-content:space-between; align-items:center; padding:10px 14px; font-size:12px; font-weight:600; font-family:'Mitr',sans-serif; background:#4891db; color:#fff; }
+.psize { font-size:10px; opacity:.65; font-weight:400; }
+.psub { display:flex; justify-content:space-between; align-items:center; padding:6px 14px; font-size:11px; font-family:'Mitr',sans-serif; background:linear-gradient(135deg,#2d2a26,#4a443d); color:#fff; }
+.psub span { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pclose { background:rgba(255,255,255,.2); border:none; color:#fff; border-radius:4px; cursor:pointer; padding:2px 8px; font-size:11px; margin-left:8px; flex-shrink:0; }
+.pbody { padding:14px; background:#f7fafd; }
+.plabel { background:#fff; border:1.5px solid #1e3a6e; border-radius:3px; padding:9px 10px; margin-bottom:12px; }
+.pn { font-weight:700; font-size:10px; margin-bottom:7px; color:#2d3a48; }
+.prc { display:flex; justify-content:space-between; align-items:baseline; font-size:8px; color:#8194a8; }
+.pp { font-size:20px; font-weight:900; color:#2d3a48; font-family:'Outfit',sans-serif; }
+.pm { font-size:13px; font-weight:700; color:#2d3a48; font-family:'Outfit',sans-serif; }
+.psliders { display:flex; flex-direction:column; gap:7px; }
+.prow { display:flex; align-items:center; gap:8px; }
+.plbl { font-size:10px; width:28px; color:#8194a8; flex-shrink:0; }
+.prow input[type=range] { flex:1; height:4px; accent-color:#4891db; cursor:pointer; }
+.pval { font-size:10px; width:40px; text-align:right; color:#4891db; font-weight:600; flex-shrink:0; }
+
+/* ═══ 20 designs (header/subheader/frame โทนฟ้า) ═══ */
+.d1  .phead { background:linear-gradient(135deg,#5aa0e0,#2d6cad); }
+.d2  .phead { background:linear-gradient(135deg,#5aa0e0,#2d6cad); } .d2 .psub { background:#1c4e82; }
+.d3  .phead { background:#4891db; } .d3 .psub { background:#2d6cad; }
+.d4  .phead { background:#eaf3fc; color:#2d6cad; } .d4 .psub { background:#2d6cad; }
+.d5  .phead { background:#fff; color:#2d6cad; border-bottom:2px solid #4891db; } .d5 .psub { background:#eef5fc; color:#2d6cad; } .d5 .pclose { background:rgba(45,108,173,.14); color:#2d6cad; }
+.d6  .pcard { border:2px solid #4891db; } .d6 .phead { background:#eaf3fc; color:#2d6cad; } .d6 .psub { background:#2d6cad; }
+.d7  .phead { background:linear-gradient(135deg,#4891db,#2d6cad); } .d7 .psub { background:#1c4e82; }
+.d8  .phead { background:linear-gradient(135deg,#2d6cad,#1c3d5e); } .d8 .psub { background:#122f4a; color:#cfe0f0; }
+.d9  .pcard { border-top:4px solid #4891db; } .d9 .phead { background:#fff; color:#2d6cad; } .d9 .psub { background:#f0f6fc; color:#2d6cad; border-bottom:1px solid #e3ecf5; } .d9 .pclose { background:rgba(45,108,173,.14); color:#2d6cad; }
+.d10 .phead { background:linear-gradient(90deg,#2d6cad,#6aa8e4); } .d10 .psub { background:#eaf3fc; color:#2d6cad; } .d10 .pclose { background:rgba(45,108,173,.16); color:#2d6cad; }
+.d11 .phead { background:#3f83d4; } .d11 .psub { background:#2a5f9c; }
+.d12 .phead { background:#eaf3fc; color:#2d6cad; } .d12 .ptitle { background:#4891db; color:#fff; padding:3px 11px; border-radius:999px; font-size:10px; } .d12 .psub { background:#2d6cad; }
+.d13 .phead { background:#fff; color:#2d3a48; border-bottom:1px solid #e3ecf5; } .d13 .ptitle { border-left:3px solid #4891db; padding-left:8px; } .d13 .psub { background:#fafcff; color:#5b7fa3; border-bottom:1px solid #eef2f6; } .d13 .pclose { background:rgba(45,108,173,.1); color:#4891db; }
+.d14 .phead { background:#eff6fd; color:#2d6cad; border-left:5px solid #4891db; } .d14 .psub { background:#2d6cad; }
+.d15 .phead { background:linear-gradient(135deg,#6aa8e4,#4891db); margin:8px 8px 0; border-radius:12px; } .d15 .psub { background:#2d6cad; margin:5px 8px 0; border-radius:8px; } .d15 .pbody { padding-top:10px; }
+.d16 .phead { background:#dcebfa; color:#1c4e82; } .d16 .psub { background:#4891db; }
+.d17 .phead { background:linear-gradient(120deg,#2d6cad 42%,#5aa0e0); } .d17 .psub { background:#1c4e82; }
+.d18 .phead { background:#1c3d5e; border-bottom:2px solid #5aa0e0; } .d18 .psub { background:#122f4a; color:#a9d2f6; }
+.d19 .pcard { background:#f2f8fe; } .d19 .phead { background:#cfe4f8; color:#1c4e82; } .d19 .psub { background:#4891db; } .d19 .pbody { background:#f2f8fe; }
+.d20 .pcard { box-shadow:0 12px 32px rgba(45,108,173,.3); } .d20 .phead { background:linear-gradient(135deg,#4891db,#2d6cad); } .d20 .psub { background:#1c4e82; }
+</style>
+</head>
+<body>
+<h1 class="page-title">ดีไซน์ Preview Panel 20 แบบ</h1>
+<p class="page-sub">โทนฟ้าแบรนด์แทนหัวการ์ดสีทองเดิม (header + subheader + slider) · ลาก slider ดูได้<br>บอกเลขแบบที่ชอบ เพื่อนำไปแทน <code>.live-preview-card-header</code> ฯลฯ</p>
+
+<div class="grid" id="grid"></div>
+
+<script>
+const DESIGNS = [
+  'Blue Gradient','Blue Gradient + Navy sub','Solid Blue','Soft Blue Header','White + Blue underline',
+  'Blue Border Frame','Ocean Gradient','Deep Navy','Top Accent Bar','Two-tone Horizontal',
+  'Flat Blue','Pill Title','Minimal Line','Left Accent Bar','Floating Chips',
+  'Sky Soft','Diagonal Gradient','Navy + Bright line','Frosted Card','Elevated Blue',
+];
+const CARD = i => `
+  <div class="pcard d${i + 1}">
+    <div class="phead"><span class="ptitle">🏷️ Preview ป้ายราคา</span><span class="psize">4.5 × 4 cm</span></div>
+    <div class="psub"><span>Binozyt 250 mg 1x6's</span><button class="pclose">✕</button></div>
+    <div class="pbody">
+      <div class="plabel">
+        <div class="pn">Binozyt 250 mg 1x6's</div>
+        <div class="prc"><span>Price / ราคา</span><span class="pp">189</span></div>
+        <div class="prc" style="margin-top:4px"><span>Member / สมาชิก</span><span class="pm">180</span></div>
+      </div>
+      <div class="psliders">
+        <div class="prow"><span class="plbl">QR</span><input type="range" min="4" max="12" value="7"><span class="pval">7 mm</span></div>
+        <div class="prow"><span class="plbl">ชื่อ</span><input type="range" min="2" max="6" value="3.5" step="0.5"><span class="pval">3.5 pt</span></div>
+        <div class="prow"><span class="plbl">SKU</span><input type="range" min="2" max="6" value="3.5" step="0.5"><span class="pval">3.5 pt</span></div>
+      </div>
+    </div>
+  </div>`;
+
+document.getElementById('grid').innerHTML = DESIGNS.map((n, i) => `
+  <section class="card">
+    <div class="card-head"><span class="num">${i + 1}</span><span class="name">${n}</span></div>
+    ${CARD(i)}
+  </section>`).join('');
+</script>
+</body>
+</html>

@@ -7,7 +7,12 @@ import { DrugLabelPage } from './druglabel/DrugLabelPage';
 import { StockCheckPage } from './StockCheckPage';
 import { CustomerHistoryPage } from './CustomerHistoryPage';
 import { OutboundPage } from './OutboundPage';
+import { SaleSupportPage } from './SaleSupportPage';
 import { AnimatedLogoText } from './AnimatedLogo';
+import { SearchIcon } from './SearchIcon';
+import { LoginPage } from './LoginPage';
+import { loadAuthProfile, saveAuthProfile, clearAuthProfile, type Profile } from './auth';
+import { PageVisibilityContext, PageNavRow, PAGE_NAV, DEFAULT_VISIBILITY, type PageId, type PageVisibility, type NavHandlers } from './pageAccess';
 import './App.css';
 
 // Types
@@ -149,7 +154,52 @@ const App: React.FC = () => {
   const [rowQty, setRowQty] = useState<Map<string, number>>(new Map());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const lastAutoAddedBarcode = useRef<string>('');
-  const [currentPage, setCurrentPage] = useState<'pricetag' | 'druglabel' | 'stockcheck' | 'customerhistory' | 'outbound'>('pricetag');
+  const [currentPage, setCurrentPage] = useState<PageId>('pricetag');
+  const [authProfile, setAuthProfile] = useState<Profile | null>(loadAuthProfile);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [currentPage]);
+
+  // ── เปิด/ปิดปุ่มแต่ละหน้า (ตั้งค่าโดย admin, ซิงค์ผ่าน Supabase) ──
+  const [pageVisibility, setPageVisibility] = useState<PageVisibility>(DEFAULT_VISIBILITY);
+  const [showPageSettings, setShowPageSettings] = useState(false);
+  const [pageSettingsPw, setPageSettingsPw] = useState('');
+  const [pageSettingsVerified, setPageSettingsVerified] = useState(false);
+  const [pageSettingsError, setPageSettingsError] = useState(false);
+
+  const handleLogin = (profile: Profile) => {
+    saveAuthProfile(profile.id);
+    setAuthProfile(profile);
+  };
+  const handleLogout = () => {
+    clearAuthProfile();
+    setAuthProfile(null);
+  };
+
+  // โหลดสถานะเปิด/ปิดหน้าจาก Supabase ตอน mount + เด้งออกจากหน้าที่ถูกปิด
+  useEffect(() => {
+    supabase.from('app_page_settings').select('page_id, visible').then(({ data, error }) => {
+      if (error || !data) return;
+      const map: PageVisibility = { ...DEFAULT_VISIBILITY };
+      data.forEach((r) => { if (r.page_id in map) map[r.page_id as PageId] = !!r.visible; });
+      setPageVisibility(map);
+      setCurrentPage(cur => (map[cur] ? cur : (PAGE_NAV.find(p => map[p.id])?.id ?? cur)));
+    });
+  }, []);
+
+  // สลับเปิด/ปิดหน้า (optimistic + บันทึกลง Supabase, revert ถ้าพลาด)
+  const togglePageVisible = async (id: PageId) => {
+    const next = !pageVisibility[id];
+    setPageVisibility(prev => ({ ...prev, [id]: next }));
+    const { error } = await supabase
+      .from('app_page_settings')
+      .upsert({ page_id: id, visible: next, updated_at: new Date().toISOString() });
+    if (error) {
+      setPageVisibility(prev => ({ ...prev, [id]: !next }));
+      alert('บันทึกไม่สำเร็จ: ' + error.message);
+    }
+  };
 
   // โหลดวันที่ update ล่าสุดจาก Supabase ตอน mount
   useEffect(() => {
@@ -686,8 +736,31 @@ ${sheetsHtml}
     generateQR(previewBarcodeProduct.barcode).then(setPreviewQrSrc);
   }, [previewBarcodeProduct, generateQR]);
 
+  // Gate: ต้องล็อกอินก่อนเข้าใช้งานโปรแกรม
+  if (!authProfile) {
+    return <LoginPage onLogin={handleLogin} />;
+  }
+
+  const navHandlers: NavHandlers = {
+    pricetag: () => setCurrentPage('pricetag'),
+    druglabel: () => setCurrentPage('druglabel'),
+    stockcheck: () => setCurrentPage('stockcheck'),
+    customerhistory: () => setCurrentPage('customerhistory'),
+    outbound: () => setCurrentPage('outbound'),
+    salesupport: () => setCurrentPage('salesupport'),
+  };
+
   return (
+    <PageVisibilityContext.Provider value={pageVisibility}>
     <div className="app-container">
+      {/* แถบผู้ใช้ปัจจุบัน + ออกจากระบบ (แสดงทุกหน้า) */}
+      <div className="app-userbar">
+        <span className="app-userbar-icon">{authProfile.icon}</span>
+        <span className="app-userbar-name">{authProfile.label}</span>
+        <button className="app-userbar-gear" onClick={() => { setShowPageSettings(true); setPageSettingsPw(''); setPageSettingsVerified(false); setPageSettingsError(false); }} title="ตั้งค่าการแสดงหน้า (admin)">⚙️</button>
+        <button className="app-userbar-logout" onClick={handleLogout} title="ออกจากระบบ">ออกจากระบบ</button>
+      </div>
+
       {/* Hero Header — shown only on price tag page */}
       {currentPage === 'pricetag' && (<div className="hero-header">
         <div className="hero-content">
@@ -701,59 +774,7 @@ ${sheetsHtml}
               <span className="updated-badge updated-badge--loading">Loading...</span>
             )}
             </div>
-          <div className="search-nav-row">
-            <div className="search-premium">
-              <input
-                type="text"
-                className="search-input-premium"
-                placeholder="Search SKU, Barcode or Name..."
-                value={searchInput}
-                onChange={(e) => handleSearchChange(e.target.value)}
-                onKeyDown={handleSearchKeyDown}
-              />
-              <button className="search-btn-premium">🔍</button>
-            </div>
-            <button
-              className="page-nav-card page-nav-card--active"
-              onClick={() => setCurrentPage('pricetag')}
-              title="หน้าป้ายราคา"
-            >
-              <span className="page-nav-icon">🏷️</span>
-              <span className="page-nav-label">ป้ายราคา</span>
-            </button>
-            <button
-              className="page-nav-card"
-              onClick={() => setCurrentPage('druglabel')}
-              title="สลับหน้าฉลากยา"
-            >
-              <span className="page-nav-icon">📝</span>
-              <span className="page-nav-label">ฉลากยา</span>
-            </button>
-            <button
-              className="page-nav-card"
-              onClick={() => setCurrentPage('stockcheck')}
-              title="เช็คสต๊อค"
-            >
-              <span className="page-nav-icon">📦</span>
-              <span className="page-nav-label">สต๊อค</span>
-            </button>
-            <button
-              className="page-nav-card"
-              onClick={() => setCurrentPage('customerhistory')}
-              title="ประวัติลูกค้า"
-            >
-              <span className="page-nav-icon">🪪</span>
-              <span className="page-nav-label">ประวัติ</span>
-            </button>
-            <button
-              className="page-nav-card"
-              onClick={() => setCurrentPage('outbound')}
-              title="เบิกสินค้าด่วน"
-            >
-              <span className="page-nav-icon">🚚</span>
-              <span className="page-nav-label">เบิกด่วน</span>
-            </button>
-          </div>
+          <PageNavRow current="pricetag" handlers={navHandlers} />
         </div>
       </div>)}
 
@@ -763,6 +784,20 @@ ${sheetsHtml}
 
         {/* Upload CSV hidden input */}
         <input ref={fileInputRef} type="file" accept=".csv" onChange={handleFileUpload} style={{ display: 'none' }} />
+
+        <div className="table-search-row table-search-row--center">
+          <div className="search-premium">
+            <input
+              type="text"
+              className="search-input-premium"
+              placeholder="Search SKU, Barcode or Name..."
+              value={searchInput}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              onKeyDown={handleSearchKeyDown}
+            />
+            <button className="search-btn-premium"><SearchIcon /></button>
+          </div>
+        </div>
 
         {/* Main split layout */}
         <div className="main-split">
@@ -779,7 +814,7 @@ ${sheetsHtml}
                 <div style={{ display: 'flex', gap: '0.5rem', position: 'relative' }}>
                   <div className="cart-dropdown-wrap">
                     {showCart && <div className="cart-overlay" onClick={() => setShowCart(false)} />}
-                    <button className="btn-clear-small btn-cart-toggle" onClick={() => setShowCart(v => !v)}>
+                    <button className="btn-nav-style" onClick={() => setShowCart(v => !v)}>
                       รายการที่เลือก{totalItems > 0 ? ` (${totalItems})` : ''}
                     </button>
                     {showCart && (
@@ -803,9 +838,9 @@ ${sheetsHtml}
                                       <span className="cart-dropdown-badge">{p.unit}</span>
                                     </div>
                                     <div className="cart-dropdown-qty">
-                                      <button className="qty-btn" onClick={() => updateQuantity(k, -1)}>−</button>
+                                      <button className="qty-btn qty-btn--minus" onClick={() => updateQuantity(k, -1)}>−</button>
                                       <span className="cart-row-qty-num">{p.quantity}</span>
-                                      <button className="qty-btn" onClick={() => updateQuantity(k, 1)}>+</button>
+                                      <button className="qty-btn qty-btn--plus" onClick={() => updateQuantity(k, 1)}>+</button>
                                     </div>
                                     <button className="cart-row-del" onClick={() => removeProduct(k)}>✕</button>
                                   </div>
@@ -821,11 +856,11 @@ ${sheetsHtml}
                       </div>
                     )}
                   </div>
-                  <button className="btn-clear-small btn-cart-toggle" onClick={handleSelectAll}>เลือกทั้งหมด</button>
-                  <button className="btn-clear-small btn-cart-toggle" onClick={clearAll}>ลบทั้งหมด</button>
+                  <button className="btn-nav-style" onClick={handleSelectAll}>เลือกทั้งหมด</button>
+                  <button className="btn-nav-style" onClick={clearAll}>ลบทั้งหมด</button>
                 </div>
               </div>
-              <table className="product-table">
+              <table className="product-table pricetag-table">
                 <thead>
                   <tr>
                     <th>SKU</th>
@@ -847,12 +882,12 @@ ${sheetsHtml}
                       <tr key={key} className={selected ? 'row-selected' : ''}>
                         <td>{product.sku}</td>
                         <td>{product.barcode}</td>
-                        <td>{product.name}</td>
+                        <td title={product.name}>{product.name}</td>
                         <td>{product.unit}</td>
                         <td>฿{product.price.toFixed(2)}</td>
                         <td>
                           <div className="qty-control">
-                            <button className="qty-btn" onClick={() => { const cur = rowQty.get(key) ?? 1; if (cur <= 1) { removeProduct(key); } else { setRowQty(prev => { const next = new Map(prev); next.set(key, cur - 1); return next; }); } }}>−</button>
+                            <button className="qty-btn qty-btn--minus" onClick={() => { const cur = rowQty.get(key) ?? 1; if (cur <= 1) { removeProduct(key); } else { setRowQty(prev => { const next = new Map(prev); next.set(key, cur - 1); return next; }); } }}>−</button>
                             <input
                               className="qty-input"
                               type="number"
@@ -863,7 +898,7 @@ ${sheetsHtml}
                                 if (v >= 1) setRowQty(prev => { const next = new Map(prev); next.set(key, v); return next; });
                               }}
                             />
-                            <button className="qty-btn" onClick={() => setRowQty(prev => { const next = new Map(prev); next.set(key, (prev.get(key) ?? 1) + 1); return next; })}>+</button>
+                            <button className="qty-btn qty-btn--plus" onClick={() => setRowQty(prev => { const next = new Map(prev); next.set(key, (prev.get(key) ?? 1) + 1); return next; })}>+</button>
                             <button className={`qty-btn cart-inline-btn${selected ? ' in-cart' : ''}`} onClick={() => handleAddToCart(product, rowQty.get(key) ?? 1)} title="เพิ่มเข้าตะกร้า">🛒</button>
                           </div>
                         </td>
@@ -1039,6 +1074,7 @@ ${sheetsHtml}
           onGoStockCheck={() => setCurrentPage('stockcheck')}
           onGoCustomerHistory={() => setCurrentPage('customerhistory')}
           onGoOutbound={() => setCurrentPage('outbound')}
+          onGoSaleSupport={() => setCurrentPage('salesupport')}
         />
       )}
 
@@ -1050,6 +1086,7 @@ ${sheetsHtml}
           onGoStockCheck={() => setCurrentPage('stockcheck')}
           onGoCustomerHistory={() => setCurrentPage('customerhistory')}
           onGoOutbound={() => setCurrentPage('outbound')}
+          onGoSaleSupport={() => setCurrentPage('salesupport')}
         />
       )}
 
@@ -1061,6 +1098,7 @@ ${sheetsHtml}
           onGoStockCheck={() => setCurrentPage('stockcheck')}
           onGoCustomerHistory={() => setCurrentPage('customerhistory')}
           onGoOutbound={() => setCurrentPage('outbound')}
+          onGoSaleSupport={() => setCurrentPage('salesupport')}
         />
       )}
 
@@ -1072,6 +1110,22 @@ ${sheetsHtml}
           onGoStockCheck={() => setCurrentPage('stockcheck')}
           onGoCustomerHistory={() => setCurrentPage('customerhistory')}
           onGoOutbound={() => setCurrentPage('outbound')}
+          onGoSaleSupport={() => setCurrentPage('salesupport')}
+          isWarehouse={authProfile.group === 'คลังสินค้า'}
+          userBranch={authProfile.group === 'สาขา' ? authProfile.id : undefined}
+        />
+      )}
+
+      {/* SaleSupport Page */}
+      {currentPage === 'salesupport' && (
+        <SaleSupportPage
+          onGoPriceTag={() => setCurrentPage('pricetag')}
+          onGoDrugLabel={() => setCurrentPage('druglabel')}
+          onGoStockCheck={() => setCurrentPage('stockcheck')}
+          onGoCustomerHistory={() => setCurrentPage('customerhistory')}
+          onGoOutbound={() => setCurrentPage('outbound')}
+          onGoSaleSupport={() => setCurrentPage('salesupport')}
+          isPurchasing={authProfile.id === 'PURCHASING'}
         />
       )}
 
@@ -1079,11 +1133,20 @@ ${sheetsHtml}
       <div className="footer-actions">
         {currentPage === 'pricetag' && totalItems > 0 && (
           <>
-            <button className="btn-premium" onClick={handlePrint}>
-              🖨️ พิมพ์ป้ายราคา ({totalLabels} ป้าย)
+            <button className="print-action-btn" onClick={handlePrint}>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <polyline points="6 9 6 2 18 2 18 9" />
+                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+                <rect x="6" y="14" width="12" height="8" rx="1" />
+              </svg>
+              <span>พิมพ์ป้ายราคา ({totalLabels} ป้าย)</span>
             </button>
-            <button className="btn-outline" onClick={() => handlePrintThermal(thermalSettings)}>
-              🖨️ พิมพ์บาร์โค้ด
+            <button className="print-action-btn" onClick={() => handlePrintThermal(thermalSettings)}>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M3 5v14" /><path d="M7 5v14" /><path d="M11 5v14" />
+                <path d="M14 5v14" /><path d="M18 5v14" /><path d="M21 5v14" />
+              </svg>
+              <span>พิมพ์บาร์โค้ด</span>
             </button>
           </>
         )}
@@ -1326,7 +1389,84 @@ ${sheetsHtml}
           ))
         )}
       </div>
+
+      {/* Page Settings Modal — เปิด/ปิดปุ่มแต่ละหน้า (admin) */}
+      {showPageSettings && (
+        <div className="modal-overlay" onClick={() => setShowPageSettings(false)}>
+          <div className="modal-content page-settings-modal" onClick={e => e.stopPropagation()}>
+            {pageSettingsVerified && (
+              <div className="modal-header">
+                <div>
+                  <h2 style={{ margin: 0 }}>⚙️ ตั้งค่าการแสดงหน้า</h2>
+                  <p style={{ fontSize: '12px', color: '#8194a8', margin: '2px 0 0' }}>เปิด/ปิดปุ่มเมนูแต่ละหน้า — มีผลทุกเครื่อง</p>
+                </div>
+                <button className="modal-close" onClick={() => setShowPageSettings(false)}>✕</button>
+              </div>
+            )}
+            <div className={`page-settings-body${!pageSettingsVerified ? ' page-settings-body--lock' : ''}`}>
+              {!pageSettingsVerified ? (
+                <div className="page-settings-lock">
+                  <button className="page-settings-lock-close" onClick={() => setShowPageSettings(false)}>✕</button>
+                  <div className="page-settings-lock-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="5" y="11" width="14" height="10" rx="2" />
+                      <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+                    </svg>
+                  </div>
+                  <div className="page-settings-lock-form">
+                    <label style={{ fontWeight: 600, display: 'block', marginBottom: 6 }}>รหัส admin</label>
+                    <input
+                      type="password"
+                      className="search-input-premium"
+                      style={{ width: '100%', fontSize: '1rem' }}
+                      placeholder="ใส่รหัส admin..."
+                      autoFocus
+                      value={pageSettingsPw}
+                      onChange={e => { setPageSettingsPw(e.target.value); setPageSettingsError(false); }}
+                      onKeyDown={e => {
+                        if (e.key !== 'Enter') return;
+                        if (pageSettingsPw === (import.meta.env.VITE_ADMIN_PASSWORD || 'admin1234')) setPageSettingsVerified(true);
+                        else setPageSettingsError(true);
+                      }}
+                    />
+                    <button
+                      className="btn-premium"
+                      style={{ marginTop: 12, width: '100%' }}
+                      onClick={() => {
+                        if (pageSettingsPw === (import.meta.env.VITE_ADMIN_PASSWORD || 'admin1234')) setPageSettingsVerified(true);
+                        else setPageSettingsError(true);
+                      }}
+                    >ปลดล็อก 🔓</button>
+                    {pageSettingsError && (
+                      <div style={{ marginTop: 8, color: '#c0392b', fontSize: 13 }}>รหัสไม่ถูกต้อง</div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="page-toggle-list">
+                  {PAGE_NAV.map(p => (
+                    <div className="page-toggle-row" key={p.id}>
+                      <span className="page-toggle-label"><span className="page-toggle-icon">{p.icon}</span>{p.label}</span>
+                      <button
+                        className={`page-toggle-switch${pageVisibility[p.id] ? ' on' : ''}`}
+                        onClick={() => togglePageVisible(p.id)}
+                        role="switch"
+                        aria-checked={pageVisibility[p.id]}
+                        title={pageVisibility[p.id] ? 'กำลังแสดง — คลิกเพื่อซ่อน' : 'ถูกซ่อน — คลิกเพื่อแสดง'}
+                      >
+                        <span className="page-toggle-knob" />
+                      </button>
+                    </div>
+                  ))}
+                  <p className="page-settings-hint">ปิดแล้วปุ่มเมนูหน้านั้นจะหายจากทุกหน้า/ทุกเครื่อง (บันทึกอัตโนมัติ)</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+    </PageVisibilityContext.Provider>
   );
 };
 

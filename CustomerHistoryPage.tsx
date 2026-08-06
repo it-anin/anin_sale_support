@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from './supabase';
 import { AnimatedLogoText } from './AnimatedLogo';
+import { PageNavRow } from './pageAccess';
+import { SearchIcon } from './SearchIcon';
 
 interface CustomerRecord {
   phone: string;
@@ -16,9 +18,10 @@ interface Props {
   onGoStockCheck: () => void;
   onGoCustomerHistory: () => void;
   onGoOutbound: () => void;
+  onGoSaleSupport: () => void;
 }
 
-export function CustomerHistoryPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGoCustomerHistory, onGoOutbound }: Props) {
+export function CustomerHistoryPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGoCustomerHistory, onGoOutbound, onGoSaleSupport }: Props) {
   const [results,       setResults]       = useState<CustomerRecord[]>([]);
   const [search,        setSearch]        = useState('');
   const [searching,     setSearching]     = useState(false);
@@ -85,44 +88,26 @@ export function CustomerHistoryPage({ onGoPriceTag, onGoDrugLabel, onGoStockChec
               : <span className="updated-badge updated-badge--loading">Loading...</span>
             }
           </div>
-          <div className="search-nav-row">
-            <div className="search-premium">
-              <input
-                type="text"
-                className="search-input-premium"
-                placeholder="ค้นหาชื่อ นามสกุล หรือเบอร์โทร..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-              />
-              <button className="search-btn-premium">
-                {searching ? '⏳' : '🔍'}
-              </button>
-            </div>
-            <button className="page-nav-card" onClick={onGoPriceTag} title="ป้ายราคา">
-              <span className="page-nav-icon">🏷️</span>
-              <span className="page-nav-label">ป้ายราคา</span>
-            </button>
-            <button className="page-nav-card" onClick={onGoDrugLabel} title="ฉลากยา">
-              <span className="page-nav-icon">📝</span>
-              <span className="page-nav-label">ฉลากยา</span>
-            </button>
-            <button className="page-nav-card" onClick={onGoStockCheck} title="เช็คสต๊อค">
-              <span className="page-nav-icon">📦</span>
-              <span className="page-nav-label">สต๊อค</span>
-            </button>
-            <button className="page-nav-card page-nav-card--active" onClick={onGoCustomerHistory} title="ประวัติลูกค้า">
-              <span className="page-nav-icon">🪪</span>
-              <span className="page-nav-label">ประวัติ</span>
-            </button>
-            <button className="page-nav-card" onClick={onGoOutbound} title="เบิกสินค้าด่วน">
-              <span className="page-nav-icon">🚚</span>
-              <span className="page-nav-label">เบิกด่วน</span>
-            </button>
-          </div>
+          <PageNavRow current="customerhistory" handlers={{ pricetag: onGoPriceTag, druglabel: onGoDrugLabel, stockcheck: onGoStockCheck, customerhistory: onGoCustomerHistory, outbound: onGoOutbound, salesupport: onGoSaleSupport }} />
         </div>
       </div>
 
       <div className="container">
+        <div className="table-search-row">
+          <div className="search-premium">
+            <input
+              type="text"
+              className="search-input-premium"
+              placeholder="ค้นหาชื่อ นามสกุล หรือเบอร์โทร..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+            <button className="search-btn-premium">
+              {searching ? '⏳' : <SearchIcon />}
+            </button>
+          </div>
+        </div>
+
         {searched && (
           <div className="product-table-wrap stock-table-wrap">
             <div className="selected-table-header">
@@ -169,7 +154,15 @@ export function CustomerHistoryPage({ onGoPriceTag, onGoDrugLabel, onGoStockChec
 
         {!searched && (
           <div className="stock-empty-state">
-            <div className="stock-empty-icon"><img className="stock-empty-icon-img" src="/test.png" alt="ค้นหา" /></div>
+            <div className="stock-empty-icon">
+              <svg className="stock-empty-icon-img" viewBox="0 0 96 96" aria-hidden="true">
+                <rect x="22" y="30" width="52" height="36" rx="4" fill="none" stroke="#4891db" strokeWidth="3.5" />
+                <circle cx="35" cy="48" r="7" fill="none" stroke="#4891db" strokeWidth="3" />
+                <line x1="50" y1="41" x2="66" y2="41" stroke="#4891db" strokeWidth="2.5" strokeLinecap="round" />
+                <line x1="50" y1="49" x2="66" y2="49" stroke="#4891db" strokeWidth="2.5" strokeLinecap="round" />
+                <line x1="50" y1="57" x2="60" y2="57" stroke="#4891db" strokeWidth="2.5" strokeLinecap="round" />
+              </svg>
+            </div>
             <div>พิมพ์ชื่อหรือนามสกุลลูกค้าในช่องค้นหาด้านบน</div>
           </div>
         )}

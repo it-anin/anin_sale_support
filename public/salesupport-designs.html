@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>เลือกดีไซน์ UI — SaleSupport (10 แบบ)</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&family=Mitr:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Noto Sans Thai',sans-serif; background:#eef1f5; color:#2d2a26; padding:2rem 1.5rem 4rem; }
+  .page-title { text-align:center; font-size:1.6rem; font-weight:600; margin-bottom:0.25rem; }
+  .page-sub { text-align:center; color:#8a8272; margin-bottom:2rem; font-weight:300; }
+
+  .card { max-width:1100px; margin:0 auto 1.8rem; background:#fff; border-radius:16px; box-shadow:0 4px 20px rgba(0,0,0,0.07); overflow:hidden; }
+  .card-head { display:flex; align-items:center; gap:0.7rem; padding:0.9rem 1.4rem 0.6rem; }
+  .card-num { display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:50%; background:#2d2a26; color:#f2d98d; font-weight:600; font-size:0.9rem; flex-shrink:0; }
+  .card-name { font-weight:600; font-size:1.05rem; }
+  .card-desc { color:#8a8272; font-size:0.82rem; font-weight:300; margin-left:auto; text-align:right; }
+  .demo { padding:1.2rem 1.4rem 1.5rem; }
+  button { font-family:'Noto Sans Thai',sans-serif; cursor:pointer; }
+  table { border-collapse:collapse; width:100%; font-size:12.5px; }
+  th, td { text-align:left; }
+
+  /* ═════════ 1) Classic Top Tabs โทนฟ้า ═════════ */
+  .d1 .menu { display:flex; gap:4px; }
+  .d1 .menu button { padding:9px 22px; border:none; border-radius:12px 12px 0 0; background:#dce7f3; color:#5b7590; font-size:13px; font-weight:500; }
+  .d1 .menu button.on { background:linear-gradient(135deg,#4891db,#6faae6); color:#fff; }
+  .d1 .panel { border:1px solid #d5e3f2; border-radius:0 12px 12px 12px; overflow:hidden; }
+  .d1 th { background:linear-gradient(135deg,#7bb5e4,#f2f9ff); color:#1c3d5e; padding:9px 12px; font-weight:600; }
+  .d1 td { padding:8px 12px; border-top:1px solid #e8f0f9; }
+  .d1 tr:hover td { background:#f2f8fe; }
+
+  /* ═════════ 2) Pill Segmented ═════════ */
+  .d2 .menu { display:inline-flex; background:#e8eef5; border-radius:999px; padding:4px; gap:2px; margin-bottom:14px; }
+  .d2 .menu button { padding:8px 20px; border:none; border-radius:999px; background:transparent; color:#5b7590; font-size:13px; font-weight:500; transition:all .2s; }
+  .d2 .menu button.on { background:#fff; color:#2d6cad; box-shadow:0 2px 8px rgba(0,0,0,0.12); }
+  .d2 .panel { border-radius:16px; overflow:hidden; box-shadow:0 4px 16px rgba(0,0,0,0.08); }
+  .d2 th { background:#4891db; color:#fff; padding:10px 12px; font-weight:500; }
+  .d2 td { padding:9px 12px; }
+  .d2 tr:nth-child(even) td { background:#f4f9fe; }
+
+  /* ═════════ 3) Sidebar ซ้าย ═════════ */
+  .d3 .wrap { display:flex; gap:0; border:1px solid #e3e8ee; border-radius:14px; overflow:hidden; }
+  .d3 .menu { display:flex; flex-direction:column; background:#f7f9fb; border-right:1px solid #e3e8ee; min-width:170px; padding:10px 0; }
+  .d3 .menu button { display:flex; align-items:center; gap:9px; padding:11px 18px; border:none; background:none; color:#5b7590; font-size:13px; font-weight:500; text-align:left; border-left:3px solid transparent; }
+  .d3 .menu button.on { background:#eaf3fc; color:#2d6cad; border-left-color:#4891db; }
+  .d3 .panel { flex:1; }
+  .d3 th { padding:10px 12px; color:#8194a8; font-weight:600; font-size:11.5px; text-transform:uppercase; letter-spacing:.4px; border-bottom:2px solid #e3e8ee; }
+  .d3 td { padding:9px 12px; border-bottom:1px solid #eef2f6; }
+
+  /* ═════════ 4) Underline มินิมอล ═════════ */
+  .d4 .menu { display:flex; gap:26px; border-bottom:1.5px solid #e5e9ee; margin-bottom:4px; }
+  .d4 .menu button { padding:10px 2px; border:none; background:none; color:#8194a8; font-size:13.5px; font-weight:500; position:relative; }
+  .d4 .menu button.on { color:#2d6cad; }
+  .d4 .menu button.on::after { content:''; position:absolute; bottom:-1.5px; left:0; right:0; height:3px; border-radius:3px; background:#4891db; }
+  .d4 th { padding:12px 12px 8px; color:#a9b4c0; font-weight:500; font-size:12px; }
+  .d4 td { padding:11px 12px; border-bottom:1px solid #f0f3f6; }
+  .d4 .dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px; }
+
+  /* ═════════ 5) Dashboard Cards ═════════ */
+  .d5 .menu { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:14px; }
+  .d5 .menu button { display:flex; flex-direction:column; align-items:flex-start; gap:2px; padding:12px 15px; border:1.5px solid #e3e8ee; border-radius:14px; background:#fff; transition:all .2s; }
+  .d5 .menu button .t { font-size:13px; font-weight:600; color:#2d2a26; }
+  .d5 .menu button .c { font-size:11px; color:#8a8272; font-weight:300; }
+  .d5 .menu button.on { border-color:#4891db; background:#eaf3fc; box-shadow:0 4px 12px rgba(72,145,219,0.18); }
+  .d5 .panel { border-radius:12px; overflow:hidden; }
+  .d5 th { background:linear-gradient(135deg,#2d2a26,#4a443d); color:#f2d98d; padding:10px 12px; font-weight:500; }
+  .d5 td { padding:9px 12px; border-bottom:1px solid #f0ece4; }
+
+  /* ═════════ 6) Dark Mode ═════════ */
+  .d6 .stage { background:#1e2430; border-radius:16px; padding:18px; }
+  .d6 .menu { display:flex; gap:8px; margin-bottom:14px; }
+  .d6 .menu button { padding:8px 18px; border:1px solid #37404f; border-radius:10px; background:#252c3a; color:#8fa0b8; font-size:13px; font-weight:500; }
+  .d6 .menu button.on { background:#4891db; border-color:#4891db; color:#fff; box-shadow:0 0 14px rgba(72,145,219,0.5); }
+  .d6 table { color:#d5dce6; }
+  .d6 th { padding:9px 12px; color:#7f92ab; border-bottom:1px solid #37404f; font-weight:600; font-size:12px; }
+  .d6 td { padding:9px 12px; border-bottom:1px solid #2b3342; }
+  .d6 tr:hover td { background:#252c3a; }
+
+  /* ═════════ 7) Soft Pastel Chips ═════════ */
+  .d7 .menu { display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; }
+  .d7 .menu button { padding:8px 18px; border:none; border-radius:12px; font-size:13px; font-weight:600; opacity:.55; transition:all .2s; }
+  .d7 .m1 { background:#e3effc; color:#2d6cad; } .d7 .m2 { background:#e5f5e9; color:#2e8b47; }
+  .d7 .m3 { background:#f0e9fb; color:#7a4bbf; } .d7 .m4 { background:#fdf0e2; color:#c07a1f; }
+  .d7 .menu button.on { opacity:1; box-shadow:0 3px 10px rgba(0,0,0,0.12); transform:translateY(-1px); }
+  .d7 .panel { border:1px solid #edf0f4; border-radius:14px; overflow:hidden; }
+  .d7 th { padding:10px 12px; background:#f8fafc; color:#5b7590; font-weight:600; }
+  .d7 td { padding:9px 12px; border-top:1px solid #f0f3f6; }
+  .d7 tr td:first-child { border-left:3px solid #4891db; }
+  .d7 .chip { padding:3px 10px; border-radius:999px; font-size:11px; font-weight:600; }
+  .d7 .c-wait { background:#fdf0e2; color:#c07a1f; } .d7 .c-arrive { background:#e3effc; color:#2d6cad; } .d7 .c-done { background:#e5f5e9; color:#2e8b47; }
+
+  /* ═════════ 8) Glassmorphism บนพื้นฟ้า ═════════ */
+  .d8 .stage { background:linear-gradient(135deg,#4891db,#6faae6); border-radius:16px; padding:18px; }
+  .d8 .menu { display:flex; gap:8px; margin-bottom:14px; }
+  .d8 .menu button { padding:8px 18px; border:1px solid rgba(255,255,255,0.35); border-radius:12px; background:rgba(255,255,255,0.14); color:#fff; font-size:13px; font-weight:500; backdrop-filter:blur(4px); }
+  .d8 .menu button.on { background:#fff; color:#2d6cad; border-color:#fff; }
+  .d8 .panel { background:rgba(255,255,255,0.16); border:1px solid rgba(255,255,255,0.3); border-radius:14px; overflow:hidden; backdrop-filter:blur(6px); }
+  .d8 table { color:#fff; }
+  .d8 th { padding:10px 12px; border-bottom:1px solid rgba(255,255,255,0.35); font-weight:600; }
+  .d8 td { padding:9px 12px; border-bottom:1px solid rgba(255,255,255,0.18); }
+
+  /* ═════════ 9) Data Grid สไตล์ Excel ═════════ */
+  .d9 .menu { display:flex; gap:0; }
+  .d9 .menu button { padding:8px 20px; border:1px solid #c9d4e0; border-bottom:none; border-radius:8px 8px 0 0; background:#eef2f7; color:#5b7590; font-size:12.5px; font-weight:500; margin-right:-1px; }
+  .d9 .menu button.on { background:#fff; color:#1c3d5e; font-weight:600; position:relative; z-index:1; }
+  .d9 .panel { border:1px solid #c9d4e0; overflow-x:auto; }
+  .d9 table { font-size:12px; min-width:640px; }
+  .d9 th { background:#f1f5f9; color:#3d5670; padding:7px 10px; border:1px solid #dbe3ec; font-weight:600; position:sticky; top:0; }
+  .d9 td { padding:6px 10px; border:1px solid #e8eef4; }
+  .d9 tr:nth-child(even) td { background:#fafcfe; }
+  .d9 .hint { font-size:11px; color:#8a8272; margin-top:6px; font-weight:300; }
+
+  /* ═════════ 10) Modern SaaS ═════════ */
+  .d10 .bar { display:flex; align-items:center; margin-bottom:14px; }
+  .d10 .crumb { font-size:13px; color:#8194a8; font-weight:500; }
+  .d10 .crumb b { color:#2d2a26; font-weight:600; }
+  .d10 .menu { display:flex; gap:6px; margin-left:auto; }
+  .d10 .menu button { padding:7px 14px; border:1px solid #e3e8ee; border-radius:9px; background:#fff; color:#5b7590; font-size:12.5px; font-weight:500; }
+  .d10 .menu button.on { background:#1c3d5e; border-color:#1c3d5e; color:#fff; }
+  .d10 .panel { border:1px solid #e9edf2; border-radius:14px; overflow:hidden; }
+  .d10 th { padding:9px 14px; background:#fbfcfd; color:#8194a8; font-weight:500; font-size:11.5px; border-bottom:1px solid #e9edf2; }
+  .d10 td { padding:10px 14px; border-bottom:1px solid #f2f5f8; }
+  .d10 tr:hover td { background:#f7fafc; }
+  .d10 .badge { display:inline-flex; align-items:center; gap:5px; padding:3px 10px; border-radius:7px; font-size:11px; font-weight:600; background:#f2f5f8; color:#5b7590; }
+  .d10 .badge i { width:7px; height:7px; border-radius:50%; display:inline-block; font-style:normal; }
+
+  .footer-note { text-align:center; margin-top:2.5rem; color:#8a8272; font-weight:300; }
+  .footer-note b { color:#2d6cad; font-weight:600; }
+</style>
+</head>
+<body>
+  <h1 class="page-title">🧩 UI หน้า SaleSupport — 10 แบบ</h1>
+  <p class="page-sub">เมนูย่อย Order / Request Item / New Product / Ticket + ตารางข้อมูลจาก Supabase · ตัวอย่างแสดงเมนู Order พร้อมข้อมูลจำลอง</p>
+
+  <!-- 1 -->
+  <div class="card d1">
+    <div class="card-head"><span class="card-num">1</span><span class="card-name">Classic Top Tabs โทนฟ้า</span><span class="card-desc">แท็บติดกับตาราง หัวตารางไล่เฉดฟ้า-ขาวแบบเดียวกับหน้าป้ายราคา</span></div>
+    <div class="demo">
+      <div class="menu"><button class="on">📋 Order</button><button>📦 Request Item</button><button>🆕 New Product</button><button>🎫 Ticket</button></div>
+      <div class="panel"><table>
+        <tr><th>SKU / ชื่อสินค้า</th><th>Branch</th><th>จำนวน</th><th>วันที่นัดรับ</th><th>สถานะ</th></tr>
+        <tr><td>10001 พาราเซตามอล 500mg</td><td>SRC</td><td>20</td><td>12/07/2026</td><td>รอสั่งซื้อ</td></tr>
+        <tr><td>10002 วิตามินซี 1000mg</td><td>KKL</td><td>5</td><td>14/07/2026</td><td>ของถึงสาขา</td></tr>
+        <tr><td>10003 ยาแก้ไอน้ำดำ</td><td>SSS</td><td>10</td><td>15/07/2026</td><td>ส่งมอบแล้ว</td></tr>
+      </table></div>
+    </div>
+  </div>
+
+  <!-- 2 -->
+  <div class="card d2">
+    <div class="card-head"><span class="card-num">2</span><span class="card-name">Pill Segmented Control</span><span class="card-desc">เมนูแคปซูลสลับในกรอบเดียว ตารางการ์ดลอย หัวฟ้าทึบ</span></div>
+    <div class="demo">
+      <div class="menu"><button class="on">Order</button><button>Request Item</button><button>New Product</button><button>Ticket</button></div>
+      <div class="panel"><table>
+        <tr><th>SKU / ชื่อสินค้า</th><th>Branch</th><th>จำนวน</th><th>วันที่นัดรับ</th><th>สถานะ</th></tr>
+        <tr><td>10001 พาราเซตามอล 500mg</td><td>SRC</td><td>20</td><td>12/07/2026</td><td>รอสั่งซื้อ</td></tr>
+        <tr><td>10002 วิตามินซี 1000mg</td><td>KKL</td><td>5</td><td>14/07/2026</td><td>ของถึงสาขา</td></tr>
+        <tr><td>10003 ยาแก้ไอน้ำดำ</td><td>SSS</td><td>10</td><td>15/07/2026</td><td>ส่งมอบแล้ว</td></tr>
+      </table></div>
+    </div>
+  </div>
+
+  <!-- 3 -->
+  <div class="card d3">
+    <div class="card-head"><span class="card-num">3</span><span class="card-name">Sidebar เมนูซ้าย</span><span class="card-desc">เมนูแนวตั้งด้านซ้ายมีแถบฟ้าชี้เมนูที่เปิด เหมาะถ้าจะเพิ่มเมนูอีกในอนาคต</span></div>
+    <div class="demo"><div class="wrap">
+      <div class="menu"><button class="on">📋 Order</button><button>📦 Request Item</button><button>🆕 New Product</button><button>🎫 Ticket</button></div>
+      <div class="panel"><table>
+        <tr><th>SKU / ชื่อสินค้า</th><th>Branch</th><th>จำนวน</th><th>วันที่นัดรับ</th><th>สถานะ</th></tr>
+        <tr><td>10001 พาราเซตามอล 500mg</td><td>SRC</td><td>20</td><td>12/07/2026</td><td>รอสั่งซื้อ</td></tr>
+        <tr><td>10002 วิตามินซี 1000mg</td><td>KKL</td><td>5</td><td>14/07/2026</td><td>ของถึงสาขา</td></tr>
+        <tr><td>10003 ยาแก้ไอน้ำดำ</td><td>SSS</td><td>10</td><td>15/07/2026</td><td>ส่งมอบแล้ว</td></tr>
+      </table></div>
+    </div></div>
+  </div>
+
+  <!-- 4 -->
+  <div class="card d4">
+    <div class="card-head"><span class="card-num">4</span><span class="card-name">Underline มินิมอล</span><span class="card-desc">แท็บขีดเส้นใต้เรียบโล่ง สถานะเป็นจุดสี โปร่งสบายตา</span></div>
+    <div class="demo">
+      <div class="menu"><button class="on">Order</button><button>Request Item</button><button>New Product</button><button>Ticket</button></div>
+      <table>
+        <tr><th>SKU / ชื่อสินค้า</th><th>Branch</th><th>จำนวน</th><th>วันที่นัดรับ</th><th>สถานะ</th></tr>
+        <tr><td>10001 พาราเซตามอล 500mg</td><td>SRC</td><td>20</td><td>12/07/2026</td><td><span class="dot" style="background:#e8a33d"></span>รอสั่งซื้อ</td></tr>
+        <tr><td>10002 วิตามินซี 1000mg</td><td>KKL</td><td>5</td><td>14/07/2026</td><td><span class="dot" style="background:#4891db"></span>ของถึงสาขา</td></tr>
+        <tr><td>10003 ยาแก้ไอน้ำดำ</td><td>SSS</td><td>10</td><td>15/07/2026</td><td><span class="dot" style="background:#3fa25c"></span>ส่งมอบแล้ว</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- 5 -->
+  <div class="card d5">
+    <div class="card-head"><span class="card-num">5</span><span class="card-name">Dashboard Cards</span><span class="card-desc">เมนูเป็นการ์ด 4 ใบพร้อมจำนวนรายการ ตารางหัวเข้ม-ทองแบบตารางสินค้าเดิม</span></div>
+    <div class="demo">
+      <div class="menu">
+        <button class="on"><span class="t">📋 Order</span><span class="c">12 รายการค้าง</span></button>
+        <button><span class="t">📦 Request Item</span><span class="c">4 รายการ</span></button>
+        <button><span class="t">🆕 New Product</span><span class="c">7 รายการ</span></button>
+        <button><span class="t">🎫 Ticket</span><span class="c">2 เรื่องค้าง</span></button>
+      </div>
+      <div class="panel"><table>
+        <tr><th>SKU / ชื่อสินค้า</th><th>Branch</th><th>จำนวน</th><th>วันที่นัดรับ</th><th>สถานะ</th></tr>
+        <tr><td>10001 พาราเซตามอล 500mg</td><td>SRC</td><td>20</td><td>12/07/2026</td><td>รอสั่งซื้อ</td></tr>
+        <tr><td>10002 วิตามินซี 1000mg</td><td>KKL</td><td>5</td><td>14/07/2026</td><td>ของถึงสาขา</td></tr>
+        <tr><td>10003 ยาแก้ไอน้ำดำ</td><td>SSS</td><td>10</td><td>15/07/2026</td><td>ส่งมอบแล้ว</td></tr>
+      </table></div>
+    </div>
+  </div>
+
+  <!-- 6 -->
+  <div class="card d6">
+    <div class="card-head"><span class="card-num">6</span><span class="card-name">Dark Mode</span><span class="card-desc">โหมดมืดทั้งหน้า ปุ่ม active เรืองแสงฟ้า ดูจอสบายตาเวลาทำงานนาน</span></div>
+    <div class="demo"><div class="stage">
+      <div class="menu"><button class="on">Order</button><button>Request Item</button><button>New Product</button><button>Ticket</button></div>
+      <table>
+        <tr><th>SKU / ชื่อสินค้า</th><th>Branch</th><th>จำนวน</th><th>วันที่นัดรับ</th><th>สถานะ</th></tr>
+        <tr><td>10001 พาราเซตามอล 500mg</td><td>SRC</td><td>20</td><td>12/07/2026</td><td>รอสั่งซื้อ</td></tr>
+        <tr><td>10002 วิตามินซี 1000mg</td><td>KKL</td><td>5</td><td>14/07/2026</td><td>ของถึงสาขา</td></tr>
+        <tr><td>10003 ยาแก้ไอน้ำดำ</td><td>SSS</td><td>10</td><td>15/07/2026</td><td>ส่งมอบแล้ว</td></tr>
+      </table>
+    </div></div>
+  </div>
+
+  <!-- 7 -->
+  <div class="card d7">
+    <div class="card-head"><span class="card-num">7</span><span class="card-name">Soft Pastel + Status Chips</span><span class="card-desc">แต่ละเมนูมีสีประจำตัว สถานะเป็นชิปพาสเทล อ่านสถานะงานได้เร็ว</span></div>
+    <div class="demo">
+      <div class="menu"><button class="m1 on">📋 Order</button><button class="m2">📦 Request Item</button><button class="m3">🆕 New Product</button><button class="m4">🎫 Ticket</button></div>
+      <div class="panel"><table>
+        <tr><th>SKU / ชื่อสินค้า</th><th>Branch</th><th>จำนวน</th><th>วันที่นัดรับ</th><th>สถานะ</th></tr>
+        <tr><td>10001 พาราเซตามอล 500mg</td><td>SRC</td><td>20</td><td>12/07/2026</td><td><span class="chip c-wait">รอสั่งซื้อ</span></td></tr>
+        <tr><td>10002 วิตามินซี 1000mg</td><td>KKL</td><td>5</td><td>14/07/2026</td><td><span class="chip c-arrive">ของถึงสาขา</span></td></tr>
+        <tr><td>10003 ยาแก้ไอน้ำดำ</td><td>SSS</td><td>10</td><td>15/07/2026</td><td><span class="chip c-done">ส่งมอบแล้ว</span></td></tr>
+      </table></div>
+    </div>
+  </div>
+
+  <!-- 8 -->
+  <div class="card d8">
+    <div class="card-head"><span class="card-num">8</span><span class="card-name">Glassmorphism บนพื้นฟ้า</span><span class="card-desc">กระจกโปร่งบนพื้นฟ้าไล่เฉด เข้าชุดกับ header ของแอปที่สุด</span></div>
+    <div class="demo"><div class="stage">
+      <div class="menu"><button class="on">Order</button><button>Request Item</button><button>New Product</button><button>Ticket</button></div>
+      <div class="panel"><table>
+        <tr><th>SKU / ชื่อสินค้า</th><th>Branch</th><th>จำนวน</th><th>วันที่นัดรับ</th><th>สถานะ</th></tr>
+        <tr><td>10001 พาราเซตามอล 500mg</td><td>SRC</td><td>20</td><td>12/07/2026</td><td>รอสั่งซื้อ</td></tr>
+        <tr><td>10002 วิตามินซี 1000mg</td><td>KKL</td><td>5</td><td>14/07/2026</td><td>ของถึงสาขา</td></tr>
+        <tr><td>10003 ยาแก้ไอน้ำดำ</td><td>SSS</td><td>10</td><td>15/07/2026</td><td>ส่งมอบแล้ว</td></tr>
+      </table></div>
+    </div></div>
+  </div>
+
+  <!-- 9 -->
+  <div class="card d9">
+    <div class="card-head"><span class="card-num">9</span><span class="card-name">Data Grid สไตล์ Excel</span><span class="card-desc">ตารางเส้นตีครบแบบสเปรดชีต แน่นและชัด เหมาะกับ Order ที่มี 23 คอลัมน์</span></div>
+    <div class="demo">
+      <div class="menu"><button class="on">Order</button><button>Request Item</button><button>New Product</button><button>Ticket</button></div>
+      <div class="panel"><table>
+        <tr><th>SKU / ชื่อสินค้า</th><th>Branch</th><th>จำนวน</th><th>เลขบิลขาย</th><th>ชื่อลูกค้า</th><th>วันที่นัดรับ</th><th>สถานะ</th></tr>
+        <tr><td>10001 พาราเซตามอล 500mg</td><td>SRC</td><td>20</td><td>IV-880012</td><td>คุณสมชาย</td><td>12/07/2026</td><td>รอสั่งซื้อ</td></tr>
+        <tr><td>10002 วิตามินซี 1000mg</td><td>KKL</td><td>5</td><td>IV-880014</td><td>คุณมาลี</td><td>14/07/2026</td><td>ของถึงสาขา</td></tr>
+        <tr><td>10003 ยาแก้ไอน้ำดำ</td><td>SSS</td><td>10</td><td>IV-880019</td><td>คุณวิชัย</td><td>15/07/2026</td><td>ส่งมอบแล้ว</td></tr>
+      </table></div>
+      <div class="hint">↔ เลื่อนซ้าย-ขวาดูคอลัมน์ที่เหลือได้ หัวตารางล็อกอยู่กับที่</div>
+    </div>
+  </div>
+
+  <!-- 10 -->
+  <div class="card d10">
+    <div class="card-head"><span class="card-num">10</span><span class="card-name">Modern SaaS</span><span class="card-desc">สไตล์ Notion/Linear — breadcrumb ซ้าย เมนูขวา แบดจ์สถานะมีจุดสี</span></div>
+    <div class="demo">
+      <div class="bar">
+        <span class="crumb">SaleSupport / <b>Order</b></span>
+        <div class="menu"><button class="on">Order</button><button>Request Item</button><button>New Product</button><button>Ticket</button></div>
+      </div>
+      <div class="panel"><table>
+        <tr><th>SKU / ชื่อสินค้า</th><th>Branch</th><th>จำนวน</th><th>วันที่นัดรับ</th><th>สถานะ</th></tr>
+        <tr><td>10001 พาราเซตามอล 500mg</td><td>SRC</td><td>20</td><td>12/07/2026</td><td><span class="badge"><i style="background:#e8a33d"></i>รอสั่งซื้อ</span></td></tr>
+        <tr><td>10002 วิตามินซี 1000mg</td><td>KKL</td><td>5</td><td>14/07/2026</td><td><span class="badge"><i style="background:#4891db"></i>ของถึงสาขา</span></td></tr>
+        <tr><td>10003 ยาแก้ไอน้ำดำ</td><td>SSS</td><td>10</td><td>15/07/2026</td><td><span class="badge"><i style="background:#3fa25c"></i>ส่งมอบแล้ว</span></td></tr>
+      </table></div>
+    </div>
+  </div>
+
+  <p class="footer-note">ชอบแบบไหน บอกหมายเลข เช่น <b>"เอาแบบ 7"</b> แล้วผมจะสร้างหน้า SaleSupport จริง พร้อมตาราง Supabase ทั้ง 4 เมนูให้ครับ</p>
+</body>
+</html>

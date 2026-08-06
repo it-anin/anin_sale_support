@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ปุ่มยืนยันอนุมัติ — 10 แบบ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Mitr:wght@300;400;500;600&family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: #eef2f6;
+    font-family: 'Noto Sans Thai', sans-serif;
+    color: #24303c;
+    padding: 32px 24px 80px;
+  }
+  .page-head { max-width: 1400px; margin: 0 auto 28px; }
+  .page-head h1 { font-size: 26px; margin: 0 0 6px; font-weight: 700; }
+  .page-head p { margin: 0; font-size: 14px; color: #5c6b7a; line-height: 1.7; }
+  .page-head code { background: #dde6ee; padding: 1px 6px; border-radius: 4px; font-family: 'Outfit', monospace; font-size: 13px; }
+
+  .grid {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(370px, 1fr));
+    gap: 22px;
+  }
+
+  .design {
+    background: #fff;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 3px 14px rgba(0,0,0,0.08);
+    display: flex;
+    flex-direction: column;
+  }
+  .design-head { padding: 12px 16px 10px; }
+  .design-title { font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+  .design-num {
+    width: 24px; height: 24px; flex-shrink: 0;
+    border-radius: 7px; background: #2d6cad; color: #fff;
+    font-family: 'Outfit', sans-serif; font-size: 12px; font-weight: 700;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .design-desc { font-size: 12.5px; color: #6b7a89; margin-top: 5px; line-height: 1.6; padding-left: 32px; padding-bottom: 10px; }
+
+  /* overlay มืดจำลองของจริง */
+  .stage {
+    background: rgba(0,0,0,0.55);
+    padding: 24px 20px 28px;
+    display: flex; justify-content: center;
+  }
+
+  /* ===== modal จริง (.dl-modal .dl-modal-sm) ===== */
+  .modal { background: #fff; border-radius: 16px; width: 100%; max-width: 320px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+  .modal-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0.85rem 1.1rem; background: #4682b4; color: #fff;
+    font-size: 14px; font-weight: 700; font-family: 'Noto Sans Thai', sans-serif;
+  }
+  .modal-head button { background: none; border: none; color: #eaf3fc; font-size: 16px; cursor: pointer; padding: 2px 6px; border-radius: 4px; }
+  .modal-body { padding: 1.1rem; }
+  .modal-input {
+    width: 100%; padding: 8px 10px; border: 1.5px solid #cfe0f2; border-radius: 8px;
+    font-family: inherit; font-size: 1em; background: #fff; outline: none;
+  }
+  .modal-input:focus { border-color: #4891db; box-shadow: 0 0 0 2px rgba(72,145,219,0.2); }
+  .modal-foot {
+    display: flex; justify-content: flex-end; gap: 0.75rem;
+    padding: 0.9rem 1.1rem; border-top: 1px solid #e9eef3; background: #f8fafc;
+  }
+
+  /* ===== ปุ่มยืนยันพื้นฐาน (แต่ละแบบ override ทับ) ===== */
+  .btn-ok {
+    display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+    padding: 9px 22px; border-radius: 10px; border: none;
+    background: linear-gradient(135deg, #2d6cad, #4891db); color: #fff;
+    font-family: 'Mitr', sans-serif; font-weight: 500; font-size: 0.92rem;
+    cursor: pointer; transition: all .22s ease; white-space: nowrap;
+  }
+  .btn-ok svg { width: 15px; height: 15px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+  .btn-cancel {
+    padding: 9px 18px; border-radius: 10px; border: 1.5px solid #cfe0f2;
+    background: #fff; color: #6b7a89; font-family: 'Mitr', sans-serif; font-size: 0.92rem; cursor: pointer;
+    transition: all .2s ease;
+  }
+  .btn-cancel:hover { background: #f2f6fa; color: #2d3a48; }
+
+  /* ============ 1. Solid Blue ============ */
+  .d1 .btn-ok:hover { background: linear-gradient(135deg, #24578a, #2d6cad); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(45,108,173,.4); }
+
+  /* ============ 2. Pill Gradient ============ */
+  .d2 .btn-ok { border-radius: 999px; padding: 9px 26px; box-shadow: 0 2px 8px rgba(45,108,173,.35); }
+  .d2 .btn-ok:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(45,108,173,.45); }
+
+  /* ============ 3. Success Green ============ */
+  .d3 .btn-ok { background: linear-gradient(135deg, #1d7a2f, #35a84c); }
+  .d3 .btn-ok:hover { background: linear-gradient(135deg, #176727, #2b9440); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(29,122,47,.4); }
+
+  /* ============ 4. Outline Check ============ */
+  .d4 .btn-ok { background: #fff; color: #2d6cad; border: 1.5px solid #4891db; }
+  .d4 .btn-ok:hover { background: #2d6cad; border-color: #2d6cad; color: #fff; }
+
+  /* ============ 5. Elevated 3D (กดยุบ) ============ */
+  .d5 .btn-ok { box-shadow: 0 4px 0 #1e4d7d; }
+  .d5 .btn-ok:hover { transform: translateY(-1px); box-shadow: 0 5px 0 #1e4d7d, 0 6px 14px rgba(0,0,0,.18); }
+  .d5 .btn-ok:active { transform: translateY(4px); box-shadow: 0 0 0 #1e4d7d; transition-duration: .07s; }
+
+  /* ============ 6. Cancel + Confirm ============ */
+  /* (ใช้ปุ่มมาตรฐาน แต่เพิ่มปุ่มยกเลิกในฟุตเตอร์) */
+
+  /* ============ 7. Full-width Block ============ */
+  .d7 .modal-foot { display: block; padding: 0.9rem 1.1rem 1.1rem; }
+  .d7 .btn-ok { width: 100%; padding: 13px; border-radius: 12px; font-size: 1rem; font-weight: 600; }
+  .d7 .btn-ok:hover { background: linear-gradient(135deg, #24578a, #2d6cad); box-shadow: 0 4px 14px rgba(45,108,173,.4); }
+
+  /* ============ 8. Soft Tint ============ */
+  .d8 .btn-ok { background: #eaf3fc; color: #2d6cad; font-weight: 600; }
+  .d8 .btn-ok:hover { background: #d5e8fb; }
+
+  /* ============ 9. Glow Ring ============ */
+  .d9 .btn-ok { box-shadow: 0 0 0 0 rgba(72,145,219,.6); animation: okGlow 2s ease-in-out infinite; }
+  @keyframes okGlow {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(72,145,219,.55); }
+    50%      { box-shadow: 0 0 0 7px rgba(72,145,219,0); }
+  }
+  .d9 .btn-ok:hover { background: linear-gradient(135deg, #24578a, #2d6cad); animation: none; box-shadow: 0 4px 12px rgba(45,108,173,.4); }
+
+  /* ============ 10. Slide Arrow ============ */
+  .d10 .btn-ok { padding-right: 18px; }
+  .d10 .btn-ok .arrow { display: inline-block; transition: transform .22s ease; }
+  .d10 .btn-ok:hover { background: linear-gradient(135deg, #24578a, #2d6cad); }
+  .d10 .btn-ok:hover .arrow { transform: translateX(4px); }
+
+  .foot {
+    max-width: 1400px; margin: 34px auto 0;
+    background: #fff; border-radius: 14px; padding: 18px 22px;
+    font-size: 14px; color: #4a5966; line-height: 1.8;
+    box-shadow: 0 3px 14px rgba(0,0,0,0.06);
+  }
+  .foot b { color: #24303c; }
+</style>
+</head>
+<body>
+
+<div class="page-head">
+  <h1>ปุ่มยืนยันอนุมัติ — 10 แบบ</h1>
+  <p>
+    ดีไซน์ใหม่สำหรับปุ่ม <b>✔ ยืนยัน</b> ใน popup "🔐 ใส่รหัสผ่านเพื่ออนุมัติ" หน้าเบิกด่วน<br>
+    ของเดิมใช้คลาส <code>.btn-cart-toggle</code> (ยืมมาจากปุ่มตะกร้าหน้าป้ายราคา ซึ่งมีเอฟเฟกต์ shimmer วิ่งไม่เข้ากับบริบทนี้)<br>
+    <b>เอาเมาส์ชี้ที่ปุ่มเพื่อดู hover</b> · แบบ 5 ลองกดค้างดูจะเห็นปุ่มยุบ · บอกเลขแบบที่ชอบมาได้เลยครับ
+  </p>
+</div>
+
+<div class="grid" id="grid"></div>
+
+<div class="foot">
+  <b>หมายเหตุ:</b> ตอนนี้ปุ่มอนุมัติใช้ <b>รหัสเดียวกับ login แผนกคลังสินค้า</b> แล้ว (แก้ที่ <code>auth.ts</code> ที่เดียว) — ข้อความ placeholder จึงเปลี่ยนจาก "รหัสผ่าน admin" เป็น "รหัสผ่านคลังสินค้า" ให้ตรงความจริง<br>
+  <b>แบบ 3 (Success Green)</b> ใช้สีเขียวสื่อ "อนุมัติ" ตรงตัว และเข้าชุดกับแถวที่อนุมัติแล้วซึ่งเป็นพื้นเขียว <code>#eaf7ea</code> อยู่แล้ว · <b>แบบ 6</b> เพิ่มปุ่มยกเลิกคู่กัน ช่วยให้ปิด popup ได้โดยไม่ต้องกด ✕ มุมบน
+</div>
+
+<script>
+const CHECK = `<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>`;
+const LOCK  = `<svg viewBox="0 0 24 24" style="stroke-width:2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>`;
+
+function footer(n) {
+  if (n === 6) {
+    return `<button class="btn-cancel" type="button">ยกเลิก</button>
+            <button class="btn-ok" type="button">${CHECK}<span>ยืนยัน</span></button>`;
+  }
+  if (n === 10) {
+    return `<button class="btn-ok" type="button"><span>ยืนยันอนุมัติ</span><span class="arrow">→</span></button>`;
+  }
+  if (n === 7) {
+    return `<button class="btn-ok" type="button">${LOCK}<span>ยืนยันอนุมัติ</span></button>`;
+  }
+  return `<button class="btn-ok" type="button">${CHECK}<span>ยืนยัน</span></button>`;
+}
+
+const DESIGNS = [
+  { n: 1,  name: 'Solid Blue',       desc: 'ฟ้าทึบไล่สีมาตรฐานของธีม + ไอคอนถูก — เรียบ ปลอดภัย เข้ากับปุ่มอื่นทั้งแอป' },
+  { n: 2,  name: 'Pill Gradient',    desc: 'แคปซูลมนเต็ม มีเงาฟ้านุ่มใต้ปุ่ม hover แล้วลอยขึ้น — ดูนุ่มนวลทันสมัย' },
+  { n: 3,  name: 'Success Green',    desc: 'เขียวสื่อ "อนุมัติ" ตรงตัว เข้าชุดกับแถวที่อนุมัติแล้ว (พื้นเขียว #eaf7ea)' },
+  { n: 4,  name: 'Outline Check',    desc: 'พื้นขาวขอบฟ้า hover แล้วเติมสีทึบ — เบาตา ไม่ดูก้าวร้าวเกินไป' },
+  { n: 5,  name: 'Elevated 3D',      desc: 'มีขอบล่างหนา 4px กดแล้วยุบลงจริง — สัมผัสเหมือนปุ่มจริง (สไตล์เดียวกับปุ่ม toolbar ที่เพิ่งเลือก)' },
+  { n: 6,  name: 'Cancel + Confirm', desc: 'เพิ่มปุ่ม "ยกเลิก" คู่กัน — ปิด popup ได้โดยไม่ต้องกด ✕ มุมบน เป็นมาตรฐาน dialog ทั่วไป' },
+  { n: 7,  name: 'Full-width Block', desc: 'ปุ่มเต็มความกว้าง ตัวใหญ่ ไอคอนกุญแจ — กดง่ายที่สุด เหมาะกับการใช้บนแท็บเล็ต/มือถือ' },
+  { n: 8,  name: 'Soft Tint',        desc: 'พื้นฟ้าอ่อน ตัวอักษรฟ้าเข้ม — มินิมอลมาก ไม่แย่งความสนใจจากช่องรหัส' },
+  { n: 9,  name: 'Glow Ring',        desc: 'วงแหวนฟ้าเต้นเป็นจังหวะรอบปุ่ม ดึงสายตาให้รู้ว่าต้องกดตรงนี้ (หยุดเต้นตอน hover)' },
+  { n: 10, name: 'Slide Arrow',      desc: 'ลูกศรเลื่อนไปขวาตอน hover สื่อถึงการ "ดำเนินการต่อ" — มีลูกเล่นเล็กๆ' }
+];
+
+const grid = document.getElementById('grid');
+grid.innerHTML = DESIGNS.map(d => `
+  <div class="design">
+    <div class="design-head">
+      <div class="design-title"><span class="design-num">${d.n}</span>${d.name}</div>
+      <div class="design-desc">${d.desc}</div>
+    </div>
+    <div class="stage d${d.n}">
+      <div class="modal">
+        <div class="modal-head">
+          <span>🔐 ใส่รหัสผ่านเพื่ออนุมัติ</span>
+          <button type="button">✕</button>
+        </div>
+        <div class="modal-body">
+          <input class="modal-input" type="password" placeholder="รหัสผ่านคลังสินค้า" />
+        </div>
+        <div class="modal-foot">${footer(d.n)}</div>
+      </div>
+    </div>
+  </div>
+`).join('');
+</script>
+
+</body>
+</html>

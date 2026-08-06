@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ดีไซน์ปุ่มแท็บ Stock 10 แบบ (โทนฟ้า)</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Noto Sans Thai',sans-serif; background:#eef1f5; color:#2d3a48; padding:2rem 1.5rem 4rem; }
+.page-title { text-align:center; font-size:1.7rem; font-weight:700; color:#2d6cad; margin-bottom:.3rem; }
+.page-sub { text-align:center; color:#8194a8; margin-bottom:2rem; font-weight:300; font-size:.9rem; line-height:1.6; }
+
+.card { max-width:760px; margin:0 auto 1.6rem; background:#fff; border-radius:16px; box-shadow:0 4px 20px rgba(0,0,0,.07); overflow:hidden; }
+.card-head { display:flex; align-items:center; gap:.7rem; padding:1rem 1.4rem .4rem; }
+.num { display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:50%; background:#2d6cad; color:#fff; font-weight:700; font-size:.9rem; flex-shrink:0; }
+.name { font-weight:600; font-size:1.05rem; }
+.desc { color:#8194a8; font-size:.8rem; font-weight:300; margin-left:auto; text-align:right; }
+.demo { padding:1rem 1.4rem 1.6rem; }
+button { font-family:inherit; cursor:pointer; }
+
+/* ── panel ตารางจำลอง (ใช้ร่วมทุกแบบ) ── */
+.panel { border:1px solid #dbe6f1; background:#fff; overflow:hidden; border-radius:0 0 10px 10px; }
+.prow { display:grid; grid-template-columns:82px 1fr 56px; gap:8px; padding:8px 12px; font-size:12.5px; border-top:1px solid #eef2f6; }
+.prow span:last-child { text-align:right; }
+.prow.head { background:#eaf3fc; color:#2d6cad; font-weight:600; border-top:0; }
+
+/* ═══ 1) Folder Tabs (ฟ้า) ═══ */
+.d1 .tabs { display:flex; gap:5px; align-items:flex-end; }
+.d1 .tab { padding:.55rem 1.4rem; border:1.5px solid #cadcee; border-bottom:none; background:#eef5fc; color:#5b7fa3; font-size:.86rem; font-weight:600; border-radius:10px 10px 0 0; transition:all .15s; position:relative; bottom:0; box-shadow:0 -2px 4px rgba(45,108,173,.05); }
+.d1 .tab:hover { background:#e2eefb; bottom:4px; }
+.d1 .tab.active { background:linear-gradient(160deg,#5aa0e0,#2d6cad); color:#fff; border-color:#2d6cad; bottom:3px; box-shadow:0 -4px 10px rgba(45,108,173,.35); z-index:1; }
+.d1 .panel { border-color:#cadcee; }
+
+/* ═══ 2) Pill Segmented ═══ */
+.d2 .tabs { display:inline-flex; background:#e8eff7; border-radius:999px; padding:4px; gap:2px; margin-bottom:12px; }
+.d2 .tab { padding:8px 18px; border:none; border-radius:999px; background:transparent; color:#5b7fa3; font-size:.85rem; font-weight:600; transition:all .2s; }
+.d2 .tab.active { background:#fff; color:#2d6cad; box-shadow:0 2px 8px rgba(45,108,173,.2); }
+.d2 .panel { border-radius:12px; }
+
+/* ═══ 3) Underline ═══ */
+.d3 .tabs { display:flex; gap:6px; border-bottom:2px solid #e3ecf5; }
+.d3 .tab { padding:9px 16px; border:none; background:none; color:#8194a8; font-size:.88rem; font-weight:600; border-bottom:3px solid transparent; margin-bottom:-2px; transition:all .18s; }
+.d3 .tab:hover { color:#4891db; }
+.d3 .tab.active { color:#2d6cad; border-bottom-color:#4891db; }
+.d3 .panel { border:1px solid #eef2f6; border-radius:10px; margin-top:12px; box-shadow:0 2px 12px rgba(45,108,173,.08); }
+
+/* ═══ 4) Flat Filled Rounded ═══ */
+.d4 .tabs { display:flex; gap:6px; margin-bottom:12px; }
+.d4 .tab { padding:8px 18px; border:none; border-radius:9px; background:#eaf3fc; color:#4891db; font-size:.85rem; font-weight:600; transition:all .15s; }
+.d4 .tab:hover { background:#d9ebfb; }
+.d4 .tab.active { background:#4891db; color:#fff; box-shadow:0 3px 10px rgba(72,145,219,.4); }
+.d4 .panel { border-radius:12px; }
+
+/* ═══ 5) Soft Card Lift ═══ */
+.d5 .tabs { display:flex; gap:8px; align-items:flex-end; padding-top:6px; }
+.d5 .tab { padding:.6rem 1.3rem; border:none; border-radius:12px; background:#f2f7fd; color:#5b7fa3; font-size:.85rem; font-weight:600; box-shadow:0 2px 5px rgba(45,108,173,.08); transition:all .2s; transform:translateY(0); }
+.d5 .tab:hover { transform:translateY(-3px); }
+.d5 .tab.active { background:linear-gradient(160deg,#6aa8e4,#2d6cad); color:#fff; transform:translateY(-5px); box-shadow:0 8px 18px rgba(45,108,173,.35); }
+.d5 .panel { border-radius:12px; margin-top:4px; }
+
+/* ═══ 6) Outline → Fill ═══ */
+.d6 .tabs { display:flex; gap:8px; margin-bottom:12px; }
+.d6 .tab { padding:8px 18px; border:1.5px solid #b8d3ee; border-radius:8px; background:#fff; color:#4891db; font-size:.85rem; font-weight:600; transition:all .15s; }
+.d6 .tab:hover { border-color:#4891db; background:#f2f8fe; }
+.d6 .tab.active { background:#2d6cad; border-color:#2d6cad; color:#fff; }
+.d6 .panel { border-radius:12px; }
+
+/* ═══ 7) Gradient Capsule ═══ */
+.d7 .tabs { display:flex; gap:7px; margin-bottom:12px; }
+.d7 .tab { padding:8px 20px; border:none; border-radius:999px; background:#eaf3fc; color:#5b7fa3; font-size:.85rem; font-weight:600; transition:all .18s; }
+.d7 .tab:hover { background:#dcebfa; }
+.d7 .tab.active { background:linear-gradient(135deg,#4891db,#2d6cad); color:#fff; box-shadow:0 4px 12px rgba(45,108,173,.4); }
+.d7 .panel { border-radius:12px; }
+
+/* ═══ 8) Ghost Minimal (จุด) ═══ */
+.d8 .tabs { display:flex; gap:4px; margin-bottom:12px; }
+.d8 .tab { position:relative; padding:8px 16px; border:none; background:none; color:#8194a8; font-size:.88rem; font-weight:600; transition:all .18s; }
+.d8 .tab:hover { color:#4891db; }
+.d8 .tab.active { color:#2d6cad; }
+.d8 .tab.active::after { content:''; position:absolute; bottom:2px; left:50%; transform:translateX(-50%); width:5px; height:5px; border-radius:50%; background:#4891db; }
+.d8 .panel { border-radius:12px; box-shadow:0 2px 12px rgba(45,108,173,.08); }
+
+/* ═══ 9) Bottom Bar Indicator ═══ */
+.d9 .tabs { display:flex; gap:2px; background:#eef5fc; border-radius:10px 10px 0 0; padding:5px 5px 0; }
+.d9 .tab { flex:1; padding:9px 12px; border:none; background:none; color:#6b8bab; font-size:.85rem; font-weight:600; border-radius:8px 8px 0 0; transition:all .18s; position:relative; }
+.d9 .tab:hover { background:rgba(255,255,255,.5); color:#2d6cad; }
+.d9 .tab.active { background:#fff; color:#2d6cad; box-shadow:0 -2px 8px rgba(45,108,173,.1); }
+.d9 .tab.active::after { content:''; position:absolute; bottom:0; left:12px; right:12px; height:3px; border-radius:3px; background:#4891db; }
+.d9 .panel { border-radius:0 0 10px 10px; border-top:0; }
+
+/* ═══ 10) 3D Chunky Blue ═══ */
+.d10 .tabs { display:flex; gap:8px; margin-bottom:14px; padding-top:4px; }
+.d10 .tab { padding:9px 18px; border:none; border-radius:10px; background:#eaf3fc; color:#2d6cad; font-size:.85rem; font-weight:700; box-shadow:0 4px 0 #c3d9f0; transition:all .1s; transform:translateY(0); }
+.d10 .tab:hover { transform:translateY(-2px); box-shadow:0 6px 0 #c3d9f0; }
+.d10 .tab:active { transform:translateY(2px); box-shadow:0 2px 0 #c3d9f0; }
+.d10 .tab.active { background:#4891db; color:#fff; box-shadow:0 4px 0 #245a94; }
+.d10 .tab.active:hover { box-shadow:0 6px 0 #245a94; }
+.d10 .panel { border-radius:12px; }
+</style>
+</head>
+<body>
+<h1 class="page-title">ดีไซน์ปุ่มแท็บ Stock 10 แบบ</h1>
+<p class="page-sub">โทนฟ้าแบรนด์ (#4891db / #2d6cad) แทนโทนทองเดิม · คลิกแท็บเพื่อดู hover/active<br>บอกเลขแบบที่ชอบ เพื่อนำไปแทน <code>.stock-tab</code> ในหน้าเช็คสต๊อค</p>
+
+<div id="grid"></div>
+
+<script>
+const TABS = ['คลังสินค้า', 'SRC', 'KKL', 'SSS'];
+const ROWS = [
+  ['100234', 'พาราเซตามอล 500mg', '120'],
+  ['100567', 'วิตามินซี 1000mg', '85'],
+  ['100892', 'ยาแก้ไอ มะนาว', '43'],
+];
+const DESIGNS = [
+  ['Folder Tabs', 'แท็บโฟลเดอร์ต่อตาราง · active ไล่เฉดฟ้า'],
+  ['Pill Segmented', 'พิลล์ในแคปซูล · active พื้นขาวเงา'],
+  ['Underline', 'แบนสะอาด · เส้นใต้ฟ้า active'],
+  ['Flat Filled', 'active พื้นฟ้าทึบ · อื่นฟ้าอ่อน'],
+  ['Soft Card Lift', 'การ์ดมน · active ยกลอย ไล่เฉดฟ้า'],
+  ['Outline → Fill', 'ขอบฟ้าพื้นขาว · active พื้นทึบ'],
+  ['Gradient Capsule', 'แคปซูลกลม · active ไล่เฉดฟ้า'],
+  ['Ghost Minimal', 'โปร่งเรียบ · active จุดฟ้าใต้'],
+  ['Bottom Bar', 'เต็มแถบ · active แถบล่างฟ้า'],
+  ['3D Chunky Blue', 'ปุ่มหนา เงา 3D · active ฟ้าเข้ม'],
+];
+
+document.getElementById('grid').innerHTML = DESIGNS.map((d, i) => `
+  <section class="card">
+    <div class="card-head"><span class="num">${i + 1}</span><span class="name">${d[0]}</span><span class="desc">${d[1]}</span></div>
+    <div class="demo d${i + 1}">
+      <div class="tabs">${TABS.map((t, j) => `<button class="tab${j === 0 ? ' active' : ''}">${t}</button>`).join('')}</div>
+      <div class="panel">
+        <div class="prow head"><span>SKU</span><span>ชื่อสินค้า</span><span>จำนวน</span></div>
+        ${ROWS.map(r => `<div class="prow"><span>${r[0]}</span><span>${r[1]}</span><span>${r[2]}</span></div>`).join('')}
+      </div>
+    </div>
+  </section>`).join('');
+
+// คลิกแท็บ → สลับ active ภายในแถบเดียวกัน
+document.querySelectorAll('.tabs').forEach(bar => {
+  bar.addEventListener('click', e => {
+    const t = e.target.closest('.tab');
+    if (!t) return;
+    bar.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+  });
+});
+</script>
+</body>
+</html>

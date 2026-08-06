@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stock Empty/Loading Icon — 20 แบบ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+Thai:wght@300;400;500;600;700&family=Lilita+One&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: #eef2f6;
+    font-family: 'Noto Sans Thai', sans-serif;
+    color: #24303c;
+    padding: 32px 24px 80px;
+  }
+  .page-head { max-width: 1400px; margin: 0 auto 28px; }
+  .page-head h1 { font-size: 26px; margin: 0 0 6px; font-weight: 700; }
+  .page-head p { margin: 0; font-size: 14px; color: #5c6b7a; line-height: 1.7; }
+  .page-head code { background: #dde6ee; padding: 1px 6px; border-radius: 4px; font-family: 'Outfit', monospace; font-size: 13px; }
+
+  .grid {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+  }
+
+  .design {
+    background: #fff;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 3px 14px rgba(0,0,0,0.08);
+    display: flex;
+    flex-direction: column;
+  }
+  .design-head { padding: 12px 16px 10px; border-bottom: 1px solid #eef1f4; }
+  .design-title { font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+  .design-num {
+    width: 24px; height: 24px; flex-shrink: 0;
+    border-radius: 7px; background: #2d6cad; color: #fff;
+    font-family: 'Outfit', sans-serif; font-size: 12px; font-weight: 700;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .design-desc { font-size: 12.5px; color: #6b7a89; margin-top: 5px; line-height: 1.6; padding-left: 32px; }
+
+  /* พื้นหลังจำลอง .container ของจริง (#faf8f5) */
+  .stage {
+    background: #faf8f5;
+    padding: 36px 16px 30px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+  }
+  .stage-caption {
+    font-size: 13px;
+    color: #b0a898;
+    font-family: 'Outfit', sans-serif;
+  }
+
+  /* กรอบไอคอน 96px ในแกลเลอรี (ของจริงคือ 256px เต็ม .stock-empty-icon-img) */
+  .icon-box {
+    width: 96px;
+    height: 96px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+  .icon-box svg { display: block; overflow: visible; }
+
+  .blue    { color: #4891db; }
+  .blueDk  { color: #2d6cad; }
+  .paleBlue{ color: #cfe0f5; }
+
+  /* ================= Keyframes ================= */
+  @keyframes spin        { to { transform: rotate(360deg); } }
+  @keyframes spinCCW     { to { transform: rotate(-360deg); } }
+  @keyframes pulse       { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.12); opacity: 0.65; } }
+  @keyframes bounce      { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-14px); } }
+  @keyframes dotBlink    { 0%,80%,100% { opacity: 0.25; transform: scale(0.85); } 40% { opacity: 1; transform: scale(1.1); } }
+  @keyframes barScale    { 0%,100% { transform: scaleY(0.35); } 50% { transform: scaleY(1); } }
+  @keyframes scanMove    { 0% { transform: translateY(-26px); opacity: 0; } 15% { opacity: 1; } 85% { opacity: 1; } 100% { transform: translateY(26px); opacity: 0; } }
+  @keyframes dash        { to { stroke-dashoffset: 0; } }
+  @keyframes fillWave    { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+  @keyframes ringFade    { 0% { transform: scale(0.6); opacity: 1; } 100% { transform: scale(1.5); opacity: 0; } }
+  @keyframes flip        { 0%,100% { transform: rotateY(0deg); } 50% { transform: rotateY(180deg); } }
+  @keyframes tilt        { 0%,100% { transform: rotate(-6deg); } 50% { transform: rotate(6deg); } }
+  @keyframes orbit       { to { transform: rotate(360deg); } }
+  @keyframes counterOrbit{ to { transform: rotate(-360deg); } }
+  @keyframes letterBlur  { 0% { filter: blur(4px); opacity: 0.2; } 50% { filter: blur(0); opacity: 1; } 100% { filter: blur(4px); opacity: 0.2; } }
+  @keyframes stack       { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+  @keyframes checkDraw   { 0%,60% { stroke-dashoffset: 24; opacity: 0; } 75% { opacity: 1; } 100% { stroke-dashoffset: 0; opacity: 1; } }
+
+  /* ============== 1. Ring Spinner ============== */
+  .d1 .ring { animation: spin 1.1s linear infinite; transform-origin: center; }
+
+  /* ============== 2. Dual Ring ============== */
+  .d2 .ringA { animation: spin 1.4s linear infinite; transform-origin: center; }
+  .d2 .ringB { animation: spinCCW 1.9s linear infinite; transform-origin: center; }
+
+  /* ============== 3. Dashed Ring ============== */
+  .d3 .dashRing { animation: spin 1.6s linear infinite; transform-origin: center; }
+
+  /* ============== 4. Box Rotate 3D-ish ============== */
+  .d4 .boxGroup { animation: spin 2.4s linear infinite; transform-origin: center; }
+
+  /* ============== 5. Bouncing Package ============== */
+  .d5 .pkg { animation: bounce 0.9s ease-in-out infinite; }
+  .d5 .shadow { animation: pulse 0.9s ease-in-out infinite; transform-origin: center; }
+
+  /* ============== 6. Three Dots ============== */
+  .d6 .dot1 { animation: dotBlink 1.2s ease-in-out infinite; }
+  .d6 .dot2 { animation: dotBlink 1.2s ease-in-out 0.15s infinite; }
+  .d6 .dot3 { animation: dotBlink 1.2s ease-in-out 0.3s infinite; }
+
+  /* ============== 7. Bar Equalizer ============== */
+  .d7 .bar1 { animation: barScale 1s ease-in-out infinite; transform-origin: bottom; }
+  .d7 .bar2 { animation: barScale 1s ease-in-out 0.15s infinite; transform-origin: bottom; }
+  .d7 .bar3 { animation: barScale 1s ease-in-out 0.3s infinite; transform-origin: bottom; }
+  .d7 .bar4 { animation: barScale 1s ease-in-out 0.45s infinite; transform-origin: bottom; }
+  .d7 .bar5 { animation: barScale 1s ease-in-out 0.6s infinite; transform-origin: bottom; }
+
+  /* ============== 8. Barcode Scan ============== */
+  .d8 .scanLine { animation: scanMove 1.6s ease-in-out infinite; }
+
+  /* ============== 9. Magnifier Orbit ============== */
+  .d9 .magOrbit { animation: orbit 2.2s linear infinite; transform-origin: 48px 48px; }
+
+  /* ============== 10. Pulsing Logo Ring (BIGYA) ============== */
+  .d10 .pulseRing1 { animation: ringFade 1.8s ease-out infinite; transform-origin: center; }
+  .d10 .pulseRing2 { animation: ringFade 1.8s ease-out 0.6s infinite; transform-origin: center; }
+  .d10 .pulseRing3 { animation: ringFade 1.8s ease-out 1.2s infinite; transform-origin: center; }
+
+  /* ============== 11. Spinning Arc (thick) ============== */
+  .d11 .arcThick { animation: spin 1s cubic-bezier(0.5,0,0.5,1) infinite; transform-origin: center; }
+
+  /* ============== 12. Flipping Card ============== */
+  .d12 .flipCard { animation: flip 1.6s ease-in-out infinite; transform-origin: center; transform-style: preserve-3d; }
+
+  /* ============== 13. Stacked Boxes Loading ============== */
+  .d13 .stackTop { animation: stack 1s ease-in-out infinite; }
+  .d13 .stackMid { animation: stack 1s ease-in-out 0.15s infinite; }
+  .d13 .stackBot { animation: stack 1s ease-in-out 0.3s infinite; }
+
+  /* ============== 14. Wordmark Blur-in (reuse site logo anim) ============== */
+  .d14 .wl { display: inline-block; animation: letterBlur 1.8s ease-in-out infinite; }
+  .d14 .wl:nth-child(1) { animation-delay: 0s; }
+  .d14 .wl:nth-child(2) { animation-delay: 0.08s; }
+  .d14 .wl:nth-child(3) { animation-delay: 0.16s; }
+  .d14 .wl:nth-child(4) { animation-delay: 0.24s; }
+  .d14 .wl:nth-child(5) { animation-delay: 0.32s; }
+
+  /* ============== 15. Orbiting Dots around Box ============== */
+  .d15 .orbitGroup { animation: orbit 2s linear infinite; transform-origin: 48px 48px; }
+
+  /* ============== 16. Gauge / Progress Arc ============== */
+  .d16 .gaugeArc { stroke-dasharray: 130; stroke-dashoffset: 130; animation: dash 1.6s ease-in-out infinite; transform: rotate(-90deg); transform-origin: center; }
+
+  /* ============== 17. Tilting Clipboard ============== */
+  .d17 .tiltBoard { animation: tilt 1.6s ease-in-out infinite; transform-origin: 48px 90px; }
+
+  /* ============== 18. Checkmark Draw Loop ============== */
+  .d18 .checkPath { stroke-dasharray: 24; animation: checkDraw 1.8s ease-in-out infinite; }
+  .d18 .checkRing { animation: spin 3s linear infinite; transform-origin: center; }
+
+  /* ============== 19. Wave Fill Box ============== */
+  .d19 .waveTop { animation: fillWave 1.2s ease-in-out infinite; }
+
+  /* ============== 20. Concentric Ring Trio (fast/med/slow) ============== */
+  .d20 .cRingA { animation: spin 0.9s linear infinite; transform-origin: center; }
+  .d20 .cRingB { animation: spinCCW 1.5s linear infinite; transform-origin: center; }
+  .d20 .cRingC { animation: spin 2.4s linear infinite; transform-origin: center; }
+
+  .foot {
+    max-width: 1400px; margin: 34px auto 0;
+    background: #fff; border-radius: 14px; padding: 18px 22px;
+    font-size: 14px; color: #4a5966; line-height: 1.8;
+    box-shadow: 0 3px 14px rgba(0,0,0,0.06);
+  }
+  .foot b { color: #24303c; }
+</style>
+</head>
+<body>
+
+<div class="page-head">
+  <h1>Stock Empty/Loading Icon — 20 แบบ</h1>
+  <p>
+    แทนที่ <code>&lt;img className="stock-empty-icon-img" src="/stock.png"&gt;</code> ในหน้าเช็คสต๊อค (แสดงตอนยังไม่ได้ค้นหา) ด้วยไอคอนโลโก้แบบเคลื่อนไหว (SVG + CSS animation) แทนไฟล์รูปภาพ<br>
+    ทุกแบบใช้โทนฟ้าของธีมเว็บ (<code>#4891db</code> / <code>#2d6cad</code>) วางบนพื้น <code>#faf8f5</code> เหมือนหน้าจริง (ของจริงกว้าง 256px แกลเลอรีนี้ย่อเหลือ 96px ให้ดูพร้อมกันหลายแบบ)<br>
+    บอกเลขแบบที่ชอบมาได้เลยครับ ผมจะใส่เข้าไปแทน <code>stock.png</code> จริง
+  </p>
+</div>
+
+<div class="grid" id="grid"></div>
+
+<div class="foot">
+  <b>หมายเหตุทางเทคนิค:</b> ทุกแบบเป็น inline SVG + CSS <code>@keyframes</code> ล้วน ไม่พึ่งไฟล์รูป — ขนาดจะคมชัดทุกความละเอียดจอ และไฟล์เว็บเบาลง (ไม่ต้องโหลด .png เพิ่ม)<br>
+  แบบ 14 ใช้ลูกเล่นเดียวกับโลโก้ <code>AnimatedLogoText</code> ที่ใช้อยู่ทุกหน้าอยู่แล้ว จะดูเข้าธีมมากที่สุด · แบบ 5, 13, 15, 17, 19 มีธีม "กล่อง/สต๊อคสินค้า" ตรงกับความหมายของหน้านี้
+</div>
+
+<script>
+const DESIGNS = [
+  { n: 1,  cls: 'd1',  name: 'Ring Spinner',        desc: 'วงแหวนหมุนคลาสสิก เรียบง่าย เข้าใจง่ายที่สุดว่ากำลังโหลด', svg: `
+    <svg width="96" height="96" viewBox="0 0 96 96">
+      <circle cx="48" cy="48" r="34" fill="none" stroke="#cfe0f5" stroke-width="7"/>
+      <circle class="ring" cx="48" cy="48" r="34" fill="none" stroke="#4891db" stroke-width="7" stroke-linecap="round" stroke-dasharray="60 200"/>
+    </svg>` },
+
+  { n: 2,  cls: 'd2',  name: 'Dual Ring',            desc: 'วงแหวน 2 ชั้น หมุนสวนทางกัน ให้ความรู้สึกมีมิติมากกว่าวงเดียว', svg: `
+    <svg width="96" height="96" viewBox="0 0 96 96">
+      <circle class="ringA" cx="48" cy="48" r="34" fill="none" stroke="#4891db" stroke-width="6" stroke-linecap="round" stroke-dasharray="45 170"/>
+      <circle class="ringB" cx="48" cy="48" r="22" fill="none" stroke="#2d6cad" stroke-width="5" stroke-linecap="round" stroke-dasharray="30 110"/>
+    </svg>` },
+
+  { n: 3,  cls: 'd3',  name: 'Dashed Ring',          desc: 'วงแหวนเส้นประหมุนรอบตัว ลุคทันสมัย เบาตากว่าเส้นทึบ', svg: `
+    <svg width="96" height="96" viewBox="0 0 96 96">
+      <circle class="dashRing" cx="48" cy="48" r="32" fill="none" stroke="#4891db" stroke-width="5" stroke-linecap="round" stroke-dasharray="4 10"/>
+      <circle cx="48" cy="48" r="6" fill="#2d6cad"/>
+    </svg>` },
+
+  { n: 4,  cls: 'd4',  name: 'Rotating Box',         desc: 'กล่องพัสดุหมุนรอบตัวเอง ธีมสต๊อคสินค้าตรงตัว', svg: `
+    <svg width="96" height="96" viewBox="0 0 96 96">
+      <g class="boxGroup">
+        <path d="M48 20 L74 33 L74 63 L48 76 L22 63 L22 33 Z" fill="none" stroke="#4891db" stroke-width="4" stroke-linejoin="round"/>
+        <path d="M22 33 L48 46 L74 33" fill="none" stroke="#4891db" stroke-width="4" stroke-linejoin="round"/>
+        <path d="M48 46 L48 76" fill="none" stroke="#4891db" stroke-width="4"/>
+      </g>
+    </svg>` },
+
+  { n: 5,  cls: 'd5',  name: 'Bouncing Package',     desc: 'กล่องเด้งขึ้นลง + เงาข้างล่างจางตาม เป็นมิตร มีชีวิตชีวา', svg: `
+    <svg width="96" height="96" viewBox="0 0 96 96">
+      <ellipse class="shadow" cx="48" cy="76" rx="20" ry="5" fill="#cfe0f5"/>
+      <g class="pkg">
+        <rect x="28" y="30" width="40" height="34" rx="3" fill="none" stroke="#4891db" stroke-width="4"/>
+        <path d="M28 42 H68 M48 30 V64" stroke="#4891db" stroke-width="3"/>
+      </g>
+    </svg>` },
+
+  { n: 6,  cls: 'd6',  name: 'Three Dots',           desc: 'จุดกระพริบสลับกัน 3 จุด มินิมอลสุด ใช้พื้นที่น้อย', svg: `
+    <svg width="96" height="96" viewBox="0 0 96 96">
+      <circle class="dot1" cx="30" cy="48" r="7" fill="#4891db"/>
+      <circle class="dot2" cx="48" cy="48" r="7" fill="#4891db"/>
+      <circle class="dot3" cx="66" cy="48" r="7" fill="#4891db"/>
+    </svg>` },
+
+  { n: 7,  cls: 'd7',  name: 'Bar Equalizer',        desc: 'แท่งกราฟยืด-หดสลับกัน 5 แท่ง ให้ความรู้สึกกำลังประมวลผลข้อมูล', svg: `
+    <svg width="96" height="96" viewBox="0 0 96 96">
+      <rect class="bar1" x="24" y="34" width="7" height="30" rx="3" fill="#4891db"/>
+      <rect class="bar2" x="36" y="34" width="7" height="30" rx="3" fill="#4891db"/>
+      <rect class="bar3" x="48" y="34" width="7" height="30" rx="3" fill="#2d6cad"/>
+      <rect class="bar4" x="60" y="34" width="7" height="30" rx="3" fill="#4891db"/>
+      <rect class="bar5" x="72" y="34" width="7" height="30" rx="3" fill="#4891db"/>
+    </svg>` },
+
+  { n: 8,  cls: 'd8',  name: 'Barcode Scan',         desc: 'เส้นสแกนวิ่งผ่านบาร์โค้ด ตรงกับธีมสต๊อค/สแกนสินค้ามาก', svg: `
+    <svg width="96" height="96" viewBox="0 0 96 96">
+      <g stroke="#cfe0f5" stroke-width="3">
+        <path d="M26 30 V66"/><path d="M32 30 V66"/><path d="M40 30 V66"/><path d="M46 30 V66"/>
+        <path d="M54 30 V66"/><path d="M62 30 V66"/><path d="M68 30 V66"/><path d="M74 30 V66"/>
+      </g>
+      <line class="scanLine" x1="22" y1="48" x2="78" y2="48" stroke="#4891db" stroke-width="3"/>
+    </svg>` },
+
+  { n: 9,  cls: 'd9',  name: 'Magnifier Orbit',      desc: 'แว่นขยายโคจรรอบวงกลม สื่อถึงการ "กำลังค้นหา" ตรงบริบทหน้านี้', svg: `
+    <svg width="96" height="96" viewBox="0 0 96 96">
+      <circle cx="48" cy="48" r="30" fill="none" stroke="#cfe0f5" stroke-width="3" stroke-dasharray="3 6"/>
+      <g class="magOrbit">
+        <g transform="translate(18,18)">
+          <circle cx="0" cy="0" r="9" fill="none" stroke="#4891db" stroke-width="4"/>
+          <line x1="6.5" y1="6.5" x2="13" y2="13" stroke="#4891db" stroke-width="4" stroke-linecap="round"/>
+        </g>
+      </g>
+    </svg>` },
+
+  { n: 10, cls: 'd10', name: 'Pulsing Logo Ring',    desc: 'วงแหวนขยายจางออกเป็นชั้นๆ ซ้อนกัน 3 รอบ ดูพรีเมียมแบบแบรนด์', svg: `
+    <svg width="96" height="96" viewBox="0 0 96 96">
+      <circle class="pulseRing1" cx="48" cy="48" r="20" fill="none" stroke="#4891db" stroke-width="3"/>
+      <circle class="pulseRing2" cx="48" cy="48" r="20" fill="none" stroke="#4891db" stroke-width="3"/>
+      <circle class="pulseRing3" cx="48" cy="48" r="20" fill="none" stroke="#4891db" stroke-width="3"/>
+      <circle cx="48" cy="48" r="12" fill="#2d6cad"/>
+    </svg>` },
+
+  { n: 11, cls: 'd11', name: 'Thick Spinning Arc',   desc: 'เส้นหนาโค้งหมุนเร็ว ให้ความรู้สึกกระฉับกระเฉง โหลดไว', svg: `
+    <svg width="96" height="96" viewBox="0 0 96 96">
+      <circle cx="48" cy="48" r="30" fill="none" stroke="#eaf3fc" stroke-width="10"/>
+      <circle class="arcThick" cx="48" cy="48" r="30" fill="none" stroke="#2d6cad" stroke-width="10" stroke-linecap="round" stroke-dasharray="47 141"/>
+    </svg>` },
+
+  { n: 12, cls: 'd12', name: 'Flipping Price Tag',   desc: 'ป้ายราคาพลิกกลับไปมา 3 มิติ อ้างอิงโลโก้ป้ายราคาของแอป', svg: `
+    <svg width="96" height="96" viewBox="0 0 96 96">
+      <g class="flipCard">
+        <path d="M30 26 L58 26 L70 48 L58 70 L30 70 Z" fill="none" stroke="#4891db" stroke-width="4" stroke-linejoin="round"/>
+        <circle cx="40" cy="38" r="3.5" fill="#4891db"/>
+      </g>
+    </svg>` },
+
+  { n: 13, cls: 'd13', name: 'Stacked Boxes',        desc: 'กล่องสต๊อค 3 ใบซ้อนกันขยับขึ้นลงไล่จังหวะ เหมือนคลังสินค้ากำลังทำงาน', svg: `
+    <svg width="96" height="96" viewBox="0 0 96 96">
+      <rect class="stackTop" x="34" y="24" width="28" height="16" rx="2" fill="none" stroke="#4891db" stroke-width="3.5"/>
+      <rect class="stackMid" x="30" y="42" width="36" height="16" rx="2" fill="none" stroke="#2d6cad" stroke-width="3.5"/>
+      <rect class="stackBot" x="26" y="60" width="44" height="16" rx="2" fill="none" stroke="#4891db" stroke-width="3.5"/>
+    </svg>` },
+
+  { n: 14, cls: 'd14', name: 'Wordmark Blur-in',     desc: 'ตัวอักษร "BIGYA" blur-in ไล่ทีละตัววนซ้ำ ใช้แอนิเมชันเดียวกับโลโก้หลักของเว็บ — เข้าธีมสุด', svg: `
+    <svg width="96" height="96" viewBox="0 0 96 96">
+      <text x="48" y="54" text-anchor="middle" font-family="'Lilita One',cursive" font-size="18" fill="#2d6cad">
+        <tspan class="wl">B</tspan><tspan class="wl">I</tspan><tspan class="wl">G</tspan><tspan class="wl">Y</tspan><tspan class="wl">A</tspan>
+      </text>
+    </svg>` },
+
+  { n: 15, cls: 'd15', name: 'Orbiting Dots + Box',  desc: 'จุดเล็ก 2 จุดโคจรรอบกล่องสินค้านิ่งตรงกลาง ผสมธีมกล่อง+loading', svg: `
+    <svg width="96" height="96" viewBox="0 0 96 96">
+      <rect x="38" y="38" width="20" height="20" rx="2" fill="none" stroke="#2d6cad" stroke-width="3.5"/>
+      <g class="orbitGroup">
+        <circle cx="48" cy="16" r="4" fill="#4891db"/>
+        <circle cx="48" cy="80" r="4" fill="#4891db"/>
+      </g>
+    </svg>` },
+
+  { n: 16, cls: 'd16', name: 'Gauge Progress Arc',   desc: 'เส้นโค้งไล่วาดเหมือนหลอดโหลด/มาตรวัด แล้ววนซ้ำ', svg: `
+    <svg width="96" height="96" viewBox="0 0 96 96">
+      <circle cx="48" cy="48" r="20.7" fill="none" stroke="#eaf3fc" stroke-width="8"/>
+      <circle class="gaugeArc" cx="48" cy="48" r="20.7" fill="none" stroke="#4891db" stroke-width="8" stroke-linecap="round"/>
+    </svg>` },
+
+  { n: 17, cls: 'd17', name: 'Tilting Clipboard',    desc: 'คลิปบอร์ดเอียงซ้าย-ขวาเบาๆ เหมือนกำลังเช็กสต๊อค (สื่อความหมายชัดสุด)', svg: `
+    <svg width="96" height="96" viewBox="0 0 96 96">
+      <g class="tiltBoard">
+        <rect x="32" y="24" width="32" height="42" rx="3" fill="none" stroke="#4891db" stroke-width="3.5"/>
+        <rect x="42" y="20" width="12" height="7" rx="2" fill="#2d6cad"/>
+        <line x1="38" y1="38" x2="58" y2="38" stroke="#4891db" stroke-width="2.5"/>
+        <line x1="38" y1="46" x2="58" y2="46" stroke="#4891db" stroke-width="2.5"/>
+        <line x1="38" y1="54" x2="52" y2="54" stroke="#4891db" stroke-width="2.5"/>
+      </g>
+    </svg>` },
+
+  { n: 18, cls: 'd18', name: 'Checkmark Loop',       desc: 'วงแหวนหมุนช้าๆ พร้อมเครื่องหมายถูกวาดขึ้นวนซ้ำ สื่อถึง "กำลังตรวจสอบ"', svg: `
+    <svg width="96" height="96" viewBox="0 0 96 96">
+      <circle class="checkRing" cx="48" cy="48" r="30" fill="none" stroke="#cfe0f5" stroke-width="4" stroke-dasharray="2 8"/>
+      <path class="checkPath" d="M36 49 L45 58 L61 40" fill="none" stroke="#2d6cad" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>` },
+
+  { n: 19, cls: 'd19', name: 'Wave Fill Box',        desc: 'เส้นคลื่นในกล่องขยับขึ้นลง เหมือนของกำลังถูกเติมเข้าคลัง', svg: `
+    <svg width="96" height="96" viewBox="0 0 96 96">
+      <rect x="28" y="28" width="40" height="38" rx="3" fill="none" stroke="#2d6cad" stroke-width="3.5"/>
+      <clipPath id="waveClip"><rect x="29" y="29" width="38" height="36" rx="2"/></clipPath>
+      <g clip-path="url(#waveClip)">
+        <path class="waveTop" d="M25 52 Q37 46 48 52 T71 52 V70 H25 Z" fill="#a9d0f5"/>
+      </g>
+    </svg>` },
+
+  { n: 20, cls: 'd20', name: 'Concentric Ring Trio', desc: '3 วงแหวนหมุนคนละความเร็ว/ทิศทาง ให้ความรู้สึก "ระบบกำลังทำงาน" ซับซ้อนแต่เรียบ', svg: `
+    <svg width="96" height="96" viewBox="0 0 96 96">
+      <circle class="cRingA" cx="48" cy="48" r="30" fill="none" stroke="#4891db" stroke-width="3" stroke-linecap="round" stroke-dasharray="20 170"/>
+      <circle class="cRingB" cx="48" cy="48" r="22" fill="none" stroke="#2d6cad" stroke-width="3" stroke-linecap="round" stroke-dasharray="15 125"/>
+      <circle class="cRingC" cx="48" cy="48" r="14" fill="none" stroke="#a9d0f5" stroke-width="3" stroke-linecap="round" stroke-dasharray="10 80"/>
+    </svg>` }
+];
+
+const grid = document.getElementById('grid');
+grid.innerHTML = DESIGNS.map(d => `
+  <div class="design">
+    <div class="design-head">
+      <div class="design-title"><span class="design-num">${d.n}</span>${d.name}</div>
+      <div class="design-desc">${d.desc}</div>
+    </div>
+    <div class="stage ${d.cls}">
+      <div class="icon-box">${d.svg}</div>
+      <div class="stage-caption">พิมพ์ SKU หรือชื่อสินค้าในช่องค้นหาด้านบน</div>
+    </div>
+  </div>
+`).join('');
+</script>
+
+</body>
+</html>

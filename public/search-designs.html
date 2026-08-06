@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ดีไซน์ช่องค้นหา 10 แบบ (โทนฟ้า)</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Noto Sans Thai',sans-serif; background:#eef1f5; color:#2d3a48; padding:2rem 1.5rem 4rem; }
+.page-title { text-align:center; font-size:1.7rem; font-weight:700; color:#2d6cad; margin-bottom:.3rem; }
+.page-sub { text-align:center; color:#8194a8; margin-bottom:2rem; font-weight:300; font-size:.9rem; line-height:1.6; }
+.card { max-width:720px; margin:0 auto 1.5rem; background:#fff; border-radius:16px; box-shadow:0 4px 20px rgba(0,0,0,.07); overflow:hidden; }
+.card-head { display:flex; align-items:center; gap:.7rem; padding:1rem 1.4rem .3rem; }
+.num { display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:50%; background:#2d6cad; color:#fff; font-weight:700; font-size:.9rem; flex-shrink:0; }
+.name { font-weight:600; font-size:1.05rem; }
+.desc { color:#8194a8; font-size:.8rem; font-weight:300; margin-left:auto; text-align:right; }
+.demo { padding:1.7rem 1.4rem; }
+.sbar { width:100%; max-width:520px; margin:0 auto; }
+input { font-family:inherit; }
+input:focus { outline:none; }
+.ic svg { display:block; }
+
+/* ═══ 1) Rounded Pill ═══ */
+.d1 .sbar { position:relative; }
+.d1 input { width:100%; padding:15px 58px 15px 22px; border:none; border-radius:50px; font-size:15px; background:#f2f7fd; box-shadow:0 6px 24px rgba(45,108,173,.1); transition:.2s; }
+.d1 input:focus { background:#fff; box-shadow:0 8px 28px rgba(45,108,173,.22); }
+.d1 .sbtn { position:absolute; right:6px; top:6px; width:44px; height:44px; border-radius:50%; border:none; background:linear-gradient(137deg,#5aa0e0,#2d6cad); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:.2s; }
+.d1 .sbtn:hover { transform:scale(1.08); box-shadow:0 4px 12px rgba(45,108,173,.4); }
+.d1 .ic svg { width:20px; height:20px; }
+
+/* ═══ 2) Flat Bordered + icon ซ้าย ═══ */
+.d2 .sbar { display:flex; align-items:center; gap:10px; padding:0 16px; border:1.5px solid #cadcee; border-radius:12px; background:#fff; transition:.2s; }
+.d2 .sbar:focus-within { border-color:#4891db; box-shadow:0 0 0 3px rgba(72,145,219,.15); }
+.d2 .sic { color:#7c9bb8; flex-shrink:0; }
+.d2 .sic svg { width:19px; height:19px; }
+.d2 input { flex:1; border:none; padding:14px 0; font-size:15px; background:none; }
+
+/* ═══ 3) Underline Minimal ═══ */
+.d3 .sbar { display:flex; align-items:center; gap:10px; border-bottom:2px solid #cadcee; transition:.2s; }
+.d3 .sbar:focus-within { border-bottom-color:#4891db; }
+.d3 .sic { color:#7c9bb8; }
+.d3 .sic svg { width:19px; height:19px; }
+.d3 input { flex:1; border:none; padding:12px 2px; font-size:15px; background:none; }
+
+/* ═══ 4) Filled Soft Blue ═══ */
+.d4 .sbar { position:relative; }
+.d4 input { width:100%; padding:14px 56px 14px 20px; border:none; border-radius:12px; font-size:15px; background:#eaf3fc; transition:.2s; }
+.d4 input:focus { background:#e0eefb; box-shadow:inset 0 0 0 2px #4891db; }
+.d4 .sbtn { position:absolute; right:5px; top:5px; bottom:5px; width:44px; border-radius:9px; border:none; background:#2d6cad; color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:.2s; }
+.d4 .sbtn:hover { background:#4891db; }
+.d4 .ic svg { width:20px; height:20px; }
+
+/* ═══ 5) Elevated Card ═══ */
+.d5 .sbar { position:relative; }
+.d5 input { width:100%; padding:16px 60px 16px 22px; border:none; border-radius:14px; font-size:15px; background:#fff; box-shadow:0 10px 30px rgba(45,108,173,.15); transition:.2s; }
+.d5 input:focus { box-shadow:0 12px 34px rgba(45,108,173,.28); }
+.d5 .sbtn { position:absolute; right:8px; top:8px; bottom:8px; width:46px; border-radius:11px; border:none; background:linear-gradient(135deg,#4891db,#2d6cad); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:.2s; }
+.d5 .sbtn:hover { filter:brightness(1.08); }
+.d5 .ic svg { width:20px; height:20px; }
+
+/* ═══ 6) Frosted Glass (พื้นฟ้า) ═══ */
+.demo.d6 { background:linear-gradient(135deg,#4891db,#2d6cad); }
+.d6 .sbar { position:relative; }
+.d6 input { width:100%; padding:15px 56px 15px 22px; border:1px solid rgba(255,255,255,.4); border-radius:50px; font-size:15px; color:#fff; background:rgba(255,255,255,.18); backdrop-filter:blur(8px); transition:.2s; }
+.d6 input::placeholder { color:rgba(255,255,255,.8); }
+.d6 input:focus { background:rgba(255,255,255,.3); border-color:rgba(255,255,255,.75); }
+.d6 .sbtn { position:absolute; right:6px; top:6px; width:44px; height:44px; border-radius:50%; border:none; background:#fff; color:#2d6cad; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:.2s; }
+.d6 .sbtn:hover { transform:scale(1.08); }
+.d6 .ic svg { width:20px; height:20px; }
+
+/* ═══ 7) Gradient Border ═══ */
+.d7 .sbar { padding:2px; border-radius:50px; background:linear-gradient(135deg,#4891db,#7bb5e4,#2d6cad); }
+.d7 .inner { display:flex; align-items:center; background:#fff; border-radius:50px; padding:0 8px 0 20px; }
+.d7 input { flex:1; border:none; padding:14px 0; font-size:15px; background:none; }
+.d7 .sbtn { width:40px; height:40px; border-radius:50%; border:none; background:linear-gradient(135deg,#4891db,#2d6cad); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:.2s; }
+.d7 .sbtn:hover { filter:brightness(1.08); }
+.d7 .ic svg { width:19px; height:19px; }
+
+/* ═══ 8) Split Button (ปุ่มข้อความ) ═══ */
+.d8 .sbar { display:flex; border-radius:12px; overflow:hidden; box-shadow:0 6px 20px rgba(45,108,173,.1); }
+.d8 input { flex:1; border:1.5px solid #cadcee; border-right:none; padding:14px 18px; font-size:15px; border-radius:12px 0 0 12px; transition:.2s; }
+.d8 input:focus { border-color:#4891db; }
+.d8 .sbtn { border:none; background:linear-gradient(135deg,#4891db,#2d6cad); color:#fff; font-family:inherit; font-size:14px; font-weight:600; padding:0 22px; cursor:pointer; display:flex; align-items:center; gap:7px; transition:.2s; }
+.d8 .sbtn:hover { filter:brightness(1.08); }
+.d8 .ic svg { width:18px; height:18px; }
+
+/* ═══ 9) Underline Sweep (icon ขวา) ═══ */
+.d9 .sbar { display:flex; align-items:center; gap:10px; position:relative; padding:12px 2px; }
+.d9 .sbar::after { content:''; position:absolute; left:0; right:0; bottom:0; height:2px; background:#dbe6f1; }
+.d9 .sbar::before { content:''; position:absolute; left:0; bottom:0; height:2px; width:0; background:#4891db; transition:width .3s; z-index:1; }
+.d9 .sbar:focus-within::before { width:100%; }
+.d9 input { flex:1; border:none; padding:2px; font-size:15px; background:none; }
+.d9 .sic { color:#4891db; }
+.d9 .sic svg { width:20px; height:20px; }
+
+/* ═══ 10) Big Hero ═══ */
+.d10 .sbar { position:relative; max-width:560px; }
+.d10 input { width:100%; padding:20px 68px 20px 28px; border:none; border-radius:50px; font-size:16px; background:#fff; box-shadow:0 12px 40px rgba(45,108,173,.18); transition:.2s; }
+.d10 input:focus { box-shadow:0 14px 46px rgba(45,108,173,.3); }
+.d10 .sbtn { position:absolute; right:8px; top:8px; width:52px; height:52px; border-radius:50%; border:none; background:linear-gradient(137deg,#5aa0e0,#2d6cad); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:.2s; }
+.d10 .sbtn:hover { transform:scale(1.08); box-shadow:0 6px 18px rgba(45,108,173,.4); }
+.d10 .ic svg { width:24px; height:24px; }
+</style>
+</head>
+<body>
+<h1 class="page-title">ดีไซน์ช่องค้นหา 10 แบบ</h1>
+<p class="page-sub">โทนฟ้าแบรนด์ (#4891db / #2d6cad) · คลิกในช่องเพื่อดู focus<br>บอกเลขแบบที่ชอบ เพื่อนำไปแทน <code>.search-premium</code> / <code>.search-input-premium</code> / <code>.search-btn-premium</code></p>
+
+<section class="card"><div class="card-head"><span class="num">1</span><span class="name">Rounded Pill</span><span class="desc">กลมมน · ปุ่มกลมไล่เฉดฟ้าขวา</span></div>
+<div class="demo d1"><div class="sbar"><input type="text" placeholder="ค้นหา SKU / บาร์โค้ด / ชื่อสินค้า..."><button class="sbtn"><span class="ic"></span></button></div></div></section>
+
+<section class="card"><div class="card-head"><span class="num">2</span><span class="name">Flat Bordered</span><span class="desc">ขอบฟ้า · ไอคอนซ้าย โฟกัสเรืองขอบ</span></div>
+<div class="demo d2"><div class="sbar"><span class="ic sic"></span><input type="text" placeholder="ค้นหา SKU / บาร์โค้ด / ชื่อสินค้า..."></div></div></section>
+
+<section class="card"><div class="card-head"><span class="num">3</span><span class="name">Underline Minimal</span><span class="desc">เส้นใต้ฟ้า · เรียบสุด</span></div>
+<div class="demo d3"><div class="sbar"><span class="ic sic"></span><input type="text" placeholder="ค้นหา SKU / บาร์โค้ด / ชื่อสินค้า..."></div></div></section>
+
+<section class="card"><div class="card-head"><span class="num">4</span><span class="name">Filled Soft Blue</span><span class="desc">พื้นฟ้าอ่อน · ปุ่มฟ้าเข้มเหลี่ยมมน</span></div>
+<div class="demo d4"><div class="sbar"><input type="text" placeholder="ค้นหา SKU / บาร์โค้ด / ชื่อสินค้า..."><button class="sbtn"><span class="ic"></span></button></div></div></section>
+
+<section class="card"><div class="card-head"><span class="num">5</span><span class="name">Elevated Card</span><span class="desc">เงาลอยนุ่ม · ปุ่มไล่เฉดฟ้า</span></div>
+<div class="demo d5"><div class="sbar"><input type="text" placeholder="ค้นหา SKU / บาร์โค้ด / ชื่อสินค้า..."><button class="sbtn"><span class="ic"></span></button></div></div></section>
+
+<section class="card"><div class="card-head"><span class="num">6</span><span class="name">Frosted Glass</span><span class="desc">กระจกฝ้าบนพื้นฟ้า · ปุ่มขาว</span></div>
+<div class="demo d6"><div class="sbar"><input type="text" placeholder="ค้นหา SKU / บาร์โค้ด / ชื่อสินค้า..."><button class="sbtn"><span class="ic"></span></button></div></div></section>
+
+<section class="card"><div class="card-head"><span class="num">7</span><span class="name">Gradient Border</span><span class="desc">ขอบไล่เฉดฟ้า · ปุ่มกลมข้างใน</span></div>
+<div class="demo d7"><div class="sbar"><div class="inner"><input type="text" placeholder="ค้นหา SKU / บาร์โค้ด / ชื่อสินค้า..."><button class="sbtn"><span class="ic"></span></button></div></div></div></section>
+
+<section class="card"><div class="card-head"><span class="num">8</span><span class="name">Split Button</span><span class="desc">ปุ่ม "ค้นหา" มีข้อความ+ไอคอน</span></div>
+<div class="demo d8"><div class="sbar"><input type="text" placeholder="ค้นหา SKU / บาร์โค้ด / ชื่อสินค้า..."><button class="sbtn"><span class="ic"></span>ค้นหา</button></div></div></section>
+
+<section class="card"><div class="card-head"><span class="num">9</span><span class="name">Underline Sweep</span><span class="desc">เส้นใต้วิ่งตอนโฟกัส · ไอคอนขวา</span></div>
+<div class="demo d9"><div class="sbar"><input type="text" placeholder="ค้นหา SKU / บาร์โค้ด / ชื่อสินค้า..."><span class="ic sic"></span></div></div></section>
+
+<section class="card"><div class="card-head"><span class="num">10</span><span class="name">Big Hero</span><span class="desc">ใหญ่ เงาฟุ้ง · ปุ่มกลมใหญ่ (แนว hero)</span></div>
+<div class="demo d10"><div class="sbar"><input type="text" placeholder="ค้นหา SKU / บาร์โค้ด / ชื่อสินค้า..."><button class="sbtn"><span class="ic"></span></button></div></div></section>
+
+<script>
+// ไอคอนแว่นขยาย (SVG) — ใส่ในทุก .ic
+const ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7.5"/><path d="M21 21l-4.35-4.35"/></svg>`;
+document.querySelectorAll('.ic').forEach(el => el.innerHTML = ICON);
+</script>
+</body>
+</html>

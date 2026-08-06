@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>เลือกดีไซน์ Badge อนุมัติ — Order Popup (10 แบบ)</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Noto Sans Thai',sans-serif; background:#eef1f5; color:#2d2a26; padding:2rem 1.5rem 4rem; }
+  .page-title { text-align:center; font-size:1.6rem; font-weight:600; margin-bottom:0.25rem; }
+  .page-sub { text-align:center; color:#8a8272; margin-bottom:2rem; font-weight:300; }
+
+  .card { max-width:900px; margin:0 auto 1.5rem; background:#fff; border-radius:16px; box-shadow:0 4px 20px rgba(0,0,0,0.07); overflow:hidden; }
+  .card-head { display:flex; align-items:center; gap:0.7rem; padding:0.9rem 1.4rem 0.5rem; }
+  .card-num { display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:50%; background:#2d2a26; color:#f2d98d; font-weight:600; font-size:0.9rem; flex-shrink:0; }
+  .card-name { font-weight:600; font-size:1.05rem; }
+  .card-desc { color:#8a8272; font-size:0.82rem; font-weight:300; margin-left:auto; text-align:right; }
+
+  /* จำลองส่วนท้าย popup รายละเอียด Order */
+  .mock {
+    margin:0.6rem 1.4rem 1.4rem;
+    border:1px solid #e9edf2;
+    border-radius:14px;
+    padding:14px 18px;
+    background:#fbfcfd;
+  }
+  .mock-title { font-size:11.5px; font-weight:600; color:#8194a8; letter-spacing:.4px; text-transform:uppercase; margin-bottom:10px; }
+  .badges { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  .badges > * { cursor:pointer; user-select:none; font-family:'Noto Sans Thai',sans-serif; transition:all .22s ease; }
+
+  /* ═══ 1) Pastel Chip + เช็คเขียว ═══ */
+  .b1 { display:inline-flex; align-items:center; gap:7px; padding:8px 16px; border:none; border-radius:999px; background:#fdf0e2; color:#c07a1f; font-size:13px; font-weight:600; }
+  .b1 .ic::before { content:'○'; }
+  .b1:hover { box-shadow:0 3px 10px rgba(192,122,31,.3); }
+  .b1.done { background:#e5f5e9; color:#2e8b47; }
+  .b1.done .ic::before { content:'✔'; }
+
+  /* ═══ 2) Toggle Switch ═══ */
+  .b2 { display:inline-flex; align-items:center; gap:9px; padding:7px 14px 7px 8px; border:1px solid #e3e8ee; border-radius:999px; background:#fff; font-size:13px; font-weight:500; color:#5b7590; }
+  .b2 .sw { width:34px; height:19px; border-radius:999px; background:#d5dee8; position:relative; transition:all .22s; flex-shrink:0; }
+  .b2 .sw::after { content:''; position:absolute; top:2px; left:2px; width:15px; height:15px; border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.25); transition:all .22s; }
+  .b2.done { border-color:#bfe3c9; color:#2e8b47; }
+  .b2.done .sw { background:#3fa25c; }
+  .b2.done .sw::after { left:17px; }
+
+  /* ═══ 3) Step Progress ═══ */
+  .b3wrap { display:flex; align-items:flex-start; gap:0; }
+  .b3 { display:flex; flex-direction:column; align-items:center; gap:6px; width:110px; background:none; border:none; position:relative; }
+  .b3:not(:first-child)::before { content:''; position:absolute; top:14px; right:calc(50% + 16px); width:calc(100% - 32px); height:3px; border-radius:3px; background:#e3e8ee; transition:all .3s; }
+  .b3 .dot { width:28px; height:28px; border-radius:50%; border:2.5px solid #cfd9e4; background:#fff; color:#9aa7b5; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; transition:all .22s; }
+  .b3 .lb { font-size:11.5px; font-weight:500; color:#8194a8; }
+  .b3:hover .dot { border-color:#4891db; color:#4891db; }
+  .b3.done .dot { background:#3fa25c; border-color:#3fa25c; color:#fff; }
+  .b3.done .dot::before { content:'✔'; }
+  .b3:not(.done) .dot::before { content:attr(data-n); }
+  .b3.done .lb { color:#2e8b47; font-weight:600; }
+  .b3.done:not(:first-child)::before { background:#3fa25c; }
+
+  /* ═══ 4) Solid เทา → เขียวไล่เฉด ═══ */
+  .b4 { padding:9px 18px; border:none; border-radius:10px; background:#eef1f5; color:#8194a8; font-size:13px; font-weight:600; }
+  .b4:hover { background:#e2e8ef; }
+  .b4.done { background:linear-gradient(135deg,#3fa25c,#5fc47e); color:#fff; box-shadow:0 4px 12px rgba(63,162,92,.35); }
+  .b4.done::after { content:' ✔'; }
+
+  /* ═══ 5) Outline → เติมสี ═══ */
+  .b5 { padding:8px 18px; border:1.5px solid #d5dee8; border-radius:10px; background:transparent; color:#5b7590; font-size:13px; font-weight:600; }
+  .b5:hover { border-color:#4891db; color:#2d6cad; }
+  .b5.done { border-color:#3fa25c; background:#3fa25c; color:#fff; }
+  .b5.done::before { content:'✔ '; }
+
+  /* ═══ 6) Card + Checkbox + เวลา ═══ */
+  .b6wrap { display:flex; flex-direction:column; gap:8px; width:100%; max-width:380px; }
+  .b6 { display:flex; align-items:center; gap:10px; padding:10px 14px; border:1px solid #e3e8ee; border-radius:12px; background:#fff; font-size:13px; font-weight:500; color:#2d3a48; text-align:left; }
+  .b6 .cb { width:20px; height:20px; border-radius:6px; border:2px solid #cfd9e4; background:#fff; display:flex; align-items:center; justify-content:center; color:#fff; font-size:12px; flex-shrink:0; transition:all .2s; }
+  .b6 .tm { margin-left:auto; font-size:11px; color:#9aa7b5; font-weight:300; visibility:hidden; }
+  .b6:hover { border-color:#4891db; }
+  .b6.done { background:#f0f9f2; border-color:#bfe3c9; }
+  .b6.done .cb { background:#3fa25c; border-color:#3fa25c; }
+  .b6.done .cb::before { content:'✔'; }
+  .b6.done .tm { visibility:visible; color:#2e8b47; }
+
+  /* ═══ 7) ตราประทับ (Stamp) ═══ */
+  .b7 { position:relative; padding:10px 20px; border:2px dashed #d5b98a; border-radius:10px; background:#fdf8ee; color:#a8894f; font-size:13px; font-weight:600; }
+  .b7:hover { background:#faf1dd; }
+  .b7 .stamp { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:800; color:#2e8b47; border:2.5px solid #2e8b47; border-radius:8px; transform:rotate(-8deg) scale(1.4); opacity:0; transition:all .25s cubic-bezier(.34,1.56,.64,1); background:rgba(255,255,255,.85); letter-spacing:1px; }
+  .b7.done { border-style:solid; border-color:#bfe3c9; color:#b9c6b9; }
+  .b7.done .stamp { opacity:1; transform:rotate(-8deg) scale(1); }
+
+  /* ═══ 8) Gold Luxe เข้าธีมทอง ═══ */
+  .b8 { padding:9px 18px; border:1.5px solid #e0d9c8; border-radius:10px; background:#faf8f3; color:#8a8272; font-size:13px; font-weight:600; letter-spacing:.3px; }
+  .b8:hover { border-color:#d4af37; color:#8a6d1f; box-shadow:0 0 10px rgba(212,175,55,.25); }
+  .b8.done { background:linear-gradient(135deg,#d4af37,#f2d98d); border-color:#f2d98d; color:#2d2a26; box-shadow:0 3px 10px rgba(212,175,55,.4); }
+  .b8.done::before { content:'✦ '; }
+
+  /* ═══ 9) Neon Glow ═══ */
+  .b9 { padding:9px 18px; border:1.5px solid #cfd9e4; border-radius:999px; background:#fff; color:#8194a8; font-size:13px; font-weight:600; }
+  .b9:hover { border-color:#4891db; color:#2d6cad; box-shadow:0 0 10px rgba(72,145,219,.35); }
+  .b9.done { border-color:#3fa25c; color:#2e8b47; background:#fff; box-shadow:0 0 12px rgba(63,162,92,.55), inset 0 0 8px rgba(63,162,92,.12); text-shadow:0 0 6px rgba(63,162,92,.4); }
+  .b9.done::before { content:'✔ '; }
+
+  /* ═══ 10) Timeline แนวตั้ง ═══ */
+  .b10wrap { display:flex; flex-direction:column; width:100%; max-width:360px; }
+  .b10 { display:flex; align-items:center; gap:12px; padding:6px 0; background:none; border:none; text-align:left; position:relative; }
+  .b10 .rail { display:flex; flex-direction:column; align-items:center; align-self:stretch; width:22px; flex-shrink:0; }
+  .b10 .nd { width:16px; height:16px; border-radius:50%; border:2.5px solid #cfd9e4; background:#fff; transition:all .2s; z-index:1; }
+  .b10:not(:last-child) .rail::after { content:''; flex:1; width:3px; background:#e3e8ee; margin-top:2px; border-radius:3px; }
+  .b10 .lb { font-size:13px; font-weight:500; color:#5b7590; }
+  .b10 .st { margin-left:auto; font-size:11px; font-weight:600; color:#c07a1f; background:#fdf0e2; padding:2px 9px; border-radius:999px; }
+  .b10:hover .nd { border-color:#4891db; }
+  .b10.done .nd { background:#3fa25c; border-color:#3fa25c; }
+  .b10.done .lb { color:#2e8b47; font-weight:600; }
+  .b10.done .st { color:#2e8b47; background:#e5f5e9; }
+  .b10.done .st::before { content:'✔ '; }
+  .b10.done:not(:last-child) .rail::after { background:#3fa25c; }
+  .b10:not(.done) .st::before { content:''; }
+
+  .hint { font-size:11px; color:#9aa7b5; margin-top:10px; font-weight:300; }
+  .footer-note { text-align:center; margin-top:2.5rem; color:#8a8272; font-weight:300; }
+  .footer-note b { color:#2d6cad; font-weight:600; }
+</style>
+</head>
+<body>
+  <h1 class="page-title">✅ Badge Status อนุมัติใน Popup Order — 10 แบบ</h1>
+  <p class="page-sub">3 ขั้นตอน: ของถึงสาขา / แจ้งลูกค้า / ส่งมอบสินค้า · <b>กดที่ปุ่มเพื่อลองอนุมัติ/ยกเลิกได้จริง</b> (ตัวอย่างตั้ง "ของถึงสาขา" อนุมัติแล้ว)</p>
+
+  <!-- 1 -->
+  <div class="card"><div class="card-head"><span class="card-num">1</span><span class="card-name">Pastel Chip</span><span class="card-desc">ชิปพาสเทลส้ม→เขียว เข้าชุดชิปสถานะในตาราง</span></div>
+    <div class="mock"><div class="mock-title">สถานะการดำเนินการ</div><div class="badges">
+      <button class="b1 done" onclick="this.classList.toggle('done')"><span class="ic"></span>ของถึงสาขา</button>
+      <button class="b1" onclick="this.classList.toggle('done')"><span class="ic"></span>แจ้งลูกค้า</button>
+      <button class="b1" onclick="this.classList.toggle('done')"><span class="ic"></span>ส่งมอบสินค้า</button>
+    </div></div>
+  </div>
+
+  <!-- 2 -->
+  <div class="card"><div class="card-head"><span class="card-num">2</span><span class="card-name">Toggle Switch</span><span class="card-desc">สวิตช์เปิด-ปิดสไตล์มือถือ เห็นสถานะชัด</span></div>
+    <div class="mock"><div class="mock-title">สถานะการดำเนินการ</div><div class="badges">
+      <button class="b2 done" onclick="this.classList.toggle('done')"><span class="sw"></span>ของถึงสาขา</button>
+      <button class="b2" onclick="this.classList.toggle('done')"><span class="sw"></span>แจ้งลูกค้า</button>
+      <button class="b2" onclick="this.classList.toggle('done')"><span class="sw"></span>ส่งมอบสินค้า</button>
+    </div></div>
+  </div>
+
+  <!-- 3 -->
+  <div class="card"><div class="card-head"><span class="card-num">3</span><span class="card-name">Step Progress</span><span class="card-desc">ขั้นตอนต่อเนื่องมีเส้นเชื่อม เห็นลำดับงานชัดเจน</span></div>
+    <div class="mock"><div class="mock-title">สถานะการดำเนินการ</div><div class="b3wrap">
+      <button class="b3 done" data-n="1" onclick="this.classList.toggle('done')"><span class="dot" data-n="1"></span><span class="lb">ของถึงสาขา</span></button>
+      <button class="b3" onclick="this.classList.toggle('done')"><span class="dot" data-n="2"></span><span class="lb">แจ้งลูกค้า</span></button>
+      <button class="b3" onclick="this.classList.toggle('done')"><span class="dot" data-n="3"></span><span class="lb">ส่งมอบสินค้า</span></button>
+    </div></div>
+  </div>
+
+  <!-- 4 -->
+  <div class="card"><div class="card-head"><span class="card-num">4</span><span class="card-name">Solid เทา→เขียว</span><span class="card-desc">ปุ่มทึบเรียบ อนุมัติแล้วไล่เฉดเขียว+เงา</span></div>
+    <div class="mock"><div class="mock-title">สถานะการดำเนินการ</div><div class="badges">
+      <button class="b4 done" onclick="this.classList.toggle('done')">ของถึงสาขา</button>
+      <button class="b4" onclick="this.classList.toggle('done')">แจ้งลูกค้า</button>
+      <button class="b4" onclick="this.classList.toggle('done')">ส่งมอบสินค้า</button>
+    </div></div>
+  </div>
+
+  <!-- 5 -->
+  <div class="card"><div class="card-head"><span class="card-num">5</span><span class="card-name">Outline → เติมสี</span><span class="card-desc">เส้นขอบโปร่ง กดแล้วเติมเขียวทึบ</span></div>
+    <div class="mock"><div class="mock-title">สถานะการดำเนินการ</div><div class="badges">
+      <button class="b5 done" onclick="this.classList.toggle('done')">ของถึงสาขา</button>
+      <button class="b5" onclick="this.classList.toggle('done')">แจ้งลูกค้า</button>
+      <button class="b5" onclick="this.classList.toggle('done')">ส่งมอบสินค้า</button>
+    </div></div>
+  </div>
+
+  <!-- 6 -->
+  <div class="card"><div class="card-head"><span class="card-num">6</span><span class="card-name">Card + Checkbox + เวลา</span><span class="card-desc">การ์ดแนวตั้งมีช่องติ๊ก โชว์วันเวลาที่อนุมัติ</span></div>
+    <div class="mock"><div class="mock-title">สถานะการดำเนินการ</div><div class="b6wrap">
+      <button class="b6 done" onclick="this.classList.toggle('done')"><span class="cb"></span>ของถึงสาขา<span class="tm">12/07/2026 14:32</span></button>
+      <button class="b6" onclick="this.classList.toggle('done')"><span class="cb"></span>แจ้งลูกค้า<span class="tm">12/07/2026 15:05</span></button>
+      <button class="b6" onclick="this.classList.toggle('done')"><span class="cb"></span>ส่งมอบสินค้า<span class="tm">13/07/2026 09:41</span></button>
+    </div></div>
+  </div>
+
+  <!-- 7 -->
+  <div class="card"><div class="card-head"><span class="card-num">7</span><span class="card-name">ตราประทับ (Stamp)</span><span class="card-desc">กดแล้วตราเขียว "อนุมัติ" ประทับเด้งลงมา</span></div>
+    <div class="mock"><div class="mock-title">สถานะการดำเนินการ</div><div class="badges">
+      <button class="b7 done" onclick="this.classList.toggle('done')">ของถึงสาขา<span class="stamp">อนุมัติ ✔</span></button>
+      <button class="b7" onclick="this.classList.toggle('done')">แจ้งลูกค้า<span class="stamp">อนุมัติ ✔</span></button>
+      <button class="b7" onclick="this.classList.toggle('done')">ส่งมอบสินค้า<span class="stamp">อนุมัติ ✔</span></button>
+    </div></div>
+  </div>
+
+  <!-- 8 -->
+  <div class="card"><div class="card-head"><span class="card-num">8</span><span class="card-name">Gold Luxe</span><span class="card-desc">โทนทองหรูเข้าธีมร้าน อนุมัติแล้วเป็นทองเต็ม</span></div>
+    <div class="mock"><div class="mock-title">สถานะการดำเนินการ</div><div class="badges">
+      <button class="b8 done" onclick="this.classList.toggle('done')">ของถึงสาขา</button>
+      <button class="b8" onclick="this.classList.toggle('done')">แจ้งลูกค้า</button>
+      <button class="b8" onclick="this.classList.toggle('done')">ส่งมอบสินค้า</button>
+    </div></div>
+  </div>
+
+  <!-- 9 -->
+  <div class="card"><div class="card-head"><span class="card-num">9</span><span class="card-name">Neon Glow</span><span class="card-desc">แคปซูลเรืองแสงเขียวเมื่ออนุมัติ เด่นสะดุดตา</span></div>
+    <div class="mock"><div class="mock-title">สถานะการดำเนินการ</div><div class="badges">
+      <button class="b9 done" onclick="this.classList.toggle('done')">ของถึงสาขา</button>
+      <button class="b9" onclick="this.classList.toggle('done')">แจ้งลูกค้า</button>
+      <button class="b9" onclick="this.classList.toggle('done')">ส่งมอบสินค้า</button>
+    </div></div>
+  </div>
+
+  <!-- 10 -->
+  <div class="card"><div class="card-head"><span class="card-num">10</span><span class="card-name">Timeline แนวตั้ง</span><span class="card-desc">เส้นเวลาไล่ลงมา + ป้ายสถานะขวา เหมาะกับลำดับงานส่งของ</span></div>
+    <div class="mock"><div class="mock-title">สถานะการดำเนินการ</div><div class="b10wrap">
+      <button class="b10 done" onclick="this.classList.toggle('done')"><span class="rail"><span class="nd"></span></span><span class="lb">ของถึงสาขา</span><span class="st">อนุมัติแล้ว</span></button>
+      <button class="b10" onclick="this.classList.toggle('done')"><span class="rail"><span class="nd"></span></span><span class="lb">แจ้งลูกค้า</span><span class="st">รอดำเนินการ</span></button>
+      <button class="b10" onclick="this.classList.toggle('done')"><span class="rail"><span class="nd"></span></span><span class="lb">ส่งมอบสินค้า</span><span class="st">รอดำเนินการ</span></button>
+    </div></div>
+  </div>
+
+  <p class="footer-note">ชอบแบบไหน บอกหมายเลข เช่น <b>"เอาแบบ 6"</b> แล้วผมจะทำ Popup รายละเอียด Order ครบ 19 ช่อง + Badge กดอนุมัติจริง (บันทึกลง Supabase) ให้เลยครับ</p>
+</body>
+</html>

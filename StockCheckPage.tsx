@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from './supabase';
 import { AnimatedLogoText } from './AnimatedLogo';
+import { PageNavRow } from './pageAccess';
+import { SearchIcon } from './SearchIcon';
 
 interface StockItem {
   branch: string;
@@ -19,9 +21,10 @@ interface Props {
   onGoStockCheck: () => void;
   onGoCustomerHistory: () => void;
   onGoOutbound: () => void;
+  onGoSaleSupport: () => void;
 }
 
-export function StockCheckPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGoCustomerHistory, onGoOutbound }: Props) {
+export function StockCheckPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGoCustomerHistory, onGoOutbound, onGoSaleSupport }: Props) {
   const [results,      setResults]      = useState<StockItem[]>([]);
   const [activeTab,    setActiveTab]    = useState<string>('คลังสินค้า');
   const [search,       setSearch]       = useState('');
@@ -92,44 +95,26 @@ export function StockCheckPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, on
               : <span className="updated-badge updated-badge--loading">Loading...</span>
             }
           </div>
-          <div className="search-nav-row">
-            <div className="search-premium">
-              <input
-                type="text"
-                className="search-input-premium"
-                placeholder="ค้นหา SKU หรือชื่อสินค้า..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-              />
-              <button className="search-btn-premium">
-                {searching ? '⏳' : '🔍'}
-              </button>
-            </div>
-            <button className="page-nav-card" onClick={onGoPriceTag} title="ป้ายราคา">
-              <span className="page-nav-icon">🏷️</span>
-              <span className="page-nav-label">ป้ายราคา</span>
-            </button>
-            <button className="page-nav-card" onClick={onGoDrugLabel} title="ฉลากยา">
-              <span className="page-nav-icon">📝</span>
-              <span className="page-nav-label">ฉลากยา</span>
-            </button>
-            <button className="page-nav-card page-nav-card--active" onClick={onGoStockCheck} title="เช็คสต๊อค">
-              <span className="page-nav-icon">📦</span>
-              <span className="page-nav-label">สต๊อค</span>
-            </button>
-            <button className="page-nav-card" onClick={onGoCustomerHistory} title="ประวัติลูกค้า">
-              <span className="page-nav-icon">🪪</span>
-              <span className="page-nav-label">ประวัติ</span>
-            </button>
-            <button className="page-nav-card" onClick={onGoOutbound} title="เบิกสินค้าด่วน">
-              <span className="page-nav-icon">🚚</span>
-              <span className="page-nav-label">เบิกด่วน</span>
-            </button>
-          </div>
+          <PageNavRow current="stockcheck" handlers={{ pricetag: onGoPriceTag, druglabel: onGoDrugLabel, stockcheck: onGoStockCheck, customerhistory: onGoCustomerHistory, outbound: onGoOutbound, salesupport: onGoSaleSupport }} />
         </div>
       </div>
 
       <div className="container">
+        <div className="table-search-row">
+          <div className="search-premium">
+            <input
+              type="text"
+              className="search-input-premium"
+              placeholder="ค้นหา SKU หรือชื่อสินค้า..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+            <button className="search-btn-premium">
+              {searching ? '⏳' : <SearchIcon />}
+            </button>
+          </div>
+        </div>
+
         {searched && <div className="stock-tabs">
           {TABS.map(tab => (
             <button
@@ -182,7 +167,13 @@ export function StockCheckPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, on
 
         {!searched && (
           <div className="stock-empty-state">
-            <div className="stock-empty-icon"><img className="stock-empty-icon-img" src="/stock.png" alt="ค้นหา" /></div>
+            <div className="stock-empty-icon">
+              <svg className="stock-empty-icon-img" viewBox="0 0 96 96" aria-hidden="true">
+                <path d="M48 20 L74 33 L74 63 L48 76 L22 63 L22 33 Z" fill="none" stroke="#4891db" strokeWidth="4" strokeLinejoin="round" />
+                <path d="M22 33 L48 46 L74 33" fill="none" stroke="#4891db" strokeWidth="4" strokeLinejoin="round" />
+                <path d="M48 46 L48 76" fill="none" stroke="#4891db" strokeWidth="4" />
+              </svg>
+            </div>
             <div>พิมพ์ SKU หรือชื่อสินค้าในช่องค้นหาด้านบน</div>
           </div>
         )}

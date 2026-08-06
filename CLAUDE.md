@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ```bash
-npm run dev       # Start dev server (http://localhost:5173, LAN: http://192.168.x.x:5173)
+npm run dev       # Start dev server (http://localhost:5200, LAN: http://192.168.x.x:5200)
 npm run build     # TypeScript compile + Vite build
 npm run preview   # Preview production build
 npx vercel --prod # Deploy to Vercel
@@ -13,14 +13,17 @@ npx vercel --prod # Deploy to Vercel
 
 ## Architecture
 
-Four-page React app sharing the same `App.css` and Supabase project.  
-`currentPage` state in `App.tsx`: `'pricetag' | 'druglabel' | 'stockcheck' | 'customerhistory'`
+Six-page React app sharing the same `App.css` and Supabase project.  
+`currentPage` state in `App.tsx`: `'pricetag' | 'druglabel' | 'stockcheck' | 'customerhistory' | 'outbound' | 'salesupport'`
 
 **Key files — ป้ายราคา (Price Tag):**
-- `App.tsx` — entire price-tag app: types, state, Supabase fetch, search, QR generation, print logic, JSX
+- `App.tsx` — entire price-tag app: types, state, Supabase fetch, search, QR generation, print logic, JSX + page switcher
 - `App.css` — all styles for all pages including `@media print` rules
+- `AnimatedLogo.tsx` — `AnimatedLogoText` component: letter-by-letter blur-in logo animation (ใช้ในทุกหน้า)
 - `supabase.ts` — shared Supabase client (root dir, not src/)
-- `vite.config.ts` — Vite config with `host: '0.0.0.0'` for LAN access
+- `pageAccess.tsx` — `PageId`/`PAGE_NAV` config + `PageVisibilityContext` + `usePageVisibility` + `<PageNavRow>` (ปุ่มนำทางกลาง ใช้ทุกหน้า, รู้สถานะเปิด/ปิดหน้า)
+- `page-settings-setup.sql` — SQL สร้างตาราง `app_page_settings` (เปิด/ปิดปุ่มแต่ละหน้า)
+- `vite.config.ts` — Vite config with `host: '0.0.0.0'` + `port: 5200` for LAN access
 - `main.tsx` — React entry point
 - `index.html` — HTML shell
 - `.env` — VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, VITE_ADMIN_PASSWORD
@@ -50,6 +53,26 @@ Four-page React app sharing the same `App.css` and Supabase project.
 - `deduplicate-customer.mjs` — script กรองแถวซ้ำระหว่าง 2 ไฟล์ CSV
 - `วิธีใช้-deduplicate-customer.md` — คู่มือ deduplicate + delete/truncate + อัพเดทลูกค้าใหม่
 
+**Key files — เบิกด่วน (Quick Outbound):**
+- `OutboundPage.tsx` — ตารางแถวเบิกสินค้า: lookup SKU/Barcode จากตาราง `products`, อนุมัติด้วยรหัส admin, persist ลง localStorage
+
+**Key files — ซัพพอร์ต (Sale Support):**
+- `SaleSupportPage.tsx` — ศูนย์รวมงานซัพพอร์ตการขาย: sidebar 5 เมนู (Order / Request Item / New Product / Ticket / Products), ฟอร์มเพิ่มข้อมูล, popup รายละเอียด, อัปโหลด Excel (Supplier + Product Master), อัปโหลดรูปเข้า Storage
+- `salesupport-setup.sql` — SQL สร้างตาราง `ss_*`, `product_master` + storage bucket `salesupport`
+
+**Design galleries (public/*.html):** ไฟล์ HTML เลือกดีไซน์ (เปิดผ่าน dev server เช่น `/outbound-btn-designs.html`) — ใช้เทียบแบบก่อนใส่จริง ไม่ได้ import เข้าแอป
+
+## Login / Auth (ล็อกอินแยกแผนก)
+
+- Gate หน้าแรก: `App.tsx` ถ้ายังไม่ล็อกอิน (`authProfile == null`) → `return <LoginPage />` ก่อนถึง render หลัก (early-return อยู่หลัง hooks ทั้งหมด — อย่าย้ายขึ้นไปก่อน hooks)
+- `auth.ts` — เก็บ `PROFILES` (id, label, group, password, icon) + helper `loadAuthProfile` / `saveAuthProfile` / `clearAuthProfile` (persist ผ่าน localStorage key `authProfileId`)
+- `LoginPage.tsx` — ใส่รหัสผ่านช่องเดียว → กด "เข้าสู่ระบบ" (หรือ Enter) → ระบบจับคู่รหัสกับ `PROFILES` อัตโนมัติ ไม่ต้องเลือกแผนกก่อน (ไม่มีการ์ดเลือกโปรไฟล์แล้ว)
+  - ดีไซน์: พื้นหลัง **Bubble Rise** (ฟองฟ้าลอยขึ้น — `.login-bubbles`/`.login-bubble` สุ่ม 14 ฟองด้วย `useMemo`) + entrance **Cascade** (โลโก้ blur-in → คำโปรย → ช่องรหัส → ปุ่ม ทยอยเข้าตาม `@keyframes loginRise` + `loginCardIn` ใน App.css) — ดีไซน์เลือกจาก `public/login-designs.html` (ผสมแบบ 15 + 17)
+- โปรไฟล์ + รหัส (แก้ที่ `auth.ts`): **สาขา** SRC `1234` / KKL `4567` / SSS `9999` · **คลังสินค้า** `0000` · **จัดซื้อ** `1111`
+- แถบผู้ใช้ + ปุ่มออกจากระบบ: `.app-userbar` fixed มุมขวาบน แสดงทุกหน้า (render ใน `App.tsx`)
+- ⚠️ รหัสอยู่ฝั่ง client (เหมือน `VITE_ADMIN_PASSWORD`) — เป็น gate ใช้งานภายใน ไม่ใช่ security จริง
+- ปัจจุบันเป็น **gate เข้าใช้งานอย่างเดียว** — ยังไม่จำกัดสิทธิ์/หน้าตามแผนก (โปรไฟล์เก็บไว้พร้อมต่อยอด role-based ภายหลัง)
+
 ## Database (Supabase)
 
 **Table: `products`** (barcode, sku, name, unit, price, category, updated_at)
@@ -74,6 +97,23 @@ Four-page React app sharing the same `App.css` and Supabase project.
 - **Chunked delete** — script ลบของเก่าทีละ 1000 แถวเพื่อเลี่ยง Supabase statement timeout (ตาราง 100K+ แถวลบในคำสั่งเดียวจะ timeout)
 - **Multi-machine CSV path** — `CSV_CANDIDATES` array เช็คหลาย path ตามลำดับ ใช้ path แรกที่เจอ (รองรับเครื่อง Arm + BigYa-spare)
 
+**SaleSupport tables** (สร้างด้วย `salesupport-setup.sql` — RLS: anon ทำได้ทุกอย่าง `for all`):
+
+| Table | ใช้กับเมนู | หมายเหตุ |
+|---|---|---|
+| `ss_orders` | Order | งานสั่งจอง/สั่งซื้อของลูกค้า ~23 คอลัมน์ (sku, branch, qty, paid_date, customer_name, contact_channel, สถานะ chip: arrived_branch / customer_notified / delivered ฯลฯ) |
+| `ss_request_items` | Request Item | ขอสินค้าที่ไม่มีในสต๊อก + supplier, image_url, customer_name |
+| `ss_new_products` | New Product | เสนอสินค้าใหม่เข้าร้าน + image_url, quoted_price, status |
+| `ss_tickets` | Ticket | แจ้งปัญหา department: Purchase / Warehouse |
+| `product_master` | Products | ฐานข้อมูลสินค้าหลักจากไฟล์ Product_Master — **unique constraint ที่ `sku`** (รองรับ upsert) — เมนู Products filter `abc = 'P'` เรียงตาม sku |
+| `ss_suppliers` | (autocomplete) | ชื่อ supplier + `details` jsonb เก็บคอลัมน์อื่นทั้งหมดจาก Excel |
+
+- **Storage bucket `salesupport`** (public) — เก็บรูปสินค้าแนบจากเมนู Request Item / New Product (โฟลเดอร์ `request-items/`, `new-products/`) — policy: anon insert + select
+- อัปโหลด Excel ผ่านเว็บด้วยไลบรารี `xlsx`: ปุ่ม "อัปโหลด Supplier" (ล้างแล้ว insert ใหม่ทีละ 100 แถว) และ "📤 อัปโหลด Product Master" (จับคู่หัวคอลัมน์ด้วย `MASTER_HEADER_MAP` regex)
+- Supplier autocomplete: พิมพ์ ≥ 2 ตัวอักษรใน field Supplier → ค้นจาก `ss_suppliers`
+- SKU autocomplete (ฟอร์ม Order): ค้นจากตาราง `products` เติมชื่อ/หน่วยอัตโนมัติ
+- Popup Order มี 3 ตราประทับอนุมัติ (ของถึงสาขา / แจ้งลูกค้า / ส่งมอบสินค้า) — กดแล้วบันทึกลง Supabase ทันที
+
 ## CSV Format
 
 **Products CSV** (Admin upload via web):  
@@ -97,7 +137,7 @@ Parser: custom `parseCSV()` — `"` เริ่ม quoted mode เฉพาะ�
 
 ## Multi-Machine Sync — ข้อควรระวังเมื่อ pull โค้ดข้ามเครื่อง
 
-โปรเจกต์นี้ใช้งานบน 2 เครื่อง: **Arm** (`C:\Users\Arm\Desktop\anin-label 16-5-2026\anin_pricetag_qrcode`) และ **BigYa-spare** (`c:\Users\BigYa-spare\Desktop\SaleSupport`) sync ผ่าน GitHub repo `it-anin/anin_sale_support`
+โปรเจกต์นี้ใช้งานบน 2 เครื่อง: **Arm** (`C:\Users\Arm\Desktop\SaleSupport`) และ **BigYa-spare** (`c:\Users\BigYa-spare\Desktop\SaleSupport`) sync ผ่าน GitHub repo `it-anin/anin_sale_support`
 
 **ขั้นตอนแนะนำเวลา pull โค้ดใหม่:**
 ```bash
@@ -181,6 +221,7 @@ Cart and scan history survive browser close / power loss — no need to re-scan 
 | `scannedHistory` | `[string, Product][]` | ประวัติสินค้าที่สแกนบาร์โค้ด |
 | `thermalSettings` | object | qrSize / fontSize / skuSize |
 | `qrSettings` | object | QR sheet settings |
+| `outboundItems` | `OutboundRow[]` | แถวเบิกสินค้าในหน้าเบิกด่วน (รวมสถานะอนุมัติ) |
 
 **Load:** `loadCartFromStorage()` / `loadHistoryFromStorage()` — called as `useState` initializer (runs once on mount).  
 **Save:** `useEffect` on each state change → `localStorage.setItem(...)`.  
@@ -194,14 +235,26 @@ Cart and scan history survive browser close / power loss — no need to re-scan 
 - `visibleProducts` = merge of scannedHistory + filteredProducts (deduplicated by sku-unit key)
 - `clearAll` also resets scannedHistory and removes its localStorage entry
 
-## UI — Button Styles — FROZEN ⚠️
+## Quick Outbound (หน้าเบิกด่วน)
 
-All main action buttons use the same **Neon Gold** style (do NOT revert to plain styles):
-- `.btn-premium` — พิมพ์ป้ายราคา
-- `.btn-outline` — พิมพ์บาร์โค้ด
-- `.btn-cart-toggle` — รายการที่เลือก / เลือกทั้งหมด / ลบทั้งหมด
+- แถวเบิกเป็น editable table — พิมพ์ SKU/Barcode แล้ว blur หรือกด Enter → `lookupRow()` query ตาราง `products` (`.or('sku.eq.x,barcode.eq.x')`) เติมชื่อ/หน่วยอัตโนมัติ ไม่เจอ → แสดง "ไม่พบสินค้า"
+- Branch: dropdown SRC / KKL / SSS
+- ปุ่ม **Outbound** ต่อแถว = อนุมัติ: ต้องมี sku+name และ qty > 0 → ใส่รหัส `VITE_ADMIN_PASSWORD` (ครั้งแรกครั้งเดียว — unlock ทั้ง session 🔓) → แถวเปลี่ยนเป็น ✅ อนุมัติแล้ว + timestamp พื้นเขียว แก้ไขไม่ได้
+- แถวทั้งหมด (รวมสถานะอนุมัติ) persist ลง localStorage key `outboundItems`
+- `clearAll` มี `window.confirm` ก่อนล้าง — ล้างแล้วเหลือ 1 แถวว่างเสมอ
+- ปุ่ม เพิ่มแถว / ล้างทั้งหมด (`.outbound-3d-btn`) และ Outbound (`.outbound-approve-btn`) ใช้สไตล์ **Luxe Double Border** โทนฟ้า: พื้นขาว ขอบ `#4891db` 2 ชั้น (border + outline) → hover พื้น `#2d6cad` ตัวอักษรขาว
 
-Gold gradient: `linear-gradient(135deg, #d4af37, #f2d98d)`, border `1.5px solid #f2d98d`, hover neon glow.
+## UI — Theme
+
+- **โทนสีหลักเปลี่ยนจากทองเป็นฟ้าแล้ว**: hero header พื้น `#4891db` + คลื่น SVG ด้านล่าง, น้ำเงินเข้ม `#2d6cad`, ฟ้าอ่อน `#eaf3fc`
+- โลโก้ทุกหน้าใช้ `<AnimatedLogoText text="..." />` (font Lilita One) — ตัวอักษรทยอย blur-in ทีละตัว
+- ปุ่มนำทางระหว่างหน้า: `.page-nav-card` การ์ดโปร่งขาว 72×66px มีไอคอน+ป้ายชื่อ อยู่ใน hero ของทุกหน้า (6 ปุ่ม: ป้ายราคา / ฉลากยา / สต๊อค / ประวัติ / เบิกด่วน / ซัพพอร์ต) — หน้าปัจจุบันใส่ `.page-nav-card--active`
+- **ไอคอนปุ่มนำทางเป็น inline SVG แบบเส้น ไม่ใช่ emoji แล้ว** (2026-07-28, ดีไซน์ "Line Regular" จาก `public/nav-icon-designs.html`) — `PAGE_NAV[].icon` เป็น `ReactNode` (JSX `<svg>`) ไม่ใช่ string · สไตล์คุมจาก `.page-nav-icon svg` ใน App.css: `stroke: currentColor` + `stroke-width: 1.75` + 21×21px → **ไอคอนเปลี่ยนสีตามปุ่มเอง** (ขาวบนพื้นฟ้า → `#2d6cad` ตอน hover/active) ไม่ต้องเขียน CSS แยกต่อสถานะ
+- ไอคอนชุดเดียวกันนี้ถูกใช้ซ้ำใน modal ตั้งค่าเปิด/ปิดหน้า (`.page-toggle-icon svg`, 18×18px สี `#4891db`) เพราะอ่านจาก `PAGE_NAV[].icon` ตัวเดียวกัน — แก้ไอคอนที่ `pageAccess.tsx` ที่เดียวเปลี่ยนทั้ง 2 จุด
+- เปลี่ยนหน้า → panel เล่นอนิเมชั่น fadeIn
+- **สีทองถูกยกเลิกทั้งหมดแล้ว** (2026-07-28) — ไม่มี `#d4af37` / `#f2d98d` เหลือใน `App.css` แล้ว ปุ่มหลักหน้าป้ายราคา (`.btn-premium`, `.btn-outline`, `.btn-cart-toggle`) เปลี่ยนจาก Neon Gold เป็น **Neon Blue**: `linear-gradient(135deg, #2d6cad, #4891db)` ขอบ `#a9d0f5` ตัวอักษรขาว hover เรืองแสง `rgba(72,145,219,...)`
+- พาเลตต์มาตรฐาน: ฟ้าหลัก `#4891db` · น้ำเงินเข้ม `#2d6cad` · ฟ้าอ่อน (พื้นแถวที่เลือก/badge) `#eaf3fc` · ขอบอ่อน `#b8d3ee` / `#cfe0f2` · ขอบสว่างบนพื้นเข้ม `#a9d0f5`
+- ⚠️ ไฟล์ที่ยัง**มีสีทองอยู่โดยตั้งใจ** (ไม่ได้ import เข้าแอป ไม่ต้องแก้): `App.backup.20260507_110405.css`, `design-template.css`, `animation-preview.html`, `README.md`, `QUICKSTART.md`
 
 ## UI — Live Preview Cards
 
@@ -213,8 +266,16 @@ Each panel has a close (✕) button and includes product name in subheader.
 
 ## UI — Misc
 
-- Hero header: `<h1 className="logo-premium">ANIN LABEL AND BARCODE</h1>` — single line, no split logo structure
 - Admin panel shows R05.106 label, Enter key to verify password, Last Updated badge (no version badge)
+
+## Sale Support (หน้าซัพพอร์ต)
+
+- Layout: `.ss-layout` = sidebar ซ้าย (`.ss-sidebar` เมนู 5 อัน) + panel ขวา (toolbar + ตาราง)
+- เมนูขับเคลื่อนด้วย config `MENUS: MenuDef[]` — แต่ละเมนูกำหนด table, columns (`kind: 'date' | 'datetime' | 'chip'`), orderBy, filter
+- Chip สี: เขียว (`.ss-chip--green`) / แดง / ฟ้า / ส้ม ตามค่าสถานะ
+- คลิกแถว → popup รายละเอียด (แก้ไข inline ได้) — Order popup มีตราประทับอนุมัติ 3 ขั้น บันทึกลง Supabase ทันที
+- ฟอร์มเพิ่มข้อมูลต่อเมนู + แนบรูป (upload เข้า bucket `salesupport`)
+- ฟอนต์หน้านี้: Noto Sans Thai
 
 ## Drug Label — Database (Supabase)
 
@@ -303,12 +364,23 @@ Supabase permissions required:
 - จำนวน/ราคา แสดงโดยตัด decimal: `Math.floor(Number(value))`
 - ราคาต่อหน่วยใช้ `.toLocaleString()` เพิ่ม comma
 
-## Stock Check — Navigation
+## Page Navigation
 
-ปุ่ม 📦 สต๊อค ปรากฏในทุกหน้า:
-- `App.tsx` hero header (pricetag page)
-- `druglabel/DrugLabelPage.tsx` — props: `onGoPriceTag`, `onGoDrugLabel`, `onGoStockCheck`
-- `StockCheckPage.tsx` — แสดง active state
+- ปุ่มนำทางทุกหน้าใช้ component กลาง `<PageNavRow current=... handlers=... />` จาก `pageAccess.tsx` (เดิม hardcode 6 ปุ่ม `.page-nav-card` ซ้ำทุกไฟล์ — ย้ายมารวมที่ `PAGE_NAV` config)
+- ทุกหน้ารับ props ครบชุด: `onGoPriceTag`, `onGoDrugLabel`, `onGoStockCheck`, `onGoCustomerHistory`, `onGoOutbound`, `onGoSaleSupport` → ประกอบเป็น object `handlers` ส่งให้ `PageNavRow`
+- `PageId` union + `currentPage` type import จาก `pageAccess.tsx` (ไม่ inline ใน App.tsx แล้ว)
+- เพิ่มหน้าใหม่: เพิ่มใน `PageId` union + `PAGE_NAV` array (`pageAccess.tsx` — `icon` ต้องเป็น JSX `<svg>` ห่อด้วย `<Svg>` helper ไม่ใช่ emoji), เพิ่ม prop `onGoXxx` + ส่งใน `handlers` ทุกหน้า, เพิ่ม row ใน `app_page_settings` (SQL), และเพิ่มการ render หน้าใน `App.tsx`
+
+## Page Visibility — เปิด/ปิดปุ่มแต่ละหน้า (admin)
+
+- ปุ่มเฟือง ⚙️ (`.app-userbar-gear`) ในแถบผู้ใช้มุมขวาบน (ทุกหน้า) → ใส่ `VITE_ADMIN_PASSWORD` → toggle เปิด/ปิด 6 หน้า
+- เก็บสถานะใน Supabase ตาราง **`app_page_settings`** (`page_id` pk, `visible` bool) — ซิงค์ทุกเครื่อง · สร้างด้วย `page-settings-setup.sql`
+- `App.tsx`: fetch ตอน mount → `pageVisibility` state → `PageVisibilityContext.Provider` ครอบทั้งแอป · `togglePageVisible()` upsert ทันที (optimistic + revert ถ้า error)
+- `PageNavRow` อ่าน `usePageVisibility()` → ซ่อนปุ่มหน้าที่ `visible=false` **ยกเว้นหน้าปัจจุบัน** (`|| p.id === current` กันปุ่ม active หาย)
+- หน้าปัจจุบันถูกปิดตอนโหลด → เด้งไปหน้าแรกที่เปิดอยู่
+- **fail-safe**: โหลดจาก Supabase ไม่ได้ → `DEFAULT_VISIBILITY` (เปิดทุกหน้า) — แอปใช้ได้ครบเสมอ
+- ⚠️ ต้องรัน `page-settings-setup.sql` ใน Supabase ก่อน ไม่งั้น toggle บันทึกไม่ได้ (แต่แอปยังใช้ได้ครบทุกหน้า)
+- ⚠️ รหัสอยู่ฝั่ง client (เหมือน admin panel อื่น) — เป็น gate ใช้งานภายใน ไม่ใช่ security จริง
 
 ## Backup Files
 

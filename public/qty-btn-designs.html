@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ดีไซน์ปุ่ม +/− (qty-btn) 20 แบบ</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Noto Sans Thai',sans-serif; background:#eef1f5; color:#2d3a48; padding:2rem 1.5rem 4rem; }
+.page-title { text-align:center; font-size:1.7rem; font-weight:700; color:#2d6cad; margin-bottom:.3rem; }
+.page-sub { text-align:center; color:#8194a8; margin-bottom:2rem; font-weight:300; font-size:.9rem; line-height:1.6; }
+.grid { max-width:1080px; margin:0 auto; display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:16px; }
+.card { background:#fff; border-radius:14px; box-shadow:0 4px 16px rgba(0,0,0,.06); overflow:hidden; }
+.card-head { display:flex; align-items:center; gap:.6rem; padding:.85rem 1.2rem .3rem; }
+.num { display:inline-flex; align-items:center; justify-content:center; width:26px; height:26px; border-radius:50%; background:#2d6cad; color:#fff; font-weight:700; font-size:.85rem; flex-shrink:0; }
+.name { font-weight:600; font-size:.98rem; }
+.desc { color:#8194a8; font-size:.74rem; font-weight:300; margin-left:auto; text-align:right; }
+.demo { padding:1.2rem; display:flex; justify-content:center; }
+
+/* ── qty control ── */
+.qty { display:inline-flex; align-items:center; gap:14px; }
+.qnum { min-width:26px; text-align:center; font-weight:700; font-size:15px; color:#2d3a48; font-family:'Outfit',sans-serif; }
+.qb {
+  width:30px; height:30px; border-radius:9px; border:none;
+  font-weight:700; font-size:18px; line-height:1; cursor:pointer;
+  transition:all .18s; display:flex; align-items:center; justify-content:center;
+}
+.qb:hover { filter:brightness(0.95); }
+
+/* ════ กลุ่มฟ้าแบรนด์ (mono) ════ */
+/* 1 Blue Outline */
+.d1 .qb { border:2px solid #4891db; background:#fff; color:#4891db; }
+.d1 .qb:hover { background:#4891db; color:#fff; filter:none; }
+/* 2 Blue Soft */
+.d2 .qb { background:#eaf3fc; color:#2d6cad; }
+.d2 .qb:hover { background:#d3e7fa; filter:none; }
+/* 3 Blue Solid */
+.d3 .qb { background:#4891db; color:#fff; }
+.d3 .qb:hover { background:#2d6cad; filter:none; }
+/* 4 Blue Gradient */
+.d4 .qb { border-radius:50%; background:linear-gradient(135deg,#5aa0e0,#2d6cad); color:#fff; }
+/* 5 Blue Ghost */
+.d5 .qb { background:none; color:#4891db; }
+.d5 .qb:hover { background:#eaf3fc; filter:none; }
+/* 6 Blue Circle Soft */
+.d6 .qb { border-radius:50%; background:#dcebfa; color:#2d6cad; }
+.d6 .qb:hover { background:#4891db; color:#fff; filter:none; }
+
+/* ════ กลุ่มพาสเทลจับคู่ (− / +) ════ */
+/* 7 Pink / Mint */
+.d7 .minus { background:#ffe0e6; color:#e06b85; }
+.d7 .plus  { background:#d9f2e4; color:#3aa876; }
+/* 8 Peach / Sky */
+.d8 .minus { background:#ffe8d6; color:#e08a4a; }
+.d8 .plus  { background:#dbeeff; color:#3b8fd0; }
+/* 9 Rose / Green (outline) */
+.d9 .minus { border:2px solid #f4b8c4; background:#fff; color:#d9607c; }
+.d9 .minus:hover { background:#f4b8c4; color:#fff; filter:none; }
+.d9 .plus  { border:2px solid #a8dcc0; background:#fff; color:#3aa876; }
+.d9 .plus:hover  { background:#a8dcc0; color:#fff; filter:none; }
+/* 10 Coral / Teal */
+.d10 .minus { background:#ffdfd6; color:#e0674a; }
+.d10 .plus  { background:#d0f0ec; color:#2fa89a; }
+/* 11 Lavender / Lemon */
+.d11 .minus { background:#e7e0fa; color:#7d68c9; }
+.d11 .plus  { background:#fdf3c9; color:#bd9a20; }
+/* 12 Red / Blue soft (คลาสสิก) */
+.d12 .minus { background:#fde3e1; color:#d65a4f; }
+.d12 .plus  { background:#e0edfb; color:#3b7fd0; }
+/* 13 Salmon / Aqua */
+.d13 .minus { background:#ffe1da; color:#e77257; }
+.d13 .plus  { background:#d5f2f0; color:#2ba39a; }
+/* 14 Blush / Sage */
+.d14 .minus { background:#fce4e8; color:#d17089; }
+.d14 .plus  { background:#e2ecd9; color:#7ba05b; }
+/* 15 Apricot / Periwinkle */
+.d15 .minus { background:#ffeacc; color:#dd9430; }
+.d15 .plus  { background:#e0e4fb; color:#6272d0; }
+/* 16 Watermelon (ทึบสด) */
+.d16 .minus { background:#f9899e; color:#fff; }
+.d16 .plus  { background:#6fcf97; color:#fff; }
+/* 17 Candy Circle */
+.d17 .qb { border-radius:50%; }
+.d17 .minus { background:#ffd6e0; color:#e0607e; }
+.d17 .plus  { background:#d6f0e4; color:#35a877; }
+/* 18 Terracotta / Mint (ขอบวงกลม) */
+.d18 .qb { border-radius:50%; background:#fff; }
+.d18 .minus { border:2px solid #e8a08a; color:#c76a4f; }
+.d18 .minus:hover { background:#e8a08a; color:#fff; filter:none; }
+.d18 .plus  { border:2px solid #8fd0b5; color:#3a9d78; }
+.d18 .plus:hover  { background:#8fd0b5; color:#fff; filter:none; }
+/* 19 Cherry / Sky (ทึบ) */
+.d19 .minus { background:#eb6b7b; color:#fff; }
+.d19 .plus  { background:#6bb5eb; color:#fff; }
+/* 20 Neutral / Blue */
+.d20 .minus { background:#eef1f5; color:#8194a8; }
+.d20 .minus:hover { background:#e0e5ec; filter:none; }
+.d20 .plus  { background:#4891db; color:#fff; }
+.d20 .plus:hover  { background:#2d6cad; filter:none; }
+</style>
+</head>
+<body>
+<h1 class="page-title">ดีไซน์ปุ่ม +/− (qty-btn) 20 แบบ</h1>
+<p class="page-sub">แบบ 1–6 โทนฟ้าแบรนด์ · แบบ 7–20 คู่สีพาสเทล (− / + คนละสี) · เอาเมาส์ชี้เพื่อดู hover<br>ขนาดจริงในแอป 20×20px (ในนี้ขยายเป็น 30px ให้เห็นสีชัด) · บอกเลขแบบที่ชอบเพื่อนำไปแทน <code>.qty-btn</code></p>
+
+<div class="grid" id="grid"></div>
+
+<script>
+const DESIGNS = [
+  ['Blue Outline', 'ขอบฟ้า · hover เต็ม'],
+  ['Blue Soft', 'พื้นฟ้าอ่อน'],
+  ['Blue Solid', 'พื้นฟ้าทึบ'],
+  ['Blue Gradient', 'วงกลมไล่เฉดฟ้า'],
+  ['Blue Ghost', 'โปร่ง · hover จาง'],
+  ['Blue Circle', 'วงกลมฟ้าอ่อน'],
+  ['Pink / Mint', 'ชมพู − / มินต์ +'],
+  ['Peach / Sky', 'พีช − / ฟ้า +'],
+  ['Rose / Green', 'ขอบพาสเทล − /+'],
+  ['Coral / Teal', 'คอรัล − / เทอควอยซ์ +'],
+  ['Lavender / Lemon', 'ม่วง − / เหลือง +'],
+  ['Red / Blue soft', 'แดง − / ฟ้า + คลาสสิก'],
+  ['Salmon / Aqua', 'ส้มปลา − / ฟ้าน้ำทะเล +'],
+  ['Blush / Sage', 'ชมพูนวล − / เขียวเสจ +'],
+  ['Apricot / Periwinkle', 'แอปริคอต − / ม่วงฟ้า +'],
+  ['Watermelon', 'ชมพู-เขียวสด (ทึบ)'],
+  ['Candy Circle', 'วงกลมพาสเทลหวาน'],
+  ['Terracotta / Mint', 'ขอบวงกลม −/+'],
+  ['Cherry / Sky', 'เชอร์รี-ฟ้า (ทึบ)'],
+  ['Neutral / Blue', 'เทากลาง − / ฟ้า +'],
+];
+
+document.getElementById('grid').innerHTML = DESIGNS.map((d, i) => `
+  <section class="card">
+    <div class="card-head"><span class="num">${i + 1}</span><span class="name">${d[0]}</span><span class="desc">${d[1]}</span></div>
+    <div class="demo d${i + 1}">
+      <div class="qty">
+        <button class="qb minus">−</button>
+        <span class="qnum">2</span>
+        <button class="qb plus">+</button>
+      </div>
+    </div>
+  </section>`).join('');
+
+// คลิก +/− ปรับตัวเลขให้ดูมีชีวิต
+document.querySelectorAll('.qty').forEach(q => {
+  const num = q.querySelector('.qnum');
+  q.querySelector('.minus').addEventListener('click', () => { num.textContent = Math.max(0, +num.textContent - 1); });
+  q.querySelector('.plus').addEventListener('click', () => { num.textContent = +num.textContent + 1; });
+});
+</script>
+</body>
+</html>

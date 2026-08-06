@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>เลือกดีไซน์ปุ่ม — หน้าเบิกด่วน</title>
+<link href="https://fonts.googleapis.com/css2?family=Mitr:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Mitr', sans-serif;
+    background: #f5f1ea;
+    color: #2d2a26;
+    padding: 2rem 1.5rem 4rem;
+  }
+  .page-title {
+    text-align: center;
+    font-size: 1.6rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+  }
+  .page-sub {
+    text-align: center;
+    color: #8a8272;
+    margin-bottom: 2rem;
+    font-weight: 300;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+    gap: 1.25rem;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  .card {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.07);
+    overflow: hidden;
+  }
+  .card-head {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    padding: 0.9rem 1.2rem 0.6rem;
+  }
+  .card-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: #2d2a26;
+    color: #f2d98d;
+    font-weight: 600;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+    align-self: center;
+  }
+  .card-name { font-weight: 500; font-size: 1.05rem; }
+  .card-desc { color: #8a8272; font-size: 0.8rem; font-weight: 300; }
+  /* จำลองแถบหัวตารางของหน้าเบิกด่วน */
+  .mock-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    background: linear-gradient(135deg, #2d2a26, #4a443d);
+    color: #faf8f5;
+    padding: 0.7rem 1.2rem;
+    font-size: 0.9rem;
+    margin: 0.4rem 1.2rem 1.2rem;
+    border-radius: 12px;
+  }
+  .mock-count { opacity: 0.9; font-weight: 300; }
+  .btns { display: flex; gap: 0.5rem; }
+  button {
+    font-family: 'Mitr', sans-serif;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.18s ease;
+  }
+
+  /* ═══ 1) แบบปัจจุบัน (Gold Gradient) ═══ */
+  .v1 {
+    padding: 7px 16px;
+    border: 1px solid #f2d98d;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #d4af37, #f2d98d);
+    color: #2d2a26;
+    font-weight: 500;
+  }
+  .v1:hover { background: linear-gradient(135deg, #b8962e, #d4af37); }
+
+  /* ═══ 2) Outline ทอง โปร่งใส ═══ */
+  .v2 {
+    padding: 7px 16px;
+    border: 1.5px solid #d4af37;
+    border-radius: 10px;
+    background: transparent;
+    color: #f2d98d;
+    font-weight: 500;
+  }
+  .v2:hover { background: rgba(212, 175, 55, 0.18); box-shadow: 0 0 10px rgba(212,175,55,0.35); }
+
+  /* ═══ 3) Pill แคปซูล + สีแยกหน้าที่ ═══ */
+  .v3 {
+    padding: 8px 20px;
+    border: none;
+    border-radius: 999px;
+    font-weight: 500;
+  }
+  .v3-add { background: #4caf78; color: #fff; }
+  .v3-add:hover { background: #3d9465; transform: translateY(-1px); box-shadow: 0 4px 10px rgba(76,175,120,0.4); }
+  .v3-clear { background: #c25b4a; color: #fff; }
+  .v3-clear:hover { background: #a84a3b; transform: translateY(-1px); box-shadow: 0 4px 10px rgba(194,91,74,0.4); }
+
+  /* ═══ 4) Ghost ขาวหรู เงานุ่ม ═══ */
+  .v4 {
+    padding: 8px 18px;
+    border: none;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.95);
+    color: #2d2a26;
+    font-weight: 500;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+  }
+  .v4:hover { transform: translateY(-2px); box-shadow: 0 6px 14px rgba(0,0,0,0.25); }
+
+  /* ═══ 5) กรอบทองพื้นเข้ม (Luxury Dark) ═══ */
+  .v5 {
+    padding: 8px 18px;
+    border: 1px solid #d4af37;
+    border-radius: 10px;
+    background: #1f1c18;
+    color: #f2d98d;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+  }
+  .v5:hover { background: #2d2a26; box-shadow: inset 0 0 12px rgba(212,175,55,0.25), 0 0 10px rgba(212,175,55,0.4); }
+
+  /* ═══ 6) Soft Pastel เหลี่ยมมน ═══ */
+  .v6 {
+    padding: 8px 18px;
+    border: none;
+    border-radius: 12px;
+    font-weight: 500;
+  }
+  .v6-add { background: #eaf4ec; color: #1d7a2f; }
+  .v6-add:hover { background: #d8ecdc; }
+  .v6-clear { background: #f9e9e6; color: #b04a3a; }
+  .v6-clear:hover { background: #f3d8d3; }
+
+  /* ═══ 7) ไอคอนวงกลม + ข้อความ ═══ */
+  .v7 {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 16px 6px 6px;
+    border: 1px solid rgba(255,255,255,0.35);
+    border-radius: 999px;
+    background: rgba(255,255,255,0.12);
+    color: #faf8f5;
+    font-weight: 400;
+  }
+  .v7 .ic {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #d4af37, #f2d98d);
+    font-size: 0.8rem;
+  }
+  .v7:hover { background: rgba(255,255,255,0.22); border-color: rgba(255,255,255,0.6); }
+
+  /* ═══ 8) Neon Glow ═══ */
+  .v8 {
+    padding: 8px 18px;
+    border: 1.5px solid #f2d98d;
+    border-radius: 10px;
+    background: transparent;
+    color: #f2d98d;
+    font-weight: 500;
+    text-shadow: 0 0 8px rgba(242,217,141,0.7);
+    box-shadow: 0 0 8px rgba(212,175,55,0.35), inset 0 0 8px rgba(212,175,55,0.12);
+  }
+  .v8:hover {
+    color: #fff;
+    box-shadow: 0 0 16px rgba(212,175,55,0.75), inset 0 0 14px rgba(212,175,55,0.3);
+  }
+
+  /* ═══ 9) 3D กดได้จริง ═══ */
+  .v9 {
+    padding: 8px 18px;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(180deg, #f2d98d, #d4af37);
+    color: #2d2a26;
+    font-weight: 600;
+    box-shadow: 0 4px 0 #9a7d24, 0 6px 10px rgba(0,0,0,0.3);
+  }
+  .v9:hover { filter: brightness(1.05); }
+  .v9:active { transform: translateY(3px); box-shadow: 0 1px 0 #9a7d24, 0 2px 4px rgba(0,0,0,0.3); }
+
+  /* ═══ 10) Gradient Border ทองล้อมพื้นขาว ═══ */
+  .v10 {
+    position: relative;
+    padding: 8px 18px;
+    border: 2px solid transparent;
+    border-radius: 12px;
+    background:
+      linear-gradient(#fff, #fff) padding-box,
+      linear-gradient(135deg, #d4af37, #f2d98d, #b8962e) border-box;
+    color: #8a6d1f;
+    font-weight: 600;
+  }
+  .v10:hover {
+    background:
+      linear-gradient(135deg, #d4af37, #f2d98d) padding-box,
+      linear-gradient(135deg, #d4af37, #f2d98d, #b8962e) border-box;
+    color: #2d2a26;
+  }
+
+  .footer-note {
+    text-align: center;
+    margin-top: 2.5rem;
+    color: #8a8272;
+    font-weight: 300;
+  }
+  .footer-note b { color: #b8962e; font-weight: 600; }
+</style>
+</head>
+<body>
+  <h1 class="page-title">🚚 ดีไซน์ปุ่ม "เพิ่มแถว / ล้างทั้งหมด" หน้าเบิกด่วน</h1>
+  <p class="page-sub">ปุ่มอยู่ในแถบหัวตารางสีเข้มแบบเดียวกับหน้าจริง — ลองชี้เมาส์ดู hover ได้ทุกแบบ</p>
+
+  <div class="grid">
+
+    <div class="card">
+      <div class="card-head"><span class="card-num">1</span><div><div class="card-name">แบบปัจจุบัน — Gold Gradient</div><div class="card-desc">ไล่เฉดทองตามธีมเดิมของแอป</div></div></div>
+      <div class="mock-toolbar"><span class="mock-count">3 รายการ · อนุมัติแล้ว 1</span>
+        <div class="btns"><button class="v1">➕ เพิ่มแถว</button><button class="v1">🗑️ ล้างทั้งหมด</button></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span class="card-num">2</span><div><div class="card-name">Outline ทองโปร่ง</div><div class="card-desc">เบาสายตา ขอบทองบนพื้นเข้ม</div></div></div>
+      <div class="mock-toolbar"><span class="mock-count">3 รายการ · อนุมัติแล้ว 1</span>
+        <div class="btns"><button class="v2">➕ เพิ่มแถว</button><button class="v2">🗑️ ล้างทั้งหมด</button></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span class="card-num">3</span><div><div class="card-name">แคปซูลสีแยกหน้าที่</div><div class="card-desc">เขียว = เพิ่ม, แดง = ลบ อ่านหน้าที่ได้ทันที</div></div></div>
+      <div class="mock-toolbar"><span class="mock-count">3 รายการ · อนุมัติแล้ว 1</span>
+        <div class="btns"><button class="v3 v3-add">➕ เพิ่มแถว</button><button class="v3 v3-clear">🗑️ ล้างทั้งหมด</button></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span class="card-num">4</span><div><div class="card-name">ขาวหรู เงานุ่ม</div><div class="card-desc">การ์ดขาวลอยเด่นบนพื้นเข้ม ยกตัวเมื่อชี้</div></div></div>
+      <div class="mock-toolbar"><span class="mock-count">3 รายการ · อนุมัติแล้ว 1</span>
+        <div class="btns"><button class="v4">➕ เพิ่มแถว</button><button class="v4">🗑️ ล้างทั้งหมด</button></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span class="card-num">5</span><div><div class="card-name">Luxury Dark</div><div class="card-desc">พื้นดำขอบทอง ตัวอักษรทอง เรืองแสงเมื่อชี้</div></div></div>
+      <div class="mock-toolbar"><span class="mock-count">3 รายการ · อนุมัติแล้ว 1</span>
+        <div class="btns"><button class="v5">➕ เพิ่มแถว</button><button class="v5">🗑️ ล้างทั้งหมด</button></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span class="card-num">6</span><div><div class="card-name">Soft Pastel</div><div class="card-desc">พาสเทลอ่อนโทนเขียว/แดง นุ่มนวลสบายตา</div></div></div>
+      <div class="mock-toolbar"><span class="mock-count">3 รายการ · อนุมัติแล้ว 1</span>
+        <div class="btns"><button class="v6 v6-add">➕ เพิ่มแถว</button><button class="v6 v6-clear">🗑️ ล้างทั้งหมด</button></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span class="card-num">7</span><div><div class="card-name">ไอคอนวงกลมทอง</div><div class="card-desc">แคปซูลโปร่งมีเหรียญทองหน้าข้อความ เข้าชุดปุ่มนำทาง</div></div></div>
+      <div class="mock-toolbar"><span class="mock-count">3 รายการ · อนุมัติแล้ว 1</span>
+        <div class="btns">
+          <button class="v7"><span class="ic">➕</span>เพิ่มแถว</button>
+          <button class="v7"><span class="ic">🗑️</span>ล้างทั้งหมด</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span class="card-num">8</span><div><div class="card-name">Neon Gold Glow</div><div class="card-desc">ขอบทองเรืองแสงตลอดเวลา สว่างขึ้นเมื่อชี้</div></div></div>
+      <div class="mock-toolbar"><span class="mock-count">3 รายการ · อนุมัติแล้ว 1</span>
+        <div class="btns"><button class="v8">➕ เพิ่มแถว</button><button class="v8">🗑️ ล้างทั้งหมด</button></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span class="card-num">9</span><div><div class="card-name">3D กดได้จริง</div><div class="card-desc">ปุ่มนูนมีขอบหนา กดแล้วยุบลงเหมือนปุ่มจริง — ลองคลิกดู</div></div></div>
+      <div class="mock-toolbar"><span class="mock-count">3 รายการ · อนุมัติแล้ว 1</span>
+        <div class="btns"><button class="v9">➕ เพิ่มแถว</button><button class="v9">🗑️ ล้างทั้งหมด</button></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span class="card-num">10</span><div><div class="card-name">Gradient Border</div><div class="card-desc">พื้นขาวล้อมกรอบไล่เฉดทอง ชี้แล้วเติมทองเต็มปุ่ม</div></div></div>
+      <div class="mock-toolbar"><span class="mock-count">3 รายการ · อนุมัติแล้ว 1</span>
+        <div class="btns"><button class="v10">➕ เพิ่มแถว</button><button class="v10">🗑️ ล้างทั้งหมด</button></div>
+      </div>
+    </div>
+
+  </div>
+
+  <p class="footer-note">ชอบแบบไหน บอกหมายเลข เช่น <b>"เอาแบบ 3"</b> แล้วผมจะปรับหน้าเบิกด่วนให้เลยครับ</p>
+</body>
+</html>

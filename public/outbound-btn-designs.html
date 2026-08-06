@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>เลือกดีไซน์ปุ่ม เพิ่มแถว / ล้างทั้งหมด / Outbound — 20 แบบ (Blue Theme)</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Noto Sans Thai', sans-serif;
+    background: #eef4fa;
+    color: #2d3a48;
+    padding: 2rem 1.5rem 4rem;
+  }
+  .page-title { text-align: center; font-size: 1.6rem; font-weight: 600; margin-bottom: 0.25rem; color: #2d6cad; }
+  .page-sub { text-align: center; color: #8194a8; margin-bottom: 2rem; font-weight: 300; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(460px, 1fr));
+    gap: 1.25rem;
+    max-width: 1500px;
+    margin: 0 auto;
+  }
+  .card { background: #fff; border-radius: 16px; box-shadow: 0 4px 20px rgba(45,108,173,0.10); overflow: hidden; }
+  .card-head { display: flex; align-items: baseline; gap: 0.6rem; padding: 0.9rem 1.2rem 0.6rem; }
+  .card-num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; border-radius: 50%;
+    background: #2d6cad; color: #fff;
+    font-weight: 600; font-size: 0.9rem; flex-shrink: 0; align-self: center;
+  }
+  .card-name { font-weight: 500; font-size: 1.05rem; }
+  .card-desc { color: #8194a8; font-size: 0.8rem; font-weight: 300; }
+
+  /* ---- จำลองบริบทหน้าเบิกด่วน ---- */
+  .mock-toolbar {
+    display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+    background: linear-gradient(135deg, #2d6cad, #4891db);
+    color: #fff;
+    padding: 0.7rem 1.2rem;
+    font-size: 0.85rem;
+    margin: 0.4rem 1.2rem 0;
+    border-radius: 12px 12px 0 0;
+  }
+  .mock-btns { display: flex; gap: 0.6rem; }
+  .mock-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
+    border: 1px solid #e3e8ee; border-top: none;
+    border-radius: 0 0 12px 12px;
+    margin: 0 1.2rem 1.2rem;
+    padding: 0.7rem 1.2rem;
+    background: #fbfdff;
+  }
+  .mock-cell { color: #8194a8; font-size: 0.82rem; font-weight: 300; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* ============ 1. Classic Blue 3D ============ */
+  .d1-btn {
+    padding: 8px 18px; border: none; border-radius: 10px;
+    background: linear-gradient(180deg, #6aa8e4, #4891db);
+    color: #fff; font-family: inherit; font-weight: 600; font-size: 0.9rem; cursor: pointer;
+    box-shadow: 0 4px 0 #2d6cad, 0 6px 10px rgba(30,77,122,0.35);
+    transition: all 0.18s ease;
+  }
+  .d1-btn:hover { filter: brightness(1.06); }
+  .d1-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #2d6cad, 0 2px 4px rgba(30,77,122,0.35); }
+
+  /* ============ 2. Neon Blue Glow ============ */
+  .d2-btn {
+    padding: 8px 18px; border: 1.5px solid #a8cef2; border-radius: 10px;
+    background: linear-gradient(135deg, #4891db, #6aa8e4);
+    color: #fff; font-family: inherit; font-weight: 700; font-size: 0.9rem; cursor: pointer;
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+  }
+  .d2-btn:hover { box-shadow: 0 0 14px rgba(72,145,219,0.9), 0 0 30px rgba(72,145,219,0.45); transform: translateY(-1px); }
+  .d2-btn:active { transform: translateY(0); box-shadow: 0 0 6px rgba(72,145,219,0.6); }
+
+  /* ============ 3. Glass บนแถบฟ้า ============ */
+  .d3-btn {
+    padding: 8px 18px; border: 1px solid rgba(255,255,255,0.55); border-radius: 12px;
+    background: rgba(255,255,255,0.16);
+    backdrop-filter: blur(6px);
+    color: #fff; font-family: inherit; font-weight: 500; font-size: 0.9rem; cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .d3-btn:hover { background: rgba(255,255,255,0.3); box-shadow: inset 0 0 12px rgba(255,255,255,0.25); }
+  .d3-btn:active { background: rgba(255,255,255,0.4); }
+  .d3-btn--light { color: #2d6cad; border-color: #4891db; background: rgba(72,145,219,0.08); }
+  .d3-btn--light:hover { background: rgba(72,145,219,0.18); }
+
+  /* ============ 4. Flat Minimal + เส้นใต้ ============ */
+  .d4-btn {
+    padding: 8px 16px; border: none; border-radius: 8px;
+    background: transparent; color: #eaf3fc;
+    font-family: inherit; font-weight: 500; font-size: 0.9rem; cursor: pointer;
+    position: relative; transition: background 0.2s ease;
+  }
+  .d4-btn::after {
+    content: ''; position: absolute; left: 16px; right: 16px; bottom: 4px; height: 2px;
+    background: #fff; border-radius: 2px;
+    transform: scaleX(0); transition: transform 0.25s ease;
+  }
+  .d4-btn:hover { background: rgba(255,255,255,0.12); }
+  .d4-btn:hover::after { transform: scaleX(1); }
+  .d4-btn--dark { color: #2d6cad; }
+  .d4-btn--dark::after { background: #4891db; }
+  .d4-btn--dark:hover { background: rgba(72,145,219,0.1); }
+
+  /* ============ 5. Pill + แสงวิ่ง ============ */
+  .d5-btn {
+    padding: 8px 20px; border: none; border-radius: 999px;
+    background: linear-gradient(135deg, #2d6cad, #4891db);
+    color: #fff; font-family: inherit; font-weight: 600; font-size: 0.9rem; cursor: pointer;
+    position: relative; overflow: hidden; transition: transform 0.15s ease;
+  }
+  .d5-btn::before {
+    content: ''; position: absolute; top: 0; left: -80%; width: 50%; height: 100%;
+    background: linear-gradient(105deg, transparent, rgba(255,255,255,0.55), transparent);
+    transform: skewX(-20deg);
+  }
+  .d5-btn:hover::before { animation: d5shine 0.7s ease; }
+  @keyframes d5shine { to { left: 130%; } }
+  .d5-btn:active { transform: scale(0.96); }
+
+  /* ============ 6. Navy Emboss ============ */
+  .d6-btn {
+    padding: 8px 18px; border: 1px solid #3d7cbd; border-radius: 10px;
+    background: linear-gradient(180deg, #2d6cad, #1e4d7a);
+    color: #cfe4f8; font-family: inherit; font-weight: 500; font-size: 0.9rem; cursor: pointer;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.18), 0 3px 6px rgba(30,77,122,0.4);
+    transition: all 0.18s ease;
+  }
+  .d6-btn:hover { border-color: #a8cef2; color: #fff; box-shadow: inset 0 1px 0 rgba(255,255,255,0.18), 0 0 10px rgba(72,145,219,0.5); }
+  .d6-btn:active { background: #1a4269; box-shadow: inset 0 2px 6px rgba(0,0,0,0.4); }
+
+  /* ============ 7. Duotone แยกหน้าที่ ============ */
+  .d7-add {
+    padding: 8px 18px; border: none; border-radius: 10px;
+    background: #fff;
+    color: #2d6cad; font-family: inherit; font-weight: 600; font-size: 0.9rem; cursor: pointer;
+    transition: all 0.18s ease;
+  }
+  .d7-add:hover { box-shadow: 0 0 10px rgba(255,255,255,0.7); }
+  .d7-clear {
+    padding: 8px 18px; border: 1.5px solid rgba(255,255,255,0.55); border-radius: 10px;
+    background: transparent; color: #eaf3fc;
+    font-family: inherit; font-weight: 500; font-size: 0.9rem; cursor: pointer;
+    transition: all 0.18s ease;
+  }
+  .d7-clear:hover { border-color: #f5b7ab; color: #ffd9d1; background: rgba(192,57,43,0.25); }
+  .d7-out {
+    padding: 8px 22px; border: none; border-radius: 10px;
+    background: #2d6cad; color: #fff;
+    font-family: inherit; font-weight: 600; font-size: 0.9rem; cursor: pointer;
+    transition: all 0.18s ease;
+  }
+  .d7-out:hover { background: #4891db; box-shadow: 0 0 10px rgba(72,145,219,0.5); }
+
+  /* ============ 8. เส้นประ → เติมฟ้า ============ */
+  .d8-btn {
+    padding: 8px 18px; border: 1.5px dashed rgba(255,255,255,0.7); border-radius: 10px;
+    background: transparent; color: #fff;
+    font-family: inherit; font-weight: 500; font-size: 0.9rem; cursor: pointer;
+    transition: all 0.22s ease;
+  }
+  .d8-btn:hover { border-style: solid; background: #fff; color: #2d6cad; }
+  .d8-btn--dark { border-color: #4891db; color: #2d6cad; }
+  .d8-btn--dark:hover { background: linear-gradient(135deg, #4891db, #6aa8e4); color: #fff; border-color: transparent; }
+
+  /* ============ 9. Gradient Border ============ */
+  .d9-btn {
+    padding: 8px 18px; border: 2px solid transparent; border-radius: 12px;
+    background:
+      linear-gradient(#33689c, #33689c) padding-box,
+      linear-gradient(135deg, #a8cef2, #1e4d7a, #a8cef2) border-box;
+    color: #eaf3fc; font-family: inherit; font-weight: 500; font-size: 0.9rem; cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .d9-btn:hover {
+    background:
+      linear-gradient(135deg, #4891db, #6aa8e4) padding-box,
+      linear-gradient(135deg, #a8cef2, #1e4d7a, #a8cef2) border-box;
+    color: #fff;
+  }
+  .d9-btn--light {
+    background:
+      linear-gradient(#fbfdff, #fbfdff) padding-box,
+      linear-gradient(135deg, #a8cef2, #1e4d7a, #a8cef2) border-box;
+    color: #2d6cad;
+  }
+
+  /* ============ 10. Retro Offset Shadow ============ */
+  .d10-btn {
+    padding: 8px 18px; border: 2px solid #1e4d7a; border-radius: 8px;
+    background: #eaf3fc; color: #1e4d7a;
+    font-family: inherit; font-weight: 600; font-size: 0.9rem; cursor: pointer;
+    box-shadow: 4px 4px 0 #2d6cad;
+    transition: all 0.15s ease;
+  }
+  .d10-btn:hover { transform: translate(-1px, -1px); box-shadow: 5px 5px 0 #2d6cad; }
+  .d10-btn:active { transform: translate(3px, 3px); box-shadow: 1px 1px 0 #2d6cad; }
+
+  /* ============ 11. Soft Ice ============ */
+  .d11-btn {
+    padding: 9px 20px; border: none; border-radius: 14px;
+    background: #f2f8fd; color: #2d6cad;
+    font-family: inherit; font-weight: 500; font-size: 0.9rem; cursor: pointer;
+    box-shadow: 0 3px 10px rgba(45,108,173,0.28), inset 0 1px 0 #fff;
+    transition: all 0.2s ease;
+  }
+  .d11-btn:hover { background: #fff; color: #4891db; box-shadow: 0 5px 16px rgba(45,108,173,0.4), inset 0 1px 0 #fff; }
+  .d11-btn:active { box-shadow: 0 1px 4px rgba(45,108,173,0.3), inset 0 2px 4px rgba(45,108,173,0.15); }
+
+  /* ============ 12. Icon Badge วงกลม ============ */
+  .d12-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 16px 6px 6px; border: 1px solid rgba(255,255,255,0.5); border-radius: 999px;
+    background: rgba(255,255,255,0.12); color: #fff;
+    font-family: inherit; font-weight: 500; font-size: 0.88rem; cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .d12-ico {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 26px; height: 26px; border-radius: 50%;
+    background: #fff; color: #2d6cad; font-size: 0.8rem;
+  }
+  .d12-btn:hover { background: rgba(255,255,255,0.25); box-shadow: 0 0 10px rgba(255,255,255,0.4); }
+  .d12-btn--light { color: #2d6cad; background: rgba(72,145,219,0.08); border-color: #4891db; }
+  .d12-btn--light .d12-ico { background: linear-gradient(135deg, #4891db, #6aa8e4); color: #fff; }
+
+  /* ============ 13. Glossy วิ้ง (animated gradient) ============ */
+  .d13-btn {
+    padding: 8px 20px; border: 1px solid #3d7cbd; border-radius: 10px;
+    background: linear-gradient(110deg, #4891db, #8fc0ee, #4891db, #8fc0ee, #4891db);
+    background-size: 300% 100%;
+    color: #fff; font-family: inherit; font-weight: 600; font-size: 0.9rem; cursor: pointer;
+    text-shadow: 0 1px 2px rgba(30,77,122,0.4);
+    animation: d13flow 6s linear infinite;
+    box-shadow: 0 2px 6px rgba(30,77,122,0.3);
+    transition: transform 0.15s ease;
+  }
+  @keyframes d13flow { to { background-position: 300% 0; } }
+  .d13-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(72,145,219,0.55); }
+  .d13-btn:active { transform: translateY(1px); }
+
+  /* ============ 14. Ghost → เรืองแสง ============ */
+  .d14-btn {
+    padding: 8px 18px; border: 1.5px solid rgba(255,255,255,0.4); border-radius: 10px;
+    background: transparent; color: rgba(255,255,255,0.8);
+    font-family: inherit; font-weight: 400; font-size: 0.9rem; cursor: pointer;
+    transition: all 0.25s ease;
+  }
+  .d14-btn:hover {
+    border-color: #fff; color: #fff;
+    text-shadow: 0 0 8px rgba(255,255,255,0.8);
+    box-shadow: 0 0 12px rgba(255,255,255,0.5), inset 0 0 12px rgba(255,255,255,0.15);
+  }
+  .d14-btn--light { border-color: rgba(45,108,173,0.4); color: #2d6cad; }
+  .d14-btn--light:hover { border-color: #2d6cad; color: #1e4d7a; text-shadow: none; box-shadow: 0 0 12px rgba(72,145,219,0.45), inset 0 0 12px rgba(72,145,219,0.12); }
+
+  /* ============ 15. 3D กดลึก (skeuomorphic) ============ */
+  .d15-btn {
+    padding: 9px 20px; border: none; border-radius: 12px;
+    background: linear-gradient(180deg, #8fc0ee 0%, #5b9bd5 45%, #4891db 100%);
+    color: #fff; font-family: inherit; font-weight: 600; font-size: 0.9rem; cursor: pointer;
+    box-shadow: 0 5px 0 #1e4d7a, 0 8px 14px rgba(30,77,122,0.4), inset 0 1px 0 rgba(255,255,255,0.7);
+    text-shadow: 0 1px 2px rgba(30,77,122,0.5);
+    transition: all 0.12s ease;
+  }
+  .d15-btn:hover { filter: brightness(1.05); }
+  .d15-btn:active {
+    transform: translateY(4px);
+    box-shadow: 0 1px 0 #1e4d7a, 0 2px 4px rgba(30,77,122,0.35), inset 0 2px 4px rgba(0,0,0,0.15);
+  }
+
+  /* ============ 16. มุมตัด (clip corner) ============ */
+  .d16-btn {
+    padding: 9px 22px; border: none;
+    clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+    background: linear-gradient(135deg, #4891db, #6aa8e4);
+    color: #fff; font-family: inherit; font-weight: 600; font-size: 0.9rem; cursor: pointer;
+    transition: filter 0.18s ease, transform 0.18s ease;
+  }
+  .d16-btn:hover { filter: brightness(1.1) saturate(1.1); transform: translateY(-1px); }
+  .d16-btn:active { transform: translateY(1px); }
+  .d16-btn--dark { background: linear-gradient(135deg, #2d6cad, #1e4d7a); color: #cfe4f8; }
+
+  /* ============ 17. Gem Inner Highlight ============ */
+  .d17-btn {
+    padding: 8px 20px; border: 1px solid #2d6cad; border-radius: 12px;
+    background: radial-gradient(ellipse at 50% -20%, #d5e9fb 0%, #8fc0ee 35%, #4891db 75%, #2d6cad 100%);
+    color: #12395e; font-family: inherit; font-weight: 600; font-size: 0.9rem; cursor: pointer;
+    box-shadow: 0 3px 8px rgba(30,77,122,0.35), inset 0 -2px 4px rgba(20,60,100,0.4);
+    transition: all 0.18s ease;
+  }
+  .d17-btn:hover { box-shadow: 0 3px 14px rgba(72,145,219,0.65), inset 0 -2px 4px rgba(20,60,100,0.4); }
+  .d17-btn:active { background: radial-gradient(ellipse at 50% 120%, #d5e9fb 0%, #8fc0ee 35%, #4891db 75%, #2d6cad 100%); }
+
+  /* ============ 18. แยกสีอันตราย (ล้าง = แดง) ============ */
+  .d18-add {
+    padding: 8px 18px; border: none; border-radius: 10px;
+    background: linear-gradient(180deg, #6aa8e4, #4891db);
+    color: #fff; font-family: inherit; font-weight: 600; font-size: 0.9rem; cursor: pointer;
+    box-shadow: 0 3px 0 #2d6cad; transition: all 0.15s ease;
+  }
+  .d18-add:active { transform: translateY(2px); box-shadow: 0 1px 0 #2d6cad; }
+  .d18-clear {
+    padding: 8px 18px; border: none; border-radius: 10px;
+    background: linear-gradient(180deg, #e8907a, #c96a52);
+    color: #fff; font-family: inherit; font-weight: 600; font-size: 0.9rem; cursor: pointer;
+    box-shadow: 0 3px 0 #96422f; transition: all 0.15s ease;
+  }
+  .d18-clear:active { transform: translateY(2px); box-shadow: 0 1px 0 #96422f; }
+  .d18-out {
+    padding: 8px 22px; border: none; border-radius: 10px;
+    background: linear-gradient(180deg, #7fb77e, #5a9459);
+    color: #fff; font-family: inherit; font-weight: 600; font-size: 0.9rem; cursor: pointer;
+    box-shadow: 0 3px 0 #3d6b3c; transition: all 0.15s ease;
+  }
+  .d18-out:active { transform: translateY(2px); box-shadow: 0 1px 0 #3d6b3c; }
+
+  /* ============ 19. ลอยเงานุ่ม (float lift) ============ */
+  .d19-btn {
+    padding: 9px 20px; border: none; border-radius: 12px;
+    background: linear-gradient(135deg, #4891db, #6aa8e4);
+    color: #fff; font-family: inherit; font-weight: 600; font-size: 0.9rem; cursor: pointer;
+    box-shadow: 0 2px 6px rgba(45,108,173,0.4);
+    transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .d19-btn:hover { transform: translateY(-3px) scale(1.03); box-shadow: 0 10px 20px rgba(45,108,173,0.5); }
+  .d19-btn:active { transform: translateY(-1px) scale(1); box-shadow: 0 4px 10px rgba(45,108,173,0.45); }
+
+  /* ============ 20. Luxe Double Border ============ */
+  .d20-btn {
+    padding: 8px 20px; border: 1px solid #fff; border-radius: 10px;
+    background: #2d6cad; color: #fff;
+    font-family: inherit; font-weight: 500; font-size: 0.9rem; cursor: pointer;
+    outline: 1px solid rgba(255,255,255,0.45); outline-offset: 3px;
+    letter-spacing: 0.03em;
+    transition: all 0.22s ease;
+  }
+  .d20-btn:hover {
+    background: #fff; color: #2d6cad;
+    outline-color: #fff; outline-offset: 4px;
+    box-shadow: 0 0 14px rgba(255,255,255,0.5);
+  }
+  .d20-btn:active { outline-offset: 2px; }
+  .d20-btn--light { background: #fbfdff; color: #2d6cad; border-color: #4891db; outline-color: rgba(72,145,219,0.45); }
+  .d20-btn--light:hover { background: #2d6cad; color: #fff; outline-color: #4891db; box-shadow: 0 0 14px rgba(72,145,219,0.5); }
+</style>
+</head>
+<body>
+  <h1 class="page-title">ดีไซน์ปุ่ม เพิ่มแถว / ล้างทั้งหมด / Outbound</h1>
+  <p class="page-sub">20 แบบ โทนสีฟ้า #4891db · เข้ม #2d6cad · อ่อน #eaf3fc — hover / กดดูได้ทุกปุ่ม</p>
+
+  <div class="grid">
+
+    <!-- 1 -->
+    <div class="card">
+      <div class="card-head"><span class="card-num">1</span><div><div class="card-name">Classic Blue 3D</div><div class="card-desc">ปุ่ม 3D ฐานหนา — กดแล้วยุบจริง</div></div></div>
+      <div class="mock-toolbar"><span>3 รายการ · อนุมัติแล้ว 1</span><div class="mock-btns"><button class="d1-btn">➕ เพิ่มแถว</button><button class="d1-btn">🗑️ ล้างทั้งหมด</button></div></div>
+      <div class="mock-row"><span class="mock-cell">10234 · พาราเซตามอล 500mg · SRC</span><button class="d1-btn">Outbound</button></div>
+    </div>
+
+    <!-- 2 -->
+    <div class="card">
+      <div class="card-head"><span class="card-num">2</span><div><div class="card-name">Neon Blue Glow</div><div class="card-desc">ขอบฟ้าอ่อน — hover เรืองแสงรอบปุ่ม</div></div></div>
+      <div class="mock-toolbar"><span>3 รายการ · อนุมัติแล้ว 1</span><div class="mock-btns"><button class="d2-btn">➕ เพิ่มแถว</button><button class="d2-btn">🗑️ ล้างทั้งหมด</button></div></div>
+      <div class="mock-row"><span class="mock-cell">10234 · พาราเซตามอล 500mg · SRC</span><button class="d2-btn">Outbound</button></div>
+    </div>
+
+    <!-- 3 -->
+    <div class="card">
+      <div class="card-head"><span class="card-num">3</span><div><div class="card-name">Glass ใส</div><div class="card-desc">กระจกฝ้าโปร่งบนแถบฟ้า ดูโมเดิร์นสะอาด</div></div></div>
+      <div class="mock-toolbar"><span>3 รายการ · อนุมัติแล้ว 1</span><div class="mock-btns"><button class="d3-btn">➕ เพิ่มแถว</button><button class="d3-btn">🗑️ ล้างทั้งหมด</button></div></div>
+      <div class="mock-row"><span class="mock-cell">10234 · พาราเซตามอล 500mg · SRC</span><button class="d3-btn d3-btn--light">Outbound</button></div>
+    </div>
+
+    <!-- 4 -->
+    <div class="card">
+      <div class="card-head"><span class="card-num">4</span><div><div class="card-name">Flat Minimal</div><div class="card-desc">เรียบสุด ไม่มีกรอบ — hover มีเส้นวิ่งใต้</div></div></div>
+      <div class="mock-toolbar"><span>3 รายการ · อนุมัติแล้ว 1</span><div class="mock-btns"><button class="d4-btn">➕ เพิ่มแถว</button><button class="d4-btn">🗑️ ล้างทั้งหมด</button></div></div>
+      <div class="mock-row"><span class="mock-cell">10234 · พาราเซตามอล 500mg · SRC</span><button class="d4-btn d4-btn--dark">Outbound</button></div>
+    </div>
+
+    <!-- 5 -->
+    <div class="card">
+      <div class="card-head"><span class="card-num">5</span><div><div class="card-name">Blue Pill + แสงวิ่ง</div><div class="card-desc">ทรงแคปซูล hover มีแสงวิ่งผ่าน</div></div></div>
+      <div class="mock-toolbar"><span>3 รายการ · อนุมัติแล้ว 1</span><div class="mock-btns"><button class="d5-btn">➕ เพิ่มแถว</button><button class="d5-btn">🗑️ ล้างทั้งหมด</button></div></div>
+      <div class="mock-row"><span class="mock-cell">10234 · พาราเซตามอล 500mg · SRC</span><button class="d5-btn">Outbound</button></div>
+    </div>
+
+    <!-- 6 -->
+    <div class="card">
+      <div class="card-head"><span class="card-num">6</span><div><div class="card-name">Navy Emboss</div><div class="card-desc">ปุ่มน้ำเงินเข้มนูน กลืนกับแถบหัวตาราง</div></div></div>
+      <div class="mock-toolbar"><span>3 รายการ · อนุมัติแล้ว 1</span><div class="mock-btns"><button class="d6-btn">➕ เพิ่มแถว</button><button class="d6-btn">🗑️ ล้างทั้งหมด</button></div></div>
+      <div class="mock-row"><span class="mock-cell">10234 · พาราเซตามอล 500mg · SRC</span><button class="d6-btn">Outbound</button></div>
+    </div>
+
+    <!-- 7 -->
+    <div class="card">
+      <div class="card-head"><span class="card-num">7</span><div><div class="card-name">Duotone แยกหน้าที่</div><div class="card-desc">เพิ่ม = ขาว · ล้าง = ghost แดงเมื่อ hover · Outbound = น้ำเงินเข้ม</div></div></div>
+      <div class="mock-toolbar"><span>3 รายการ · อนุมัติแล้ว 1</span><div class="mock-btns"><button class="d7-add">➕ เพิ่มแถว</button><button class="d7-clear">🗑️ ล้างทั้งหมด</button></div></div>
+      <div class="mock-row"><span class="mock-cell">10234 · พาราเซตามอล 500mg · SRC</span><button class="d7-out">Outbound</button></div>
+    </div>
+
+    <!-- 8 -->
+    <div class="card">
+      <div class="card-head"><span class="card-num">8</span><div><div class="card-name">เส้นประ → เติมสี</div><div class="card-desc">ขอบประโปร่ง hover เปลี่ยนเป็นทึบเต็มปุ่ม</div></div></div>
+      <div class="mock-toolbar"><span>3 รายการ · อนุมัติแล้ว 1</span><div class="mock-btns"><button class="d8-btn">➕ เพิ่มแถว</button><button class="d8-btn">🗑️ ล้างทั้งหมด</button></div></div>
+      <div class="mock-row"><span class="mock-cell">10234 · พาราเซตามอล 500mg · SRC</span><button class="d8-btn d8-btn--dark">Outbound</button></div>
+    </div>
+
+    <!-- 9 -->
+    <div class="card">
+      <div class="card-head"><span class="card-num">9</span><div><div class="card-name">Gradient Border</div><div class="card-desc">ขอบไล่สีฟ้ารอบปุ่ม hover เติมสีด้านใน</div></div></div>
+      <div class="mock-toolbar"><span>3 รายการ · อนุมัติแล้ว 1</span><div class="mock-btns"><button class="d9-btn">➕ เพิ่มแถว</button><button class="d9-btn">🗑️ ล้างทั้งหมด</button></div></div>
+      <div class="mock-row"><span class="mock-cell">10234 · พาราเซตามอล 500mg · SRC</span><button class="d9-btn d9-btn--light">Outbound</button></div>
+    </div>
+
+    <!-- 10 -->
+    <div class="card">
+      <div class="card-head"><span class="card-num">10</span><div><div class="card-name">Retro Offset</div><div class="card-desc">เงาเยื้องสไตล์เรโทร กดแล้วเลื่อนทั้งปุ่ม</div></div></div>
+      <div class="mock-toolbar"><span>3 รายการ · อนุมัติแล้ว 1</span><div class="mock-btns"><button class="d10-btn">➕ เพิ่มแถว</button><button class="d10-btn">🗑️ ล้างทั้งหมด</button></div></div>
+      <div class="mock-row"><span class="mock-cell">10234 · พาราเซตามอล 500mg · SRC</span><button class="d10-btn">Outbound</button></div>
+    </div>
+
+    <!-- 11 -->
+    <div class="card">
+      <div class="card-head"><span class="card-num">11</span><div><div class="card-name">Soft Ice</div><div class="card-desc">ฟ้าน้ำแข็งนุ่มเงาจาง โทนอ่อนสบายตา</div></div></div>
+      <div class="mock-toolbar"><span>3 รายการ · อนุมัติแล้ว 1</span><div class="mock-btns"><button class="d11-btn">➕ เพิ่มแถว</button><button class="d11-btn">🗑️ ล้างทั้งหมด</button></div></div>
+      <div class="mock-row"><span class="mock-cell">10234 · พาราเซตามอล 500mg · SRC</span><button class="d11-btn">Outbound</button></div>
+    </div>
+
+    <!-- 12 -->
+    <div class="card">
+      <div class="card-head"><span class="card-num">12</span><div><div class="card-name">Icon Badge</div><div class="card-desc">ไอคอนอยู่ในวงกลมขาว ตัวปุ่มโปร่ง</div></div></div>
+      <div class="mock-toolbar"><span>3 รายการ · อนุมัติแล้ว 1</span><div class="mock-btns"><button class="d12-btn"><span class="d12-ico">➕</span>เพิ่มแถว</button><button class="d12-btn"><span class="d12-ico">🗑️</span>ล้างทั้งหมด</button></div></div>
+      <div class="mock-row"><span class="mock-cell">10234 · พาราเซตามอล 500mg · SRC</span><button class="d12-btn d12-btn--light"><span class="d12-ico">🚚</span>Outbound</button></div>
+    </div>
+
+    <!-- 13 -->
+    <div class="card">
+      <div class="card-head"><span class="card-num">13</span><div><div class="card-name">Glossy วิ้ง</div><div class="card-desc">ผิวมันเงาไล่แสงวนตลอดเวลา</div></div></div>
+      <div class="mock-toolbar"><span>3 รายการ · อนุมัติแล้ว 1</span><div class="mock-btns"><button class="d13-btn">➕ เพิ่มแถว</button><button class="d13-btn">🗑️ ล้างทั้งหมด</button></div></div>
+      <div class="mock-row"><span class="mock-cell">10234 · พาราเซตามอล 500mg · SRC</span><button class="d13-btn">Outbound</button></div>
+    </div>
+
+    <!-- 14 -->
+    <div class="card">
+      <div class="card-head"><span class="card-num">14</span><div><div class="card-name">Ghost เรืองแสง</div><div class="card-desc">โปร่งจาง ๆ hover ตัวอักษร+ขอบเรืองแสง</div></div></div>
+      <div class="mock-toolbar"><span>3 รายการ · อนุมัติแล้ว 1</span><div class="mock-btns"><button class="d14-btn">➕ เพิ่มแถว</button><button class="d14-btn">🗑️ ล้างทั้งหมด</button></div></div>
+      <div class="mock-row"><span class="mock-cell">10234 · พาราเซตามอล 500mg · SRC</span><button class="d14-btn d14-btn--light">Outbound</button></div>
+    </div>
+
+    <!-- 15 -->
+    <div class="card">
+      <div class="card-head"><span class="card-num">15</span><div><div class="card-name">3D กดลึก</div><div class="card-desc">นูนสูง ไฮไลต์บนสุด กดแล้วยุบลึกสะใจ</div></div></div>
+      <div class="mock-toolbar"><span>3 รายการ · อนุมัติแล้ว 1</span><div class="mock-btns"><button class="d15-btn">➕ เพิ่มแถว</button><button class="d15-btn">🗑️ ล้างทั้งหมด</button></div></div>
+      <div class="mock-row"><span class="mock-cell">10234 · พาราเซตามอล 500mg · SRC</span><button class="d15-btn">Outbound</button></div>
+    </div>
+
+    <!-- 16 -->
+    <div class="card">
+      <div class="card-head"><span class="card-num">16</span><div><div class="card-name">มุมตัดเฉียง</div><div class="card-desc">ตัดมุมทแยงสไตล์ tech — Outbound สลับเป็นเข้ม</div></div></div>
+      <div class="mock-toolbar"><span>3 รายการ · อนุมัติแล้ว 1</span><div class="mock-btns"><button class="d16-btn">➕ เพิ่มแถว</button><button class="d16-btn">🗑️ ล้างทั้งหมด</button></div></div>
+      <div class="mock-row"><span class="mock-cell">10234 · พาราเซตามอล 500mg · SRC</span><button class="d16-btn d16-btn--dark">Outbound</button></div>
+    </div>
+
+    <!-- 17 -->
+    <div class="card">
+      <div class="card-head"><span class="card-num">17</span><div><div class="card-name">Gem Highlight</div><div class="card-desc">ฟ้าอมแสงแบบอัญมณี ไฮไลต์โค้งด้านบน</div></div></div>
+      <div class="mock-toolbar"><span>3 รายการ · อนุมัติแล้ว 1</span><div class="mock-btns"><button class="d17-btn">➕ เพิ่มแถว</button><button class="d17-btn">🗑️ ล้างทั้งหมด</button></div></div>
+      <div class="mock-row"><span class="mock-cell">10234 · พาราเซตามอล 500mg · SRC</span><button class="d17-btn">Outbound</button></div>
+    </div>
+
+    <!-- 18 -->
+    <div class="card">
+      <div class="card-head"><span class="card-num">18</span><div><div class="card-name">แยกสีตามหน้าที่</div><div class="card-desc">เพิ่ม = ฟ้า · ล้าง = แดงอิฐ (อันตราย) · Outbound = เขียว (สำเร็จ)</div></div></div>
+      <div class="mock-toolbar"><span>3 รายการ · อนุมัติแล้ว 1</span><div class="mock-btns"><button class="d18-add">➕ เพิ่มแถว</button><button class="d18-clear">🗑️ ล้างทั้งหมด</button></div></div>
+      <div class="mock-row"><span class="mock-cell">10234 · พาราเซตามอล 500mg · SRC</span><button class="d18-out">Outbound</button></div>
+    </div>
+
+    <!-- 19 -->
+    <div class="card">
+      <div class="card-head"><span class="card-num">19</span><div><div class="card-name">ลอยเด้งนุ่ม</div><div class="card-desc">hover ลอยขึ้นพร้อมเงาใหญ่ สปริงนิด ๆ</div></div></div>
+      <div class="mock-toolbar"><span>3 รายการ · อนุมัติแล้ว 1</span><div class="mock-btns"><button class="d19-btn">➕ เพิ่มแถว</button><button class="d19-btn">🗑️ ล้างทั้งหมด</button></div></div>
+      <div class="mock-row"><span class="mock-cell">10234 · พาราเซตามอล 500mg · SRC</span><button class="d19-btn">Outbound</button></div>
+    </div>
+
+    <!-- 20 -->
+    <div class="card">
+      <div class="card-head"><span class="card-num">20</span><div><div class="card-name">Luxe Double Border</div><div class="card-desc">ขอบสองชั้นดูพรีเมียม hover สลับสี</div></div></div>
+      <div class="mock-toolbar"><span>3 รายการ · อนุมัติแล้ว 1</span><div class="mock-btns"><button class="d20-btn">➕ เพิ่มแถว</button><button class="d20-btn">🗑️ ล้างทั้งหมด</button></div></div>
+      <div class="mock-row"><span class="mock-cell">10234 · พาราเซตามอล 500mg · SRC</span><button class="d20-btn d20-btn--light">Outbound</button></div>
+    </div>
+
+  </div>
+</body>
+</html>

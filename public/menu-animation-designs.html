@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>เลือกอนิเมชั่นเปิด-ปิดเมนู — SaleSupport (10 แบบ)</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Noto Sans Thai',sans-serif; background:#eef1f5; color:#2d2a26; padding:2rem 1.5rem 4rem; }
+  .page-title { text-align:center; font-size:1.6rem; font-weight:600; margin-bottom:0.25rem; }
+  .page-sub { text-align:center; color:#8a8272; margin-bottom:2rem; font-weight:300; }
+
+  .card { max-width:920px; margin:0 auto 1.5rem; background:#fff; border-radius:16px; box-shadow:0 4px 20px rgba(0,0,0,0.07); overflow:hidden; }
+  .card-head { display:flex; align-items:center; gap:0.7rem; padding:0.9rem 1.4rem 0.5rem; }
+  .card-num { display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:50%; background:#2d2a26; color:#f2d98d; font-weight:600; font-size:0.9rem; flex-shrink:0; }
+  .card-name { font-weight:600; font-size:1.05rem; }
+  .card-desc { color:#8a8272; font-size:0.82rem; font-weight:300; margin-left:auto; text-align:right; }
+
+  /* จำลอง layout sidebar + panel ของหน้า SaleSupport */
+  .mock { display:flex; margin:0.6rem 1.4rem 1.4rem; border:1px solid #e3e8ee; border-radius:14px; overflow:hidden; min-height:220px; }
+  .mock-side { display:flex; flex-direction:column; background:#f7f9fb; border-right:1px solid #e3e8ee; min-width:150px; padding:8px 0; flex-shrink:0; }
+  .mock-side button { display:flex; align-items:center; gap:8px; padding:10px 16px; border:none; background:none; color:#5b7590;
+    font-size:12.5px; font-weight:500; font-family:'Noto Sans Thai',sans-serif; text-align:left; cursor:pointer; border-left:3px solid transparent; transition:all .15s; }
+  .mock-side button:hover { background:#eef3f9; color:#2d6cad; }
+  .mock-side button.on { background:#eaf3fc; color:#2d6cad; border-left-color:#4891db; font-weight:600; }
+  .mock-panel { flex:1; padding:14px 18px; overflow:hidden; perspective:900px; }
+  .mp-title { font-size:14px; font-weight:600; color:#1c3d5e; margin-bottom:10px; }
+  .mp-row { height:30px; border-radius:8px; background:#f2f6fa; margin-bottom:8px; display:flex; align-items:center; padding:0 12px; font-size:11.5px; color:#8194a8; }
+
+  /* ═══ 1) Fade ═══ */
+  @keyframes fadeIn10 { from{opacity:0} to{opacity:1} }
+  .anim1 .mp { animation:fadeIn10 .45s ease-out both; }
+
+  /* ═══ 2) Slide จากขวา ═══ */
+  @keyframes slideR10 { from{opacity:0; transform:translateX(60px)} to{opacity:1; transform:none} }
+  .anim2 .mp { animation:slideR10 .38s cubic-bezier(.22,.9,.36,1) both; }
+
+  /* ═══ 3) Slide ขึ้น + เฟด ═══ */
+  @keyframes slideU10 { from{opacity:0; transform:translateY(40px)} to{opacity:1; transform:none} }
+  .anim3 .mp { animation:slideU10 .4s cubic-bezier(.22,.9,.36,1) both; }
+
+  /* ═══ 4) Zoom In ═══ */
+  @keyframes zoom10 { from{opacity:0; transform:scale(.92)} to{opacity:1; transform:scale(1)} }
+  .anim4 .mp { animation:zoom10 .35s cubic-bezier(.22,.9,.36,1) both; transform-origin:center top; }
+
+  /* ═══ 5) Flip 3D ═══ */
+  @keyframes flip10 { from{opacity:0; transform:rotateY(-14deg) translateX(28px)} to{opacity:1; transform:none} }
+  .anim5 .mp { animation:flip10 .5s cubic-bezier(.22,.9,.36,1) both; transform-origin:left center; }
+
+  /* ═══ 6) Blur เบลอ→ชัด ═══ */
+  @keyframes blur10 { from{opacity:0; filter:blur(10px)} to{opacity:1; filter:blur(0)} }
+  .anim6 .mp { animation:blur10 .5s ease-out both; }
+
+  /* ═══ 7) Stagger ไล่ทีละแถว ═══ */
+  @keyframes stag10 { from{opacity:0; transform:translateY(16px)} to{opacity:1; transform:none} }
+  .anim7 .mp .mp-title, .anim7 .mp .mp-row { animation:stag10 .35s cubic-bezier(.22,.9,.36,1) both; animation-delay:calc(var(--i)*70ms); }
+
+  /* ═══ 8) Curtain เปิดม่าน ═══ */
+  @keyframes curtain10 { from{clip-path:inset(0 100% 0 0); opacity:.4} to{clip-path:inset(0 0 0 0); opacity:1} }
+  .anim8 .mp { animation:curtain10 .45s ease-out both; }
+
+  /* ═══ 9) Bounce เด้งสปริง ═══ */
+  @keyframes bounce10 { 0%{opacity:0; transform:scale(.85)} 60%{opacity:1; transform:scale(1.03)} 100%{opacity:1; transform:scale(1)} }
+  .anim9 .mp { animation:bounce10 .5s cubic-bezier(.34,1.56,.64,1) both; transform-origin:center top; }
+
+  /* ═══ 10) Tilt เอียงเข้าที่ ═══ */
+  @keyframes tilt10 { from{opacity:0; transform:translateY(30px) rotate(1.5deg) skewY(1deg)} to{opacity:1; transform:none} }
+  .anim10 .mp { animation:tilt10 .45s cubic-bezier(.22,.9,.36,1) both; transform-origin:left bottom; }
+
+  .footer-note { text-align:center; margin-top:2.5rem; color:#8a8272; font-weight:300; }
+  .footer-note b { color:#2d6cad; font-weight:600; }
+</style>
+</head>
+<body>
+  <h1 class="page-title">🎬 อนิเมชั่นเปิด-ปิดเมนู หน้า SaleSupport — 10 แบบ</h1>
+  <p class="page-sub"><b>กดสลับเมนูในกรอบตัวอย่างแต่ละแบบ</b> เพื่อดูอนิเมชั่นตอนเปิดเมนูใหม่</p>
+
+  <div id="cards"></div>
+
+  <p class="footer-note">ชอบแบบไหน บอกหมายเลข เช่น <b>"เอาแบบ 3"</b> แล้วผมจะใส่อนิเมชั่นนี้ให้หน้า SaleSupport จริงครับ</p>
+
+<script>
+  const DESIGNS = [
+    { n:1,  name:'Fade',              desc:'เฟดเข้าเรียบง่าย นุ่มนวลที่สุด' },
+    { n:2,  name:'Slide จากขวา',      desc:'เนื้อหาเลื่อนเข้าจากขวา เหมือนเปลี่ยนหน้า' },
+    { n:3,  name:'Slide ขึ้น + เฟด',   desc:'ลอยขึ้นจากด้านล่างพร้อมเฟด (แนวเดียวกับหน้าอื่นของแอป)' },
+    { n:4,  name:'Zoom In',           desc:'ขยายจากเล็กไปเต็ม ดูมีมิติ' },
+    { n:5,  name:'Flip 3D',           desc:'บิดเปิดแบบ 3 มิติจากขอบซ้าย' },
+    { n:6,  name:'Blur เบลอ→ชัด',     desc:'ภาพเบลอแล้วค่อยๆ คมชัด พรีเมียม' },
+    { n:7,  name:'Stagger ไล่ทีละแถว', desc:'หัวข้อและแถวตารางไล่เข้าทีละแถว มีจังหวะ' },
+    { n:8,  name:'Curtain เปิดม่าน',   desc:'เนื้อหาถูกเปิดเผยจากซ้ายไปขวาเหมือนรูดม่าน' },
+    { n:9,  name:'Bounce สปริง',      desc:'เด้งเกินนิดแล้วคืนตัว สนุกมีชีวิตชีวา' },
+    { n:10, name:'Tilt เอียงเข้าที่',   desc:'เอียงเล็กน้อยแล้วดีดกลับตรง แบบการ์ดกระดาษ' },
+  ];
+  const MENUS = ['📋 Order','📦 Request Item','🆕 New Product','🎫 Ticket','💊 Products'];
+  const ROWS = {
+    '📋 Order':        ['10001 พาราเซตามอล 500mg · SRC · 20 กล่อง','10002 วิตามินซี 1000mg · KKL · 5 ขวด','10003 ยาแก้ไอน้ำดำ · SSS · 10 ขวด'],
+    '📦 Request Item': ['ยาแก้แพ้ Loratadine · SSS · 3 กล่อง','น้ำเกลือล้างแผล 1000ml · SRC · 12 ขวด','วิตามินรวมเด็ก · KKL · 6 ขวด'],
+    '🆕 New Product':  ['ProbioMax · 30 แคปซูล · รอพิจารณา','DermCream Plus · 50g · อนุมัติแล้ว','HerbaCough Syrup · 120ml · รอพิจารณา'],
+    '🎫 Ticket':       ['IT · เครื่องพิมพ์ใบเสร็จไม่ทำงาน · รอดำเนินการ','บัญชี · ยอดบิลไม่ตรง · เสร็จสิ้น','คลัง · ของหายจากสต๊อก · รอดำเนินการ'],
+    '💊 Products':     ['100074 Benarone 100 mg · SPS MEDICAL','100076 Livial 2.5 mg · Zuellig_Organon','100096 Angeliq 28s · DKSH_TME BPH'],
+  };
+
+  function panelHTML(menuName) {
+    const rows = ROWS[menuName].map((r,i) => `<div class="mp-row" style="--i:${i+1}">${r}</div>`).join('');
+    return `<div class="mp"><div class="mp-title" style="--i:0">${menuName}</div>${rows}</div>`;
+  }
+
+  function switchMenu(id, menuName, btn) {
+    const panel = document.getElementById('panel'+id);
+    panel.innerHTML = panelHTML(menuName);
+    btn.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('on'));
+    btn.classList.add('on');
+  }
+
+  document.getElementById('cards').innerHTML = DESIGNS.map(d => `
+    <div class="card">
+      <div class="card-head"><span class="card-num">${d.n}</span><span class="card-name">${d.name}</span><span class="card-desc">${d.desc}</span></div>
+      <div class="mock anim${d.n}">
+        <div class="mock-side">
+          ${MENUS.map((m,i) => `<button class="${i===0?'on':''}" onclick="switchMenu(${d.n}, '${m}', this)">${m}</button>`).join('')}
+        </div>
+        <div class="mock-panel" id="panel${d.n}">${panelHTML(MENUS[0])}</div>
+      </div>
+    </div>
+  `).join('');
+</script>
+</body>
+</html>

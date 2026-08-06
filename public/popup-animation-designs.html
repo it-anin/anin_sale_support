@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>เลือกอนิเมชั่น Popup รายละเอียด — SaleSupport (10 แบบ)</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Noto Sans Thai',sans-serif; background:#eef1f5; color:#2d2a26; padding:2rem 1.5rem 4rem; }
+  .page-title { text-align:center; font-size:1.6rem; font-weight:600; margin-bottom:0.25rem; }
+  .page-sub { text-align:center; color:#8a8272; margin-bottom:2rem; font-weight:300; }
+
+  .grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(230px,1fr)); gap:1rem; max-width:1100px; margin:0 auto; }
+  .demo-card { background:#fff; border-radius:14px; box-shadow:0 4px 16px rgba(0,0,0,0.07); padding:1.2rem; text-align:center; }
+  .demo-head { display:flex; align-items:center; gap:0.6rem; justify-content:center; margin-bottom:0.5rem; }
+  .demo-num { display:inline-flex; align-items:center; justify-content:center; width:26px; height:26px; border-radius:50%; background:#2d2a26; color:#f2d98d; font-weight:600; font-size:0.85rem; flex-shrink:0; }
+  .demo-name { font-weight:600; font-size:1rem; }
+  .demo-desc { color:#8a8272; font-size:0.78rem; font-weight:300; margin-bottom:0.9rem; min-height:2.4em; }
+  .demo-open { padding:8px 20px; border:none; border-radius:10px; background:#4891db; color:#fff; font-family:'Noto Sans Thai',sans-serif; font-size:13px; font-weight:600; cursor:pointer; transition:all .2s; }
+  .demo-open:hover { background:#2d6cad; box-shadow:0 4px 12px rgba(72,145,219,.4); }
+
+  /* Modal พื้นฐาน (จำลอง popup จริงของแอป) */
+  .ov { position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; display:flex; align-items:center; justify-content:center; padding:1rem; }
+  .md { background:#fff; border-radius:16px; width:100%; max-width:520px; box-shadow:0 20px 60px rgba(0,0,0,0.3); overflow:hidden; }
+  .md-h { display:flex; align-items:center; justify-content:space-between; padding:1rem 1.25rem; background:linear-gradient(135deg,#2d2a26,#4a443d); color:#f2d98d; font-size:15px; font-weight:700; }
+  .md-x { background:none; border:none; color:#f2d98d; font-size:18px; cursor:pointer; line-height:1; }
+  .md-b { padding:1.1rem 1.25rem; display:grid; grid-template-columns:1fr 1fr; gap:10px 18px; }
+  .md-b .full { grid-column:1/-1; }
+  .lb { font-size:11px; color:#8194a8; font-weight:600; }
+  .vl { font-size:13px; color:#2d3a48; }
+
+  /* ══════════ ชุดอนิเมชั่น (มีทั้งเข้า .in และออก .out) ══════════ */
+  /* พื้นหลังมืด fade ทุกแบบ */
+  .ov.in { animation:ovIn .28s ease-out both; }
+  .ov.out { animation:ovOut .24s ease-in both; }
+  @keyframes ovIn { from{opacity:0} to{opacity:1} }
+  @keyframes ovOut { from{opacity:1} to{opacity:0} }
+
+  /* 1) Fade + Scale (มาตรฐาน) */
+  .a1.in .md { animation:s1in .3s cubic-bezier(.22,.9,.36,1) both; }
+  .a1.out .md { animation:s1out .22s ease-in both; }
+  @keyframes s1in { from{opacity:0; transform:scale(.9)} to{opacity:1; transform:scale(1)} }
+  @keyframes s1out { from{opacity:1; transform:scale(1)} to{opacity:0; transform:scale(.9)} }
+
+  /* 2) Slide ลงจากบน */
+  .a2.in .md { animation:s2in .34s cubic-bezier(.22,.9,.36,1) both; }
+  .a2.out .md { animation:s2out .24s ease-in both; }
+  @keyframes s2in { from{opacity:0; transform:translateY(-60px)} to{opacity:1; transform:none} }
+  @keyframes s2out { from{opacity:1; transform:none} to{opacity:0; transform:translateY(-60px)} }
+
+  /* 3) Slide ขึ้นจากล่าง (sheet) */
+  .a3.in .md { animation:s3in .34s cubic-bezier(.22,.9,.36,1) both; }
+  .a3.out .md { animation:s3out .26s ease-in both; }
+  @keyframes s3in { from{opacity:0; transform:translateY(70px)} to{opacity:1; transform:none} }
+  @keyframes s3out { from{opacity:1; transform:none} to{opacity:0; transform:translateY(70px)} }
+
+  /* 4) Bounce สปริง */
+  .a4.in .md { animation:s4in .5s cubic-bezier(.34,1.56,.64,1) both; }
+  .a4.out .md { animation:s4out .22s ease-in both; }
+  @keyframes s4in { 0%{opacity:0; transform:scale(.8)} 60%{opacity:1; transform:scale(1.04)} 100%{transform:scale(1)} }
+  @keyframes s4out { from{opacity:1; transform:scale(1)} to{opacity:0; transform:scale(.8)} }
+
+  /* 5) Flip 3D */
+  .a5.in .md { animation:s5in .45s cubic-bezier(.22,.9,.36,1) both; transform-origin:center; }
+  .a5.out .md { animation:s5out .3s ease-in both; transform-origin:center; }
+  @keyframes s5in { from{opacity:0; transform:perspective(1000px) rotateX(-40deg)} to{opacity:1; transform:perspective(1000px) rotateX(0)} }
+  @keyframes s5out { from{opacity:1; transform:perspective(1000px) rotateX(0)} to{opacity:0; transform:perspective(1000px) rotateX(30deg)} }
+
+  /* 6) Blur เบลอ→ชัด */
+  .a6.in .md { animation:s6in .4s ease-out both; }
+  .a6.out .md { animation:s6out .26s ease-in both; }
+  @keyframes s6in { from{opacity:0; filter:blur(14px); transform:scale(1.02)} to{opacity:1; filter:blur(0); transform:scale(1)} }
+  @keyframes s6out { from{opacity:1; filter:blur(0)} to{opacity:0; filter:blur(14px)} }
+
+  /* 7) Zoom จากจุดกลาง (pop) */
+  .a7.in .md { animation:s7in .32s cubic-bezier(.22,.9,.36,1) both; transform-origin:center; }
+  .a7.out .md { animation:s7out .22s ease-in both; transform-origin:center; }
+  @keyframes s7in { from{opacity:0; transform:scale(.4)} to{opacity:1; transform:scale(1)} }
+  @keyframes s7out { from{opacity:1; transform:scale(1)} to{opacity:0; transform:scale(.4)} }
+
+  /* 8) Slide จากขวา */
+  .a8.in .md { animation:s8in .34s cubic-bezier(.22,.9,.36,1) both; }
+  .a8.out .md { animation:s8out .26s ease-in both; }
+  @keyframes s8in { from{opacity:0; transform:translateX(80px)} to{opacity:1; transform:none} }
+  @keyframes s8out { from{opacity:1; transform:none} to{opacity:0; transform:translateX(80px)} }
+
+  /* 9) Tilt เอียงเข้าที่ */
+  .a9.in .md { animation:s9in .4s cubic-bezier(.34,1.4,.64,1) both; }
+  .a9.out .md { animation:s9out .24s ease-in both; }
+  @keyframes s9in { from{opacity:0; transform:translateY(40px) rotate(-4deg)} to{opacity:1; transform:none} }
+  @keyframes s9out { from{opacity:1; transform:none} to{opacity:0; transform:translateY(40px) rotate(3deg)} }
+
+  /* 10) Unfold ขยายจากเส้น */
+  .a10.in .md { animation:s10in .42s cubic-bezier(.22,.9,.36,1) both; transform-origin:center; }
+  .a10.out .md { animation:s10out .28s ease-in both; transform-origin:center; }
+  @keyframes s10in { from{opacity:0; transform:scaleY(.02) scaleX(.7)} 50%{opacity:1; transform:scaleY(.02) scaleX(1)} 100%{opacity:1; transform:scaleY(1) scaleX(1)} }
+  @keyframes s10out { from{opacity:1; transform:scaleY(1)} to{opacity:0; transform:scaleY(.02)} }
+
+  .footer-note { text-align:center; margin-top:2.5rem; color:#8a8272; font-weight:300; }
+  .footer-note b { color:#2d6cad; font-weight:600; }
+</style>
+</head>
+<body>
+  <h1 class="page-title">🎬 อนิเมชั่นเปิด-ปิด Popup รายละเอียด — 10 แบบ</h1>
+  <p class="page-sub"><b>กดปุ่ม "เปิด Popup" ของแต่ละแบบ</b> เพื่อดูอนิเมชั่นตอนเปิด แล้วกด ✕ หรือคลิกพื้นหลังเพื่อดูตอนปิด</p>
+
+  <div class="grid" id="grid"></div>
+
+  <p class="footer-note">ชอบแบบไหน บอกหมายเลข เช่น <b>"เอาแบบ 4"</b> แล้วผมจะใส่ให้ Popup รายละเอียดทุกเมนูในหน้า SaleSupport จริงครับ</p>
+
+<script>
+  const D = [
+    {n:1,  name:'Fade + Scale',   desc:'ขยายเล็กน้อยพร้อมเฟด มาตรฐานนุ่มนวล'},
+    {n:2,  name:'Slide ลงจากบน',  desc:'ร่วงลงมาจากด้านบน'},
+    {n:3,  name:'Slide ขึ้นล่าง',  desc:'เลื่อนขึ้นจากด้านล่างแบบ sheet'},
+    {n:4,  name:'Bounce สปริง',   desc:'เด้งเกินนิดแล้วคืนตัว มีชีวิตชีวา'},
+    {n:5,  name:'Flip 3D',        desc:'พลิกเปิดแบบ 3 มิติตามแกน X'},
+    {n:6,  name:'Blur เบลอ→ชัด',  desc:'เบลอแล้วค่อยคมชัด พรีเมียม'},
+    {n:7,  name:'Zoom Pop',       desc:'ผุดจากจุดเล็กกลางจอ'},
+    {n:8,  name:'Slide จากขวา',   desc:'เลื่อนเข้าจากทางขวา'},
+    {n:9,  name:'Tilt เอียง',      desc:'เอียงเล็กน้อยแล้วดีดตรง'},
+    {n:10, name:'Unfold คลี่',    desc:'คลี่จากเส้นแนวนอนออกเต็ม'},
+  ];
+
+  function body() {
+    return `<div class="md-h"><span>📦 รายละเอียดรายการ</span><button class="md-x" onclick="closeM(this)">✕</button></div>
+      <div class="md-b">
+        <div class="full"><div class="lb">ชื่อสินค้า</div><div class="vl">พาราเซตามอล 500mg</div></div>
+        <div><div class="lb">สาขา</div><div class="vl">SRC</div></div>
+        <div><div class="lb">จำนวน</div><div class="vl">20 กล่อง</div></div>
+        <div><div class="lb">เลขบิลขาย</div><div class="vl">IV-880012</div></div>
+        <div><div class="lb">ชื่อลูกค้า</div><div class="vl">คุณสมชาย</div></div>
+      </div>`;
+  }
+
+  function openM(n) {
+    const ov = document.createElement('div');
+    ov.className = `ov a${n} in`;
+    ov.innerHTML = `<div class="md">${body()}</div>`;
+    ov.addEventListener('click', e => { if (e.target === ov) closeM(ov); });
+    document.body.appendChild(ov);
+  }
+  function closeM(el) {
+    const ov = el.closest('.ov');
+    ov.classList.remove('in');
+    ov.classList.add('out');
+    ov.querySelector('.md').addEventListener('animationend', () => ov.remove(), { once:true });
+  }
+
+  document.getElementById('grid').innerHTML = D.map(d => `
+    <div class="demo-card">
+      <div class="demo-head"><span class="demo-num">${d.n}</span><span class="demo-name">${d.name}</span></div>
+      <div class="demo-desc">${d.desc}</div>
+      <button class="demo-open" onclick="openM(${d.n})">เปิด Popup</button>
+    </div>
+  `).join('');
+</script>
+</body>
+</html>

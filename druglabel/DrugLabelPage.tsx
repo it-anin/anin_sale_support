@@ -5,6 +5,8 @@ import { Label } from './Label';
 import { DLResultList } from './ResultList';
 import { translateMedicineLabel, getTargetLangs } from './translate';
 import { AnimatedLogoText } from '../AnimatedLogo';
+import { PageNavRow } from '../pageAccess';
+import { SearchIcon } from '../SearchIcon';
 
 const BRANCH_PROFILES = [
   { id: 'hq',        shop_name_th: 'สาขาชากค้อ',          shop_name_en: 'Chak Kho Branch',           phone: '082-0311590' },
@@ -45,9 +47,10 @@ interface Props {
   onGoStockCheck: () => void;
   onGoCustomerHistory: () => void;
   onGoOutbound: () => void;
+  onGoSaleSupport: () => void;
 }
 
-export function DrugLabelPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGoCustomerHistory, onGoOutbound }: Props) {
+export function DrugLabelPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGoCustomerHistory, onGoOutbound, onGoSaleSupport }: Props) {
   const [settings,       setSettings]       = useState<ShopSettings | null>(null);
   const [selectedBranch, setSelectedBranch] = useState<BranchId>('hq');
   const [lang,           setLang]           = useState<Lang>('th');
@@ -427,39 +430,21 @@ export function DrugLabelPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onG
                 onClick={() => setSelectedBranch(b.id)} type="button">{b.shop_name_th}</button>
             ))}
           </div>
-          <div className="search-nav-row">
-            <form className="search-premium" onSubmit={handleSearch}>
-              <input className="search-input-premium" type="text" autoFocus
-                placeholder="ค้นหา SKU / บาร์โค้ด / ชื่อยา"
-                value={searchInput} onChange={e => setSearchInput(e.target.value)} />
-              <button className="search-btn-premium" type="submit" disabled={loading}>{loading ? '...' : '🔍'}</button>
-            </form>
-            <button className="page-nav-card" onClick={onGoPriceTag} type="button" title="ไปหน้าป้ายราคา">
-              <span className="page-nav-icon">🏷️</span>
-              <span className="page-nav-label">ป้ายราคา</span>
-            </button>
-            <button className="page-nav-card page-nav-card--active" onClick={onGoDrugLabel} type="button" title="หน้าฉลากยา">
-              <span className="page-nav-icon">📝</span>
-              <span className="page-nav-label">ฉลากยา</span>
-            </button>
-            <button className="page-nav-card" onClick={onGoStockCheck} type="button" title="เช็คสต๊อค">
-              <span className="page-nav-icon">📦</span>
-              <span className="page-nav-label">สต๊อค</span>
-            </button>
-            <button className="page-nav-card" onClick={onGoCustomerHistory} type="button" title="ประวัติลูกค้า">
-              <span className="page-nav-icon">🪪</span>
-              <span className="page-nav-label">ประวัติ</span>
-            </button>
-            <button className="page-nav-card" onClick={onGoOutbound} type="button" title="เบิกสินค้าด่วน">
-              <span className="page-nav-icon">🚚</span>
-              <span className="page-nav-label">เบิกด่วน</span>
-            </button>
-          </div>
+          <PageNavRow current="druglabel" handlers={{ pricetag: onGoPriceTag, druglabel: onGoDrugLabel, stockcheck: onGoStockCheck, customerhistory: onGoCustomerHistory, outbound: onGoOutbound, salesupport: onGoSaleSupport }} />
         </div>
       </div>
 
       {/* Two-panel layout */}
-      <div className="dl-page"><div className="dl-main">
+      <div className="dl-page">
+        <div className="table-search-row">
+          <form className="search-premium" onSubmit={handleSearch}>
+            <input className="search-input-premium" type="text" autoFocus
+              placeholder="ค้นหา SKU / บาร์โค้ด / ชื่อยา"
+              value={searchInput} onChange={e => setSearchInput(e.target.value)} />
+            <button className="search-btn-premium" type="submit" disabled={loading}>{loading ? '...' : <SearchIcon />}</button>
+          </form>
+        </div>
+        <div className="dl-main">
         <section className="dl-results-panel">
           <div className="dl-upload-row">
             <button className="dl-upload-btn" type="button" onClick={() => { setAddForm(emptyForm()); setAddError(''); setShowAddModal(true); }}>
