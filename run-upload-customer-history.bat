@@ -1,4 +1,5 @@
 @echo off
+:: ตั้ง Task Scheduler ให้รันวันละครั้ง หลัง export customer_history.csv เสร็จ
 title Upload Customer History
 chcp 65001 > nul
 cd /d "%~dp0"

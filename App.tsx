@@ -505,8 +505,8 @@ const App: React.FC = () => {
       const canvas = document.createElement('canvas');
       JsBarcode(canvas, barcode, {
         format: 'CODE128',
-        width: 2,
-        height: 60,
+        width: 3,
+        height: 90,
         displayValue: false,
         margin: 0
       });
@@ -953,29 +953,21 @@ ${sheetsHtml}
                       <div className="lbl-header">
                         <div className="lbl-logo">BIGYA</div>
                       </div>
-                      <div className="lbl-name-row">
-                        <span className="lbl-name">{previewPriceProduct.name}</span>
-                        <span className="lbl-unit">{previewPriceProduct.unit}</span>
-                      </div>
-                      <div className="lbl-price-section">
-                        <div className="lbl-price-labels">
-                          <span>Price</span>
-                          <span>ราคา</span>
+                      <div className="lbl-mid">
+                        <div className="lbl-name-row">
+                          <span className="lbl-name">{previewPriceProduct.name}</span>
+                          <span className="lbl-unit">{previewPriceProduct.unit}</span>
                         </div>
-                        <div className="lbl-price-value">
-                          <span className="lbl-price-int">{Math.floor(previewPriceProduct.price).toLocaleString()}</span>
+                        <div className="lbl-price-section">
+                          <div className="lbl-price-labels">
+                            <span>Price</span>
+                            <span>ราคา</span>
+                          </div>
+                          <div className="lbl-price-value">
+                            <span className="lbl-price-int">{Math.floor(previewPriceProduct.price).toLocaleString()}</span>
+                          </div>
+                          <span className="lbl-baht">บาท</span>
                         </div>
-                        <span className="lbl-baht">บาท</span>
-                      </div>
-                      <div className="lbl-member-section">
-                        <div className="lbl-member-labels">
-                          <span>Member</span>
-                          <span>สมาชิก</span>
-                        </div>
-                        <div className="lbl-member-value">
-                          <span className="lbl-member-int">{Math.ceil(previewPriceProduct.price * 0.95).toLocaleString()}</span>
-                        </div>
-                        <span className="lbl-baht">บาท</span>
                       </div>
                       <div className="lbl-footer">
                         <div className="lbl-codes">
@@ -1293,29 +1285,21 @@ ${sheetsHtml}
                     <div className="lbl-header">
                       <div className="lbl-logo">BIGYA</div>
                     </div>
-                    <div className="lbl-name-row">
-                      <span className="lbl-name">{product.name}</span>
-                      <span className="lbl-unit">{product.unit}</span>
-                    </div>
-                    <div className="lbl-price-section">
-                      <div className="lbl-price-labels">
-                        <span>Price</span>
-                        <span>ราคา</span>
+                    <div className="lbl-mid">
+                      <div className="lbl-name-row">
+                        <span className="lbl-name">{product.name}</span>
+                        <span className="lbl-unit">{product.unit}</span>
                       </div>
-                      <div className="lbl-price-value">
-                        <span className="lbl-price-int">{Math.floor(product.price).toLocaleString()}</span>
-                                              </div>
-                      <span className="lbl-baht">บาท</span>
-                    </div>
-                    <div className="lbl-member-section">
-                      <div className="lbl-member-labels">
-                        <span>Member</span>
-                        <span>สมาชิก</span>
+                      <div className="lbl-price-section">
+                        <div className="lbl-price-labels">
+                          <span>Price</span>
+                          <span>ราคา</span>
+                        </div>
+                        <div className="lbl-price-value">
+                          <span className="lbl-price-int">{Math.floor(product.price).toLocaleString()}</span>
+                        </div>
+                        <span className="lbl-baht">บาท</span>
                       </div>
-                      <div className="lbl-member-value">
-                        <span className="lbl-member-int">{Math.ceil(product.price * 0.95).toLocaleString()}</span>
-                      </div>
-                      <span className="lbl-baht">บาท</span>
                     </div>
                     <div className="lbl-footer">
                       <div className="lbl-codes">
@@ -1351,29 +1335,21 @@ ${sheetsHtml}
               <div className="lbl-header">
                 <div className="lbl-logo">BIGYA</div>
               </div>
-              <div className="lbl-name-row">
-                <span className="lbl-name">{product.name}</span>
-                <span className="lbl-unit">{product.unit}</span>
-              </div>
-              <div className="lbl-price-section">
-                <div className="lbl-price-labels">
-                  <span>Price</span>
-                  <span>ราคา</span>
+              <div className="lbl-mid">
+                <div className="lbl-name-row">
+                  <span className="lbl-name">{product.name}</span>
+                  <span className="lbl-unit">{product.unit}</span>
                 </div>
-                <div className="lbl-price-value">
-                  <span className="lbl-price-int">{Math.floor(product.price).toLocaleString()}</span>
-                                  </div>
-                <span className="lbl-baht">บาท</span>
-              </div>
-              <div className="lbl-member-section">
-                <div className="lbl-member-labels">
-                  <span>Member</span>
-                  <span>สมาชิก</span>
+                <div className="lbl-price-section">
+                  <div className="lbl-price-labels">
+                    <span>Price</span>
+                    <span>ราคา</span>
+                  </div>
+                  <div className="lbl-price-value">
+                    <span className="lbl-price-int">{Math.floor(product.price).toLocaleString()}</span>
+                  </div>
+                  <span className="lbl-baht">บาท</span>
                 </div>
-                <div className="lbl-member-value">
-                  <span className="lbl-member-int">{Math.ceil(product.price * 0.95).toLocaleString()}</span>
-                </div>
-                <span className="lbl-baht">บาท</span>
               </div>
               <div className="lbl-footer">
                 <div className="lbl-codes">

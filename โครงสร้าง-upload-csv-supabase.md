@@ -164,40 +164,53 @@ node upload-stock.mjs
 
 ## 3. ตาราง `customer_history` — ประวัติลูกค้า
 
-**คอลัมน์:** `id, phone, first_name, last_name, sku, product_name, uploaded_at`
+**คอลัมน์:** `id, purchase_date, phone, first_name, last_name, sku, product_name, dedupe_key, uploaded_at`
+
+**ที่มาของข้อมูล:** export รายงาน **R06.158** จาก Promax
 
 **วิธี upload:** Node.js script `upload-customer-history.mjs`
 ```bash
-node upload-customer-history.mjs            # ลบเก่าทั้งหมด แล้ว insert ใหม่ (default)
-node upload-customer-history.mjs --append   # เพิ่มข้อมูลใหม่ ไม่ลบของเก่า
+node upload-customer-history.mjs             # incremental ตรวจข้อมูลย้อนหลัง 7 วัน
+node upload-customer-history.mjs --full-scan # เปรียบเทียบข้อมูลย้อนหลังทั้งไฟล์
 ```
+
+สคริปต์ไม่ล้างตารางและเก็บเฉพาะวันที่ซื้อล่าสุดต่อ ลูกค้า+SKU โดยใช้ `dedupe_key`
+ก่อนใช้งานกับตารางเดิม ให้รัน `customer-history-incremental-migration.sql` ใน SQL Editor หนึ่งครั้ง
+รัน `customer-history-sync-status.sql` เพิ่มอีกหนึ่งครั้ง เพื่อให้ badge แสดงเวลาตรวจล่าสุดแม้ไม่มีแถวเปลี่ยน
+
 หรือผ่าน batch wrapper `run-upload-customer-history.bat`
 
 **กระบวนการในสคริปต์:**
 1. หาไฟล์ CSV จาก `CSV_CANDIDATES` (ใช้ path แรกที่เจอ)
 2. parse CSV เอง
-3. เติม `0` นำหน้าเบอร์โทรอัตโนมัติถ้ายาว 8 หรือ 9 หลัก (Excel ตัด 0 หน้าออก)
-4. โหมด default: **ลบเก่าแบบ chunked ทีละ 1000 แถว** (เลี่ยง Supabase statement timeout เมื่อตารางมี 100K+ แถว) แล้ว insert ทีละ 500 แถว
-5. โหมด `--append`: ข้ามการลบ insert ต่อท้ายเลย
+3. แปลงคอลัมน์วันที่ซื้อ (`D/M/YYYY H:MM:SS`) เป็น ISO timestamp ด้วย `parseThaiDateTime()`
+4. normalize เบอร์โทรและสร้าง `dedupe_key` จากลูกค้า+SKU
+5. ยุบ CSV ให้เหลือวันที่ซื้อล่าสุดต่อคีย์
+6. โหมดปกติตรวจช่วงย้อนหลัง 7 วัน; `--full-scan` ตรวจทั้งไฟล์
+7. เปรียบเทียบข้อมูลเดิม แล้ว upsert เฉพาะแถวใหม่หรือวันที่ซื้อใหม่กว่าเป็นชุดละ 500
+8. บันทึกผลรอบล่าสุดลง `customer_history_sync_status` เพื่ออัปเดต badge หน้าเว็บ
 
 **ไฟล์ CSV:** `customer_history.csv` — เช็คตามลำดับ:
-1. `C:\Users\Arm\Documents\update_stock\customer_history.csv`
-2. `C:\Users\BigYa-spare\Documents\update_stock\customer_history.csv`
-3. `C:\Users\BigYa-spare\Documents\update_stock\customer_history.CSV`
+1. `C:\Users\AninMainPC\Desktop\run-upload-stock\customer_history.csv`
+2. `C:\Users\AninMainPC\Desktop\run-upload-stock\customer_history.CSV`
+3. `C:\Users\Arm\Documents\update_stock\customer_history.csv`
+4. `C:\Users\BigYa-spare\Documents\update_stock\customer_history.csv`
+5. `C:\Users\BigYa-spare\Documents\update_stock\customer_history.CSV`
 
 **รูปแบบ Customer History CSV** (zero-indexed):
 
 | คอลัมน์ | index | ความหมาย |
 |---|---|---|
-| B | 1 | Phone (เบอร์โทร) |
-| C | 2 | ชื่อ (first_name) |
-| D | 3 | นามสกุล (last_name) |
-| I | 8 | SKU |
-| J | 9 | ชื่อสินค้า (product_name) |
+| B | 1 | วันที่ซื้อ (purchase_date) — format `D/M/YYYY H:MM:SS` เช่น `14/1/2026 18:09:21` |
+| X | 23 | SKU |
+| Y | 24 | ชื่อสินค้า (product_name) |
+| AJ | 35 | เบอร์โทร (phone) |
+| AK | 36 | ชื่อ (first_name) |
+| AL | 37 | นามสกุล (last_name) |
 
-> แถวที่ไม่มีทั้งชื่อและนามสกุล → ข้าม
+> แถวที่ไม่มีเบอร์/ชื่อ หรือไม่มี SKU/ชื่อสินค้า หรือวันที่ไม่ถูกต้อง → ข้าม
 
-**Deduplicate:** ก่อน import ข้อมูลย้อนหลังใช้ `deduplicate-customer.mjs` กรองแถวซ้ำระหว่าง 2 ไฟล์ CSV (ดู `วิธีใช้-deduplicate-customer.md`)
+`deduplicate-customer.mjs` เป็นเครื่องมือ legacy สำหรับเทียบไฟล์เก่า ไม่จำเป็นสำหรับ uploader แบบ incremental
 
 ---
 

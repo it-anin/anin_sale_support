@@ -804,23 +804,21 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0.03cm;
-  font-family: 'DB GILL SIAM X', 'DB GILL SIAM X', sans-serif;
+  font-family: 'Inter', 'Sarabun', sans-serif;
 }
 
 /* font sizes ตรงกับ print จริง */
 .live-preview-panel .lbl-logo { font-size: 4pt; padding: 0.5pt 3pt; border-width: 0.3mm; }
-.live-preview-panel .lbl-name { font-size: 7pt; font-weight: 800; line-height: 1.2; }
-.live-preview-panel .lbl-unit { font-size: 6pt; font-weight: 800; }
-.live-preview-panel .lbl-price-labels { font-size: 5pt; min-width: 0.7cm; }
-.live-preview-panel .lbl-price-int { font-size: 18pt; font-weight: 900; line-height: 1; }
+.live-preview-panel .lbl-mid { gap: 2pt; }
+.live-preview-panel .lbl-name-row { gap: 4pt; }
+.live-preview-panel .lbl-name { font-size: 9pt; font-weight: 800; line-height: 1.2; }
+.live-preview-panel .lbl-unit { font-size: 7pt; font-weight: 800; }
+.live-preview-panel .lbl-price-labels { font-size: 6pt; min-width: 0.7cm; }
+.live-preview-panel .lbl-price-int { font-size: 26pt; font-weight: 900; line-height: 1; }
 .live-preview-panel .lbl-price-section { gap: 2pt; margin-top: 1pt; }
-.live-preview-panel .lbl-member-labels { font-size: 5pt; min-width: 0.7cm; }
-.live-preview-panel .lbl-member-int { font-size: 11pt; font-weight: 600; line-height: 1; }
-.live-preview-panel .lbl-member-section { gap: 2pt; border-top: 0.2mm solid #f0f0f0; padding-top: 1pt; margin-top: 5pt; }
-.live-preview-panel .lbl-member-value { justify-content: right; margin-right: 20%; }
 .live-preview-panel .lbl-baht { font-size: 5pt; margin-bottom: 1pt; }
 .live-preview-panel .lbl-codes { font-size: 4pt; line-height: 1.4; }
-.live-preview-panel .lbl-barcode img { height: 0.7cm; max-width: 100%; object-fit: contain; }
+.live-preview-panel .lbl-barcode img { height: 0.82cm; max-width: 100%; object-fit: contain; }
 .live-preview-panel .lbl-barcode-num { font-size: 3.5pt; }
 
 /* Ruler — CSS Grid 2×2 ใช้ cm ตรงกับป้ายจริง (border-box) */
@@ -1963,6 +1961,15 @@ body.pulse-b .cart-inline-btn.in-cart {
   letter-spacing: 0.5px;
 }
 
+/* Middle block: name + price, centered vertically in the space freed by removing the member row */
+.lbl-mid {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  flex: 1;
+  gap: 4px;
+}
+
 /* Name + Unit row */
 .lbl-name-row {
   display: flex;
@@ -1972,7 +1979,7 @@ body.pulse-b .cart-inline-btn.in-cart {
 }
 
 .lbl-name {
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 800;
   color: #111;
   line-height: 1.2;
@@ -1984,7 +1991,7 @@ body.pulse-b .cart-inline-btn.in-cart {
 }
 
 .lbl-unit {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 800;
   color: #111;
   white-space: nowrap;
@@ -2024,7 +2031,7 @@ body.pulse-b .cart-inline-btn.in-cart {
 }
 
 .lbl-price-int {
-  font-size: 36px;
+  font-size: 44px;
   font-weight: 900;
   color: #111;
   line-height: 1;
@@ -2103,11 +2110,12 @@ body.pulse-b .cart-inline-btn.in-cart {
   align-items: center;
   min-width: 0;
   overflow: hidden;
-  flex-shrink: 1;
+  /* never shrink — a squeezed barcode narrows the bars and stops scanning */
+  flex-shrink: 0;
 }
 
 .lbl-barcode img {
-  height: 38px;
+  height: 44px;
   max-width: 100%;
   width: auto;
   object-fit: contain;
@@ -2226,6 +2234,14 @@ body.pulse-b .cart-inline-btn.in-cart {
     color: #2F7F98;
   }
 
+  .label-print .lbl-mid {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    flex: 1;
+    gap: 2pt;
+  }
+
   .label-print .lbl-name-row {
     display: flex;
     justify-content: space-between;
@@ -2234,7 +2250,7 @@ body.pulse-b .cart-inline-btn.in-cart {
   }
 
   .label-print .lbl-name {
-    font-size: 7pt;
+    font-size: 9pt;
     font-weight: 800;
     color: #000;
     line-height: 1.2;
@@ -2246,7 +2262,7 @@ body.pulse-b .cart-inline-btn.in-cart {
   }
 
   .label-print .lbl-unit {
-    font-size: 6pt;
+    font-size: 7pt;
     font-weight: 800;
     color: #000;
     white-space: nowrap;
@@ -2268,7 +2284,7 @@ body.pulse-b .cart-inline-btn.in-cart {
   .label-print .lbl-price-labels {
     display: flex;
     flex-direction: column;
-    font-size: 5pt;
+    font-size: 6pt;
     font-weight: 700;
     color: #000;
     line-height: 1.3;
@@ -2283,7 +2299,7 @@ body.pulse-b .cart-inline-btn.in-cart {
   }
 
   .label-print .lbl-price-int {
-    font-size: 18pt;
+    font-size: 26pt;
     font-weight: 900;
     color: #000;
     line-height: 1;
@@ -2367,11 +2383,12 @@ body.pulse-b .cart-inline-btn.in-cart {
     align-items: center;
     min-width: 0;
     overflow: hidden;
-    flex-shrink: 1;
+    /* never shrink — a squeezed barcode narrows the bars and stops scanning */
+    flex-shrink: 0;
   }
 
   .label-print .lbl-barcode img {
-    height: 0.7cm;
+    height: 0.82cm;
     max-width: 100%;
     width: auto;
     object-fit: contain;
@@ -3049,11 +3066,30 @@ body.pulse-b .cart-inline-btn.in-cart {
 .stock-table .stock-col-unit  { width: 10%;  white-space: nowrap; }
 .stock-table .stock-col-price { width: 10%;  text-align: right; white-space: nowrap; }
 
+/* Customer History — Skeleton Shimmer (ระหว่างค้นหา) */
+.ch-skeleton span {
+  display: block;
+  height: 11px;
+  border-radius: 6px;
+  background: linear-gradient(90deg,
+    #ece7de 0%, #f7f1e4 38%, rgba(242, 217, 141, 0.55) 50%, #f7f1e4 62%, #ece7de 100%);
+  background-size: 220% 100%;
+  animation: chShimmer 1.15s linear infinite;
+}
+@keyframes chShimmer {
+  from { background-position: 120% 0; }
+  to   { background-position: -120% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ch-skeleton span { animation: none; }
+}
+
 /* Customer History Table */
-.stock-table .cust-col-phone   { width: 15%; white-space: nowrap; }
-.stock-table .cust-col-name    { width: 20%; white-space: nowrap; }
-.stock-table .cust-col-sku     { width: 15%; white-space: nowrap; }
-.stock-table .cust-col-product { width: 50%; white-space: normal; word-break: break-word; line-height: 1.4; }
+.stock-table .cust-col-date    { width: 13%; white-space: nowrap; }
+.stock-table .cust-col-phone   { width: 13%; white-space: nowrap; }
+.stock-table .cust-col-name    { width: 18%; white-space: nowrap; }
+.stock-table .cust-col-sku     { width: 13%; white-space: nowrap; }
+.stock-table .cust-col-product { width: 43%; white-space: normal; word-break: break-word; line-height: 1.4; }
 
 /* ===== Outbound Page (เบิกสินค้าด่วน) ===== */
 .outbound-table-wrap {

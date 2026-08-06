@@ -50,6 +50,9 @@ Six-page React app sharing the same `App.css` and Supabase project.
 - `upload-customer-history.mjs` — Node.js script: reads CSV → uploads to Supabase `customer_history` table
 - `run-upload-customer-history.bat` — batch wrapper สำหรับ Task Scheduler: แสดง progress บนหน้าจอ ปิดอัตโนมัติเมื่อเสร็จ
 - `customer-history-setup.sql` — SQL สำหรับสร้างตาราง `customer_history` ใน Supabase
+- `customer-history-incremental-migration.sql` — migration ตารางเดิม: เพิ่ม/backfill `dedupe_key`, ยุบแถวซ้ำ และสร้าง unique index โดยไม่ drop table
+- `customer-history-sync-status.sql` — สร้างตารางเก็บสถิติการรัน uploader (ไม่ได้ใช้เป็นแหล่งเวลาของ badge)
+- `upload-customer-history.test.mjs` — unit tests สำหรับ parse วันที่, normalize, dedupe, incremental classification และ sync payload
 - `deduplicate-customer.mjs` — script กรองแถวซ้ำระหว่าง 2 ไฟล์ CSV
 - `วิธีใช้-deduplicate-customer.md` — คู่มือ deduplicate + delete/truncate + อัพเดทลูกค้าใหม่
 
@@ -87,14 +90,18 @@ Six-page React app sharing the same `App.css` and Supabase project.
 - Upload: ผ่าน `upload-stock.mjs` (Node.js script) — ไม่ผ่านเว็บ — ใช้ **service_role key** (env `SUPABASE_SERVICE_KEY` หรือ `.env`)
 - ไม่มี web upload UI — ใช้ Task Scheduler รัน script ทุก 5 นาทีแทน
 
-**Table: `customer_history`** (id, phone, first_name, last_name, sku, product_name, uploaded_at)
+**Table: `customer_history`** (id, purchase_date, phone, first_name, last_name, sku, product_name, dedupe_key, uploaded_at)
 - RLS: `public read customer_history` (SELECT) เท่านั้น — **ไม่มี public write** (มี PII: เบอร์โทร/ชื่อลูกค้า)
 - สร้างด้วย `customer-history-setup.sql` · ตัด write policy ด้วย `lock-rls-readonly.sql`
 - Upload: ผ่าน `upload-customer-history.mjs` (Node.js script) — รันมือหรือ Task Scheduler — ใช้ **service_role key** (env `SUPABASE_SERVICE_KEY` หรือ `.env`)
-- **`--append` flag** — `node upload-customer-history.mjs --append` เพิ่มข้อมูลใหม่โดยไม่ลบของเก่า (ค่าเริ่มต้นคือลบทั้งหมดแล้ว insert ใหม่)
-- script เติม 0 นำหน้าเบอร์โทรอัตโนมัติถ้า 8 หรือ 9 หลัก
-- Deduplicate: ใช้ `deduplicate-customer.mjs` กรองแถวซ้ำก่อน import ข้อมูลย้อนหลัง
-- **Chunked delete** — script ลบของเก่าทีละ 1000 แถวเพื่อเลี่ยง Supabase statement timeout (ตาราง 100K+ แถวลบในคำสั่งเดียวจะ timeout)
+- Upload เป็น incremental เสมอ: เก็บเฉพาะรายการล่าสุดต่อ ลูกค้า+SKU และไม่ลบข้อมูลเก่าทั้งตาราง
+- `node upload-customer-history.mjs` ตรวจช่วงย้อนหลัง 7 วัน; `--full-scan` ตรวจทั้งไฟล์; `--append` เป็น alias ของโหมดปกติ
+- ก่อนใช้ uploader รุ่น incremental กับตารางเดิม ต้องรัน `customer-history-incremental-migration.sql` หนึ่งครั้ง
+- uploader บันทึกสถิติการรันลง `customer_history_sync_status`; ต้องรัน `customer-history-sync-status.sql` หนึ่งครั้ง
+- badge หน้า Customer History อ่าน `uploaded_at` ล่าสุดจาก `customer_history` โดยตรง ไม่อ่านจาก sync status
+- badge แสดงเฉพาะ `Last Updated : วันเวลา` และโหลดใหม่ทุก 60 วินาที รวมถึงเมื่อ window กลับมา focus/visible
+- script เหลือเฉพาะตัวเลขในเบอร์โทร และเติม 0 เมื่อมี 8 หรือ 9 หลักแต่ยังไม่มี 0 นำหน้า
+- `dedupe_key` มี unique index; uploader ยุบ CSV และ upsert เฉพาะแถวใหม่/ใหม่กว่าเป็นชุดละ 500
 - **Multi-machine CSV path** — `CSV_CANDIDATES` array เช็คหลาย path ตามลำดับ ใช้ path แรกที่เจอ (รองรับเครื่อง Arm + BigYa-spare)
 
 **SaleSupport tables** (สร้างด้วย `salesupport-setup.sql` — RLS: anon ทำได้ทุกอย่าง `for all`):
@@ -114,6 +121,19 @@ Six-page React app sharing the same `App.css` and Supabase project.
 - SKU autocomplete (ฟอร์ม Order): ค้นจากตาราง `products` เติมชื่อ/หน่วยอัตโนมัติ
 - Popup Order มี 3 ตราประทับอนุมัติ (ของถึงสาขา / แจ้งลูกค้า / ส่งมอบสินค้า) — กดแล้วบันทึกลง Supabase ทันที
 
+## Customer History — Search Behavior
+
+- Debounce 200ms · ค้นหาแบบ search-first (ไม่โหลดตอน mount)
+- 2 คำขึ้นไป → `first_name ILIKE %คำแรก%` **AND** `last_name ILIKE %คำที่สอง%`
+- คำเดียว → `.or(first_name / last_name / phone ILIKE %q%)`
+- เรียง `purchase_date` จากใหม่ไปเก่า · ดึงดิบสูงสุด `ROW_LIMIT = 1000` แถว
+- **ยุบแถวซ้ำฝั่งเว็บ** — key = `phone|first_name|last_name|sku|product_name` เก็บแถวที่ `purchase_date` ล่าสุด
+  - ต้องมี phone/ชื่อ ใน key ด้วย ไม่งั้นลูกค้าคนละคนที่ซื้อสินค้าเดียวกันจะถูกยุบรวมกัน
+  - ข้อมูลจริง (ก.ค. 2569): 239,200 แถว / ลูกค้า 20,070 คน — ยุบแล้วเหลือ ~67%
+  - ลูกค้าที่มีเกิน 1000 แถวมีแค่ `เงินสด` (24,276) กับ `Grab` (1,642) ซึ่งไม่ใช่ลูกค้าจริง → limit 1000 ครบสำหรับลูกค้าจริงทุกคน
+- `truncated` state → แสดง "(จากข้อมูล 1,000 แถวล่าสุด)" เมื่อชนเพดาน
+- ระหว่างค้นหาแสดง skeleton shimmer (`.ch-skeleton` ใน App.css) — `<thead>` แสดงตลอด สลับแค่ `<tbody>` ความกว้างคอลัมน์เลยไม่กระโดด
+
 ## CSV Format
 
 **Products CSV** (Admin upload via web):  
@@ -124,16 +144,31 @@ Columns (zero-indexed): D=Branch(3), E=SKU(4), F=Name(5), G=จำนวน(6), 
 Branch mapping (case-insensitive): `Warehouse`→คลังสินค้า, `Front Store`→SRC, `Main KKL`→KKL, `Main SSS`→SSS  
 ชื่อไฟล์: `All_stock.csv` — `CSV_CANDIDATES` ใน `upload-stock.mjs` เช็คหลาย path ใช้ path แรกที่เจอ (เครื่อง Server `C:\Users\AninMainPC\Desktop\run-upload-stock\` ก่อน → Arm → BigYa-spare)  
 
-**Customer History CSV** (→ `upload-customer-history.mjs`):  
-Columns (zero-indexed): B=Phone(1), C=ชื่อ(2), D=นามสกุล(3), I=SKU(8), J=ชื่อสินค้า(9). Row 0 = header.  
+**Customer History CSV** (export รายงาน **R06.158** จาก Promax → `upload-customer-history.mjs`):  
+Columns (zero-indexed): B=วันที่ซื้อ(1, format D/M/YYYY H:MM:SS), X=SKU(23), Y=ชื่อสินค้า(24), AJ=เบอร์โทร(35), AK=ชื่อ(36), AL=นามสกุล(37). Row 0 = header.  
+> ⚠️ column layout ผูกกับรูปแบบรายงาน R06.158 — ถ้า Promax เปลี่ยนคอลัมน์ในรายงานนี้ ต้องแก้ index ใน `upload-customer-history.mjs` ตาม  
 ชื่อไฟล์: `customer_history.csv` — script เช็คหลาย path ตามลำดับ ใช้ path แรกที่เจอ:
 1. `C:\Users\AninMainPC\Desktop\run-upload-stock\customer_history.csv` (เครื่อง Server — ตัวหลักปัจจุบัน)
-2. `C:\Users\Arm\Documents\update_stock\customer_history.csv` (เครื่อง Arm)
-3. `C:\Users\BigYa-spare\Documents\update_stock\customer_history.csv` (เครื่อง BigYa-spare)
-4. `C:\Users\BigYa-spare\Documents\update_stock\customer_history.CSV` (เครื่อง BigYa-spare, ตัวพิมพ์ใหญ่)
+2. `C:\Users\AninMainPC\Desktop\run-upload-stock\customer_history.CSV` (เครื่อง Server, ตัวพิมพ์ใหญ่)
+3. `C:\Users\Arm\Documents\update_stock\customer_history.csv` (เครื่อง Arm)
+4. `C:\Users\BigYa-spare\Desktop\run-upload-stock\customer_history.csv` (เครื่อง BigYa-spare Bot)
+5. `C:\Users\BigYa-spare\Desktop\run-upload-stock\customer_history.CSV` (เครื่อง BigYa-spare Bot, ตัวพิมพ์ใหญ่)
+6. `C:\Users\BigYa-spare\Documents\update_stock\customer_history.csv` (เครื่อง BigYa-spare)
+7. `C:\Users\BigYa-spare\Documents\update_stock\customer_history.CSV` (เครื่อง BigYa-spare, ตัวพิมพ์ใหญ่)
 
-Phone: เติม 0 อัตโนมัติถ้า 8 หรือ 9 หลัก (Excel ตัด 0 นำหน้าออก)
+Phone: เหลือเฉพาะตัวเลข และเติม 0 อัตโนมัติเมื่อมี 8 หรือ 9 หลักแต่ยังไม่มี 0 นำหน้า
 Parser: custom `parseCSV()` — `"` เริ่ม quoted mode เฉพาะตอน `field === ''` เพื่อรองรับ inch symbol `2"` กลางชื่อสินค้า
+
+## Customer History — Recent Changes (2026-07-27 ถึง 2026-07-28)
+
+- เปลี่ยน uploader จาก delete-all/insert-all เป็น incremental และ idempotent
+- ยุบข้อมูลให้เหลือรายการซื้อล่าสุดต่อ ลูกค้า+SKU; ใช้เบอร์โทรเป็น customer identity และ fallback เป็นชื่อ+นามสกุล
+- เพิ่ม strict date validation, phone normalization, fallback product key และสรุปจำนวนแถวทุกสถานะ
+- เพิ่มช่วงตรวจย้อนหลัง 7 วัน, `--full-scan`, batch read/write และ unique `dedupe_key`
+- เพิ่ม SQL migration แบบไม่ drop table พร้อม SQL สำหรับ sync status
+- เพิ่ม unit tests และ npm script `test:customer-upload`
+- เปลี่ยน badge จาก sync status มาอ่าน `customer_history.uploaded_at` โดยตรง เพื่อรองรับข้อมูลที่มาจาก uploader หลายโปรแกรม
+- ตัดข้อความจำนวน “เพิ่ม/อัปเดต” ออกจาก badge เหลือเฉพาะเวลาล่าสุด
 
 ## Multi-Machine Sync — ข้อควรระวังเมื่อ pull โค้ดข้ามเครื่อง
 
@@ -184,14 +219,35 @@ Do NOT modify without explicit user instruction:
 - Label structure:
   ```
   ·BIGYA logo (top-right)
-  ชื่อสินค้า | หน่วย
-  Price / ราคา | [price int, no decimal] | บาท
-  Member / สมาชิก | [Math.ceil(price×0.95), no decimal] | บาท
+  ┌ .lbl-mid (flex:1, justify-content:center) ──────┐
+  │ ชื่อสินค้า | หน่วย                                │
+  │ Price / ราคา | [price int, no decimal] | บาท     │
+  └─────────────────────────────────────────────────┘
   วันที่ปริ้น + SKU (left) | barcode image (right)
   ```
-- Member price: `Math.ceil(price × 0.95)` — always round up, no decimals shown
+- **ไม่มีแถว Member / ราคาสมาชิก แล้ว** — ตัดออก 2569-08-06 ตามคำสั่งผู้ใช้
+- `.lbl-mid` ห่อชื่อสินค้า+ราคาไว้ด้วยกัน แล้วดันให้อยู่กึ่งกลางแนวตั้งในพื้นที่ที่ว่างจากการตัดแถว Member
 - Bottom-left: print date (`toLocaleDateString('th-TH')`) + SKU
-- No decimal shown on either price or member price
+- No decimal shown on price
+
+**3 จุดที่ต้องแก้พร้อมกันเสมอเมื่อเปลี่ยนโครงป้ายราคา** (JSX ซ้ำกัน 3 ชุดใน `App.tsx`):
+1. Live Preview panel (`previewPriceProduct`) — scope CSS `.live-preview-panel`
+2. Preview modal (`showPreview`) — scope CSS `.label-preview` (ค่าฐาน)
+3. `.print-only` (พิมพ์จริง) — scope CSS `@media print .label-print`
+
+> ⚠️ Live Preview ต้อง override ให้ตรงกับ `.label-print` **ทุก property ที่มีผลต่อ layout** ไม่ใช่แค่ `font-size`
+> — `gap` ที่ไม่ตรงกันเคยทำให้ชื่อสินค้าตัดขึ้นบรรทัด 2 แล้วโดน `-webkit-line-clamp: 2` ตัดทิ้งเฉพาะใน preview
+> — `font-family` ต้องเป็น `'Inter', 'Sarabun'` เหมือนกัน (เดิม preview ใช้ `'DB GILL SIAM X'` ที่ไม่ได้โหลด)
+
+### Barcode บนป้ายราคา — ห้ามลดขนาด ⚠️
+- `generateBarcode()` ใน `App.tsx`: CODE128 `width: 3, height: 90` (อัตราส่วน 4:1)
+  — `width` คือความละเอียด px ต่อ module ไม่ใช่ขนาดที่พิมพ์ ยิ่งสูงยิ่งคมตอนพิมพ์
+  — ถ้าแก้ `width` ต้องแก้ `height` ตามให้อัตราส่วนคง 4:1 ไม่งั้น `object-fit: contain` จะย่อบาร์โค้ดลง
+- ขนาดที่พิมพ์จริง: `height: 0.82cm` → บาร์โค้ด 3.28 × 0.82 cm, แท่งแคบสุด **0.273 มม.**
+  (CODE128 ต้องการ ≥ 0.19 มม. — ค่าเดิม 0.7cm ให้แค่ 0.233 มม. สแกนไม่ค่อยติด)
+- `.lbl-barcode` ต้องเป็น `flex-shrink: 0` — ถ้าเป็น `1` วันที่/SKU ที่ยาว (เช่น `31/12/2569`)
+  จะแย่งความกว้างจนบาร์โค้ดถูกบีบ แท่งแคบลง แล้วสแกนไม่ติด
+- ที่ว่างในแถวล่างเหลือ ~2px เท่านั้น — จะขยายกว่านี้ต้องย้ายวันที่/SKU ไปที่อื่นก่อน
 
 ### ป้ายบาร์โค้ด (Thermal/QR Sticker)
 - handlePrintThermal / handlePrintQr code — FROZEN (alignment confirmed correct)
