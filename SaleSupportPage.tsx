@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, type CSSProperties, type MouseEvent as ReactMouseEvent } from 'react';
+import { useState, useEffect, useRef, type CSSProperties, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react';
 import * as XLSX from 'xlsx';
 import { supabase } from './supabase';
 import { AnimatedLogoText } from './AnimatedLogo';
@@ -361,7 +361,7 @@ interface ColumnDef {
 interface MenuDef {
   id: MenuId;
   label: string;
-  icon: string;
+  icon: ReactNode;
   table: string;
   columns: ColumnDef[];
   orderBy?: string;
@@ -369,9 +369,54 @@ interface MenuDef {
   filter?: { column: string; value: string };
 }
 
+// ไอคอนเมนู sidebar — แบบ "Square Badge" (กรอบสี่เหลี่ยมมนเส้นบาง, currentColor)
+// สไตล์คุมจาก `.ss-menu-icon` / `.ss-menu-icon svg` ใน App.css
+const MenuSvg = ({ children }: { children: ReactNode }) => (
+  <svg viewBox="0 0 24 24" aria-hidden="true">{children}</svg>
+);
+const IconProducts = (
+  <MenuSvg>
+    <rect x="2.5" y="9" width="19" height="6" rx="3" />
+    <line x1="12" y1="9" x2="12" y2="15" />
+  </MenuSvg>
+);
+const IconOrder = (
+  <MenuSvg>
+    <rect x="5" y="3" width="14" height="18" rx="2" />
+    <path d="M9 3h6v2a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1V3Z" />
+    <path d="M8 11.5h8" />
+    <path d="M8 15.5h5" />
+  </MenuSvg>
+);
+const IconRequest = (
+  <MenuSvg>
+    <path d="m12 2.3 8.6 4.95L12 12.2 3.4 7.25 12 2.3Z" />
+    <path d="M2.5 8.7 11.2 13.7v8.3L2.5 17V8.7Z" />
+    <path d="M12.8 13.7 21.5 8.7V17l-8.7 5v-8.3Z" />
+  </MenuSvg>
+);
+const IconNewProduct = (
+  <MenuSvg>
+    <path d="M12 2.5 14.1 9.4 21 11.5 14.1 13.6 12 20.5 9.9 13.6 3 11.5 9.9 9.4Z" />
+  </MenuSvg>
+);
+const IconTicket = (
+  <MenuSvg>
+    <path d="M3 8.2a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 0 0 3.6v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-3.6Z" />
+    <path d="M14 6.2v1.8M14 11v2M14 15.5v1.8" strokeDasharray="0.1 3.2" />
+  </MenuSvg>
+);
+const IconUpload = (
+  <MenuSvg>
+    <path d="M12 3v12" />
+    <path d="m7 8 5-5 5 5" />
+    <path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4" />
+  </MenuSvg>
+);
+
 const MENUS: MenuDef[] = [
   {
-    id: 'order', label: 'Order', icon: '📋', table: 'ss_orders',
+    id: 'order', label: 'Order', icon: IconOrder, table: 'ss_orders',
     columns: [
       { key: 'sku_name',          label: 'SKU / ชื่อสินค้า', min: 200 },
       { key: 'branch',            label: 'Branch', min: 70 },
@@ -399,7 +444,7 @@ const MENUS: MenuDef[] = [
     ],
   },
   {
-    id: 'request', label: 'Request Item', icon: '📦', table: 'ss_request_items',
+    id: 'request', label: 'Request Item', icon: IconRequest, table: 'ss_request_items',
     columns: [
       { key: 'product_name', label: 'ชื่อสินค้า', min: 180 },
       { key: 'branch',       label: 'สาขา', min: 70 },
@@ -423,7 +468,7 @@ const MENUS: MenuDef[] = [
     ],
   },
   {
-    id: 'newproduct', label: 'New Product', icon: '🆕', table: 'ss_new_products',
+    id: 'newproduct', label: 'New Product', icon: IconNewProduct, table: 'ss_new_products',
     columns: [
       { key: 'name_brand',        label: 'Name/Brand', min: 150 },
       { key: 'active_ingredient', label: 'ชื่อยา/สารสำคัญ', min: 170 },
@@ -439,7 +484,7 @@ const MENUS: MenuDef[] = [
     ],
   },
   {
-    id: 'ticket', label: 'Ticket', icon: '🎫', table: 'ss_tickets',
+    id: 'ticket', label: 'Ticket', icon: IconTicket, table: 'ss_tickets',
     columns: [
       { key: 'department', label: 'Department', min: 100 },
       { key: 'created_at', label: 'Date Time', kind: 'datetime', min: 130 },
@@ -450,7 +495,7 @@ const MENUS: MenuDef[] = [
     ],
   },
   {
-    id: 'products', label: 'Products', icon: '💊', table: 'product_master',
+    id: 'products', label: 'Products', icon: IconProducts, table: 'product_master',
     orderBy: 'sku', ascending: true,
     filter: { column: 'abc', value: 'P' },
     columns: [
@@ -1187,7 +1232,7 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
               onChange={e => { const f = e.target.files?.[0]; if (f) handleSupplierFile(f); }} />
             <button className="ss-menu-btn ss-upload-supplier-btn" disabled={uploadingSupplier}
               onClick={() => supplierFileRef.current?.click()}>
-              <span className="ss-menu-icon">📤</span>
+              <span className="ss-menu-icon">{IconUpload}</span>
               {uploadingSupplier ? 'กำลังนำเข้า...' : 'อัปโหลด Supplier'}
             </button>
             {supplierMsg && (
@@ -1199,7 +1244,7 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
 
           <div className="ss-panel ss-panel-anim" key={activeMenu}>
             <div className="ss-panel-toolbar">
-              <span>{menu.icon} {menu.label} · {loading ? 'กำลังโหลด...' : `${rows.length} รายการ`}</span>
+              <span className="ss-panel-title"><span className="ss-menu-icon">{menu.icon}</span> {menu.label} · {loading ? 'กำลังโหลด...' : `${rows.length} รายการ`}</span>
               {activeMenu === 'order' && (
                 <button className="ss-add-btn" onClick={openAddOrder}>➕ New Order</button>
               )}
@@ -1262,7 +1307,7 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
                         activeMenu === 'order' ? () => { setSelectedOrder(row); setStampError(''); setEditing(false); }
                         : activeMenu === 'request' ? () => openRequestDetail(row)
                         : () => { setEditing(false); setDetailView({
-                            title: `${menu.icon} รายละเอียด ${menu.label}`,
+                            title: `รายละเอียด ${menu.label}`,
                             table: menu.table,
                             fields: activeMenu === 'products' ? PRODUCT_DETAIL_FIELDS : menu.columns,
                             row,

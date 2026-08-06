@@ -3575,7 +3575,27 @@ body.pulse-b .cart-inline-btn.in-cart {
   border-left-color: #4891db;
   font-weight: 600;
 }
-.ss-menu-icon { font-size: 14px; line-height: 1; }
+.ss-menu-icon {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  border-radius: 7px;
+  border: 1.2px solid currentColor;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ss-menu-icon svg {
+  display: block;
+  width: 13px;
+  height: 13px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  overflow: visible;
+}
 
 .ss-sidebar-divider { margin: 8px 14px; border-top: 1px solid #e3e8ee; }
 .ss-upload-supplier-btn { color: #8194a8; font-size: 12.5px; }
@@ -3617,6 +3637,7 @@ body.pulse-b .cart-inline-btn.in-cart {
   min-height: 52px;
   flex-shrink: 0;
 }
+.ss-panel-title { display: flex; align-items: center; gap: 6px; }
 
 .ss-error {
   padding: 10px 16px;

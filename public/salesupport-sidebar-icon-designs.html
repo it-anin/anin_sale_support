@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SaleSupport Sidebar Icon — 20 แบบ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: #eef2f6;
+    font-family: 'Noto Sans Thai', sans-serif;
+    color: #24303c;
+    padding: 32px 24px 80px;
+  }
+  .page-head { max-width: 1400px; margin: 0 auto 28px; }
+  .page-head h1 { font-size: 26px; margin: 0 0 6px; font-weight: 700; }
+  .page-head p { margin: 0; font-size: 14px; color: #5c6b7a; line-height: 1.7; }
+  .page-head code { background: #dde6ee; padding: 1px 6px; border-radius: 4px; font-family: 'Outfit', monospace; font-size: 13px; }
+
+  .grid {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+  }
+
+  .design {
+    background: #fff;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 3px 14px rgba(0,0,0,0.08);
+    display: flex;
+    flex-direction: column;
+  }
+  .design-head {
+    padding: 12px 16px 10px;
+    border-bottom: 1px solid #eef1f4;
+  }
+  .design-title { font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+  .design-num {
+    width: 24px; height: 24px; flex-shrink: 0;
+    border-radius: 7px; background: #2d6cad; color: #fff;
+    font-family: 'Outfit', sans-serif; font-size: 12px; font-weight: 700;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .design-desc { font-size: 12.5px; color: #6b7a89; margin-top: 5px; line-height: 1.6; padding-left: 32px; }
+  .design-tech {
+    font-family: 'Outfit', monospace; font-size: 11px; color: #8a97a4;
+    margin-top: 4px; padding-left: 32px;
+  }
+
+  /* ===== ของจริงจาก App.css (.ss-sidebar) ===== */
+  .sidebar-strip { background: #f7f9fb; padding: 7px 0; }
+  .ss-menu-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 9px 13px;
+    border: none;
+    background: none;
+    color: #5b7590;
+    font-size: 12.5px;
+    font-weight: 500;
+    font-family: 'Noto Sans Thai', sans-serif;
+    text-align: left;
+    cursor: pointer;
+    border-left: 3px solid transparent;
+    transition: all 0.15s ease;
+  }
+  .ss-menu-btn:hover { background: #eef3f9; color: #2d6cad; }
+  .ss-menu-btn--active {
+    background: #eaf3fc;
+    color: #2d6cad;
+    border-left-color: #4891db;
+    font-weight: 600;
+  }
+  .ss-menu-icon { font-size: 15px; line-height: 1; flex-shrink: 0; display: flex; }
+
+  /* ค่าเริ่มต้นของ SVG ทุกแบบ: ใช้ currentColor → เปลี่ยนสีตามสถานะปุ่มเอง */
+  .ss-menu-icon svg {
+    display: block;
+    width: 17px; height: 17px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.9;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    overflow: visible;
+  }
+
+  /* ================= 20 แบบ ================= */
+
+  /* 1 Line Thin */
+  .d1 .ss-menu-icon svg { stroke-width: 1.3; width: 18px; height: 18px; }
+
+  /* 2 Line Regular */
+  .d2 .ss-menu-icon svg { stroke-width: 1.9; }
+
+  /* 3 Line Bold */
+  .d3 .ss-menu-icon svg { stroke-width: 2.6; width: 18px; height: 18px; }
+
+  /* 4 Line Square — ปลายเส้นตัดตรง มุมเหลี่ยม */
+  .d4 .ss-menu-icon svg { stroke-width: 2; stroke-linecap: butt; stroke-linejoin: miter; }
+
+  /* 5 Duotone Soft — เส้น + เติมสีจาง */
+  .d5 .ss-menu-icon svg { stroke-width: 1.6; fill: currentColor; fill-opacity: 0.18; }
+
+  /* 6 Solid Glyph — ทึบล้วน */
+  .d6 .ss-menu-icon svg { stroke: none; fill: currentColor; width: 17px; height: 17px; }
+
+  /* 7 Solid Muted — ทึบแบบจาง */
+  .d7 .ss-menu-icon svg { stroke: none; fill: currentColor; opacity: 0.68; width: 17px; height: 17px; }
+
+  /* 8 Ring Badge — ไอคอนในวงกลมเส้นบาง */
+  .d8 .ss-menu-icon {
+    width: 24px; height: 24px; border-radius: 50%;
+    border: 1.2px solid currentColor;
+    align-items: center; justify-content: center;
+  }
+  .d8 .ss-menu-icon svg { width: 13px; height: 13px; stroke-width: 1.8; }
+
+  /* 9 Square Badge — ไอคอนในกรอบมนเส้นบาง */
+  .d9 .ss-menu-icon {
+    width: 24px; height: 24px; border-radius: 7px;
+    border: 1.2px solid currentColor;
+    align-items: center; justify-content: center;
+  }
+  .d9 .ss-menu-icon svg { width: 13px; height: 13px; stroke-width: 1.8; }
+
+  /* 10 Filled Chip — ไอคอนเจาะขาวบนวงกลมทึบ */
+  .d10 .ss-menu-icon {
+    width: 24px; height: 24px; border-radius: 50%;
+    background: #b9cee4;
+    align-items: center; justify-content: center;
+  }
+  .d10 .ss-menu-icon svg { width: 13px; height: 13px; stroke-width: 2; stroke: #fff; }
+  .d10 .ss-menu-btn--active .ss-menu-icon,
+  .d10 .ss-menu-btn:hover .ss-menu-icon { background: #4891db; }
+
+  /* 11 Emoji Grayscale */
+  .d11 .ss-menu-icon { filter: grayscale(1); font-size: 14px; }
+
+  /* 12 Emoji Silhouette */
+  .d12 .ss-menu-icon { filter: grayscale(1) contrast(2) brightness(0.6); font-size: 14px; opacity: 0.75; }
+  .d12 .ss-menu-btn--active .ss-menu-icon,
+  .d12 .ss-menu-btn:hover .ss-menu-icon { filter: none; opacity: 1; }
+
+  /* 13 Emoji Faded */
+  .d13 .ss-menu-icon { filter: grayscale(1) contrast(1.3); opacity: 0.75; font-size: 14px; }
+
+  /* 14 Monogram — ตัวอักษรแทนไอคอน */
+  .d14 .ss-menu-icon {
+    font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 700;
+    width: 17px; justify-content: center;
+  }
+
+  /* 15 Monogram Ring — ตัวอักษรในวงกลม */
+  .d15 .ss-menu-icon {
+    width: 22px; height: 22px; border-radius: 50%;
+    border: 1.2px solid currentColor;
+    font-family: 'Outfit', sans-serif; font-size: 10.5px; font-weight: 700;
+    align-items: center; justify-content: center;
+  }
+
+  /* 16 Icon Large Compact — ไอคอนใหญ่ขึ้น label เล็กลงนิด */
+  .d16 .ss-menu-icon svg { width: 20px; height: 20px; stroke-width: 1.7; }
+  .d16 .ss-menu-btn { font-size: 11.5px; gap: 10px; }
+
+  /* 17 Underline Accent — ขีดใต้ label ตอน hover/active แทนเส้นซ้าย */
+  .d17 .ss-menu-btn { border-left-color: transparent !important; }
+  .d17 .ss-menu-label { position: relative; padding-bottom: 2px; }
+  .d17 .ss-menu-btn--active .ss-menu-label::after,
+  .d17 .ss-menu-btn:hover .ss-menu-label::after {
+    content: ''; position: absolute; left: 0; right: 0; bottom: -2px;
+    height: 2px; background: currentColor; border-radius: 2px;
+  }
+
+  /* 18 Dot Accent — จุดเล็กหน้า label แทนเส้นซ้าย */
+  .d18 .ss-menu-btn { border-left-color: transparent !important; padding-left: 16px; }
+  .d18 .ss-menu-icon { position: relative; }
+  .d18 .ss-menu-btn--active .ss-menu-icon::before,
+  .d18 .ss-menu-btn:hover .ss-menu-icon::before {
+    content: ''; position: absolute; left: -10px; top: 50%; margin-top: -2px;
+    width: 4px; height: 4px; border-radius: 50%; background: currentColor;
+  }
+
+  /* 19 Dotted Line — เส้นไอคอนเป็นจุดประ */
+  .d19 .ss-menu-icon svg {
+    stroke-width: 2.1; stroke-dasharray: 0.1 3; stroke-linecap: round;
+    width: 18px; height: 18px;
+  }
+
+  /* 20 Hairline Minimal — เส้นบางมาก label ตัวพิมพ์ใหญ่ */
+  .d20 .ss-menu-icon svg { stroke-width: 1.1; width: 15px; height: 15px; }
+  .d20 .ss-menu-btn { font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px; font-weight: 600; }
+
+  .foot {
+    max-width: 1400px; margin: 34px auto 0;
+    background: #fff; border-radius: 14px; padding: 18px 22px;
+    font-size: 14px; color: #4a5966; line-height: 1.8;
+    box-shadow: 0 3px 14px rgba(0,0,0,0.06);
+  }
+  .foot b { color: #24303c; }
+</style>
+</head>
+<body>
+
+<div class="page-head">
+  <h1>SaleSupport Sidebar Icon — 20 แบบ</h1>
+  <p>
+    เมนูซ้าย <code>.ss-sidebar</code> / <code>.ss-menu-btn</code> ในหน้าซัพพอร์ต ปัจจุบัน <code>.ss-menu-icon</code> เป็น emoji สี (💊 📋 📦 🆕 🎫)<br>
+    ทุกแบบด้านล่างใช้ <b>สีเดียวตามปุ่ม</b> (<code>currentColor</code>) — เทาบนพื้นขาว เปลี่ยนเป็น <code>#2d6cad</code> อัตโนมัติตอน hover/active<br>
+    <b>คลิกปุ่มไหนก็ได้</b> เพื่อดูสถานะ active · เอาเมาส์ชี้เพื่อดู hover · บอกเลขแบบที่ชอบได้เลยครับ
+  </p>
+</div>
+
+<div class="grid" id="grid"></div>
+
+<div class="foot">
+  <b>แบบ 1–10, 16, 19–20</b> = เปลี่ยนเป็น inline SVG (แก้ <code>MENUS</code> ใน <code>SaleSupportPage.tsx</code> ให้เก็บ SVG แทน emoji) — สีตามปุ่มอัตโนมัติ คมชัดทุกความละเอียด<br>
+  <b>แบบ 11–13</b> = เก็บ emoji เดิมไว้ แก้แค่ CSS <code>filter</code> — เร็วที่สุด แต่ยังเห็นเป็นสีที่ hover/active (แบบ 12 กลับสีตอน hover/active)<br>
+  <b>แบบ 14–15</b> = ใช้ตัวอักษรย่อ (P / O / R / N / T) แทนไอคอน<br>
+  <b>แบบ 17–18</b> = เปลี่ยนตำแหน่ง accent จากเส้นซ้าย (ของจริงตอนนี้) ไปเป็นขีดใต้ label หรือจุดหน้า label แทน
+</div>
+
+<script>
+/* ---------- ไอคอนแบบเส้น (stroke) ---------- */
+const LINE = {
+  products: '<rect x="2.5" y="9" width="19" height="6" rx="3"/><line x1="12" y1="9" x2="12" y2="15"/>',
+  order:    '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 3h6v2a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1V3Z"/><path d="M8 11.5h8"/><path d="M8 15.5h5"/>',
+  request:  '<path d="m12 2.3 8.6 4.95L12 12.2 3.4 7.25 12 2.3Z"/><path d="M2.5 8.7 11.2 13.7v8.3L2.5 17V8.7Z"/><path d="M12.8 13.7 21.5 8.7V17l-8.7 5v-8.3Z"/>',
+  newproduct: '<path d="m10.5 3 6.8 3.9v7.9L10.5 18.6 3.7 14.7V6.8Z"/><path d="M10.5 10.9 3.7 6.8"/><path d="M10.5 10.9v7.7"/><path d="M10.5 10.9 17.3 6.8"/><path d="M18.5 3.2v5.1"/><path d="M16 5.8h5"/>',
+  ticket:   '<path d="M3 8.2a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 0 0 3.6v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-3.6Z"/><path d="M14 6.2v1.8M14 11v2M14 15.5v1.8" stroke-dasharray="0.1 3.2"/>'
+};
+
+/* ---------- ไอคอนแบบทึบ (fill) ---------- */
+const SOLID = {
+  products: '<path fill-rule="evenodd" d="M2.5 12a3 3 0 0 1 3-3h13a3 3 0 0 1 0 6h-13a3 3 0 0 1-3-3Zm10.5-1h-1v2h1v-2Z"/>',
+  order:    '<path fill-rule="evenodd" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6Zm-6.4 9h6.8v1.5H7.6V11Zm0 3.5h4.4V16H7.6v-1.5Z"/>',
+  request:  '<path d="m12 2.3 8.6 4.95L12 12.2 3.4 7.25 12 2.3Z"/><path d="M2.5 8.7 11.2 13.7v8.3L2.5 17V8.7Z"/><path d="M12.8 13.7 21.5 8.7V17l-8.7 5v-8.3Z"/>',
+  newproduct: '<path d="m10.5 3 6.8 3.9v7.4L10.5 18.2 3.7 14.3V6.9Z"/><circle cx="18.5" cy="5.5" r="3.3"/><path fill="#fff" d="M17.7 3.9h1.6v1.2h1.2v1.6h-1.2v1.2h-1.6V6.7h-1.2V5.1h1.2Z"/>',
+  ticket:   '<path fill-rule="evenodd" d="M3 8.2a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v1.3a1.8 1.8 0 0 0 0 3.4v1.3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1.3a1.8 1.8 0 0 0 0-3.4V8.2Zm10.2-1.2h1.6v1.8h-1.6V7Zm0 3.9h1.6v1.8h-1.6v-1.8Zm0 3.9h1.6V16h-1.6v-1.2Z"/>'
+};
+
+const MENU = [
+  { key: 'products',   label: 'Products',     mono: 'P', emoji: '💊', title: 'Products' },
+  { key: 'order',      label: 'Order',        mono: 'O', emoji: '📋', title: 'Order' },
+  { key: 'request',    label: 'Request Item', mono: 'R', emoji: '📦', title: 'Request Item' },
+  { key: 'newproduct', label: 'New Product',  mono: 'N', emoji: '🆕', title: 'New Product' },
+  { key: 'ticket',      label: 'Ticket',       mono: 'T', emoji: '🎫', title: 'Ticket' }
+];
+
+const DESIGNS = [
+  { n: 1,  name: 'Line Thin',        mode: 'line',  th: 'เส้นบางเรียบ ดูโปร่ง เบาตา เหมาะกับเมนูข้อความเยอะ',                tech: 'stroke-width: 1.3' },
+  { n: 2,  name: 'Line Regular',     mode: 'line',  th: 'เส้นน้ำหนักมาตรฐาน อ่านง่ายที่สุด — ตัวเลือกที่ปลอดภัย',            tech: 'stroke-width: 1.9' },
+  { n: 3,  name: 'Line Bold',        mode: 'line',  th: 'เส้นหนา ชัดเจน เห็นเด่นในเมนูแคบ',                                tech: 'stroke-width: 2.6' },
+  { n: 4,  name: 'Line Square',      mode: 'line',  th: 'ปลายเส้นตัดตรง มุมเหลี่ยม ให้ความรู้สึกเป็นระบบ/เทคนิค',           tech: 'stroke-linecap: butt + linejoin: miter' },
+  { n: 5,  name: 'Duotone Soft',     mode: 'line',  th: 'เส้นบาง + เติมพื้นในสีเดียวกันแบบจาง ดูมีมิติแต่ยังไม่มีสี',        tech: 'fill: currentColor; fill-opacity: .18' },
+  { n: 6,  name: 'Solid Glyph',      mode: 'solid', th: 'ไอคอนทึบล้วน หนักแน่น อ่านออกแม้ในเมนูขนาดเล็ก',                 tech: 'fill: currentColor; stroke: none' },
+  { n: 7,  name: 'Solid Muted',      mode: 'solid', th: 'ทึบแต่ลดความทึบลง ให้ label เด่นกว่าไอคอน',                      tech: 'fill + opacity: .68' },
+  { n: 8,  name: 'Ring Badge',       mode: 'line',  th: 'ไอคอนอยู่ในวงกลมเส้นบาง ดูเป็นระเบียบ พรีเมียม',                  tech: 'border: 1.2px solid currentColor; radius 50%' },
+  { n: 9,  name: 'Square Badge',     mode: 'line',  th: 'ไอคอนในกรอบสี่เหลี่ยมมน เข้ากับปุ่มเมนูที่เป็นแถบสี่เหลี่ยม',       tech: 'border + border-radius: 7px' },
+  { n: 10, name: 'Filled Chip',      mode: 'line',  th: 'ไอคอนเจาะขาวบนวงกลมทึบสีฟ้าอ่อน เข้มขึ้นตอน active',              tech: 'background chip + knockout stroke' },
+  { n: 11, name: 'Emoji Grayscale',  mode: 'emoji', th: 'เก็บ emoji เดิมไว้ ล้างสีเป็นขาวดำ — แก้ CSS บรรทัดเดียว',        tech: 'filter: grayscale(1)' },
+  { n: 12, name: 'Emoji Silhouette', mode: 'emoji', th: 'emoji จางลงเป็นเงา คืนสีเต็มตอน hover/active',                   tech: 'grayscale + contrast + brightness' },
+  { n: 13, name: 'Emoji Faded',      mode: 'emoji', th: 'ขาวดำ + จางลงเล็กน้อย นุ่มตา ไม่แย่งความสนใจจาก label',          tech: 'grayscale + contrast + opacity .75' },
+  { n: 14, name: 'Monogram',         mode: 'mono',  th: 'ใช้ตัวอักษรย่อแทนไอคอน สะอาดมาก เข้ากับฟอนต์ Outfit',            tech: 'ตัวอักษร P / O / R / N / T' },
+  { n: 15, name: 'Monogram Ring',    mode: 'mono',  th: 'ตัวอักษรย่อในวงกลม ดูเป็นทางการเหมือน badge เลขเมนู',            tech: 'ตัวอักษร + border วงกลม' },
+  { n: 16, name: 'Icon Large Compact', mode: 'line', th: 'ไอคอนใหญ่ขึ้น label เล็กลงนิด เน้นไอคอนนำสายตา',                tech: 'ไอคอน 20px + font-size 11.5px' },
+  { n: 17, name: 'Underline Accent', mode: 'line',  th: 'ย้าย accent จากเส้นซ้ายไปเป็นขีดใต้ label ตอน hover/active',       tech: '.ss-menu-label::after' },
+  { n: 18, name: 'Dot Accent',       mode: 'line',  th: 'ย้าย accent จากเส้นซ้ายไปเป็นจุดเล็กหน้าไอคอนตอน active',          tech: '.ss-menu-icon::before จุดกลม' },
+  { n: 19, name: 'Dotted Line',      mode: 'line',  th: 'เส้นไอคอนเป็นจุดประ ลูกเล่นแปลกตา เบาและดูเป็นมิตร',              tech: 'stroke-dasharray: 0.1 3' },
+  { n: 20, name: 'Hairline Minimal', mode: 'line',  th: 'เส้นบางที่สุด label ตัวพิมพ์ใหญ่ตัวเล็ก ดูหรูมินิมอล',            tech: 'stroke 1.1 + label uppercase' }
+];
+
+function iconMarkup(item, mode) {
+  if (mode === 'emoji') return item.emoji;
+  if (mode === 'mono')  return item.mono;
+  const paths = (mode === 'solid' ? SOLID : LINE)[item.key];
+  return '<svg viewBox="0 0 24 24" aria-hidden="true">' + paths + '</svg>';
+}
+
+const grid = document.getElementById('grid');
+grid.innerHTML = DESIGNS.map(d => `
+  <div class="design d${d.n}">
+    <div class="design-head">
+      <div class="design-title"><span class="design-num">${d.n}</span>${d.name}</div>
+      <div class="design-desc">${d.th}</div>
+      <div class="design-tech">${d.tech}</div>
+    </div>
+    <div class="sidebar-strip">
+      ${MENU.map((it, i) => `
+        <button class="ss-menu-btn${i === 0 ? ' ss-menu-btn--active' : ''}" title="${it.title}" type="button">
+          <span class="ss-menu-icon">${iconMarkup(it, d.mode)}</span>
+          <span class="ss-menu-label">${it.label}</span>
+        </button>`).join('')}
+    </div>
+  </div>
+`).join('');
+
+/* คลิกปุ่มไหนก็ได้เพื่อย้าย active ภายในแบบนั้น */
+grid.addEventListener('click', e => {
+  const btn = e.target.closest('.ss-menu-btn');
+  if (!btn) return;
+  btn.parentElement.querySelectorAll('.ss-menu-btn').forEach(b => b.classList.remove('ss-menu-btn--active'));
+  btn.classList.add('ss-menu-btn--active');
+});
+</script>
+
+</body>
+</html>
