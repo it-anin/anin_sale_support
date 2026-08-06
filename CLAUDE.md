@@ -179,14 +179,35 @@ Do NOT modify without explicit user instruction:
 - Label structure:
   ```
   ·BIGYA logo (top-right)
-  ชื่อสินค้า | หน่วย
-  Price / ราคา | [price int, no decimal] | บาท
-  Member / สมาชิก | [Math.ceil(price×0.95), no decimal] | บาท
+  ┌ .lbl-mid (flex:1, justify-content:center) ──────┐
+  │ ชื่อสินค้า | หน่วย                                │
+  │ Price / ราคา | [price int, no decimal] | บาท     │
+  └─────────────────────────────────────────────────┘
   วันที่ปริ้น + SKU (left) | barcode image (right)
   ```
-- Member price: `Math.ceil(price × 0.95)` — always round up, no decimals shown
+- **ไม่มีแถว Member / ราคาสมาชิก แล้ว** — ตัดออก 2569-08-06 ตามคำสั่งผู้ใช้
+- `.lbl-mid` ห่อชื่อสินค้า+ราคาไว้ด้วยกัน แล้วดันให้อยู่กึ่งกลางแนวตั้งในพื้นที่ที่ว่างจากการตัดแถว Member
 - Bottom-left: print date (`toLocaleDateString('th-TH')`) + SKU
-- No decimal shown on either price or member price
+- No decimal shown on price
+
+**3 จุดที่ต้องแก้พร้อมกันเสมอเมื่อเปลี่ยนโครงป้ายราคา** (JSX ซ้ำกัน 3 ชุดใน `App.tsx`):
+1. Live Preview panel (`previewPriceProduct`) — scope CSS `.live-preview-panel`
+2. Preview modal (`showPreview`) — scope CSS `.label-preview` (ค่าฐาน)
+3. `.print-only` (พิมพ์จริง) — scope CSS `@media print .label-print`
+
+> ⚠️ Live Preview ต้อง override ให้ตรงกับ `.label-print` **ทุก property ที่มีผลต่อ layout** ไม่ใช่แค่ `font-size`
+> — `gap` ที่ไม่ตรงกันเคยทำให้ชื่อสินค้าตัดขึ้นบรรทัด 2 แล้วโดน `-webkit-line-clamp: 2` ตัดทิ้งเฉพาะใน preview
+> — `font-family` ต้องเป็น `'Inter', 'Sarabun'` เหมือนกัน (เดิม preview ใช้ `'DB GILL SIAM X'` ที่ไม่ได้โหลด)
+
+### Barcode บนป้ายราคา — ห้ามลดขนาด ⚠️
+- `generateBarcode()` ใน `App.tsx`: CODE128 `width: 3, height: 90` (อัตราส่วน 4:1)
+  — `width` คือความละเอียด px ต่อ module ไม่ใช่ขนาดที่พิมพ์ ยิ่งสูงยิ่งคมตอนพิมพ์
+  — ถ้าแก้ `width` ต้องแก้ `height` ตามให้อัตราส่วนคง 4:1 ไม่งั้น `object-fit: contain` จะย่อบาร์โค้ดลง
+- ขนาดที่พิมพ์จริง: `height: 0.82cm` → บาร์โค้ด 3.28 × 0.82 cm, แท่งแคบสุด **0.273 มม.**
+  (CODE128 ต้องการ ≥ 0.19 มม. — ค่าเดิม 0.7cm ให้แค่ 0.233 มม. สแกนไม่ค่อยติด)
+- `.lbl-barcode` ต้องเป็น `flex-shrink: 0` — ถ้าเป็น `1` วันที่/SKU ที่ยาว (เช่น `31/12/2569`)
+  จะแย่งความกว้างจนบาร์โค้ดถูกบีบ แท่งแคบลง แล้วสแกนไม่ติด
+- ที่ว่างในแถวล่างเหลือ ~2px เท่านั้น — จะขยายกว่านี้ต้องย้ายวันที่/SKU ไปที่อื่นก่อน
 
 ### ป้ายบาร์โค้ด (Thermal/QR Sticker)
 - handlePrintThermal / handlePrintQr code — FROZEN (alignment confirmed correct)
