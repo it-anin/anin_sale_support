@@ -23,6 +23,7 @@ Six-page React app sharing the same `App.css` and Supabase project.
 - `supabase.ts` — shared Supabase client (root dir, not src/)
 - `pageAccess.tsx` — `PageId`/`PAGE_NAV` config + `PageVisibilityContext` + `usePageVisibility` + `<PageNavRow>` (ปุ่มนำทางกลาง ใช้ทุกหน้า, รู้สถานะเปิด/ปิดหน้า)
 - `page-settings-setup.sql` — SQL สร้างตาราง `app_page_settings` (เปิด/ปิดปุ่มแต่ละหน้า)
+- `product-category-setup.sql` — SQL สร้างตาราง `product_category` + view `v_products_by_category` / `v_product_category_counts` (ปุ่ม "เลือกตามหมวด")
 - `vite.config.ts` — Vite config with `host: '0.0.0.0'` + `port: 5200` for LAN access
 - `main.tsx` — React entry point
 - `index.html` — HTML shell
@@ -68,13 +69,15 @@ Six-page React app sharing the same `App.css` and Supabase project.
 ## Login / Auth (ล็อกอินแยกแผนก)
 
 - Gate หน้าแรก: `App.tsx` ถ้ายังไม่ล็อกอิน (`authProfile == null`) → `return <LoginPage />` ก่อนถึง render หลัก (early-return อยู่หลัง hooks ทั้งหมด — อย่าย้ายขึ้นไปก่อน hooks)
-- `auth.ts` — เก็บ `PROFILES` (id, label, group, password, icon) + helper `loadAuthProfile` / `saveAuthProfile` / `clearAuthProfile` (persist ผ่าน localStorage key `authProfileId`)
+- `auth.ts` — เก็บ `PROFILES` (id, label, group, password, icon, **branch**) + helper `loadAuthProfile` / `saveAuthProfile` / `clearAuthProfile` (persist ผ่าน localStorage key `authProfileId`)
+- ⚠️ `Profile.branch` = สาขาสำหรับปุ่ม "เลือกตามหมวด" เท่านั้น ต้องสะกดตรงกับ `CATEGORY_BRANCHES` ใน `App.tsx` และ `product_category.branch` เป๊ะ ๆ — `SRC`/`KKL`/`SSS` ตรงตัว · **`WAREHOUSE` และ `PURCHASING` เป็น `null`** = ซ่อนปุ่มนั้น (ไม่กระทบหน้าอื่น ยังใช้งานได้ครบ)
 - `LoginPage.tsx` — ใส่รหัสผ่านช่องเดียว → กด "เข้าสู่ระบบ" (หรือ Enter) → ระบบจับคู่รหัสกับ `PROFILES` อัตโนมัติ ไม่ต้องเลือกแผนกก่อน (ไม่มีการ์ดเลือกโปรไฟล์แล้ว)
   - ดีไซน์: พื้นหลัง **Bubble Rise** (ฟองฟ้าลอยขึ้น — `.login-bubbles`/`.login-bubble` สุ่ม 14 ฟองด้วย `useMemo`) + entrance **Cascade** (โลโก้ blur-in → คำโปรย → ช่องรหัส → ปุ่ม ทยอยเข้าตาม `@keyframes loginRise` + `loginCardIn` ใน App.css) — ดีไซน์เลือกจาก `public/login-designs.html` (ผสมแบบ 15 + 17)
 - โปรไฟล์ + รหัส (แก้ที่ `auth.ts`): **สาขา** SRC `1234` / KKL `4567` / SSS `9999` · **คลังสินค้า** `0000` · **จัดซื้อ** `1111`
 - แถบผู้ใช้ + ปุ่มออกจากระบบ: `.app-userbar` fixed มุมขวาบน แสดงทุกหน้า (render ใน `App.tsx`)
 - ⚠️ รหัสอยู่ฝั่ง client (เหมือน `VITE_ADMIN_PASSWORD`) — เป็น gate ใช้งานภายใน ไม่ใช่ security จริง
-- ปัจจุบันเป็น **gate เข้าใช้งานอย่างเดียว** — ยังไม่จำกัดสิทธิ์/หน้าตามแผนก (โปรไฟล์เก็บไว้พร้อมต่อยอด role-based ภายหลัง)
+- ส่วนใหญ่ยังเป็น **gate เข้าใช้งาน** — ยังไม่จำกัดหน้าตามแผนก (การเปิด/ปิดหน้าใช้ `app_page_settings` ไม่ใช่โปรไฟล์)
+- **ข้อยกเว้นเดียวที่ผูกกับโปรไฟล์จริง:** ปุ่ม "เลือกตามหมวด" หน้าป้ายราคา — ล็อกสาขาตาม `Profile.branch` และซ่อนทั้งปุ่มถ้า `branch === null`
 
 ## Database (Supabase)
 
@@ -82,7 +85,28 @@ Six-page React app sharing the same `App.css` and Supabase project.
 - RLS: `public read` (SELECT) + `public write` (ALL)
 - Search: queries Supabase directly — NOT client-side filter
 - On mount: fetches only latest `updated_at` for timestamp display
-- Admin upload: CSV → PapaParse → delete all → insert in 500-row chunks
+- Admin upload: CSV (R05.106) → PapaParse → **เช็คหัวคอลัมน์** → confirm → delete all → insert in 500-row chunks
+- ⚠️ ยังเป็น **delete-all + insert** (ไม่ atomic) — ถ้า insert พังกลางทางตารางจะว่าง ต้องอัปโหลดซ้ำ · ต่างจาก `product_category` ที่ใช้ upsert + sweep
+
+**Table: `product_category`** (sku, branch, category_no 1-9, category_name, uploaded_at) — **PK = (sku, branch)**
+- `branch` = **`SRC / KKL / SSS` เท่านั้น** (ดู `CATEGORY_BRANCHES` ใน `App.tsx`) — ⚠️ **ไม่มี `คลังสินค้า`** เพราะคลังไม่ได้ติดป้ายราคาที่ชั้นวาง จึงเป็นชุดที่**สั้นกว่า** `stock.branch` / `TABS` ใน `StockCheckPage` ที่มี 4 สาขา · เขียนสะกดเหมือนกันเป๊ะเพื่อให้เทียบข้ามตารางได้
+- RLS: `public read` + `public write` (ALL) — **เว็บเป็นคนเขียนเอง** ด้วย anon key (ไม่ใช่ .mjs + service_role แบบ stock/customer_history) ถ้าไม่เปิด write policy ปุ่มอัปโหลดจะ 403 เงียบ ๆ · ข้อมูลนี้อ่อนไหวน้อยกว่า `products` ที่เปิด write อยู่แล้วพร้อมราคา
+- สร้างด้วย `product-category-setup.sql` (รันซ้ำได้ ไม่ลบข้อมูล — มี migration ในตัวสำหรับตารางเวอร์ชันแรกที่ PK เป็น `sku` เดี่ยว)
+- Upload: ไฟล์ Location (.xlsx) ผ่านปุ่มในเมนู "เลือกตามหมวด" หน้าป้ายราคา — **ไม่ต้องใส่รหัส admin**
+- **สาขาปลายทาง = สาขาของโปรไฟล์ที่ล็อกอิน เลือกเองไม่ได้** — `guessBranchFromFileName()` ใช้แค่เตือนใน confirm ถ้าชื่อไฟล์ดูเป็นของสาขาอื่น
+- **"แทนที่ทั้งสาขา" ด้วย mark-and-sweep** (ไม่ใช่ merge ล้วน และไม่ใช่ delete-all):
+  1. upsert ทุกแถวด้วย `uploaded_at` ค่าเดียวกันทั้งชุด (`onConflict: 'sku,branch'`)
+  2. `DELETE WHERE branch = X AND uploaded_at < <ชุดนี้>` → ลบ SKU ที่ไม่มีในไฟล์รอบนี้
+  - ⚠️ **ลำดับสำคัญ** — sweep ต้องอยู่หลัง loop upsert สำเร็จครบทุก chunk (chunk ไหน error จะ `throw` ออกไปก่อน) ไม่งั้นจะลบข้อมูลทิ้งตอน upsert ยังไม่ครบ
+  - แก้ปัญหาแถวค้าง: SKU ที่ถูกย้ายไปหมวด `DELETE` หรือเลิกขาย จะถูก parser ข้าม ถ้าใช้ merge ล้วนแถวเก่าจะค้างพร้อมหมวดเดิมตลอดไป
+  - idempotent · ไม่กระทบสาขาอื่น (มี `.eq('branch', …)` คุมทั้ง upsert และ delete)
+- **safety net กันไฟล์ export ไม่ครบ**: ก่อน confirm query จำนวนเดิมของสาขานั้นมาโชว์เทียบ (`เดิม X SKU → ไฟล์ใหม่ Y SKU`) และถ้าไฟล์ใหม่เล็กลงเกิน 20% จะขึ้นเตือน 🚨 ให้ตรวจก่อน
+- ⚠️ มีไฟล์ Location แค่ 2 สาขา (WH→คลังสินค้า, SSS) — **SRC / KKL จะไม่มีหมวดจนกว่าจะมีไฟล์** ปุ่มหมวดของสาขาที่ไม่มีข้อมูลจะ disabled พร้อมข้อความบอก
+- **ไม่มี FK ไป `products(sku)` โดยตั้งใจ:** (1) `products.sku` ไม่ unique (7,907 unique จาก 10,843 แถว) เป็น FK target ไม่ได้ (2) `handleFileUpload` ลบ `products` ทั้งตารางทุกครั้งที่อัปโหลด CSV สินค้า → FK จะพังหรือ cascade ลบหมวดทิ้ง · INNER JOIN ใน view ซ่อน SKU กำพร้าให้อยู่แล้ว
+- View `v_products_by_category` — join `products` × `product_category` ดึงหมวดเดียวจบในคำขอเดียว
+- View `v_product_category_counts` — จำนวนแถวต่อหมวด (badge ทั้ง 9 หมวดในคำขอเดียว)
+- ⚠️ **สินค้าใหม่ใน `products` จะไม่มีหมวด** จนกว่าจะอัปโหลดไฟล์ Location ใหม่
+- ⚠️ `WITH (security_invoker = true)` ต้องใช้ PG15+ — ถ้า error ให้ตัด clause ออก (ทั้ง 2 ตารางเป็น `SELECT USING (true)` อยู่แล้ว)
 
 **Table: `stock`** (id, branch, sku, name, qty, unit, price, uploaded_at)
 - RLS: `public read stock` (SELECT) เท่านั้น — **ไม่มี public write** (anon เขียนไม่ได้)
@@ -134,10 +158,52 @@ Six-page React app sharing the same `App.css` and Supabase project.
 - `truncated` state → แสดง "(จากข้อมูล 1,000 แถวล่าสุด)" เมื่อชนเพดาน
 - ระหว่างค้นหาแสดง skeleton shimmer (`.ch-skeleton` ใน App.css) — `<thead>` แสดงตลอด สลับแค่ `<tbody>` ความกว้างคอลัมน์เลยไม่กระโดด
 
-## CSV Format
+## CSV / Excel Format
 
-**Products CSV** (Admin upload via web):  
-Columns (zero-indexed): A=Barcode(0), B=Price(1), C=Category(2), E=SKU(4), F=Name(5), G=Unit(6). Row 0 = header.
+**Products CSV** — เรียกไฟล์นี้ว่า **R05.106** (Admin → Upload):  
+27 คอลัมน์ · ตรวจกับ export จริง 11 ไฟล์ (พ.ค.–ส.ค. 2569) หัวคอลัมน์นิ่งทุกไฟล์
+
+> 📌 **ชื่อเรียกกลาง = `R05.106`** (ตามเลขรายงานของ Promax) ใช้ชื่อนี้ในโค้ด เอกสาร และ UI ทุกที่
+> **ไม่มีชื่อไฟล์บังคับ** — อัปโหลดผ่านหน้าเว็บ เลือกไฟล์เอง โค้ดรับ `.csv` อะไรก็ได้แล้วตรวจ *หัวคอลัมน์* แทน (ต่างจาก `upload-stock.mjs` / `upload-customer-history.mjs` ที่ล็อกชื่อไฟล์ใน `CSV_CANDIDATES` เพราะรันอัตโนมัติ ไม่มีคนเลือก)
+> ชื่อที่ export กันมาจริงไม่นิ่ง — `05106.CSV`, `R05106.CSV`, `R05.106-26-5-2026.CSV`, `R05106-11082026.CSV` ฯลฯ จึงยึดหัวคอลัมน์เป็นตัวตัดสิน ไม่ใช่ชื่อไฟล์
+> ป้ายใน UI: ปุ่ม **`Upload R05.106`** + subheader `© Data → R05.106 | Assignee : Inbound` ในหน้า Admin
+
+| field | idx | คอลัมน์ | header |
+|---|---|---|---|
+| barcode | 0 | A | `CF_BARCODE` |
+| price | 1 | B | `CF_FMLPRICE` |
+| sku | 4 | E | `CF_ITEMID` |
+| name | 5 | F | `CF_ITEMNAME` |
+| unit | 6 | G | `CF_UNITNAME` |
+| **base_multiple** | **7** | **H** | `CF_BASEMULTIPLE` |
+| **category** | **16** | **Q** | `CF_ITEMGROUPL1_GROUPNAME` |
+
+- **`CF_BASEMULTIPLE` (H) = ตัวคูณหน่วย** — `1` = หน่วยเล็กสุด, `>1` = หน่วยใหญ่ที่บรรจุหลายหน่วยเล็ก
+  - ตัวอย่าง SKU 100098 Antacil: `1`=แผง ฿15 · `10`=10แผง ฿116 · `12`=โหล ฿139 · `50`=กล่อง ฿512
+  - **เก็บทุกแถวลง DB ไม่กรองตอนอัปโหลด** — ไม่งั้นสแกนบาร์โค้ดกล่องแล้วค้นหาไม่เจอ
+  - กรองเหลือ `=1` ที่ **view `v_products_by_category`** เท่านั้น (เฉพาะหน้าเลือกตามหมวด)
+  - ข้อมูลจริง: 10,761 คู่ `sku-unit` → กรองแล้วเหลือ **7,905 = 1 ป้ายต่อ SKU พอดี** · ทุก SKU มีแถว `=1` เสมอ ไม่มีตัวไหนหาย
+- ⚠️ **หมวดอยู่คอลัมน์ Q ไม่ใช่ C** — คอลัมน์ C คือ `CF_COMMENTS` (โน้ตอิสระ ว่าง 10,792/10,841 แถว ที่เหลือเป็นค่ามั่ว เช่น `บาร์เก่า`, `WEGO`) · โค้ดเดิมอ่าน C มาตลอดจน `products.category` เป็น `'ทั่วไป'` เกือบทั้งตาราง — แก้แล้ว 2569-08-11
+- **ค้นคอลัมน์จากชื่อหัวเท่านั้น ไม่มี fallback ตำแหน่ง** — `PRODUCT_CSV_COLUMNS` + `resolveProductCsvColumns()` ใน `App.tsx` · ขาดคอลัมน์ไหน throw ก่อนแตะ DB
+- ทดสอบแล้วว่ากันไฟล์ผิดได้ด้วยรายงาน Promax ตัวจริงที่หน้าตาใกล้เคียง: `R05.105` (ขาด `CF_BARCODE`), `R01.102` สต๊อค (ขาด `CF_BARCODE` + `CF_FMLPRICE`) — สองตัวนี้คือไฟล์ที่มีโอกาสหยิบผิดจริง
+- UTF-8 BOM: ไฟล์จริงมี BOM แต่ **PapaParse ตัดให้เอง** ไม่ต้อง strip
+- `DELETE` เป็นค่าหมวดที่พบมากสุด (4,818 แถว) — **ไม่กรองออก** เก็บตามไฟล์ เพื่อให้ยังค้นหาเจอ
+- ⚠️ **ห้ามสร้างไฟล์ CSV ตัวอย่างสมมติขึ้นมาใหม่** — เดิมมี `sample-products.csv` ที่คอลัมน์ไม่ตรงกับ R05.106 (B เป็น `Brand`) แล้ว `README.md` / `QUICKSTART.md` ก็ไปลอก layout ของไฟล์สมมตินั้นมาเขียนเป็น "รูปแบบไฟล์ CSV" (ราคาอยู่ I) ทำให้เอกสารผิดตามกันทั้งชุด · ลบไฟล์และแก้เอกสารแล้ว 2569-08-11 — ถ้าต้องการไฟล์เทส ให้ใช้ export จริงจาก Promax
+
+**Location XLSX** (export จาก Promax → อัปโหลดผ่านเว็บ ปุ่มในเมนู "เลือกตามหมวด"):  
+มี **2 layout จริง** ที่ต้องรองรับพร้อมกัน — ตำแหน่งคอลัมน์ SKU ต่างกัน แต่ชื่อหัวคอลัมน์เหมือนกัน:
+
+| ไฟล์ | SKU | หมวด |
+|---|---|---|
+| `Location-SSS*.xlsx` | **D**(3) `CF_ITEMID` | **F**(5) `CF_ITEMGROUPL1_GROUPNAME` |
+| `Location-WH.xlsx` | **A**(0) `CF_ITEMID` | **F**(5) `CF_ITEMGROUPL1_GROUPNAME` |
+
+- ⚠️ **หาคอลัมน์ด้วยชื่อหัวคอลัมน์เสมอ ไม่ใช่ตำแหน่ง** (`parseLocationSheet` ใน `App.tsx`) — fallback หมวด = index 5
+- ⚠️ **key ที่เสถียรคือ "เลขนำหน้า" ไม่ใช่ข้อความไทย** — ข้อความต่างกันระหว่างไฟล์: SSS = `"6. เครื่องสำอาง"` แต่ WH = `"6. เวชสำอาง / เครื่องสำอาง"` · WH = `"7. เวชภัณฑ์ / เครื่องมือแพทย์ / ทำแผล"` (มีเว้นวรรครอบ `/`)
+- parse ด้วย `/^\s*(\d{1,2})\s*\./` เก็บเฉพาะ **1–9** — regex เดียวคัด `DELETE` (3,460 แถวใน WH), `อุปกรณ์สำนักงาน / ค่าใช้จ่าย / ขนส่ง`, `12. ของใช้ประจำภายในร้าน`, ค่าว่าง ออกครบ ไม่ต้องทำ blocklist
+- ⚠️ **อ่านชีทแรกเท่านั้น** (ชื่อ `Location`) — ชีท 2 (`R5.106` / `หน่วยสินค้า(R5.106)`) คอลัมน์คนละตำแหน่ง
+- ใช้ `sheet_to_json(ws, { header: 1, ... })` (array-of-arrays) **ไม่ใช่ object mode** เพราะ (ก) ต้องรู้ตำแหน่งคอลัมน์เพื่อทำ fallback (ข) `Location-WH` มี `CF_UNITNAME` ซ้ำ 2 คอลัมน์ object mode จะเปลี่ยนชื่อตัวที่สองเงียบ ๆ
+- ข้อมูลจริง (ส.ค. 2569): รวม 2 ไฟล์ = **4,018 SKU** ในหมวด 1–9 · ไม่มี SKU ชนคนละหมวด · 4,017/4,018 match `products`
 
 **Stock CSV** (export จาก POS → `upload-stock.mjs`):  
 Columns (zero-indexed): D=Branch(3), E=SKU(4), F=Name(5), G=จำนวน(6), H=หน่วย(7), I=ราคาต่อหน่วย(8). Row 0 = header.  
@@ -202,6 +268,43 @@ npm install                 # sync dependencies ให้ตรง package-lock.
 - Manual search → must press 🛒 to add (no auto-add)
 - Press − to qty=0 → row removed from table automatically
 - Table always visible (opacity 0.5 during loading, never hidden)
+- **`visibleProducts` มี 3 branch ลำดับ `category > search > scan`** — ใช้ helper `strip()` ร่วมกัน (filter `hiddenKeys` ก่อน แล้วค่อย reindex)
+- พิมพ์อะไรก็ตามในช่องค้นหา (รวมถึงลบจนว่าง) → ออกจาก category mode · `clearAll` ล้าง category ด้วย
+- category mode ใช้ `categoryLoading` **แยกจาก `isLoading`** — search effect เรียก `setIsLoading(false)` ตอน early-return ซึ่งจะยิงตอน `loadCategory` เคลียร์ `searchTerm` แล้วฆ่า spinner กลางคัน
+
+## Category Select — เลือกตามหมวด (หน้าป้ายราคา)
+
+ปุ่ม "เลือกตามหมวด" ที่ `.selected-table-header` → dropdown **tab สาขา + 9 หมวด** → กดแล้วโหลดสินค้าของหมวดนั้นเฉพาะสาขาที่เลือกขึ้นตาราง (ไม่เข้าตะกร้าทันที) ผู้ใช้ตรวจ/ลบก่อน แล้วกด "เลือกทั้งหมด" → พิมพ์
+
+- **label ปุ่มใช้คำของผู้ใช้ ไม่ใช่ข้อความในไฟล์ Excel** — `PRODUCT_CATEGORIES` ใน `App.tsx` · key คือเลขนำหน้า 1-9
+- ⚠️ **สาขาล็อกตามโปรไฟล์ที่ล็อกอิน เลือกเองไม่ได้** — `Profile.branch` ใน `auth.ts` · ไม่มี tab ให้สลับ แสดงเป็นป้าย `🔒 สาขา X` · เจตนาคือกันปริ้นป้ายผิดสาขา
+- **ฟีเจอร์นี้ใช้เฉพาะสาขาหน้าร้าน `SRC` / `KKL` / `SSS`** — โปรไฟล์ `WAREHOUSE` (คลังสินค้า) และ `PURCHASING` (จัดซื้อ) มี `branch: null` → **ซ่อนปุ่ม "เลือกตามหมวด" ทั้งปุ่ม** เพราะคลังไม่ได้ติดป้ายราคาที่ชั้นวาง และจัดซื้อไม่ใช่หน่วยหน้าร้าน
+- `profileBranch` ตรวจว่าค่าใน `auth.ts` อยู่ใน `CATEGORY_BRANCHES` จริง — สะกดไม่ตรงจะ `console.error` + ซ่อนปุ่ม แทนที่จะได้ 0 แถวเงียบ ๆ (ชื่อสาขาอยู่คนละไฟล์กับที่ใช้ query)
+- เปลี่ยนโปรไฟล์ (logout/login คนละคน) → `useEffect` บน `authProfile?.id` ล้าง category state ทิ้ง เพราะ component ไม่ได้ unmount ตอน logout
+- ปุ่มอัปโหลดบันทึกลง**สาขาของโปรไฟล์เท่านั้น** — `guessBranchFromFileName()` ใช้แค่เตือนใน confirm ถ้าชื่อไฟล์ดูเป็นของสาขาอื่น
+- ปุ่มหมวดของสาขาที่ยังไม่มีข้อมูลจะ disabled + ขึ้นข้อความให้อัปโหลดไฟล์สาขานั้นก่อน
+- ดึงข้อมูลผ่าน view `v_products_by_category` + `.eq('branch', …)` + `.range()` ทีละ 1000 แถว วนจนได้ `< 1000` (**ไม่ใช้ two-step `.in()`** — `.in()` โดน cap 1000 เหมือนกันและตัดข้อมูลเงียบได้ · view ใช้ 2 requests แทน ~11 และ order ที่ server ทำให้ pagination ถูกต้อง)
+- `categoryCounts` cache key = `` `${branch}|${category_no}` `` — 1 คำขอได้ครบทุกสาขาทุกหมวด (สูงสุด 4×9 = 36 แถว)
+- **dedupe `sku-unit` ฝั่ง client** — `products` มีคู่ซ้ำ 80 คู่ (10,843 แถว / 10,763 คู่) ที่ 1,300 แถวชนแน่ → React duplicate key + cart ชนกัน
+- `categoryReqRef` token กัน race — ปุ่ม 9 อันติดกัน fetch ~400ms กดรัวแล้วผลสลับหมวดได้ เช็ค token หลังทุก `await`
+- badge จำนวนต่อหมวดยิงตอน**เปิด dropdown** ไม่ใช่ตอน mount · cache ทั้ง session · ล้างหลังอัปโหลด
+- `เลือกทั้งหมด` เป็น **setState เดียว** (ของเดิมเรียก `handleAddToCart` ใน loop = O(n²)) + `window.confirm` เมื่อเกิน 200 รายการ
+- CSS prefix `.cat-` ทุกตัว — `.selected-table-header` **ใช้ร่วมกับ StockCheck / CustomerHistory / Outbound ห้ามแตะ** · `.cat-dropdown` ต้อง `position: fixed` เลียนแบบ `.cart-dropdown` เพราะ `.product-table-wrap` มี `overflow: auto`
+- **กรองเหลือหน่วยเล็กสุด** — view มี `WHERE COALESCE(p.base_multiple, 1) = 1` → 1 ป้ายต่อ SKU ไม่มีหน่วยใหญ่ (กล่อง/โหล) ปนมา · ดูรายละเอียด `CF_BASEMULTIPLE` ในหัวข้อ CSV / Excel Format
+  - ⚠️ ตัวกรองจะทำงานจริง**หลังอัปโหลด R05.106 รอบใหม่**เท่านั้น — แถวเก่าที่ยังไม่มี `base_multiple` เป็น `NULL` ซึ่ง `COALESCE` ถือว่าเป็นหน่วยเล็กสุด (พฤติกรรมเท่าเดิม ไม่พังระหว่างรอ)
+- จำนวนป้ายต่อหมวด **หลังกรอง** (คาดการณ์จากไฟล์จริง ส.ค. 2569):
+
+| สาขา | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
+|---|---|---|---|---|---|---|---|---|---|
+| SSS | 538 | 390 | 170 | 163 | 290 | 177 | 538 | 167 | 207 |
+| SRC / KKL | — ยังไม่มีไฟล์ Location ของสาขานี้ — |
+
+> ก่อนกรอง SSS หมวด 1 คือ 1,024 แถว → หลังกรองเหลือ 538 (**ลดลง ~47%**) เพราะตัดหน่วยกล่อง/โหล/แพ็กออก
+> หมวดหนักสุดเหลือ ~540 แถว ปัญหา DOM หนักจึงหมดไป
+
+- ⚠️ **`Location-WH.xlsx` ใช้กับฟีเจอร์นี้ไม่ได้แล้ว** — เป็นไฟล์ของคลังซึ่งถูกตัดออก · SRC และ KKL ต้อง export ไฟล์ Location ของสาขาตัวเองมาอัปโหลด ถึงจะใช้ปุ่มนี้ได้ (ระหว่างนี้ปุ่มหมวดจะ disabled พร้อมข้อความบอก)
+
+- ไม่ทำ pagination ฝั่ง UI — โจทย์คือ "พิมพ์ทั้งหมดในหมวด"
 
 ## Print System
 
@@ -209,6 +312,10 @@ Two separate print modes:
 
 1. **ป้ายราคา** — uses `@media print` in App.css, renders `.print-only` div, A4 landscape
 2. **ป้ายบาร์โค้ด (Thermal/QR)** — opens `window.open()` with self-contained HTML+CSS blob
+
+⚠️ **`generateBarcode` มี module-level cache (`barcodeCache: Map<barcode, dataURL>`) — ห้ามเอาออก**  
+`.print-only` render ตลอดเวลา (ซ่อนด้วย CSS `display: none` เท่านั้น) และ `flatMap` ขยายตาม `quantity` → ถ้าไม่ cache จะเรียก `JsBarcode` + `canvas.toDataURL()` ทีละป้าย **ทุกครั้งที่ App re-render** ที่ 1,300 รายการ = แอปค้างทุกครั้งที่พิมพ์ตัวอักษร/hover/กดปุ่ม  
+input เดิม → output เดิมทุกพิกเซล **ไม่ขัดกฎ FROZEN** (`width: 3, height: 90` ไม่ถูกแตะ)
 
 ## Label Design — FROZEN ⚠️
 
@@ -284,6 +391,8 @@ Cart and scan history survive browser close / power loss — no need to re-scan 
 **Clear:** `clearCart` removes `cartItems`; `clearAll` removes both `cartItems` + `scannedHistory`.  
 **Serialize:** Map ↔ `Array.from(map.entries())` / `new Map(entries)` — JSON cannot stringify Map directly.
 
+> `cartItems` อาจโตถึง ~1,300 entries (~160 KB) หลังใช้ "เลือกตามหมวด" + "เลือกทั้งหมด" — ยังต่ำกว่า quota แต่ `JSON.stringify` รันทุกครั้งที่ตะกร้าเปลี่ยน (~5-15 ms)
+
 ## Scanner Workflow
 
 - `scannedHistory: Map<string, Product>` — accumulates barcode-scanned products across searches, **persisted to localStorage**
@@ -323,6 +432,11 @@ Each panel has a close (✕) button and includes product name in subheader.
 ## UI — Misc
 
 - Admin panel shows R05.106 label, Enter key to verify password, Last Updated badge (no version badge)
+- หัวตารางป้ายราคามี 4 ปุ่ม เรียงซ้าย→ขวา: `เลือกตามหมวด │ รายการที่เลือก │ เลือกทั้งหมด │ ลบทั้งหมด` — 2 dropdown (หมวด / ตะกร้า) เปิดพร้อมกันไม่ได้
+- อัปโหลดในโปรเจกต์มี 2 จุดแยกกัน status คนละตัว: **Admin panel → `Upload R05.106`** (CSV, delete-all + insert, `uploadStatus`) และ **เมนูเลือกตามหมวด → `📁 อัปโหลด Location → <สาขา>`** (XLSX, upsert + sweep, `locationStatus`, ไม่ต้องใส่รหัส)
+- ปุ่มอัปโหลดทั้ง 2 จุด**บอกชื่อไฟล์ที่ต้องเลือกบนตัวปุ่ม** — ทั้งคู่รับไฟล์ชื่ออะไรก็ได้ ตัวตัดสินคือหัวคอลัมน์ ป้ายบนปุ่มจึงเป็นตัวช่วยเดียวที่กันหยิบผิดตั้งแต่ต้นทาง
+- ทั้ง 2 จุดมีชุดกันพลาดเหมือนกัน: **เช็คหัวคอลัมน์ก่อนแตะ DB → confirm บอก `เดิม N → ใหม่ M` → เตือน 🚨 ถ้าไฟล์หดเกิน 20% → reset input ใน `finally`**
+- กล่อง `uploadStatus` ต้องมี `whiteSpace: 'pre-line'` — ข้อความ error หัวคอลัมน์เป็นหลายบรรทัด
 
 ## Sale Support (หน้าซัพพอร์ต)
 

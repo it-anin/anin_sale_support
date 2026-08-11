@@ -100,20 +100,29 @@ await labelWriter.from('medicines').insert({ sku: '123', barcode: '...' });
 **วิธี upload:** ผ่านหน้าเว็บ (Admin panel) — ไม่ใช้ script
 1. กรอกรหัสผ่าน Admin (`VITE_ADMIN_PASSWORD`)
 2. เลือกไฟล์ CSV → PapaParse อ่าน
-3. **ลบข้อมูลเก่าทั้งหมด** แล้ว insert ใหม่ทีละ 500 แถว
+3. **เช็คหัวคอลัมน์** — ขาดคอลัมน์ไหน หยุดทันทีโดยไม่ลบอะไร
+4. **confirm** บอก `เดิม N รายการ → ไฟล์ใหม่ M รายการ` (เตือนถ้าไฟล์หดเกิน 20%)
+5. **ลบข้อมูลเก่าทั้งหมด** แล้ว insert ใหม่ทีละ 500 แถว
 
-**รูปแบบ Products CSV** (zero-indexed):
+**รูปแบบ Products CSV** — รายงาน **R05.106** จาก Promax (27 คอลัมน์):
 
-| คอลัมน์ | index | ความหมาย |
-|---|---|---|
-| A | 0 | Barcode |
-| B | 1 | Price (ราคา) |
-| C | 2 | Category (หมวดหมู่) |
-| E | 4 | SKU |
-| F | 5 | Name (ชื่อสินค้า) |
-| G | 6 | Unit (หน่วย) |
+| คอลัมน์ | index | header จริง | ความหมาย |
+|---|---|---|---|
+| A | 0 | `CF_BARCODE` | Barcode |
+| B | 1 | `CF_FMLPRICE` | Price (ราคา) |
+| E | 4 | `CF_ITEMID` | SKU |
+| F | 5 | `CF_ITEMNAME` | Name (ชื่อสินค้า) |
+| G | 6 | `CF_UNITNAME` | Unit (หน่วย) |
+| **Q** | **16** | `CF_ITEMGROUPL1_GROUPNAME` | **Category (หมวดหมู่)** |
 
 > แถว 0 = header
+
+> ⚠️ **คอลัมน์ C ไม่ใช่ Category** — เป็น `CF_COMMENTS` (โน้ตอิสระ ว่าง 10,792 จาก 10,841 แถว)
+> เอกสารฉบับก่อนระบุว่า C = Category ซึ่งผิด และโค้ดก็อ่าน C มาตลอดจน `products.category`
+> เป็น `'ทั่วไป'` เกือบทั้งตาราง — แก้ให้อ่าน Q แล้วเมื่อ 2569-08-11
+
+> ค้นคอลัมน์จาก **ชื่อหัวคอลัมน์** ไม่ใช่ตำแหน่ง (`PRODUCT_CSV_COLUMNS` +
+> `resolveProductCsvColumns()` ใน `App.tsx`) — ไฟล์ผิดรูปแบบจะถูกปฏิเสธก่อนลบข้อมูล
 
 ---
 

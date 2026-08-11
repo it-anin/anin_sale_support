@@ -29,11 +29,16 @@ npm run dev
 
 ## 📋 ไฟล์ CSV ต้องมีคอลัมน์
 
-- **A**: Barcode (เลขบาร์โค้ด)
-- **E**: SKU (รหัสสินค้า)
-- **F**: Name (ชื่อสินค้า)
-- **G**: Unit (หน่วย)
-- **I**: Price (ราคา)
+ใช้ไฟล์ export จากรายงาน **R05.106** ของ Promax ตรง ๆ ไม่ต้องแก้
+
+- **A** `CF_BARCODE` — Barcode (เลขบาร์โค้ด)
+- **B** `CF_FMLPRICE` — Price (ราคา)
+- **E** `CF_ITEMID` — SKU (รหัสสินค้า)
+- **F** `CF_ITEMNAME` — Name (ชื่อสินค้า)
+- **G** `CF_UNITNAME` — Unit (หน่วย)
+- **Q** `CF_ITEMGROUPL1_GROUPNAME` — Category (หมวด)
+
+> ระบบตรวจชื่อหัวคอลัมน์ก่อนอัปโหลด ไฟล์ผิดรูปแบบจะถูกปฏิเสธโดยไม่ลบข้อมูลเดิม
 
 ---
 

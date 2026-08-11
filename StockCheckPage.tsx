@@ -100,7 +100,7 @@ export function StockCheckPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, on
       </div>
 
       <div className="container">
-        <div className="table-search-row">
+        <div className="table-search-row table-search-row--match-table">
           <div className="search-premium">
             <input
               type="text"

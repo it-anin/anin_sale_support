@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import Papa from 'papaparse';
+import * as XLSX from 'xlsx';
 import JsBarcode from 'jsbarcode';
 import QRCode from 'qrcode';
 import { supabase } from './supabase';
@@ -52,6 +53,190 @@ const DEFAULT_THERMAL_SETTINGS: ThermalSettings = {
   qrSize: 7,
   fontSize: 3.5, skuSize: 3.5,
 };
+
+// ── หมวดสินค้า (เลือกตามหมวด) ────────────────────────────────
+// label ใช้คำของผู้ใช้ ไม่ใช่ข้อความในไฟล์ Excel — ข้อความในไฟล์ต่างกันระหว่างสาขา
+// เช่น SSS = "6. เครื่องสำอาง" แต่ WH = "6. เวชสำอาง / เครื่องสำอาง"
+// key ที่เสถียรคือ "เลขนำหน้า" เท่านั้น
+const PRODUCT_CATEGORIES: { no: number; label: string }[] = [
+  { no: 1, label: 'ยาแผนปัจจุบัน (กิน)' },
+  { no: 2, label: 'ยาแผนปัจจุบัน (ภายนอก/เฉพาะที่)' },
+  { no: 3, label: 'ยาแผนโบราณ-สมุนไพร (กิน)' },
+  { no: 4, label: 'ยาแผนโบราณ-สมุนไพร (ภายนอก/เฉพาะที่)' },
+  { no: 5, label: 'อาหารเสริม' },
+  { no: 6, label: 'เวชสำอาง/เครื่องสำอาง' },
+  { no: 7, label: 'เวชภัณฑ์/เครื่องมือแพทย์/ทำแผล' },
+  { no: 8, label: 'สินค้าอุปโภค/บริโภค' },
+  { no: 9, label: 'ยาโรคเรื้อรัง/พิเศษ/ประสาท/ฉีด' },
+];
+
+// สาขาที่ปริ้นป้ายตามหมวดได้ — **เฉพาะสาขาหน้าร้าน**
+// ไม่มี 'คลังสินค้า' โดยตั้งใจ (คลังไม่ได้ติดป้ายราคาที่ชั้นวาง) — ชุดนี้จึงสั้นกว่า
+// TABS ใน StockCheckPage.tsx / BRANCH_MAP ใน upload-stock.mjs ที่มี 4 สาขา
+const CATEGORY_BRANCHES = ['SRC', 'KKL', 'SSS'] as const;
+
+// เดาสาขาจากชื่อไฟล์ — ใช้เตือนใน confirm เท่านั้น ไม่ใช่ตัวตัดสิน
+// สาขาจริงมาจากโปรไฟล์ที่ล็อกอิน
+// ยังเดา 'คลังสินค้า' ไว้ทั้งที่ปริ้นไม่ได้ เพื่อให้เตือนได้ถ้าเผลอเอาไฟล์ WH มาลงสาขาหน้าร้าน
+function guessBranchFromFileName(name: string): string | null {
+  const n = name.toLowerCase();
+  if (/\bwh\b|warehouse|คลัง/.test(n)) return 'คลังสินค้า';
+  if (/\bsss\b/.test(n)) return 'SSS';
+  if (/\bkkl\b/.test(n)) return 'KKL';
+  if (/\bsrc\b|front\s*store/.test(n)) return 'SRC';
+  return null;
+}
+
+const CAT_PREFIX_RE = /^\s*(\d{1,2})\s*\./;
+
+// ── Barcode generator + cache ────────────────────────────────
+// ⚠️ ต้อง cache: .print-only render ตลอดเวลา (ซ่อนด้วย CSS display:none เท่านั้น)
+// และขยายตาม quantity → ถ้าไม่ cache จะเรียก JsBarcode + canvas.toDataURL()
+// ทีละป้าย ทุกครั้งที่ App re-render (1,300 รายการ = แอปค้าง)
+// input เดิม → output เดิมทุกพิกเซล ไม่ขัดกฎ FROZEN (width: 3, height: 90 ไม่ถูกแตะ)
+const barcodeCache = new Map<string, string>();
+
+const generateBarcode = (barcode: string): string => {
+  const hit = barcodeCache.get(barcode);
+  if (hit !== undefined) return hit;
+  try {
+    const canvas = document.createElement('canvas');
+    JsBarcode(canvas, barcode, {
+      format: 'CODE128',
+      width: 3,
+      height: 90,
+      displayValue: false,
+      margin: 0
+    });
+    const url = canvas.toDataURL('image/png');
+    barcodeCache.set(barcode, url);
+    return url;
+  } catch (error) {
+    console.error('Barcode generation error:', error);
+    return '';
+  }
+};
+
+// ── Products CSV (รายงาน R05.106 จาก Promax) ────────────────
+// 27 คอลัมน์ ชื่อหัวคอลัมน์นิ่งมาตลอด (ตรวจกับ export จริง 11 ไฟล์ พ.ค.–ส.ค. 2569)
+// ⚠️ ค้นคอลัมน์จาก "ชื่อหัว" เท่านั้น ไม่มี fallback ตำแหน่ง — ถ้า fallback ไฟล์ผิดรูปแบบ
+//    จะหลุดผ่านแล้วลบ products ทิ้งทั้งตาราง ซึ่งเป็นปัญหาที่ validation นี้มีไว้กัน
+const PRODUCT_CSV_COLUMNS = [
+  { key: 'barcode',  header: 'CF_BARCODE',               label: 'บาร์โค้ด' },
+  { key: 'price',    header: 'CF_FMLPRICE',              label: 'ราคา' },
+  { key: 'sku',      header: 'CF_ITEMID',                label: 'SKU' },
+  { key: 'name',     header: 'CF_ITEMNAME',              label: 'ชื่อสินค้า' },
+  { key: 'unit',     header: 'CF_UNITNAME',              label: 'หน่วย' },
+  // คอลัมน์ H — 1 = หน่วยเล็กสุด, >1 = หน่วยใหญ่ (กล่อง = 10 แผง ฯลฯ)
+  // เก็บทุกแถว การกรองเหลือ =1 ทำที่ view v_products_by_category (หน้าเลือกตามหมวด)
+  { key: 'baseMultiple', header: 'CF_BASEMULTIPLE',      label: 'ตัวคูณหน่วย' },
+  // หมวดอยู่คอลัมน์ Q ไม่ใช่ C — C คือ CF_COMMENTS (โน้ตอิสระ ว่าง 99.5% ของแถว)
+  { key: 'category', header: 'CF_ITEMGROUPL1_GROUPNAME', label: 'หมวด' },
+] as const;
+
+type ProductCsvKey = typeof PRODUCT_CSV_COLUMNS[number]['key'];
+
+// index → ตัวอักษรคอลัมน์แบบ Excel (0→A, 25→Z, 26→AA) ใช้โชว์ใน confirm ให้ตรวจง่าย
+function colLetter(idx: number): string {
+  let s = '';
+  for (let n = idx; n >= 0; n = Math.floor(n / 26) - 1) {
+    s = String.fromCharCode(65 + (n % 26)) + s;
+  }
+  return s;
+}
+
+// ค้น index ของทุกคอลัมน์ที่ต้องใช้จากแถวหัว — ขาดตัวไหน throw ทันทีก่อนแตะ DB
+function resolveProductCsvColumns(headerRow: string[]): Record<ProductCsvKey, number> {
+  const head = headerRow.map(h => String(h ?? '').trim().toUpperCase());
+  const idx = {} as Record<ProductCsvKey, number>;
+  const missing: string[] = [];
+
+  for (const col of PRODUCT_CSV_COLUMNS) {
+    const i = head.indexOf(col.header);
+    if (i < 0) missing.push(`${col.header} (${col.label})`);
+    else idx[col.key] = i;
+  }
+
+  if (missing.length > 0) {
+    const found = head.filter(Boolean).slice(0, 8).join(', ');
+    throw new Error(
+      `ไฟล์นี้ไม่ใช่รายงาน R05.106\n\n` +
+      `ไม่พบคอลัมน์: ${missing.join(', ')}\n\n` +
+      `หัวคอลัมน์ที่เจอ: ${found}${head.filter(Boolean).length > 8 ? ' ...' : ''}\n\n` +
+      `→ ยังไม่ได้ลบข้อมูลเดิม`
+    );
+  }
+  return idx;
+}
+
+interface CategoryRow { sku: string; category_no: number; category_name: string }
+interface LocationParseResult {
+  rows: CategoryRow[];
+  skipped: number;
+  conflicts: string[];
+  skuHeader: string;
+  catHeader: string;
+  usedFallback: boolean;
+}
+
+// อ่านชีท Location จากไฟล์ .xlsx → SKU + เลขหมวด 1-9
+// ตำแหน่งคอลัมน์ต่างกันระหว่างไฟล์ (SSS: SKU=D, WH: SKU=A) แต่ชื่อหัวคอลัมน์เหมือนกัน
+// → หาโดยชื่อหัวคอลัมน์เสมอ (หมวด fallback เป็นคอลัมน์ F ตามที่ผู้ใช้ระบุ)
+function parseLocationSheet(ws: XLSX.WorkSheet): LocationParseResult {
+  // header:1 (array-of-arrays) ไม่ใช่ object mode เพราะ (ก) ต้องรู้ตำแหน่งคอลัมน์เพื่อทำ fallback index 5
+  // (ข) Location-WH มี CF_UNITNAME ซ้ำ 2 คอลัมน์ object mode จะเปลี่ยนชื่อตัวที่สองเงียบ ๆ
+  // raw:false → ใช้ค่าที่แสดงผล กัน SKU ที่เป็น text ถูกแปลงเป็นตัวเลข
+  const aoa = XLSX.utils.sheet_to_json<unknown[]>(ws, {
+    header: 1, defval: '', blankrows: false, raw: false,
+  });
+  if (aoa.length < 2) throw new Error('ไฟล์ไม่มีข้อมูล');
+
+  const head = (aoa[0] as unknown[]).map(h => String(h ?? '').trim().toUpperCase());
+
+  let skuIdx = head.indexOf('CF_ITEMID');
+  if (skuIdx < 0) skuIdx = head.findIndex(h => /^CF[_ ]?ITEM[_ ]?ID$/.test(h));
+  if (skuIdx < 0) {
+    throw new Error(`ไม่พบคอลัมน์ CF_ITEMID (หัวคอลัมน์ที่เจอ: ${head.slice(0, 10).join(', ')})`);
+  }
+
+  let catIdx = head.indexOf('CF_ITEMGROUPL1_GROUPNAME');
+  let usedFallback = false;
+  if (catIdx < 0) catIdx = head.findIndex(h => h.includes('GROUPL1'));
+  if (catIdx < 0) { catIdx = 5; usedFallback = true; }   // คอลัมน์ F
+
+  const map = new Map<string, CategoryRow>();
+  const conflicts = new Set<string>();
+  let skipped = 0;
+
+  for (let i = 1; i < aoa.length; i++) {
+    const r = aoa[i] as unknown[];
+    let sku = String(r[skuIdx] ?? '').trim();
+    const rawCat = String(r[catIdx] ?? '').trim();
+    if (!sku || !rawCat) { skipped++; continue; }
+
+    // กัน xlsx ตัด 0 นำหน้าเมื่อ cell เป็นตัวเลข (products ใช้ SKU 6 หลัก)
+    if (/^\d{1,5}$/.test(sku)) sku = sku.padStart(6, '0');
+
+    // regex เดียวคัดออกครบ: 'DELETE', 'อุปกรณ์สำนักงาน / ค่าใช้จ่าย / ขนส่ง', ค่าว่าง
+    const m = CAT_PREFIX_RE.exec(rawCat);
+    if (!m) { skipped++; continue; }
+    const no = parseInt(m[1], 10);
+    if (!(no >= 1 && no <= 9)) { skipped++; continue; }   // ตัด '12. ของใช้ประจำภายในร้าน'
+
+    const prev = map.get(sku);
+    if (prev) { if (prev.category_no !== no) conflicts.add(sku); continue; }  // เก็บค่าแรก
+    map.set(sku, { sku, category_no: no, category_name: rawCat });
+  }
+
+  return {
+    rows: [...map.values()],
+    skipped,
+    conflicts: [...conflicts],
+    skuHeader: head[skuIdx] ?? `col ${skuIdx}`,
+    catHeader: head[catIdx] ?? `col ${catIdx}`,
+    usedFallback,
+  };
+}
 
 // Sheet/Grid ค่าตายตัว — ห้ามแก้ไขโดยไม่ได้รับอนุญาต
 const FIXED_THERMAL: Pick<ThermalSettings, 'sheetW'|'sheetH'|'cols'|'rows'|'gapX'|'gapY'|'offsetTop'|'offsetLeft'> = {
@@ -154,6 +339,22 @@ const App: React.FC = () => {
   const [rowQty, setRowQty] = useState<Map<string, number>>(new Map());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const lastAutoAddedBarcode = useRef<string>('');
+
+  // ── เลือกตามหมวด ──
+  const [showCategoryMenu, setShowCategoryMenu] = useState(false);
+  const [activeCategory, setActiveCategory] = useState<number | null>(null);
+  const [categoryProducts, setCategoryProducts] = useState<Product[]>([]);
+  // แยกจาก isLoading เพราะ search effect เรียก setIsLoading(false) ตอน early-return
+  // ซึ่งจะยิงตอน loadCategory เคลียร์ searchTerm แล้วฆ่า spinner กลางคัน
+  const [categoryLoading, setCategoryLoading] = useState(false);
+  const [categoryError, setCategoryError] = useState('');
+  // key = `${branch}|${category_no}` — 1 คำขอได้ครบทุกสาขาทุกหมวด (สูงสุด 36 แถว)
+  const [categoryCounts, setCategoryCounts] = useState<Record<string, number> | null>(null);
+  const categoryReqRef = useRef(0);   // token กัน race เมื่อกดหลายหมวดเร็ว ๆ
+  // status แยกจาก uploadStatus ไม่งั้นอัปโหลด Location จะลบผลอัปโหลด CSV สินค้าทิ้ง
+  const [locationStatus, setLocationStatus] = useState('');
+  const [locationBusy, setLocationBusy] = useState(false);
+  const locationFileRef = useRef<HTMLInputElement>(null);
   const [currentPage, setCurrentPage] = useState<PageId>('pricetag');
   const [authProfile, setAuthProfile] = useState<Profile | null>(loadAuthProfile);
 
@@ -176,6 +377,34 @@ const App: React.FC = () => {
     clearAuthProfile();
     setAuthProfile(null);
   };
+
+  // สาขาของผู้ใช้ที่ล็อกอินอยู่ — ล็อกตายตาม profile เปลี่ยนเองไม่ได้ (กันปริ้นผิดสาขา)
+  // null = ไม่สังกัดสาขา (จัดซื้อ) → ซ่อนปุ่ม "เลือกตามหมวด" ทั้งปุ่ม
+  const profileBranch = useMemo(() => {
+    const b = authProfile?.branch ?? null;
+    if (!b) return null;
+    // ชื่อสาขาอยู่คนละไฟล์ (auth.ts) กับที่ใช้ query ถ้าสะกดไม่ตรง DB จะได้ 0 แถวเงียบ ๆ ตลอดไป
+    if (!(CATEGORY_BRANCHES as readonly string[]).includes(b)) {
+      console.error(
+        `[เลือกตามหมวด] สาขา "${b}" ของโปรไฟล์ ${authProfile?.id} ไม่ตรงกับ CATEGORY_BRANCHES ` +
+        `(${CATEGORY_BRANCHES.join(' / ')}) — ซ่อนปุ่มไว้ก่อน แก้ที่ auth.ts`
+      );
+      return null;
+    }
+    return b;
+  }, [authProfile?.branch, authProfile?.id]);
+
+  // เปลี่ยนโปรไฟล์ (logout/login คนละคน) → ทิ้งข้อมูลหมวดของสาขาเดิม
+  // component ไม่ได้ unmount ตอน logout state จึงค้างอยู่ถ้าไม่ล้าง
+  useEffect(() => {
+    categoryReqRef.current++;
+    setActiveCategory(null);
+    setCategoryProducts([]);
+    setCategoryError('');
+    setCategoryLoading(false);
+    setShowCategoryMenu(false);
+    setLocationStatus('');
+  }, [authProfile?.id]);
 
   // โหลดสถานะเปิด/ปิดหน้าจาก Supabase ตอน mount + เด้งออกจากหน้าที่ถูกปิด
   useEffect(() => {
@@ -249,54 +478,198 @@ const App: React.FC = () => {
       skipEmptyLines: true,
       quoteChar: '"',
       complete: async (results) => {
-        const parsedProducts: Product[] = [];
-        const data = results.data as string[][];
+        try {
+          const data = results.data as string[][];
+          if (data.length < 2) throw new Error('ไฟล์ไม่มีข้อมูล');
 
-        for (let i = 1; i < data.length; i++) {
-          const row = data[i];
-          if (row.length > 4 && row[0] && row[4]) {
-            const product: Product = {
-              barcode: row[0]?.trim() || '',
-              sku: row[4]?.trim() || '',
-              name: (row[5]?.trim() || '').split(/[\r\n]/)[0].trim(),
-              unit: row[6]?.trim() || '',
-              price: parseFloat(row[1]) || 0,   // col B = ราคาของ Barcode นั้น
-              category: row[2]?.trim() || 'ทั่วไป',
-              rowIndex: i
-            };
-            if (product.barcode || product.sku) parsedProducts.push(product);
+          // ── เช็คหัวคอลัมน์ก่อนแตะ DB — ไฟล์ผิดรูปแบบต้องตกตรงนี้ ──
+          // (PapaParse ตัด UTF-8 BOM ให้แล้ว head[0] จึงสะอาด)
+          const col = resolveProductCsvColumns(data[0]);
+
+          // baseMultiple ไม่อยู่ใน Product (ไม่ได้ใช้แสดงผล) แต่ต้องส่งขึ้น DB
+          const parsedProducts: (Product & { baseMultiple: number | null })[] = [];
+          for (let i = 1; i < data.length; i++) {
+            const row = data[i];
+            const barcode = (row[col.barcode] ?? '').trim();
+            const sku = (row[col.sku] ?? '').trim();
+            if (!barcode || !sku) continue;
+            const bm = parseFloat(row[col.baseMultiple]);
+            parsedProducts.push({
+              barcode,
+              sku,
+              name: ((row[col.name] ?? '').trim()).split(/[\r\n]/)[0].trim(),
+              unit: (row[col.unit] ?? '').trim(),
+              price: parseFloat(row[col.price]) || 0,
+              category: (row[col.category] ?? '').trim() || 'ทั่วไป',
+              baseMultiple: Number.isFinite(bm) ? bm : null,
+              rowIndex: i,
+            });
           }
+          if (parsedProducts.length === 0) throw new Error('ไม่พบแถวที่มีทั้งบาร์โค้ดและ SKU');
+
+          // ── ยืนยันก่อนลบ — โชว์จำนวนเดิมเทียบไฟล์ใหม่ ──
+          setUploadStatus('กำลังตรวจข้อมูลเดิม...');
+          const { count: existing } = await supabase
+            .from('products')
+            .select('id', { count: 'exact', head: true });
+
+          const shrink = existing && existing > 0 ? 1 - parsedProducts.length / existing : 0;
+          const shrinkWarn = shrink > 0.2
+            ? `\n\n🚨 ไฟล์นี้น้อยกว่าข้อมูลเดิม ${Math.round(shrink * 100)}% — ถ้า export มาไม่ครบ ข้อมูลที่หายจะถูกลบ\nไม่แน่ใจให้กด Cancel แล้ว export ใหม่`
+            : '';
+
+          const mapping = PRODUCT_CSV_COLUMNS
+            .map(c => `${c.label}=${colLetter(col[c.key])}`)
+            .join(' · ');
+
+          const baseUnits = parsedProducts.filter(p => p.baseMultiple === 1).length;
+
+          const ok = window.confirm(
+            `ไฟล์: ${file.name}\n` +
+            `✅ ตรวจหัวคอลัมน์ผ่าน (R05.106)\n` +
+            `   ${mapping}\n\n` +
+            `   เดิมมี ${(existing ?? 0).toLocaleString()} รายการ → ไฟล์ใหม่ ${parsedProducts.length.toLocaleString()} รายการ\n` +
+            `   ในนั้นเป็นหน่วยเล็กสุด ${baseUnits.toLocaleString()} รายการ (หน้าเลือกตามหมวดจะเห็นเท่านี้)\n\n` +
+            `⚠️ จะลบข้อมูลเดิมทั้งหมดแล้วใส่ใหม่` +
+            shrinkWarn
+          );
+          if (!ok) { setUploadStatus(''); return; }
+
+          setUploadStatus(`กำลังอัปโหลด ${parsedProducts.length.toLocaleString()} รายการ...`);
+
+          // ลบข้อมูลเก่าและใส่ใหม่
+          const { error: delError } = await supabase.from('products').delete().neq('id', 0);
+          if (delError) throw new Error(delError.message);
+
+          const rows = parsedProducts.map(p => ({ barcode: p.barcode, sku: p.sku, name: p.name, unit: p.unit, price: p.price, category: p.category, base_multiple: p.baseMultiple }));
+          const CHUNK = 500;
+          for (let i = 0; i < rows.length; i += CHUNK) {
+            setUploadStatus(`กำลังอัปโหลด ${Math.min(i + CHUNK, rows.length).toLocaleString()}/${rows.length.toLocaleString()} รายการ...`);
+            const { error } = await supabase.from('products').insert(rows.slice(i, i + CHUNK));
+            if (error) throw new Error(error.message);
+          }
+
+          setUploadStatus(`✅ อัปโหลดสำเร็จ ${parsedProducts.length.toLocaleString()} รายการ`);
+        } catch (e) {
+          setUploadStatus(`❌ ${e instanceof Error ? e.message : String(e)}`);
+        } finally {
+          setIsLoading(false);
+          // reset เสมอ — ของเดิม reset เฉพาะตอนสำเร็จ ทำให้เลือกไฟล์เดิมซ้ำหลัง error ไม่ทำงาน
+          if (event.target) event.target.value = '';
         }
-
-        setUploadStatus(`กำลังอัปโหลด ${parsedProducts.length} รายการ...`);
-
-        // ลบข้อมูลเก่าและใส่ใหม่
-        const { error: delError } = await supabase.from('products').delete().neq('id', 0);
-        if (delError) { setUploadStatus('เกิดข้อผิดพลาด: ' + delError.message); setIsLoading(false); return; }
-
-        const rows = parsedProducts.map(p => ({ barcode: p.barcode, sku: p.sku, name: p.name, unit: p.unit, price: p.price, category: p.category }));
-        const CHUNK = 500;
-        for (let i = 0; i < rows.length; i += CHUNK) {
-          const { error } = await supabase.from('products').insert(rows.slice(i, i + CHUNK));
-          if (error) { setUploadStatus('เกิดข้อผิดพลาด: ' + error.message); setIsLoading(false); return; }
-        }
-
-        setUploadStatus(`✅ อัปโหลดสำเร็จ ${parsedProducts.length} รายการ`);
-        setIsLoading(false);
-        if (event.target) event.target.value = '';
       },
       error: (error) => {
         console.error('Error parsing CSV:', error);
-        setUploadStatus('เกิดข้อผิดพลาด: ' + error.message);
+        setUploadStatus('❌ อ่านไฟล์ไม่สำเร็จ: ' + error.message);
         setIsLoading(false);
+        if (event.target) event.target.value = '';
       }
     });
+  };
+
+  // อัปโหลดไฟล์ Location (.xlsx) → ตาราง product_category
+  // "แทนที่ทั้งสาขา": upsert ทุกแถวด้วย uploaded_at ชุดเดียว แล้วลบแถวของสาขานี้ที่ timestamp เก่ากว่า
+  // (= ไม่มีในไฟล์รอบนี้ เช่นถูกย้ายไปหมวด DELETE หรือเลิกขาย) — สาขาอื่นไม่กระทบ
+  const handleLocationUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setLocationBusy(true);
+    setLocationStatus('กำลังอ่านไฟล์ Location...');
+    try {
+      const wb = XLSX.read(await file.arrayBuffer());
+      // ต้องอ่านชีทแรกเท่านั้น — ชีท 2 (R5.106) คอลัมน์คนละตำแหน่ง
+      const sheetName = wb.SheetNames.find(n => n.trim().toLowerCase() === 'location') ?? wb.SheetNames[0];
+      const ws = wb.Sheets[sheetName];
+      if (!ws) throw new Error('ไม่พบชีทข้อมูลในไฟล์');
+
+      const { rows, skipped, conflicts, skuHeader, catHeader, usedFallback } = parseLocationSheet(ws);
+      if (rows.length === 0) throw new Error('ไม่พบแถวที่มีหมวด 1-9');
+
+      // สาขาที่บันทึก = สาขาของโปรไฟล์ที่ล็อกอิน เปลี่ยนเองไม่ได้
+      const branch = profileBranch;
+      if (!branch) throw new Error('โปรไฟล์นี้ไม่สังกัดสาขา อัปโหลดไม่ได้');
+      const guessed = guessBranchFromFileName(file.name);
+      const mismatch = guessed && guessed !== branch
+        ? `\n\n⚠️ ชื่อไฟล์ดูเหมือนของสาขา "${guessed}" แต่คุณล็อกอินเป็น "${branch}"\nถ้าไฟล์ผิด กด Cancel แล้วเลือกไฟล์ของสาขา ${branch}`
+        : '';
+
+      // จำนวนที่มีอยู่เดิม — ให้ผู้ใช้เทียบก่อนตัดสินใจ กันเผลออัปโหลดไฟล์ที่ export มาไม่ครบ
+      setLocationStatus('กำลังตรวจข้อมูลเดิม...');
+      const { count: existing } = await supabase
+        .from('product_category')
+        .select('sku', { count: 'exact', head: true })
+        .eq('branch', branch);
+
+      // ไฟล์เล็กลงผิดปกติ = สัญญาณว่า export มาไม่ครบ
+      const shrink = existing && existing > 0 ? 1 - rows.length / existing : 0;
+      const shrinkWarn = shrink > 0.2
+        ? `\n\n🚨 ไฟล์นี้น้อยกว่าข้อมูลเดิม ${Math.round(shrink * 100)}% — ถ้า export มาไม่ครบ ข้อมูลที่หายจะถูกลบ\nไม่แน่ใจให้กด Cancel แล้ว export ใหม่`
+        : '';
+
+      const ok = window.confirm(
+        `ไฟล์: ${file.name}\nชีท: ${sheetName}\n` +
+        `คอลัมน์ SKU: ${skuHeader} · คอลัมน์หมวด: ${catHeader}${usedFallback ? ' (ใช้คอลัมน์ F)' : ''}\n\n` +
+        `▶ บันทึกลงสาขา: ${branch}\n` +
+        `   เดิมมี ${(existing ?? 0).toLocaleString()} SKU → ไฟล์ใหม่ ${rows.length.toLocaleString()} SKU\n\n` +
+        `ข้าม ${skipped.toLocaleString()} แถว (DELETE / ว่าง / นอกหมวด 1-9)` +
+        (conflicts.length ? `\n⚠️ SKU ซ้ำคนละหมวด ${conflicts.length} รายการ (จะใช้ค่าแรก)` : '') +
+        `\n\n⚠️ แทนที่ทั้งสาขา ${branch}: SKU ที่ไม่มีในไฟล์นี้จะถูกลบออก (สาขาอื่นไม่กระทบ)` +
+        shrinkWarn +
+        mismatch
+      );
+      if (!ok) { setLocationStatus(''); return; }
+
+      const CHUNK = 500;
+      const uploadedAt = new Date().toISOString();
+      const payload = rows.map(r => ({ ...r, branch, uploaded_at: uploadedAt }));
+      for (let i = 0; i < payload.length; i += CHUNK) {
+        setLocationStatus(`กำลังบันทึก ${Math.min(i + CHUNK, payload.length).toLocaleString()}/${payload.length.toLocaleString()} รายการ...`);
+        const { error } = await supabase
+          .from('product_category')
+          .upsert(payload.slice(i, i + CHUNK), { onConflict: 'sku,branch' });
+        if (error) {
+          if (error.code === '42P01' || error.code === 'PGRST205' || error.code === '42703') {
+            throw new Error('schema ไม่ตรง — รัน product-category-setup.sql ใน Supabase ก่อน');
+          }
+          throw new Error(error.message);
+        }
+      }
+
+      // sweep: ลบแถวของสาขานี้ที่ไม่ได้ถูกแตะในรอบนี้ (uploaded_at เก่ากว่า timestamp ชุดนี้)
+      // ⚠️ ต้องอยู่หลัง loop upsert — ถ้า chunk ไหน error จะ throw ออกไปก่อนถึงบรรทัดนี้
+      //    จึงไม่มีทางลบข้อมูลทิ้งตอนที่ upsert ยังไม่ครบ
+      setLocationStatus('กำลังลบรายการที่ไม่มีในไฟล์...');
+      const { count: removed, error: pruneErr } = await supabase
+        .from('product_category')
+        .delete({ count: 'exact' })
+        .eq('branch', branch)
+        .lt('uploaded_at', uploadedAt);
+      if (pruneErr) throw new Error(`ลบรายการเก่าไม่สำเร็จ: ${pruneErr.message}`);
+
+      setLocationStatus(
+        `✅ ${branch}: ${rows.length.toLocaleString()} SKU` +
+        (removed ? ` · ลบที่ไม่มีในไฟล์ ${removed.toLocaleString()}` : '') +
+        ` · ข้าม ${skipped.toLocaleString()} แถว` +
+        (conflicts.length ? ` · ⚠️ ซ้ำคนละหมวด ${conflicts.length}` : '')
+      );
+      setCategoryCounts(null);                                            // ล้าง cache badge
+      if (activeCategory !== null) loadCategory(activeCategory, branch);  // reload หมวดที่เปิดอยู่
+    } catch (e) {
+      setLocationStatus(`❌ ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setLocationBusy(false);
+      // reset ใน finally เสมอ — ไม่ใช่เฉพาะตอนสำเร็จ ไม่งั้นเลือกไฟล์เดิมซ้ำหลัง error ไม่ทำงาน
+      if (event.target) event.target.value = '';
+    }
   };
 
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
 
   // Handle search input change
   const handleSearchChange = (value: string) => {
+    // พิมพ์อะไรก็ตาม (รวมถึงลบจนว่าง) = ออกจากโหมดหมวด
+    // กันสถานะซ่อนเร้นแบบ "ช่องค้นหาว่างแต่ยังอยู่ในหมวด"
+    if (activeCategory !== null) exitCategory();
     setSearchInput(value);
     const trimmed = value.trim();
     
@@ -392,13 +765,18 @@ const App: React.FC = () => {
     return () => { clearTimeout(timer); controller.abort(); };
   }, [searchTerm]);
 
+  // ลำดับความสำคัญ: category > search > scan
   const visibleProducts = useMemo(() => {
+    const strip = (list: Product[]) =>
+      list.filter((p: Product) => !hiddenKeys.has(`${p.sku}-${p.unit}`))
+          .map((p: Product, i: number) => ({ ...p, rowIndex: i }));
+
+    // category mode — categoryProducts dedupe sku-unit มาแล้วตอน fetch
+    if (activeCategory !== null) return strip(categoryProducts);
+
     //  search term  show only filteredProducts
-    if (searchTerm.trim()) {
-      return filteredProducts
-        .filter((p: Product) => !hiddenKeys.has(`${p.sku}-${p.unit}`))
-        .map((p: Product, i: number) => ({ ...p, rowIndex: i }));
-    }
+    if (searchTerm.trim()) return strip(filteredProducts);
+
     // No search term: show scannedHistory (scan mode)
     const map = new Map<string, Product>();
     for (const p of scannedHistory.values()) {
@@ -406,7 +784,7 @@ const App: React.FC = () => {
       if (!hiddenKeys.has(key)) map.set(key, p);
     }
     return Array.from(map.values()).map((p, i) => ({ ...p, rowIndex: i }));
-  }, [filteredProducts, hiddenKeys, scannedHistory, searchTerm]);
+  }, [activeCategory, categoryProducts, filteredProducts, hiddenKeys, scannedHistory, searchTerm]);
 
   // Auto-add เมื่อค้นหาด้วย barcode ตรง (เช่น สแกนเนอร์)
   useEffect(() => {
@@ -450,9 +828,105 @@ const App: React.FC = () => {
     });
   }, []);
 
+  // batch เป็น setState เดียว — ของเดิมเรียก handleAddToCart ใน loop ทำให้ new Map(prev)
+  // ซ้ำทุกรอบ (O(n²)) ที่ 1,300 รายการ ≈ 850k inserts
   const handleSelectAll = useCallback(() => {
-    visibleProducts.forEach(p => handleAddToCart(p, rowQty.get(`${p.sku}-${p.unit}`) ?? 1));
-  }, [visibleProducts, handleAddToCart, rowQty]);
+    const items = visibleProducts;
+    if (items.length === 0) return;
+    if (items.length > 200 && !window.confirm(
+      `จะเพิ่มสินค้า ${items.length.toLocaleString()} รายการเข้าตะกร้า — อาจใช้เวลาสักครู่\nยืนยันหรือไม่?`
+    )) return;
+    setSelectedProducts(prev => {
+      const next = new Map(prev);
+      for (const p of items) {
+        const key = `${p.sku}-${p.unit}`;
+        next.set(key, { ...p, quantity: rowQty.get(key) ?? 1 });
+      }
+      return next;
+    });
+  }, [visibleProducts, rowQty]);
+
+  // ── เลือกตามหมวด: ดึงสินค้าทั้งหมดของหมวดผ่าน view v_products_by_category ──
+  const exitCategory = useCallback(() => {
+    categoryReqRef.current++;          // ยกเลิกคำขอที่ค้างอยู่
+    setActiveCategory(null);
+    setCategoryProducts([]);
+    setCategoryError('');
+    setCategoryLoading(false);
+    setShowCategoryMenu(false);
+    setHiddenKeys(new Set());
+  }, []);
+
+  const loadCategory = useCallback(async (no: number, branch: string) => {
+    const token = ++categoryReqRef.current;
+    setShowCategoryMenu(false);
+    setShowCart(false);
+    setActiveCategory(no);
+    setCategoryProducts([]);
+    setCategoryError('');
+    setCategoryLoading(true);
+    setHiddenKeys(new Set());
+    setSearchInput('');
+    setSearchTerm('');
+
+    const PAGE = 1000;                 // Supabase db-max-rows default
+    const acc: Product[] = [];
+    const seen = new Set<string>();    // dedupe sku-unit — products มีคู่ซ้ำ 80 คู่
+    try {
+      for (let from = 0; ; from += PAGE) {
+        const { data, error } = await supabase
+          .from('v_products_by_category')
+          .select('barcode, sku, name, unit, price, category_name')
+          .eq('category_no', no)
+          .eq('branch', branch)
+          .order('sku', { ascending: true })
+          .order('unit', { ascending: true })
+          .order('barcode', { ascending: true })
+          .range(from, from + PAGE - 1);
+        if (error) throw error;
+        if (token !== categoryReqRef.current) return;   // มีคำขอใหม่แล้ว ทิ้งผลนี้
+        if (!data || data.length === 0) break;
+        for (const row of data) {
+          const key = `${row.sku ?? ''}-${row.unit ?? ''}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          acc.push({
+            barcode: row.barcode || '',
+            sku: row.sku || '',
+            name: row.name || '',
+            unit: row.unit || '',
+            price: row.price || 0,
+            category: row.category_name || 'ทั่วไป',
+            rowIndex: acc.length,
+          });
+        }
+        if (data.length < PAGE) break;
+      }
+      if (token !== categoryReqRef.current) return;
+      setCategoryProducts(acc);
+    } catch (e) {
+      if (token !== categoryReqRef.current) return;
+      const code = (e as { code?: string })?.code;
+      setCategoryError(
+        code === 'PGRST205' || code === '42P01' || code === '42703'
+          ? 'schema ไม่ตรง — รัน product-category-setup.sql ใน Supabase ก่อน'
+          : (e instanceof Error ? e.message : String(e))
+      );
+      setActiveCategory(null);
+    } finally {
+      if (token === categoryReqRef.current) setCategoryLoading(false);
+    }
+  }, []);
+
+  // นับจำนวนต่อสาขา+หมวด — ยิงตอนเปิด dropdown ไม่ใช่ตอน mount, cache ทั้ง session
+  const ensureCategoryCounts = useCallback(async () => {
+    if (categoryCounts) return;
+    const { data, error } = await supabase.from('v_product_category_counts').select('*');
+    if (error || !data) return;        // badge หายไปเฉย ๆ ไม่ต้องรบกวนผู้ใช้
+    setCategoryCounts(Object.fromEntries(
+      data.map(r => [`${r.branch}|${r.category_no}`, r.product_rows])
+    ));
+  }, [categoryCounts]);
 
   // Update quantity ใน cart dropdown
   const updateQuantity = (key: string, delta: number) => {
@@ -488,34 +962,23 @@ const App: React.FC = () => {
     localStorage.removeItem('cartItems');
   };
 
-  //  clearAll: cart + search + hidden
+  //  clearAll: cart + search + hidden + category
   const clearAll = () => {
     setSelectedProducts(new Map());
     setHiddenKeys(new Set());
     setSearchInput('');
     setSearchTerm('');
     setScannedHistory(new Map());
+    categoryReqRef.current++;
+    setActiveCategory(null);
+    setCategoryProducts([]);
+    setCategoryError('');
+    setCategoryLoading(false);
+    setShowCategoryMenu(false);
     localStorage.removeItem('cartItems');
     localStorage.removeItem('scannedHistory');
   };
 
-  // Generate barcode
-  const generateBarcode = (barcode: string): string => {
-    try {
-      const canvas = document.createElement('canvas');
-      JsBarcode(canvas, barcode, {
-        format: 'CODE128',
-        width: 3,
-        height: 90,
-        displayValue: false,
-        margin: 0
-      });
-      return canvas.toDataURL('image/png');
-    } catch (error) {
-      console.error('Barcode generation error:', error);
-      return '';
-    }
-  };
 
 const generateQR = useCallback(async (barcode: string): Promise<string> => {
     try {
@@ -785,6 +1248,9 @@ ${sheetsHtml}
         {/* Upload CSV hidden input */}
         <input ref={fileInputRef} type="file" accept=".csv" onChange={handleFileUpload} style={{ display: 'none' }} />
 
+        {/* Upload Location (.xlsx) hidden input — หมวดสินค้า */}
+        <input ref={locationFileRef} type="file" accept=".xlsx,.xls" onChange={handleLocationUpload} style={{ display: 'none' }} />
+
         <div className="table-search-row table-search-row--center">
           <div className="search-premium">
             <input
@@ -803,18 +1269,95 @@ ${sheetsHtml}
         <div className="main-split">
         <div className="single-col">
 
-          <div className="product-table-wrap" style={{ opacity: isLoading ? 0.5 : 1, transition: 'opacity 0.15s' }}>
+          <div className="product-table-wrap" style={{ opacity: (isLoading || categoryLoading) ? 0.5 : 1, transition: 'opacity 0.15s' }}>
               <div className="selected-table-header">
                 <span>
-                  {!searchTerm.trim() && scannedHistory.size > 0 && (
+                  {!searchTerm.trim() && activeCategory === null && scannedHistory.size > 0 && (
                     <span className="scan-mode-badge"></span>
                   )}
-                  {visibleProducts.length} รายการ {totalItems > 0 && `· เลือกแล้ว ${totalItems} (${totalLabels} ป้าย)`}
+                  {activeCategory !== null && (
+                    <span className="cat-mode-badge">
+                      {profileBranch} · หมวด {activeCategory} · {PRODUCT_CATEGORIES.find(c => c.no === activeCategory)?.label}
+                    </span>
+                  )}
+                  {categoryLoading
+                    ? 'กำลังโหลดหมวด...'
+                    : categoryError
+                      ? `❌ ${categoryError}`
+                      : <>{visibleProducts.length.toLocaleString()} รายการ {totalItems > 0 && `· เลือกแล้ว ${totalItems.toLocaleString()} (${totalLabels.toLocaleString()} ป้าย)`}</>}
                 </span>
                 <div style={{ display: 'flex', gap: '0.5rem', position: 'relative' }}>
+                  {/* ซ่อนทั้งปุ่มถ้าโปรไฟล์ไม่สังกัดสาขา (จัดซื้อ) — กันปริ้นผิดสาขา */}
+                  {profileBranch && (
+                  <div className="cat-dropdown-wrap">
+                    {showCategoryMenu && <div className="cat-overlay" onClick={() => setShowCategoryMenu(false)} />}
+                    <button
+                      className={`btn-nav-style${activeCategory !== null ? ' btn-nav-style--on' : ''}`}
+                      onClick={() => {
+                        // คำนวณค่าถัดไปนอก updater — setState updater ต้องเป็น pure
+                        // (StrictMode เรียกซ้ำ จะทำให้ ensureCategoryCounts ยิง 2 รอบ)
+                        const next = !showCategoryMenu;
+                        setShowCategoryMenu(next);
+                        if (next) { setShowCart(false); ensureCategoryCounts(); }
+                      }}
+                    >
+                      เลือกตามหมวด{activeCategory !== null ? ` · ${activeCategory}` : ''}
+                    </button>
+                    {showCategoryMenu && (
+                      <div className="cat-dropdown">
+                        <div className="cat-dropdown-header">
+                          <span>เลือกตามหมวด</span>
+                          <button className="cat-dropdown-close" onClick={() => setShowCategoryMenu(false)}>✕</button>
+                        </div>
+                        <div className="cat-branch-locked" title="สาขาล็อกตามผู้ใช้ที่ล็อกอิน">
+                          🔒 สาขา <strong>{profileBranch}</strong>
+                        </div>
+                        <div className="cat-dropdown-list">
+                          {PRODUCT_CATEGORIES.map(c => {
+                            const n = categoryCounts?.[`${profileBranch}|${c.no}`];
+                            return (
+                              <button
+                                key={c.no}
+                                className={`cat-dropdown-item${activeCategory === c.no ? ' is-active' : ''}`}
+                                disabled={categoryLoading || (categoryCounts != null && !n)}
+                                onClick={() => loadCategory(c.no, profileBranch)}
+                              >
+                                <span className="cat-item-no">{c.no}</span>
+                                <span className="cat-item-label">{c.label}</span>
+                                <span className="cat-item-count">{n?.toLocaleString() ?? ''}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                        {categoryCounts && !PRODUCT_CATEGORIES.some(c => categoryCounts[`${profileBranch}|${c.no}`]) && (
+                          <div className="cat-dropdown-status">
+                            สาขา {profileBranch} ยังไม่มีข้อมูลหมวด — อัปโหลดไฟล์ Location ของสาขานี้ก่อน
+                          </div>
+                        )}
+                        <div className="cat-dropdown-footer">
+                          <button
+                            className="btn-clear-small"
+                            disabled={locationBusy}
+                            onClick={() => locationFileRef.current?.click()}
+                          >
+                            {locationBusy ? 'กำลังอัปโหลด...' : `📁 อัปโหลด Location → ${profileBranch}`}
+                          </button>
+                          {activeCategory !== null && (
+                            <button className="btn-clear-small" onClick={exitCategory}>ล้างหมวด</button>
+                          )}
+                        </div>
+                        {locationStatus && <div className="cat-dropdown-status">{locationStatus}</div>}
+                      </div>
+                    )}
+                  </div>
+                  )}
                   <div className="cart-dropdown-wrap">
                     {showCart && <div className="cart-overlay" onClick={() => setShowCart(false)} />}
-                    <button className="btn-nav-style" onClick={() => setShowCart(v => !v)}>
+                    <button className="btn-nav-style" onClick={() => {
+                      const next = !showCart;
+                      setShowCart(next);
+                      if (next) setShowCategoryMenu(false);
+                    }}>
                       รายการที่เลือก{totalItems > 0 ? ` (${totalItems})` : ''}
                     </button>
                     {showCart && (
@@ -1176,10 +1719,11 @@ ${sheetsHtml}
               {adminVerified && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                   <button className="btn-premium" onClick={() => fileInputRef.current?.click()}>
-                    Upload
+                    Upload R05.106
                   </button>
                   {uploadStatus && (
-                    <div style={{ padding: '0.75rem', background: '#f9f9f9', borderRadius: 8, fontSize: '0.9rem' }}>
+                    // pre-line: ข้อความ error หัวคอลัมน์เป็นหลายบรรทัด ถ้าไม่ตั้งจะยุบเป็นบรรทัดเดียว
+                    <div style={{ padding: '0.75rem', background: '#f9f9f9', borderRadius: 8, fontSize: '0.9rem', whiteSpace: 'pre-line', lineHeight: 1.5, wordBreak: 'break-word' }}>
                       {uploadStatus}
                     </div>
                   )}

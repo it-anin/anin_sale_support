@@ -82,23 +82,28 @@ pharmacy-premium/
 
 ## 📋 รูปแบบไฟล์ CSV
 
-ไฟล์ CSV จาก POS ต้องมีคอลัมน์ดังนี้:
+ใช้ไฟล์ export จากรายงาน **R05.106** ของ Promax โดยตรง (27 คอลัมน์) ไม่ต้องแก้ไขอะไร
 
-| คอลัมน์ | ข้อมูล | ตัวอย่าง |
-|---------|--------|----------|
-| A | Barcode | 8850987000010 |
-| E | SKU | 200009 |
-| F | ชื่อสินค้า | Alcon Tears Naturale |
-| G | หน่วย | Box |
-| I | ราคา | 353.00 |
+| คอลัมน์ | header | ข้อมูล | ตัวอย่าง |
+|---|---|---|---|
+| A | `CF_BARCODE` | Barcode | 8851467011175 |
+| B | `CF_FMLPRICE` | ราคา | 9.0000 |
+| E | `CF_ITEMID` | SKU | 100376 |
+| F | `CF_ITEMNAME` | ชื่อสินค้า | Mymol Para (Burapha) 500 mg 10x10's |
+| G | `CF_UNITNAME` | หน่วย | แผง |
+| Q | `CF_ITEMGROUPL1_GROUPNAME` | หมวด | 1. ยาแผนปัจจุบัน (กิน) |
 
-### ตัวอย่างไฟล์ CSV:
+### ตัวอย่างแถวข้อมูลจริง
 
 ```csv
-Barcode,Brand,Category,SubCategory,SKU,Name,Unit,Cost,Price,Stock
-8850987000010,Alcon,Medicines,Eye Care,200009,Alcon Tears Naturale Free 0.8 ml x 32 pcs,Box,300.00,353.00,50
-8877003720,Tillots,Medicines,Digestive,100314,Colpermin 10×10's,Box,100.00,122.00,100
+CF_BARCODE,CF_FMLPRICE,CF_COMMENTS,CF_ITEMS_ORDINARY,CF_ITEMID,CF_ITEMNAME,CF_UNITNAME,...,CF_ITEMGROUPL1_GROUPNAME,...
+8851467011175,9.0000,,1,100376,Mymol Para (Burapha) 500 mg 10x10's,แผง,...,1. ยาแผนปัจจุบัน (กิน),...
 ```
+
+> ⚠️ ระบบ **ตรวจชื่อหัวคอลัมน์** ก่อนอัปโหลด ไฟล์ที่ไม่ใช่ R05.106 (เช่น R05.105 หรือ R01.102)
+> จะถูกปฏิเสธพร้อมบอกว่าขาดคอลัมน์ไหน และ **ไม่ลบข้อมูลเดิม**
+>
+> ⚠️ อย่าสร้างไฟล์ CSV เองโดยเรียงคอลัมน์ตามใจ — ต้องมีแถว header ชื่อ `CF_*` ตามด้านบน
 
 ---
 

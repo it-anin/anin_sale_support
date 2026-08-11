@@ -5,14 +5,24 @@ export interface Profile {
   group: 'สาขา' | 'คลังสินค้า' | 'จัดซื้อ';
   password: string;
   icon: string;
+  /**
+   * สาขาที่ใช้กับปุ่ม "เลือกตามหมวด" หน้าป้ายราคา
+   * ต้องตรงกับ `CATEGORY_BRANCHES` ใน App.tsx และ `product_category.branch` เป๊ะ ๆ
+   *
+   * `null` = ไม่ปริ้นป้ายตามหมวด → ซ่อนปุ่มทั้งปุ่ม (กันปริ้นผิดสาขา)
+   *   - `WAREHOUSE` คลังสินค้าไม่ได้ติดป้ายราคาที่ชั้นวาง
+   *   - `PURCHASING` จัดซื้อไม่ใช่หน่วยหน้าร้าน
+   * ฟีเจอร์นี้ใช้เฉพาะสาขาหน้าร้าน SRC / KKL / SSS เท่านั้น
+   */
+  branch: string | null;
 }
 
 export const PROFILES: Profile[] = [
-  { id: 'SRC',        label: 'SRC',        group: 'สาขา',       password: '1234', icon: '🏪' },
-  { id: 'KKL',        label: 'KKL',        group: 'สาขา',       password: '4567', icon: '🏪' },
-  { id: 'SSS',        label: 'SSS',        group: 'สาขา',       password: '9999', icon: '🏪' },
-  { id: 'WAREHOUSE',  label: 'คลังสินค้า',  group: 'คลังสินค้า',  password: '0000', icon: '📦' },
-  { id: 'PURCHASING', label: 'จัดซื้อ',    group: 'จัดซื้อ',    password: '1111', icon: '🛒' },
+  { id: 'SRC',        label: 'SRC',        group: 'สาขา',       password: '1234', icon: '🏪', branch: 'SRC' },
+  { id: 'KKL',        label: 'KKL',        group: 'สาขา',       password: '4567', icon: '🏪', branch: 'KKL' },
+  { id: 'SSS',        label: 'SSS',        group: 'สาขา',       password: '9999', icon: '🏪', branch: 'SSS' },
+  { id: 'WAREHOUSE',  label: 'คลังสินค้า',  group: 'คลังสินค้า',  password: '0000', icon: '📦', branch: null },
+  { id: 'PURCHASING', label: 'จัดซื้อ',    group: 'จัดซื้อ',    password: '1111', icon: '🛒', branch: null },
 ];
 
 const AUTH_KEY = 'authProfileId';
