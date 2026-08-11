@@ -24,6 +24,10 @@ interface Product {
   unit: string;
   price: number;
   category?: string;
+  /** ตำแหน่งชั้นวาง (เช่น A14) — มีเฉพาะสินค้าที่โหลดมาจากปุ่ม "เลือกตามหมวด"
+   *  เพราะข้อมูลนี้อยู่ใน product_category ไม่ได้อยู่ใน products
+   *  แสดงมุมซ้ายบนของป้ายราคาคู่กับโลโก้ · ถ้าไม่มีก็ไม่แสดงอะไร */
+  location?: string;
   rowIndex: number;
 }
 
@@ -169,7 +173,7 @@ function resolveProductCsvColumns(headerRow: string[]): Record<ProductCsvKey, nu
   return idx;
 }
 
-interface CategoryRow { sku: string; category_no: number; category_name: string }
+interface CategoryRow { sku: string; category_no: number; category_name: string; location: string | null }
 interface LocationParseResult {
   rows: CategoryRow[];
   skipped: number;
@@ -204,6 +208,10 @@ function parseLocationSheet(ws: XLSX.WorkSheet): LocationParseResult {
   if (catIdx < 0) catIdx = head.findIndex(h => h.includes('GROUPL1'));
   if (catIdx < 0) { catIdx = 5; usedFallback = true; }   // คอลัมน์ F
 
+  // ตำแหน่งชั้นวาง — คอลัมน์ A ในไฟล์สาขา (SSS/SRC) แต่คอลัมน์ E ในไฟล์ WH
+  // จึงหาโดยชื่อหัวคอลัมน์เหมือนกัน · ไม่บังคับ ถ้าไม่มีก็ปล่อยว่าง ไม่ throw
+  const locIdx = head.indexOf('LOCATION');
+
   const map = new Map<string, CategoryRow>();
   const conflicts = new Set<string>();
   let skipped = 0;
@@ -223,9 +231,13 @@ function parseLocationSheet(ws: XLSX.WorkSheet): LocationParseResult {
     const no = parseInt(m[1], 10);
     if (!(no >= 1 && no <= 9)) { skipped++; continue; }   // ตัด '12. ของใช้ประจำภายในร้าน'
 
+    // ไฟล์ WH ใช้ '-' แทนค่าว่าง — ตัดทิ้งไม่ให้ไปโผล่บนป้าย
+    const rawLoc = locIdx >= 0 ? String(r[locIdx] ?? '').trim() : '';
+    const loc = rawLoc && rawLoc !== '-' ? rawLoc : null;
+
     const prev = map.get(sku);
     if (prev) { if (prev.category_no !== no) conflicts.add(sku); continue; }  // เก็บค่าแรก
-    map.set(sku, { sku, category_no: no, category_name: rawCat });
+    map.set(sku, { sku, category_no: no, category_name: rawCat, location: loc });
   }
 
   return {
@@ -629,7 +641,7 @@ const App: React.FC = () => {
           .upsert(payload.slice(i, i + CHUNK), { onConflict: 'sku,branch' });
         if (error) {
           if (error.code === '42P01' || error.code === 'PGRST205' || error.code === '42703') {
-            throw new Error('schema ไม่ตรง — รัน product-category-setup.sql ใน Supabase ก่อน');
+            throw new Error('schema ไม่ตรง — รัน product-category-setup.sql ใน Supabase ก่อน (เวอร์ชันล่าสุดเพิ่มคอลัมน์ location)');
           }
           throw new Error(error.message);
         }
@@ -876,7 +888,7 @@ const App: React.FC = () => {
       for (let from = 0; ; from += PAGE) {
         const { data, error } = await supabase
           .from('v_products_by_category')
-          .select('barcode, sku, name, unit, price, category_name')
+          .select('barcode, sku, name, unit, price, category_name, location')
           .eq('category_no', no)
           .eq('branch', branch)
           .order('sku', { ascending: true })
@@ -897,6 +909,7 @@ const App: React.FC = () => {
             unit: row.unit || '',
             price: row.price || 0,
             category: row.category_name || 'ทั่วไป',
+            location: row.location || undefined,
             rowIndex: acc.length,
           });
         }
@@ -1494,6 +1507,7 @@ ${sheetsHtml}
                   <div className="label-preview">
                     <>
                       <div className="lbl-header">
+                        {previewPriceProduct.location && <div className="lbl-loc">{previewPriceProduct.location}</div>}
                         <div className="lbl-logo">BIGYA</div>
                       </div>
                       <div className="lbl-mid">
@@ -1827,6 +1841,7 @@ ${sheetsHtml}
                 Array.from({ length: product.quantity }, (_, i) => (
                   <div key={`${product.sku}-${product.unit}-${i}`} className="label-preview">
                     <div className="lbl-header">
+                      {product.location && <div className="lbl-loc">{product.location}</div>}
                       <div className="lbl-logo">BIGYA</div>
                     </div>
                     <div className="lbl-mid">
@@ -1877,6 +1892,7 @@ ${sheetsHtml}
           Array.from({ length: product.quantity }, (_, i) => (
             <div key={`${product.sku}-${product.unit}-${i}`} className="label-print">
               <div className="lbl-header">
+                {product.location && <div className="lbl-loc">{product.location}</div>}
                 <div className="lbl-logo">BIGYA</div>
               </div>
               <div className="lbl-mid">

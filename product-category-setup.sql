@@ -14,13 +14,21 @@ CREATE TABLE IF NOT EXISTS product_category (
                                         -- จึงเป็นชุดที่สั้นกว่า stock.branch ที่มี 4 สาขา
   category_no   smallint    NOT NULL CHECK (category_no BETWEEN 1 AND 9),
   category_name text,        -- ข้อความดิบจากไฟล์ (ดูเฉย ๆ ไม่ใช้เป็น key)
+  location      text,        -- ตำแหน่งชั้นวาง คอลัมน์ A ของไฟล์ Location (เช่น A14 / 1A12)
   uploaded_at   timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (sku, branch)
 );
 
--- ── migration จากเวอร์ชันแรก (PK = sku เดี่ยว) ──────────────
+-- migration: ตารางที่สร้างก่อนมีคอลัมน์นี้
+ALTER TABLE product_category ADD COLUMN IF NOT EXISTS location text;
+
+-- ── migration จากเวอร์ชันแรก (PK = sku เดี่ยว ไม่มี branch) ──
+-- ข้อมูลเวอร์ชันแรกไม่มีสาขากำกับ จึงระบุไม่ได้ว่าเป็นของสาขาไหน
+-- ใส่ '(legacy)' เป็นหมุดหมายไว้ให้ SET NOT NULL ผ่าน แล้วอัปโหลดไฟล์สาขาทับใหม่
+-- (ไม่ใช้ 'คลังสินค้า' แล้ว เพราะตัดคลังออกจากฟีเจอร์นี้ไปแล้ว)
+-- บน DB ปัจจุบันเป็น no-op — branch เป็น NOT NULL มีค่าครบทุกแถวอยู่แล้ว
 ALTER TABLE product_category ADD COLUMN IF NOT EXISTS branch text;
-UPDATE product_category SET branch = 'คลังสินค้า' WHERE branch IS NULL;
+UPDATE product_category SET branch = '(legacy)' WHERE branch IS NULL;
 ALTER TABLE product_category ALTER COLUMN branch SET NOT NULL;
 
 DO $$
@@ -85,7 +93,7 @@ DROP VIEW IF EXISTS public.v_products_by_category;
 CREATE VIEW public.v_products_by_category
 WITH (security_invoker = true) AS
 SELECT p.id, p.barcode, p.sku, p.name, p.unit, p.price,
-       c.branch, c.category_no, c.category_name
+       c.branch, c.category_no, c.category_name, c.location
 FROM products p
 JOIN product_category c ON c.sku = p.sku
 WHERE COALESCE(p.base_multiple, 1) = 1;

@@ -88,7 +88,8 @@ Six-page React app sharing the same `App.css` and Supabase project.
 - Admin upload: CSV (R05.106) → PapaParse → **เช็คหัวคอลัมน์** → confirm → delete all → insert in 500-row chunks
 - ⚠️ ยังเป็น **delete-all + insert** (ไม่ atomic) — ถ้า insert พังกลางทางตารางจะว่าง ต้องอัปโหลดซ้ำ · ต่างจาก `product_category` ที่ใช้ upsert + sweep
 
-**Table: `product_category`** (sku, branch, category_no 1-9, category_name, uploaded_at) — **PK = (sku, branch)**
+**Table: `product_category`** (sku, branch, category_no 1-9, category_name, location, uploaded_at) — **PK = (sku, branch)**
+- `location` = ตำแหน่งชั้นวางจากคอลัมน์ A ของไฟล์ Location (เช่น `A14` / `1A12`) → แสดงมุมซ้ายบนของป้ายราคา (`.lbl-loc`)
 - `branch` = **`SRC / KKL / SSS` เท่านั้น** (ดู `CATEGORY_BRANCHES` ใน `App.tsx`) — ⚠️ **ไม่มี `คลังสินค้า`** เพราะคลังไม่ได้ติดป้ายราคาที่ชั้นวาง จึงเป็นชุดที่**สั้นกว่า** `stock.branch` / `TABS` ใน `StockCheckPage` ที่มี 4 สาขา · เขียนสะกดเหมือนกันเป๊ะเพื่อให้เทียบข้ามตารางได้
 - RLS: `public read` + `public write` (ALL) — **เว็บเป็นคนเขียนเอง** ด้วย anon key (ไม่ใช่ .mjs + service_role แบบ stock/customer_history) ถ้าไม่เปิด write policy ปุ่มอัปโหลดจะ 403 เงียบ ๆ · ข้อมูลนี้อ่อนไหวน้อยกว่า `products` ที่เปิด write อยู่แล้วพร้อมราคา
 - สร้างด้วย `product-category-setup.sql` (รันซ้ำได้ ไม่ลบข้อมูล — มี migration ในตัวสำหรับตารางเวอร์ชันแรกที่ PK เป็น `sku` เดี่ยว)
@@ -193,10 +194,15 @@ Six-page React app sharing the same `App.css` and Supabase project.
 **Location XLSX** (export จาก Promax → อัปโหลดผ่านเว็บ ปุ่มในเมนู "เลือกตามหมวด"):  
 มี **2 layout จริง** ที่ต้องรองรับพร้อมกัน — ตำแหน่งคอลัมน์ SKU ต่างกัน แต่ชื่อหัวคอลัมน์เหมือนกัน:
 
-| ไฟล์ | SKU | หมวด |
-|---|---|---|
-| `Location-SSS*.xlsx` | **D**(3) `CF_ITEMID` | **F**(5) `CF_ITEMGROUPL1_GROUPNAME` |
-| `Location-WH.xlsx` | **A**(0) `CF_ITEMID` | **F**(5) `CF_ITEMGROUPL1_GROUPNAME` |
+| ไฟล์ | SKU | หมวด | ตำแหน่งชั้นวาง |
+|---|---|---|---|
+| `Location-SSS*.xlsx` | **D**(3) `CF_ITEMID` | **F**(5) `CF_ITEMGROUPL1_GROUPNAME` | **A**(0) `Location` |
+| `Location-SRC.xlsx` | **D**(3) `CF_ITEMID` | **F**(5) `CF_ITEMGROUPL1_GROUPNAME` | **A**(0) `Location` |
+| `Location-WH.xlsx` | **A**(0) `CF_ITEMID` | **F**(5) `CF_ITEMGROUPL1_GROUPNAME` | **E**(4) `LOCATION` |
+
+- ตำแหน่งชั้นวางก็ต้อง**หาโดยชื่อหัวคอลัมน์**เหมือนกัน — ไฟล์สาขาอยู่คอลัมน์ A แต่ไฟล์ WH อยู่คอลัมน์ E · ไม่บังคับ ถ้าไม่มีคอลัมน์นี้ก็ปล่อยว่าง ไม่ throw
+- ค่า `-` (พบในไฟล์ WH) ถือเป็นว่าง ตัดทิ้งไม่ให้ไปโผล่บนป้าย
+- ข้อมูลจริง: SSS 2,640 SKU · SRC 3,225 SKU · **มี location ครบ 100% ทั้งคู่**
 
 - ⚠️ **หาคอลัมน์ด้วยชื่อหัวคอลัมน์เสมอ ไม่ใช่ตำแหน่ง** (`parseLocationSheet` ใน `App.tsx`) — fallback หมวด = index 5
 - ⚠️ **key ที่เสถียรคือ "เลขนำหน้า" ไม่ใช่ข้อความไทย** — ข้อความต่างกันระหว่างไฟล์: SSS = `"6. เครื่องสำอาง"` แต่ WH = `"6. เวชสำอาง / เครื่องสำอาง"` · WH = `"7. เวชภัณฑ์ / เครื่องมือแพทย์ / ทำแผล"` (มีเว้นวรรครอบ `/`)
@@ -325,7 +331,7 @@ Do NOT modify without explicit user instruction:
 - **Size: `width: 4.5cm; height: 4cm; border: 1.5mm solid #1e3a6e`** — FROZEN
 - Label structure:
   ```
-  ·BIGYA logo (top-right)
+  .lbl-loc (top-left) ·············· BIGYA logo (top-right)
   ┌ .lbl-mid (flex:1, justify-content:center) ──────┐
   │ ชื่อสินค้า | หน่วย                                │
   │ Price / ราคา | [price int, no decimal] | บาท     │
@@ -336,6 +342,14 @@ Do NOT modify without explicit user instruction:
 - `.lbl-mid` ห่อชื่อสินค้า+ราคาไว้ด้วยกัน แล้วดันให้อยู่กึ่งกลางแนวตั้งในพื้นที่ที่ว่างจากการตัดแถว Member
 - Bottom-left: print date (`toLocaleDateString('th-TH')`) + SKU
 - No decimal shown on price
+
+#### `.lbl-loc` — ตำแหน่งชั้นวาง มุมซ้ายบน (เพิ่ม 2569-08-11)
+- แสดง `product.location` (เช่น `A14` / `1A12`) คู่กับโลโก้ · **มีเฉพาะสินค้าที่โหลดมาจากปุ่ม "เลือกตามหมวด"** เพราะข้อมูลอยู่ใน `product_category` ไม่ได้อยู่ใน `products` · ค้นหาปกติ/สแกนบาร์โค้ด → ไม่มี แสดงว่างไว้
+- ⚠️ **ใช้ `margin-right: auto` บน `.lbl-loc` ห้ามเปลี่ยน `.lbl-header` เป็น `space-between`** — ป้ายที่ไม่มี location จะมีลูกเดียว `space-between` จะดันโลโก้ไปซ้าย
+- ⚠️ **ห้ามย้ายไปต่อท้ายวันที่แถวล่าง** — วัดแล้วแถวล่างเหลือที่ว่าง **~0.7mm (≈2px)**:
+  ป้าย 4.5cm − ขอบ 0.2 − padding 0.24 = **4.06cm** · บาร์โค้ด **3.28cm** (`flex-shrink: 0`) → เหลือ **7.8mm** ให้วันที่/SKU · วันที่ยาวสุด `31/12/2569` ที่ 4pt ≈ **7.1mm**
+  เอา location ไปต่อ (+~3mm) จะดันบาร์โค้ดให้แคบลงจนแท่งต่ำกว่า 0.19mm ที่ CODE128 ต้องการ → **สแกนไม่ติด**
+- แนวตั้งของ `.lbl-codes` เหลือเยอะ (~5.6mm) ถ้าต้องเพิ่มข้อมูลอีกในอนาคต ให้เพิ่มเป็น**บรรทัด**ใน stack ไม่ใช่ต่อความกว้าง
 
 **3 จุดที่ต้องแก้พร้อมกันเสมอเมื่อเปลี่ยนโครงป้ายราคา** (JSX ซ้ำกัน 3 ชุดใน `App.tsx`):
 1. Live Preview panel (`previewPriceProduct`) — scope CSS `.live-preview-panel`
