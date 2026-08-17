@@ -196,6 +196,7 @@ body {
 
 /* Page Nav Icon Card — Soft Card ขาวเงานุ่ม */
 .page-nav-card {
+  position: relative;
   flex-shrink: 0;
   width: 72px;
   height: 66px;
@@ -210,6 +211,25 @@ body {
   justify-content: center;
   gap: 5px;
   transition: all 0.25s ease;
+}
+
+.page-nav-notification-dot {
+  position: absolute;
+  top: 7px;
+  right: 8px;
+  width: 10px;
+  height: 10px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #e33f4f;
+  box-shadow: 0 2px 6px rgba(150, 20, 34, 0.45);
+  pointer-events: none;
+  animation: pageNavNotificationPulse 1.8s ease-in-out infinite;
+}
+
+@keyframes pageNavNotificationPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.18); }
 }
 
 .page-nav-card:hover {
@@ -3599,6 +3619,119 @@ body.pulse-b .cart-inline-btn.in-cart {
   border-left: 3px solid transparent;
   transition: all 0.15s ease;
 }
+/* ===== Order — เมนูย่อย 3 ขั้นตอนใต้ปุ่ม Order (ดีไซน์ "Accordion Sub-nav") =====
+   ของถึงสาขา / แจ้งลูกค้า / ส่งมอบสินค้า — เลข = จำนวนที่ยังไม่ผ่านขั้นนั้น
+   กดแล้วกรองตาราง Order · โผล่เฉพาะตอนมีของค้าง (totalStepPending > 0) */
+
+/* หัวลูกศรพับ/กาง บนปุ่ม Order */
+.ss-menu-caret {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px;
+  border-radius: 5px;
+  color: #8194a8;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.ss-menu-caret:hover { background: #dce7f3; color: #2d6cad; }
+.ss-menu-caret svg {
+  display: block;
+  width: 11px;
+  height: 11px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 0.18s ease;
+}
+.ss-menu-caret.is-open svg { transform: rotate(180deg); }
+/* พับอยู่ = เมนูย่อยมองไม่เห็น → จุดเตือนว่ายังมีของค้างซ่อนอยู่ข้างใน */
+.ss-menu-caret-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #e8a33d;
+}
+
+.ss-order-steps {
+  display: flex;
+  flex-direction: column;
+  background: #f1f6fb;
+  border-left: 3px solid #4891db;
+}
+
+.ss-order-step {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 13px 5px 30px;
+  border: none;
+  background: none;
+  color: #5b7590;
+  font-family: 'Noto Sans Thai', sans-serif;
+  font-size: 10.5px;
+  font-weight: 400;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.ss-order-step:hover:not(:disabled) { background: #e2edf8; color: #2d6cad; }
+.ss-order-step:disabled { cursor: default; }
+.ss-order-step.is-active {
+  background: #dbeaf8;
+  color: #2d6cad;
+  font-weight: 600;
+}
+/* min-width: 0 จำเป็น — flex item ไม่ยอมหดต่ำกว่าเนื้อหาถ้าไม่ใส่ ellipsis จะไม่ทำงาน
+   (เผื่อ sidebar ถูกบีบ · ที่ 150px ตอนนี้ยังไม่ตัด) */
+.ss-order-step-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ss-order-step-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: currentColor;
+}
+.ss-order-step-count {
+  margin-left: auto;
+  padding-left: 4px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 10.5px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+/* สีประจำขั้น — ใช้กับจุดนำหน้าและตัวเลข ผ่าน currentColor ของลูกทั้งสอง */
+.ss-order-step--s1 .ss-order-step-dot, .ss-order-step--s1 .ss-order-step-count { color: #4891db; }
+.ss-order-step--s2 .ss-order-step-dot, .ss-order-step--s2 .ss-order-step-count { color: #e8a33d; }
+.ss-order-step--s3 .ss-order-step-dot, .ss-order-step--s3 .ss-order-step-count { color: #d9534f; }
+
+/* ครบแล้ว = จางลงแต่ยังอยู่ ไม่ซ่อน เพื่อไม่ให้เมนูขยับขึ้นลงเวลากดตรา */
+.ss-order-step.is-zero { opacity: 0.5; }
+.ss-order-step.is-zero .ss-order-step-dot,
+.ss-order-step.is-zero .ss-order-step-count { color: #b6c3d1; }
+
+/* มีรายการเลยวันนัดรับในขั้นนี้ — สัญญาณเดิมของ .ss-menu-badge--late ย้ายมาอยู่ตรงนี้ */
+.ss-order-step-count.is-late {
+  color: #fff;
+  background: #d9534f;
+  border-radius: 20px;
+  padding: 0 6px;
+  animation: ssBadgePulse 2s ease-in-out infinite;
+}
+@keyframes ssBadgePulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(217, 83, 79, 0.5); }
+  50%      { box-shadow: 0 0 0 4px rgba(217, 83, 79, 0); }
+}
+
+
 .ss-menu-btn:hover { background: #eef3f9; color: #2d6cad; }
 .ss-menu-btn--active {
   background: #eaf3fc;
@@ -3695,14 +3828,14 @@ body.pulse-b .cart-inline-btn.in-cart {
   min-width: 1500px;
   max-width: none;
   table-layout: fixed;
-  font-size: 11px;
+  font-size: 10px;
   font-family: 'Noto Sans Thai', sans-serif;
 }
 .ss-table th {
   padding: 6px 7px;
-  color: #8194a8;
+  color: #004287;
   font-weight: 600;
-  font-size: 10.5px;
+  font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.15px;
   text-align: left;
@@ -3732,14 +3865,18 @@ body.pulse-b .cart-inline-btn.in-cart {
   border-right: 1px solid #eef2f6;
 }
 .ss-table th:last-child, .ss-table td:last-child { border-right: 0; }
-.ss-table--order {
+/* BackOrder ใช้ layout เดียวกับ Order (คอลัมน์เยอะ เลื่อนแนวนอน + ปรับความกว้าง SKU ได้) */
+.ss-table--order,
+.ss-table--backorder {
   table-layout: auto;
 }
-.ss-table--order th {
+.ss-table--order th,
+.ss-table--backorder th {
   white-space: nowrap;
   overflow: visible;
 }
-.ss-table--order th.ss-col-sku_name { overflow: visible; }
+.ss-table--order th.ss-col-sku_name,
+.ss-table--backorder th.ss-col-sku_name { overflow: visible; }
 .ss-table .ss-col-sku_name {
   width: var(--sku-name-width, 320px) !important;
   min-width: var(--sku-name-width, 320px) !important;
@@ -3747,10 +3884,36 @@ body.pulse-b .cart-inline-btn.in-cart {
   white-space: nowrap !important;
 }
 .ss-table th.ss-col-sku_name { position: sticky; }
-.ss-table--order td.ss-col-sale_bill_no {
+.ss-table--order td.ss-col-sale_bill_no,
+.ss-table--backorder td.ss-col-sale_bill_no {
   max-width: none;
   white-space: nowrap;
 }
+
+/* ── Two-line Row — ตาราง Order ยัด 2 ค่าลงช่องเดียวคนละบรรทัด ──
+   ดีไซน์แบบที่ 2 จาก public/order-table-layout-designs.html
+   24 คอลัมน์เดิม (รวม min 2,834px) ล้นทุกจอ → ยุบเหลือ 12 ช่องโดยข้อมูลยังครบ
+   ⚠️ ใช้เฉพาะคอลัมน์ที่มี `sub` ใน MENUS เท่านั้น เมนูอื่นไม่ได้ห่อ div ครอบ
+      จึงไม่มีคลาสพวกนี้และได้ layout เดิมทุกอย่าง */
+.ss-col-sub-label {
+  display: block;
+  margin-top: 1px;
+  font-size: 9px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: #b3c1cf;
+}
+.ss-cell-main { font-size: inherit; }
+.ss-cell-sub {
+  margin-top: 1px;
+  font-size: 10px;
+  font-weight: 300;
+  color: #8194a8;
+  white-space: nowrap;
+}
+/* 3 ชิปสถานะในช่องเดียว เรียงลงมาตามลำดับงาน (ถึงสาขา → แจ้งลูกค้า → ส่งมอบ) */
+.ss-chip-stack { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; }
 .ss-column-resizer { position: absolute; top: 0; right: -4px; width: 9px; height: 100%; cursor: col-resize; z-index: 4; user-select: none; }
 .ss-column-resizer::after { content: ''; position: absolute; top: 7px; bottom: 7px; left: 4px; width: 2px; border-radius: 2px; background: #9fb5ca; }
 .ss-column-resizer:hover::after { background: #2d6cad; }
@@ -3776,6 +3939,32 @@ body.pulse-b .cart-inline-btn.in-cart {
 .ss-chip--blue   { background: #e3effc; color: #2d6cad; }
 .ss-chip--orange { background: #fdf0e2; color: #c07a1f; }
 
+/* ป้ายแจ้งสาขาว่าคลังส่งของออกแล้ว — ต่อท้ายชื่อสินค้าในตาราง Order (ดีไซน์ "Days Badge" แบบไม่มีตัวเลขวัน)
+   โผล่เฉพาะโปรไฟล์สาขา + ออเดอร์ของสาขาตัวเอง + ยังไม่กดตรา "ของถึงสาขา" — ดู showOutboundAlert() */
+.ss-out-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 6px;
+  padding: 1px 7px 1px 5px;
+  border-radius: 5px;
+  background: #1a9e8f;
+  color: #fff;
+  font-size: 9.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+.ss-out-badge svg {
+  width: 10px;
+  height: 10px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .ss-img-link { color: #2d6cad; text-decoration: none; font-weight: 500; }
 .ss-img-link:hover { text-decoration: underline; }
 
@@ -3797,16 +3986,212 @@ body.pulse-b .cart-inline-btn.in-cart {
 .ss-add-btn--secondary { background: #eaf3fc; color: #2d6cad; }
 .ss-add-btn--secondary:hover { background: #d8eafb; color: #2d6cad; box-shadow: none; }
 .ss-toolbar-btns { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.ss-notification-history-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 6px 10px;
+  border: 1px solid #cfe0f2;
+  border-radius: 10px;
+  background: #fff;
+  color: #2d6cad;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.16s ease, border-color 0.16s ease, transform 0.16s ease;
+}
+.ss-notification-history-btn:hover { background: #eaf3fc; border-color: #9fc5e9; transform: translateY(-1px); }
+.ss-notification-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 5px;
+  border-radius: 10px;
+  background: #e33f4f;
+  color: #fff;
+  font-size: 10px;
+  line-height: 1;
+  box-shadow: 0 2px 5px rgba(176, 36, 51, 0.28);
+}
 .ss-search-input { width: 360px; padding: 7px 12px; font-weight: 400; }
+
+/* ประวัติอัพเดท SaleSupport — drawer ด้านขวา */
+.ss-notification-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: flex;
+  justify-content: flex-end;
+  background: rgba(20, 35, 50, 0.35);
+  backdrop-filter: blur(2px);
+}
+.ss-notification-drawer {
+  width: min(430px, 100vw);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #f7f9fc;
+  box-shadow: -12px 0 34px rgba(18, 42, 66, 0.24);
+  animation: ssNotificationDrawerIn 0.22s ease-out both;
+}
+@keyframes ssNotificationDrawerIn {
+  from { transform: translateX(28px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+.ss-notification-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 18px 15px;
+  border-bottom: 1px solid #dce5ee;
+  background: #fff;
+  color: #1c3d5e;
+  font-family: 'Noto Sans Thai', sans-serif;
+}
+.ss-notification-header > div { display: flex; flex-direction: column; gap: 2px; }
+.ss-notification-header strong { font-size: 16px; }
+.ss-notification-header span { color: #8194a8; font-size: 11.5px; font-weight: 500; }
+.ss-notification-list { flex: 1; overflow-y: auto; padding: 12px; }
+.ss-notification-item {
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  margin-bottom: 8px;
+  padding: 12px 13px;
+  border: 1px solid #dfe7ef;
+  border-radius: 11px;
+  background: #fff;
+  color: #2d3a48;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+}
+.ss-notification-item:hover { border-color: #9fc5e9; box-shadow: 0 5px 14px rgba(45, 108, 173, 0.12); transform: translateY(-1px); }
+.ss-notification-item.is-unread { border-left: 4px solid #4891db; background: #f8fbff; }
+.ss-notification-item > strong { font: 700 13px/1.45 'Noto Sans Thai', sans-serif; color: #1c3d5e; }
+.ss-notification-actor {
+  display: inline-flex;
+  padding: 2px 7px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 700;
+}
+.ss-notification-actor--warehouse { background: #e8f1fb; color: #2d6cad; }
+.ss-notification-actor--purchasing { background: #fff1dc; color: #a76408; }
+.ss-notification-new { position: absolute; top: 11px; right: 12px; color: #e33f4f; font-size: 10px; font-weight: 800; }
+.ss-notification-product {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: 7px;
+  background: #edf5fd;
+  color: #31516f;
+  font: 600 11.5px/1.4 'Noto Sans Thai', sans-serif;
+}
+.ss-notification-product b { color: #2d6cad; font-family: 'Outfit', 'Noto Sans Thai', sans-serif; }
+.ss-notification-product span { min-width: 0; overflow-wrap: anywhere; }
+.ss-notification-detail { color: #5f7183; font: 500 11.5px/1.5 'Noto Sans Thai', sans-serif; word-break: break-word; }
+.ss-notification-time { width: 100%; display: flex; justify-content: space-between; gap: 8px; color: #91a0af; font-size: 10.5px; }
+.ss-notification-time em { color: #4891db; font-style: normal; font-weight: 700; }
+.ss-notification-state { padding: 42px 18px; color: #8194a8; text-align: center; font: 500 12.5px 'Noto Sans Thai', sans-serif; }
+.ss-notification-state--error { color: #b04a3a; }
+.ss-notification-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 14px;
+  border-top: 1px solid #dce5ee;
+  background: #fff;
+  color: #91a0af;
+  font-size: 10.5px;
+}
+.ss-notification-clear-btn {
+  flex-shrink: 0;
+  border: 1px solid #e5a8a1;
+  border-radius: 8px;
+  background: #fff5f4;
+  color: #b33b31;
+  padding: 5px 10px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.ss-notification-clear-btn:hover:not(:disabled) { background: #b33b31; color: #fff; }
+.ss-notification-clear-btn:disabled { opacity: 0.45; cursor: default; }
 
 /* ช่องค้นหา toolbar (เมนู Products) */
 .ss-panel-toolbar { position: relative; }
 .ss-search-center {
   margin-left: 16px;
   margin-right: auto;
+  min-width: 0;
+  flex: 1 1 auto;
+  /* ช่องค้นหา + chip ABC ต้องต่อกันในแนวนอนเดียวกัน */
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: nowrap;
+}
+.ss-search-center .ss-search-input {
+  width: 260px;
+  min-width: 200px;
+  flex: 0 1 260px;
 }
 @media (max-width: 1100px) {
   .ss-search-center { margin-left: 8px; }
+}
+
+/* กรอง ABC เมนู Products — เลือกได้หลายค่าพร้อมกัน ไม่เลือกเลย = แสดงทั้งหมด */
+.ss-abc-filter {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.ss-abc-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #7c8b9a;
+  letter-spacing: 0.4px;
+  margin-right: 2px;
+}
+
+.ss-abc-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 11px;
+  border: 1px solid #d8e2ec;
+  border-radius: 20px;
+  background: #fff;
+  color: #5b6b7d;
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.6;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.ss-abc-chip:hover:not(.is-active) { background: #eef4fa; color: #2d6cad; border-color: #b8d3ee; }
+.ss-abc-chip.is-active {
+  background: #2d6cad;
+  border-color: #2d6cad;
+  color: #fff;
 }
 
 .ss-panel-msg {
@@ -3821,6 +4206,8 @@ body.pulse-b .cart-inline-btn.in-cart {
 .ss-panel-msg--error { color: #b04a3a; background: #fdf1ef; border-bottom-color: #f3d8d3; }
 
 /* ฟอร์ม New Order */
+.dl-modal--new-order { max-width: 820px; }
+
 .ss-form {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -3847,8 +4234,57 @@ body.pulse-b .cart-inline-btn.in-cart {
   color: #2d3a48;
 }
 .ss-input:focus { outline: none; border-color: #4891db; box-shadow: 0 0 0 2px rgba(72, 145, 219, 0.18); }
+.ss-branch-locked-value {
+  min-height: 37px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border: 1px solid #cfe0f2;
+  border-radius: 8px;
+  background: #f3f8fd;
+  color: #2d6cad;
+}
+.ss-branch-locked-value strong { font-size: 13px; }
+.ss-branch-locked-value small { margin-left: auto; color: #8194a8; font-size: 10.5px; font-weight: 500; }
 .ss-status-select { min-width: 104px; max-width: 130px; padding: 4px 6px; border: 1px solid #cbd8e6; border-radius: 7px; background: #fff; color: #25415f; font: inherit; font-size: 10.5px; cursor: pointer; }
+/* Request Item: keep the purchasing selects inside their own table columns. */
+.ss-table--request th.ss-col-status {
+  width: 118px;
+  min-width: 118px !important;
+}
+.ss-table--request th.ss-col-availability {
+  width: 132px;
+  min-width: 132px !important;
+}
+.ss-table--request .ss-status-select {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
 .ss-status-select:focus { outline: none; border-color: #4891db; box-shadow: 0 0 0 2px rgba(72, 145, 219, 0.18); }
+
+/* ช่องกรอก MOQ / SKU ตรงในตาราง (จัดซื้อเท่านั้น) — ช่องข้อความอิสระ ต่างจาก .ss-status-select ที่เป็น select
+   สไตล์เดียวกันทุก property เพื่อให้แถวเดียวกันดูเป็นชุดเดียวกัน */
+.ss-table--request th.ss-col-moq,
+.ss-table--request th.ss-col-sku {
+  width: 100px;
+  min-width: 100px !important;
+}
+.ss-status-input {
+  padding: 4px 6px; border: 1px solid #cbd8e6; border-radius: 7px; background: #fff;
+  color: #25415f; font: inherit; font-size: 10.5px;
+}
+.ss-table--request .ss-status-input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.ss-status-input:focus { outline: none; border-color: #4891db; box-shadow: 0 0 0 2px rgba(72, 145, 219, 0.18); }
 .ss-contact-row { display: flex; gap: 8px; }
 .ss-contact-select { width: 120px; flex-shrink: 0; }
 
@@ -3892,6 +4328,18 @@ body.pulse-b .cart-inline-btn.in-cart {
 .ss-suggest-sku { font-weight: 600; color: #2d6cad; flex-shrink: 0; }
 .ss-suggest-name { color: #2d3a48; flex: 1; min-width: 0; }
 .ss-suggest-unit { color: #8a97a5; font-size: 11px; flex-shrink: 0; }
+
+/* New Order: ให้รายการค้นหา SKU ใช้พื้นที่เต็มฟอร์ม เพื่อแสดงชื่อสินค้ายาวได้ครบ */
+.dl-modal--new-order .ss-suggest-list {
+  left: calc(-100% - 14px);
+  right: 0;
+  max-height: 280px;
+}
+.dl-modal--new-order .ss-suggest-item { align-items: flex-start; }
+.dl-modal--new-order .ss-suggest-name {
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
 .ss-form-note {
   grid-column: 1 / -1;
   font-size: 11.5px;
@@ -3986,6 +4434,34 @@ body.pulse-b .cart-inline-btn.in-cart {
   padding-top: 14px;
 }
 
+/* ฟอร์มคลังสินค้าใน popup Order — โผล่แทนที่ .ss-stamp-row เมื่อล็อกอินด้วยโปรไฟล์คลังสินค้า */
+.ss-wh-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px 18px;
+}
+.ss-wh-field { display: flex; flex-direction: column; gap: 4px; }
+.ss-wh-actions { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
+.ss-wh-actions .ss-add-btn:disabled { opacity: 0.45; cursor: default; }
+.ss-wh-msg { font-size: 12.5px; font-weight: 600; color: #3f8a4d; }
+.ss-wh-msg--error { color: #b04a3a; }
+
+/* ฟอร์มจัดซื้อใน popup Order */
+.ss-purchasing-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 18px;
+}
+.ss-purchasing-field { display: flex; flex-direction: column; gap: 4px; }
+.ss-purchasing-actions { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
+.ss-purchasing-actions .ss-add-btn:disabled { opacity: 0.45; cursor: default; }
+.ss-purchasing-msg { font-size: 12.5px; font-weight: 600; color: #3f8a4d; }
+.ss-purchasing-msg--error { color: #b04a3a; }
+
+@media (max-width: 620px) {
+  .ss-purchasing-grid { grid-template-columns: 1fr; }
+}
+
 /* ตราประทับอนุมัติ (แบบ 7) */
 .ss-stamp-row { display: flex; gap: 10px; flex-wrap: wrap; }
 .ss-stamp {
@@ -4022,6 +4498,109 @@ body.pulse-b .cart-inline-btn.in-cart {
 }
 .ss-stamp--done { border-style: solid; border-color: #bfe3c9; color: #b9c6b9; }
 .ss-stamp--done .ss-stamp-mark { opacity: 1; transform: rotate(-8deg) scale(1); }
+
+/* ── Toast แจ้งผลกดตราประทับ — pill กลางบนจอ ──
+   ดีไซน์ "Top Center Drop" (แบบที่ 2 จาก public/stamp-toast-designs.html)
+   ⚠️ z-index ต้องสูงกว่า .dl-modal-overlay (1000) เพราะยิงตอนป๊อปอัป Order เปิดอยู่เสมอ
+      และสูงกว่า .ss-notification-overlay (1100) ด้วย ไม่งั้นโดน drawer ประวัติอัพเดททับ
+   ⚠️ .ss-toast-layer render อยู่ตลอดแม้ไม่มี toast — ต้อง pointer-events: none
+      ไม่งั้นจะเป็นแผ่นใสบังปุ่มกลางบนจอ */
+.ss-toast-layer {
+  position: fixed;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1200;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  pointer-events: none;
+}
+.ss-toast {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100vw - 32px);
+  padding: 7px 15px 7px 11px;
+  border: 1px solid var(--ss-toast-bd);
+  border-radius: 999px;
+  background: var(--ss-toast-bg);
+  color: var(--ss-toast-fg);
+  font-family: 'Noto Sans Thai', sans-serif;
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 5px 16px rgba(14, 32, 56, 0.14);
+  animation: ssToastDrop 0.3s cubic-bezier(0.22, 1.2, 0.36, 1);
+}
+/* เขียว = อนุมัติ (สีเดียวกับ .ss-stamp-mark) · ทอง = ยกเลิก (โทนเดียวกับตราที่ยังไม่ประทับ) · แดง = ผิดพลาด */
+.ss-toast--ok     { --ss-toast-fg: #2e8b47; --ss-toast-bg: #e9f7ee; --ss-toast-bd: #bfe3c9; }
+.ss-toast--cancel { --ss-toast-fg: #b8791c; --ss-toast-bg: #fdf4e6; --ss-toast-bd: #f0d9a8; }
+.ss-toast--error  { --ss-toast-fg: #c0392b; --ss-toast-bg: #fdeaea; --ss-toast-bd: #f2c0be; }
+.ss-toast-ico { font-size: 13px; }
+.ss-toast-sub { font-weight: 400; opacity: 0.78; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.ss-toast--leaving { animation: ssToastUp 0.22s ease forwards; }
+@keyframes ssToastDrop { from { opacity: 0; transform: translateY(-18px); } }
+@keyframes ssToastUp   { to   { opacity: 0; transform: translateY(-18px); } }
+
+/* ── กล่องยืนยัน "ยกเลิกสถานะ" — แทนที่ window.confirm() ──
+   ดีไซน์ "Centered Icon Alert" (แบบที่ 6 จาก public/confirm-dialog-designs.html)
+   ⚠️ z-index สูงกว่า .dl-modal-overlay (1000) เพราะต้องลอยทับป๊อปอัป Order ที่เปิดอยู่เสมอ
+      และสูงกว่า .ss-notification-overlay (1100) เผื่อกดยกเลิกตราระหว่างเปิด drawer ประวัติค้างอยู่ */
+.ss-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1150;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(20, 35, 55, 0.42);
+  animation: ssConfirmFade 0.15s ease;
+}
+.ss-confirm-box {
+  width: 270px;
+  background: #fff;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 14px 34px rgba(10, 26, 46, 0.26);
+  text-align: center;
+  animation: ssConfirmPop 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.ss-confirm-top { padding: 20px 18px 15px; }
+.ss-confirm-ico {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #fdf4e6;
+  color: #c9822e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  margin: 0 auto 10px;
+}
+.ss-confirm-title { font-size: 14px; font-weight: 700; color: #1e3a54; margin-bottom: 6px; }
+.ss-confirm-msg { font-size: 12px; color: #7a8a9b; line-height: 1.6; }
+.ss-confirm-btns { display: flex; border-top: 1px solid #eef2f6; }
+.ss-confirm-btns button {
+  flex: 1;
+  border: none;
+  background: none;
+  padding: 12px;
+  font-family: 'Noto Sans Thai', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  color: #5b7590;
+  transition: background 0.15s ease;
+}
+.ss-confirm-btns button:first-child { border-right: 1px solid #eef2f6; }
+.ss-confirm-btns button:hover { background: #f7fafd; }
+/* เหลืองอำพัน ไม่ใช่แดง — ยกเลิกตราไม่ใช่การลบถาวร ยังกดประทับใหม่ได้ */
+.ss-confirm-btn--yes { color: #c9822e; font-weight: 800; }
+@keyframes ssConfirmFade { from { opacity: 0; } }
+@keyframes ssConfirmPop { from { opacity: 0; transform: scale(0.9); } }
 
 @media (max-width: 800px) {
   .ss-layout { flex-direction: column; }
@@ -4096,6 +4675,54 @@ body.pulse-b .cart-inline-btn.in-cart {
 .cat-branch-locked strong { color: #2d6cad; font-weight: 500; }
 
 .cat-dropdown-list { flex: 1; overflow-y: auto; padding: 0.4rem 0; }
+
+/* ── เลือกตาม Location ── รหัสชั้นวางมีหลักร้อย (SRC 488) จึงเป็นตารางรหัส + ช่องกรอง
+   ต่างจากเลือกตามหมวดที่มีแค่ 9 รายการเรียงลงมา */
+.cat-dropdown--loc { width: 380px; }
+
+.cat-loc-total {
+  margin-left: auto;
+  font-size: 0.66rem;
+  color: #9a8f82;
+  font-family: 'Outfit', sans-serif;
+}
+
+.cat-loc-grid {
+  flex: 1;
+  overflow-y: auto;
+  display: grid;
+  /* รหัสยาว 1-4 ตัว ช่องกว้างเท่ากันหมดเพื่อให้อ่านเป็นตาราง */
+  grid-template-columns: repeat(auto-fill, minmax(62px, 1fr));
+  gap: 4px;
+  padding: 0.5rem 0.6rem;
+  align-content: start;
+}
+
+.cat-loc-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 6px 4px;
+  border: 1px solid #d8e2ec;
+  border-radius: 7px;
+  background: #fff;
+  color: #5b6b7d;
+  font-family: 'Outfit', sans-serif;
+  cursor: pointer;
+  transition: all 0.13s;
+  white-space: nowrap;
+}
+.cat-loc-name { font-size: 0.8rem; font-weight: 700; letter-spacing: 0.3px; }
+/* จำนวนชั้นวางในกลุ่ม — บอกว่ากดแล้วจะได้กี่ชั้น */
+.cat-loc-sub { font-size: 0.6rem; font-weight: 500; opacity: 0.65; }
+.cat-loc-chip:hover:not(:disabled):not(.is-active) { background: #eaf3fc; color: #2d6cad; border-color: #b8d3ee; }
+.cat-loc-chip:disabled { opacity: 0.5; cursor: default; }
+.cat-loc-chip.is-active {
+  background: linear-gradient(135deg, #2d6cad, #4891db);
+  border-color: #4891db;
+  color: #fff;
+}
 
 .cat-dropdown-item {
   display: flex;

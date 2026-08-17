@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Order Stamp Alert Designs — 20 แบบ</title>
+<link href="https://fonts.googleapis.com/css2?family=Mitr:wght@400;500;600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --blue:#2d6cad; --blue2:#4891db; --blue-l:#eaf3fc; --blue-b:#b8d3ee;
+  --ink:#2d2a26; --mute:#7c8b9a; --line:#e3e8ee;
+  --warn:#e8a33d; --warn-l:#fdf4e3; --danger:#d9534f; --danger-l:#fdeceb;
+  --ok:#3fa06b; --ok-l:#e9f6ee;
+}
+*{box-sizing:border-box}
+body{margin:0;padding:28px 20px 60px;background:#f4f6f9;color:var(--ink);
+     font:15px 'Mitr',sans-serif}
+h1{text-align:center;margin:0 0 6px;font-weight:600;font-size:26px;color:var(--blue)}
+.sub{text-align:center;color:var(--mute);font-size:13px;margin:0 0 8px;line-height:1.7}
+.rule{max-width:900px;margin:0 auto 26px;background:#fff;border:1px solid var(--line);
+      border-radius:14px;padding:14px 18px;font-size:13px;line-height:1.8}
+.rule b{color:var(--blue)}
+.rule code{font-family:'Outfit',monospace;background:var(--blue-l);padding:1px 6px;border-radius:5px;font-size:12px}
+.grid{max-width:1500px;margin:auto;display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:20px}
+.card{background:#fff;border-radius:16px;padding:18px;box-shadow:0 4px 18px rgba(0,0,0,.07);
+      display:flex;flex-direction:column}
+.card h2{margin:0 0 3px;font-size:15px;font-weight:600;color:var(--blue)}
+.card .note{margin:0 0 14px;font-size:11.5px;color:var(--mute);line-height:1.6}
+.stage{background:#f7f9fc;border:1px dashed var(--line);border-radius:12px;padding:16px;
+       flex:1;display:flex;align-items:center;justify-content:center;min-height:150px;position:relative;overflow:hidden}
+.stage--tl{align-items:flex-start;justify-content:flex-start}
+.stage--full{display:block}
+
+/* ---------- ชิ้นส่วนที่ใช้ซ้ำ ---------- */
+.dot{width:7px;height:7px;border-radius:50%;display:inline-block}
+.dot--on{background:var(--ok)} .dot--off{background:#d5dbe2}
+.mini{font-family:'Outfit',sans-serif;font-size:11px;font-weight:600}
+.btn{border:0;border-radius:9px;padding:6px 13px;font:500 12px 'Mitr',sans-serif;cursor:pointer;
+     background:var(--blue);color:#fff}
+.btn--ghost{background:rgba(255,255,255,.22);color:#fff}
+.btn--out{background:#fff;color:var(--blue);border:1px solid var(--blue-b)}
+.x{background:none;border:0;color:inherit;opacity:.6;cursor:pointer;font-size:14px;line-height:1}
+
+/* 1 Toast */
+.d1{position:absolute;top:12px;right:12px;width:290px;background:#fff;border-radius:12px;
+    border-left:4px solid var(--warn);box-shadow:0 10px 28px rgba(0,0,0,.16);padding:12px 14px;
+    animation:slideIn .5s ease-out}
+@keyframes slideIn{from{transform:translateX(120%);opacity:0}to{transform:none;opacity:1}}
+.d1 .t{font-size:13px;font-weight:600;margin-bottom:3px}
+.d1 .m{font-size:11.5px;color:var(--mute);line-height:1.6}
+
+/* 2 Banner */
+.d2{width:100%;background:linear-gradient(135deg,#fdf4e3,#fff);border:1px solid #f0dcb4;
+    border-left:5px solid var(--warn);border-radius:11px;padding:12px 16px;
+    display:flex;align-items:center;gap:12px}
+.d2 .ic{font-size:20px}
+.d2 .tx{flex:1;font-size:12.5px;line-height:1.6}
+
+/* 3 Sidebar badge */
+.d3{width:100%;max-width:230px;background:#fff;border-radius:11px;overflow:hidden;border:1px solid var(--line)}
+.d3 a{display:flex;align-items:center;gap:9px;padding:9px 13px;font-size:12.5px;
+      border-left:3px solid transparent;color:var(--mute);text-decoration:none}
+.d3 a.on{background:var(--blue-l);border-left-color:var(--blue);color:var(--blue);font-weight:500}
+.d3 .cnt{margin-left:auto;background:var(--danger);color:#fff;border-radius:20px;
+         padding:1px 7px;font:700 10px 'Outfit';min-width:19px;text-align:center}
+
+/* 4 Row highlight */
+.tbl{width:100%;border-collapse:collapse;font-size:11.5px;background:#fff;border-radius:9px;overflow:hidden}
+.tbl th{background:var(--blue-l);color:var(--blue);padding:7px 9px;text-align:left;font-weight:500;font-size:11px}
+.tbl td{padding:7px 9px;border-top:1px solid var(--line)}
+.tbl tr.warn td{background:var(--warn-l)}
+.tbl tr.warn td:first-child{box-shadow:inset 3px 0 0 var(--warn)}
+.tbl tr.late td{background:var(--danger-l)}
+.tbl tr.late td:first-child{box-shadow:inset 3px 0 0 var(--danger)}
+
+/* 5 Floating pill */
+.d5{position:absolute;bottom:14px;right:14px;background:var(--blue);color:#fff;border-radius:30px;
+    padding:9px 17px 9px 13px;display:flex;align-items:center;gap:9px;
+    box-shadow:0 8px 22px rgba(45,108,173,.4);font-size:12.5px;cursor:pointer}
+.d5 .n{background:#fff;color:var(--blue);border-radius:20px;padding:1px 8px;font:700 11px 'Outfit'}
+
+/* 6 Modal */
+.d6{position:absolute;inset:0;background:rgba(20,35,55,.45);display:flex;align-items:center;justify-content:center}
+.d6 .box{background:#fff;border-radius:15px;padding:20px;width:82%;max-width:320px;text-align:center;
+         box-shadow:0 18px 44px rgba(0,0,0,.28)}
+.d6 .ic{font-size:34px}
+.d6 h4{margin:6px 0 5px;font-size:14px;font-weight:600}
+.d6 p{margin:0 0 14px;font-size:11.5px;color:var(--mute);line-height:1.6}
+
+/* 7 Progress ring */
+.d7{display:flex;gap:22px;align-items:center}
+.ring{--p:0;width:74px;height:74px;border-radius:50%;display:grid;place-items:center;
+      background:conic-gradient(var(--blue) calc(var(--p)*1%),#e6ecf3 0)}
+.ring i{width:56px;height:56px;background:#f7f9fc;border-radius:50%;display:grid;place-items:center;
+        font:700 15px 'Outfit';font-style:normal;color:var(--blue)}
+
+/* 8 Stepper */
+.step{display:flex;align-items:center;gap:0}
+.step b{width:19px;height:19px;border-radius:50%;display:grid;place-items:center;
+        font:700 9px 'Outfit';background:#e0e6ed;color:#93a1b0}
+.step b.on{background:var(--ok);color:#fff}
+.step i{width:22px;height:2px;background:#e0e6ed;display:block}
+.step i.on{background:var(--ok)}
+
+/* 9 Stat tiles */
+.d9{display:flex;gap:10px;width:100%}
+.tile{flex:1;background:#fff;border:1px solid var(--line);border-radius:12px;padding:11px;text-align:center}
+.tile.hot{border-color:#f0c9c7;background:var(--danger-l)}
+.tile .v{font:700 21px 'Outfit';color:var(--blue)}
+.tile.hot .v{color:var(--danger)}
+.tile .k{font-size:10.5px;color:var(--mute);margin-top:1px}
+
+/* 10 Dismissible alert */
+.d10{width:100%;background:var(--danger-l);border:1px solid #f2cecc;border-radius:11px;
+     padding:11px 14px;display:flex;gap:10px;align-items:flex-start;font-size:12px;line-height:1.6}
+
+/* 11 Sticky footer */
+.d11{position:absolute;left:0;right:0;bottom:0;background:#243447;color:#fff;
+     padding:11px 16px;display:flex;align-items:center;gap:12px;font-size:12.5px}
+.d11 .n{background:var(--warn);color:#3a2a08;border-radius:6px;padding:1px 8px;font:700 11px 'Outfit'}
+
+/* 12 Tab dot */
+.d12{display:flex;gap:5px;background:#fff;padding:5px;border-radius:11px;border:1px solid var(--line)}
+.d12 span{position:relative;padding:6px 13px;border-radius:8px;font-size:12px;color:var(--mute);cursor:pointer}
+.d12 span.on{background:var(--blue);color:#fff}
+.d12 span.has::after{content:'';position:absolute;top:3px;right:4px;width:6px;height:6px;
+                     border-radius:50%;background:var(--danger);box-shadow:0 0 0 2px #fff}
+
+/* 13 Timeline */
+.d13{width:100%;max-width:270px}
+.tl{display:flex;gap:10px;font-size:11.5px}
+.tl .col{display:flex;flex-direction:column;align-items:center}
+.tl .pt{width:13px;height:13px;border-radius:50%;border:2px solid #d5dbe2;background:#fff}
+.tl .pt.on{border-color:var(--ok);background:var(--ok)}
+.tl .ln{width:2px;flex:1;background:#e0e6ed;min-height:15px}
+.tl .ln.on{background:var(--ok)}
+.tl .tx{padding-bottom:11px}
+.tl .tx b{display:block;font-weight:500}
+.tl .tx small{color:var(--mute);font-size:10.5px}
+
+/* 14 List cards */
+.d14{width:100%;display:flex;flex-direction:column;gap:7px}
+.oc{background:#fff;border:1px solid var(--line);border-radius:10px;padding:9px 11px;
+    display:flex;align-items:center;gap:10px;font-size:11.5px}
+.oc.late{border-color:#f0c9c7}
+.oc .bd{flex:1;min-width:0}
+.oc .bd b{display:block;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.oc .bd small{color:var(--mute);font-size:10.5px}
+.oc .dots{display:flex;gap:3px}
+
+/* 15 Ribbon */
+.d15{background:#fff;border:1px solid var(--line);border-radius:12px;padding:15px;width:100%;
+     max-width:290px;position:relative;overflow:hidden;font-size:12px}
+.d15 .rb{position:absolute;top:11px;right:-31px;transform:rotate(45deg);background:var(--danger);
+         color:#fff;font:600 9.5px 'Mitr';padding:3px 34px}
+
+/* 16 Pulse */
+.d16{position:relative;width:46px;height:46px;border-radius:12px;background:var(--blue-l);
+     display:grid;place-items:center;font-size:21px}
+.d16 .p{position:absolute;inset:0;border-radius:12px;border:2px solid var(--danger);
+        animation:pulse 1.7s ease-out infinite}
+@keyframes pulse{0%{transform:scale(1);opacity:.85}100%{transform:scale(1.55);opacity:0}}
+.d16 .n{position:absolute;top:-6px;right:-6px;background:var(--danger);color:#fff;border-radius:20px;
+        min-width:19px;height:19px;display:grid;place-items:center;font:700 10px 'Outfit';border:2px solid #f7f9fc}
+
+/* 17 Split banner */
+.d17{width:100%;display:flex;border-radius:12px;overflow:hidden;border:1px solid var(--line)}
+.d17 .l{background:var(--blue);color:#fff;padding:13px 16px;text-align:center}
+.d17 .l .v{font:700 24px 'Outfit';line-height:1}
+.d17 .l .k{font-size:9.5px;opacity:.85}
+.d17 .r{flex:1;background:#fff;padding:11px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px}
+
+/* 18 Inline chips */
+.d18{display:flex;gap:5px;flex-wrap:wrap;justify-content:center}
+.ch{border-radius:20px;padding:3px 11px;font-size:11px;border:1px solid}
+.ch.on{background:var(--ok-l);border-color:#bfe3cd;color:#2c7a51}
+.ch.off{background:#f2f4f7;border-color:#e0e6ed;color:#98a5b3}
+
+/* 19 Tooltip */
+.d19{position:relative}
+.d19 .tg{background:var(--warn-l);border:1px solid #f0dcb4;border-radius:8px;padding:6px 11px;
+         font-size:12px;cursor:default}
+.d19 .tp{position:absolute;bottom:calc(100% + 9px);left:50%;transform:translateX(-50%);
+         background:#243447;color:#fff;padding:9px 12px;border-radius:9px;width:212px;
+         font-size:11px;line-height:1.65;box-shadow:0 8px 20px rgba(0,0,0,.22)}
+.d19 .tp::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);
+                border:6px solid transparent;border-top-color:#243447}
+
+/* 20 Side panel */
+.d20{position:absolute;top:0;right:0;bottom:0;width:225px;background:#fff;
+     box-shadow:-8px 0 24px rgba(0,0,0,.1);padding:13px;overflow:auto}
+.d20 h5{margin:0 0 3px;font-size:12.5px;font-weight:600;color:var(--blue)}
+.d20 .sm{font-size:10.5px;color:var(--mute);margin-bottom:10px}
+.d20 .it{border-top:1px solid var(--line);padding:8px 0;font-size:11px}
+.d20 .it b{display:block;font-weight:500}
+.d20 .it small{color:var(--mute);font-size:10px}
+</style>
+</head>
+<body>
+
+<h1>แจ้งเตือน Order ที่ยังกดตราไม่ครบ — 20 แบบ</h1>
+<p class="sub">หน้า Sale Support · เมนู Order<br>ข้อมูลในตัวอย่างเป็นของจริงจากตาราง <code>ss_orders</code> (12 ส.ค. 2569)</p>
+
+<div class="rule">
+  <b>เงื่อนไขที่ถือว่า "ยังไม่เสร็จ"</b> — ต้องกดครบทั้ง 3 ตราถึงจะนับว่าจบ:
+  <code>arrived_branch</code> ของถึงสาขา · <code>customer_notified</code> แจ้งลูกค้า · <code>delivered</code> ส่งมอบสินค้า<br>
+  ค่าที่นับว่าเสร็จคือมีคำว่า “แล้ว” และไม่มี “ยังไม่” (ตาม <code>stepDone()</code>) — ค่าว่าง/<code>null</code> ก็ถือว่ายังไม่เสร็จ<br>
+  <b>ข้อมูลจริงตอนนี้:</b> 8 ออเดอร์ · <b>ยังไม่ครบ 4</b> (0 ตรา 3 ราย · 2 ตรา 1 ราย) · ในนั้น <b>เลยวันนัดรับแล้ว 2</b> ราย
+</div>
+
+<div class="grid" id="g"></div>
+
+<script>
+/* ออเดอร์จริงที่ยังกดตราไม่ครบ */
+const O = [
+  { br:'SRC', sku:'990080', name:'Thermal Paper 80x80 mm (2ม้วน)', pick:'11/8', late:1, s:[0,0,0] },
+  { br:'SRC', sku:'700306', name:'Handi-C 1000 ml',                 pick:'11/8', late:1, s:[0,0,0] },
+  { br:'SRC', sku:'900422', name:"Glyxambi 25 mg/5 mg 30's",        pick:'19/8', late:0, s:[0,0,0] },
+  { br:'KKL', sku:'101369', name:"FICEF 100 mg 10x10's",            pick:'14/8', late:0, s:[1,1,0] },
+];
+const STEP = ['ของถึงสาขา','แจ้งลูกค้า','ส่งมอบสินค้า'];
+const dots = s => s.map(v => `<span class="dot dot--${v?'on':'off'}"></span>`).join('');
+const chips = s => s.map((v,i) => `<span class="ch ${v?'on':'off'}">${v?'✔':'○'} ${STEP[i]}</span>`).join('');
+
+const D = [
+[ 'Toast มุมขวาบน', 'เด้งเองตอนเข้าหน้า แล้วหายไป · ไม่บังอะไร เหมาะกับเตือนเบา ๆ',
+  `<div class="stage"><div class="d1"><button class="x" style="float:right">✕</button>
+   <div class="t">⏳ มีออเดอร์ค้าง 4 รายการ</div>
+   <div class="m">ยังกดตราไม่ครบ 3 ขั้น<br><b style="color:#d9534f">2 รายการเลยวันนัดรับแล้ว</b></div></div></div>` ],
+
+[ 'Banner เหนือตาราง', 'อยู่ติดกับตารางเสมอ ไม่หาย เห็นแน่นอน',
+  `<div class="stage stage--full"><div class="d2"><span class="ic">⚠️</span>
+   <span class="tx"><b>4 ออเดอร์ยังกดตราไม่ครบ</b><br>
+   <span style="color:#7c8b9a">SRC 3 · KKL 1 — ในนั้นเลยวันนัดรับแล้ว 2</span></span>
+   <button class="btn">ดูรายการ</button></div></div>` ],
+
+[ 'Badge บนเมนู Sidebar', 'เห็นได้จากทุกเมนู ไม่ต้องเข้าหน้า Order ก่อน',
+  `<div class="stage"><nav class="d3">
+   <a href="#">📦 Products</a>
+   <a href="#" class="on">🧾 Order <span class="cnt">4</span></a>
+   <a href="#">📋 Request Item</a>
+   <a href="#">✨ New Product</a></nav></div>` ],
+
+[ 'ไฮไลต์แถวในตาราง', 'บอกตรงจุด รู้ทันทีว่าแถวไหน · แดง = เลยนัดรับ, ส้ม = ยังไม่ถึงกำหนด',
+  `<div class="stage stage--full"><table class="tbl">
+   <tr><th>สาขา</th><th>สินค้า</th><th>นัดรับ</th><th>ตรา</th></tr>
+   ${O.map(o=>`<tr class="${o.late?'late':(o.s.every(Boolean)?'':'warn')}">
+     <td>${o.br}</td><td>${o.name.slice(0,22)}</td>
+     <td>${o.pick}${o.late?' ⚠':''}</td>
+     <td><span class="mini">${o.s.filter(Boolean).length}/3</span> ${dots(o.s)}</td></tr>`).join('')}
+   </table></div>` ],
+
+[ 'Floating Pill ล่างขวา', 'ลอยอยู่ตลอด กดแล้วกรองเฉพาะที่ค้าง',
+  `<div class="stage"><div class="d5">⏳ ออเดอร์ค้าง <span class="n">4</span></div></div>` ],
+
+[ 'Modal เด้งตอนเปิดหน้า', 'แรงสุด บังคับให้รับรู้ · เหมาะถ้าเรื่องนี้สำคัญมาก',
+  `<div class="stage"><div class="d6"><div class="box"><div class="ic">⚠️</div>
+   <h4>มีออเดอร์ค้าง 4 รายการ</h4>
+   <p>ยังกดตราไม่ครบทั้ง 3 ขั้น<br>เลยวันนัดรับแล้ว 2 รายการ</p>
+   <button class="btn">ดูรายการค้าง</button>
+   <button class="btn btn--out" style="margin-left:6px">ปิด</button></div></div></div>` ],
+
+[ 'วงแหวนความคืบหน้า', 'เห็นภาพรวมเป็นเปอร์เซ็นต์ในพริบตา',
+  `<div class="stage"><div class="d7">
+   <div class="ring" style="--p:50"><i>4/8</i></div>
+   <div style="font-size:12px;line-height:1.9">
+     <div><span class="dot dot--on"></span> เสร็จครบ 3 ตรา — <b>4</b></div>
+     <div><span class="dot dot--off"></span> ยังไม่ครบ — <b style="color:#d9534f">4</b></div>
+     <div style="color:#7c8b9a;font-size:11px;margin-top:3px">เลยนัดรับ 2 รายการ</div>
+   </div></div></div>` ],
+
+[ 'Stepper ในแถวตาราง', 'เห็นว่าค้างอยู่ขั้นไหน ไม่ใช่แค่ว่าค้าง',
+  `<div class="stage stage--full"><table class="tbl">
+   <tr><th>สินค้า</th><th>นัดรับ</th><th>ความคืบหน้า</th></tr>
+   ${O.map(o=>`<tr><td>${o.name.slice(0,20)}</td><td>${o.pick}</td><td><div class="step">
+     ${o.s.map((v,i)=>`<b class="${v?'on':''}">${i+1}</b>${i<2?`<i class="${o.s[i]&&o.s[i+1]?'on':''}"></i>`:''}`).join('')}
+     <span class="mini" style="margin-left:8px;color:#7c8b9a">${STEP[o.s.findIndex(v=>!v)]||'ครบแล้ว'}</span>
+   </div></td></tr>`).join('')}</table></div>` ],
+
+[ 'การ์ดสรุปด้านบน', 'เหมือน dashboard · เห็นตัวเลขรวมก่อนลงรายละเอียด',
+  `<div class="stage"><div class="d9">
+   <div class="tile"><div class="v">8</div><div class="k">ออเดอร์ทั้งหมด</div></div>
+   <div class="tile"><div class="v">4</div><div class="k">เสร็จครบ</div></div>
+   <div class="tile hot"><div class="v">4</div><div class="k">ยังไม่ครบตรา</div></div>
+   <div class="tile hot"><div class="v">2</div><div class="k">เลยนัดรับ</div></div>
+   </div></div>` ],
+
+[ 'Alert ปิดได้', 'ผู้ใช้ปิดเองได้ ไม่รบกวนถ้ารับทราบแล้ว',
+  `<div class="stage stage--full"><div class="d10"><span>🔔</span>
+   <span style="flex:1"><b>ออเดอร์ค้าง 4 รายการ</b> — Thermal Paper และ Handi-C เลยวันนัดรับ (11/8) แล้ว</span>
+   <button class="x">✕</button></div></div>` ],
+
+[ 'แถบล่างติดหน้าจอ', 'ไม่บังเนื้อหา แต่ตามติดตลอดการเลื่อน',
+  `<div class="stage"><div class="d11">⏳ <span>ยังกดตราไม่ครบ</span>
+   <span class="n">4 รายการ</span>
+   <span style="margin-left:auto;display:flex;gap:7px">
+   <button class="btn btn--ghost">ดูทั้งหมด</button><button class="x">✕</button></span></div></div>` ],
+
+[ 'จุดแดงบนแท็บ', 'เบาที่สุด ไม่กินพื้นที่เลย เหมาะถ้าไม่อยากให้รก',
+  `<div class="stage"><div class="d12">
+   <span class="on has">Order</span><span>Request Item</span>
+   <span class="has">New Product</span><span>Ticket</span></div></div>` ],
+
+[ 'Timeline ในป๊อปอัป', 'ใช้ในหน้ารายละเอียด · เห็นลำดับและสิ่งที่ต้องทำต่อ',
+  `<div class="stage"><div class="d13"><div class="tl">
+   <div class="col"><span class="pt on"></span><span class="ln on"></span>
+     <span class="pt on"></span><span class="ln"></span><span class="pt"></span></div>
+   <div style="flex:1">
+     <div class="tx"><b>ของถึงสาขา</b><small>ถึงแล้ว · 10/8</small></div>
+     <div class="tx"><b>แจ้งลูกค้า</b><small>แจ้งแล้ว · 11/8</small></div>
+     <div class="tx"><b style="color:#d9534f">ส่งมอบสินค้า</b><small style="color:#d9534f">ยังไม่ส่งมอบ — รอดำเนินการ</small></div>
+   </div></div></div></div>` ],
+
+[ 'รายการค้างแบบการ์ด', 'เห็นครบทุกรายการพร้อมสถานะ กดเข้าได้ทันที',
+  `<div class="stage stage--full"><div class="d14">
+   ${O.filter(o=>!o.s.every(Boolean)).map(o=>`<div class="oc ${o.late?'late':''}">
+     <span>${o.late?'🔴':'🟠'}</span>
+     <span class="bd"><b>${o.name}</b><small>${o.br} · ${o.sku} · นัดรับ ${o.pick}${o.late?' (เลยกำหนด)':''}</small></span>
+     <span class="dots">${dots(o.s)}</span></div>`).join('')}
+   </div></div>` ],
+
+[ 'Ribbon มุมการ์ด', 'ติดป้ายที่การ์ด เห็นชัดโดยไม่เพิ่มแถว',
+  `<div class="stage"><div class="d15"><div class="rb">ค้าง</div>
+   <b style="font-weight:500">Thermal Paper 80x80 mm</b>
+   <div style="color:#7c8b9a;font-size:11px;margin:3px 0 9px">SRC · 990080 · นัดรับ 11/8</div>
+   <div class="d18" style="justify-content:flex-start">${chips([0,0,0])}</div></div></div>` ],
+
+[ 'ไอคอนกระพริบ', 'ดึงสายตาด้วยการเคลื่อนไหว เหมาะวางบนหัวเมนู',
+  `<div class="stage"><div class="d16"><span class="p"></span>🧾<span class="n">4</span></div></div>` ],
+
+[ 'Split Banner', 'ตัวเลขเด่นด้านซ้าย รายละเอียด+ปุ่มด้านขวา',
+  `<div class="stage stage--full"><div class="d17">
+   <div class="l"><div class="v">4</div><div class="k">ค้างอยู่</div></div>
+   <div class="r"><span>ยังกดตราไม่ครบ 3 ขั้น<br>
+   <span style="color:#d9534f;font-size:11px">เลยวันนัดรับแล้ว 2 รายการ</span></span>
+   <button class="btn">จัดการ</button></div></div></div>` ],
+
+[ 'ชิป 3 ขั้นในแถว', 'บอกละเอียดที่สุดว่าขาดขั้นไหน โดยไม่ต้องเปิดป๊อปอัป',
+  `<div class="stage"><div style="text-align:center">
+   <div style="font-size:11.5px;color:#7c8b9a;margin-bottom:7px">Handi-C 1000 ml · SRC · นัดรับ 11/8</div>
+   <div class="d18">${chips([0,0,0])}</div>
+   <div style="font-size:11.5px;color:#7c8b9a;margin:11px 0 7px">FICEF 100 mg · KKL · นัดรับ 14/8</div>
+   <div class="d18">${chips([1,1,0])}</div></div></div>` ],
+
+[ 'Tooltip ตอน hover', 'ซ่อนรายละเอียดไว้ ไม่รกหน้าจอ · เห็นเมื่อสนใจ',
+  `<div class="stage"><div class="d19">
+   <div class="tp"><b>ยังไม่ได้กด 3 ขั้น</b><br>
+   ○ ของถึงสาขา<br>○ แจ้งลูกค้า<br>○ ส่งมอบสินค้า<br>
+   <span style="color:#ffb4b1">เลยวันนัดรับ 11/8 มา 1 วัน</span></div>
+   <span class="tg">⚠️ Thermal Paper 80x80 — ค้าง 3 ขั้น</span></div></div>` ],
+
+[ 'แผงด้านข้าง', 'รวมทุกรายการค้างไว้ที่เดียว เปิดค้างไว้ทำงานได้',
+  `<div class="stage"><aside class="d20">
+   <h5>⏳ ออเดอร์ค้าง</h5><div class="sm">ยังกดตราไม่ครบ · 4 รายการ</div>
+   ${O.filter(o=>!o.s.every(Boolean)).map(o=>`<div class="it">
+     <b>${o.name.slice(0,24)}</b>
+     <small>${o.br} · นัดรับ ${o.pick}${o.late?' 🔴':''}</small>
+     <div style="margin-top:4px">${dots(o.s)} <span class="mini" style="color:#7c8b9a">${o.s.filter(Boolean).length}/3</span></div>
+   </div>`).join('')}</aside></div>` ],
+];
+
+document.getElementById('g').innerHTML = D.map((d,i)=>
+  `<section class="card"><h2>แบบ ${i+1} — ${d[0]}</h2><p class="note">${d[1]}</p>${d[2]}</section>`
+).join('');
+</script>
+</body>
+</html>

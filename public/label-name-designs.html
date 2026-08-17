@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ป้ายราคา — ชื่อสินค้ายาวให้เห็นครบ 10 แบบ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800;900&family=Sarabun:wght@400;700;800&family=Noto+Sans+Thai:wght@300;400;500;600;700;800&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   ป้ายราคา 4.5 × 4 cm — ทำยังไงให้ชื่อสินค้ายาว ๆ เห็นครบ
+   แกลเลอรีเลือกดีไซน์ 10 แบบ · ไม่ได้ import เข้าแอป
+   เปิดผ่าน dev server: /label-name-designs.html
+
+   ⚠️ ป้ายในหน้านี้ render ที่ขนาดจริง (cm) แล้วค่อยขยายด้วย transform: scale()
+      เพื่อให้ "การวัดว่าชื่อถูกตัดไหม" ตรงกับตอนพิมพ์จริง
+   ============================================================ */
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: 26px 20px 90px;
+  background: #eef3f9; font-family: 'Noto Sans Thai', sans-serif; color: #2c3e50;
+}
+.pg-head { max-width: 1400px; margin: 0 auto 18px; }
+.pg-head h1 {
+  margin: 0 0 6px; font-family: 'Outfit', sans-serif; font-size: 27px;
+  font-weight: 800; color: #2d6cad; letter-spacing: -0.4px;
+}
+.pg-head p { margin: 0 0 4px; font-size: 13px; color: #5b7590; line-height: 1.75; font-weight: 300; }
+code {
+  background: #fff; border: 1px solid #cfe0f2; border-radius: 4px;
+  padding: 1px 5px; font-family: 'Outfit', monospace; font-size: 12px; color: #2d6cad;
+}
+.rule-box {
+  max-width: 1400px; margin: 0 auto 16px; padding: 13px 17px;
+  background: #eaf3fc; border: 1px solid #b8d3ee; border-left: 4px solid #4891db;
+  border-radius: 9px; font-size: 13px; line-height: 1.9; color: #2d5c8a;
+}
+.rule-box b { color: #1e4b7a; }
+.note-box {
+  max-width: 1400px; margin: 0 auto 18px; padding: 12px 16px;
+  background: #fff8e9; border: 1px solid #f0d9a8; border-left: 4px solid #e8a33d;
+  border-radius: 9px; font-size: 12.5px; line-height: 1.85; color: #6b5525;
+}
+.note-box b { color: #b57619; }
+
+.ctrl {
+  position: sticky; top: 0; z-index: 40;
+  max-width: 1400px; margin: 0 auto 24px; padding: 12px 16px;
+  background: #fff; border: 1px solid #cfe0f2; border-radius: 11px;
+  box-shadow: 0 3px 14px rgba(45, 108, 173, 0.1);
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+}
+.ctrl .lab { font-size: 12.5px; color: #2d5c8a; font-weight: 600; }
+.ctrl .sep { width: 1px; height: 22px; background: #e3e8ee; }
+.ctrl button, .ctrl select {
+  font-family: 'Noto Sans Thai', sans-serif; font-size: 12.5px; font-weight: 600;
+  padding: 7px 12px; border-radius: 8px; cursor: pointer; transition: all .18s ease;
+  border: 1px solid #b8d3ee; background: #fff; color: #2d6cad;
+}
+.ctrl button:hover { background: #eaf3fc; }
+.ctrl button.on { background: linear-gradient(135deg, #2d6cad, #4891db); border-color: #a9d0f5; color: #fff; }
+.ctrl select { max-width: 430px; }
+
+.summary-box {
+  max-width: 1400px; margin: 0 auto 22px; padding: 14px 16px;
+  background: #fff; border: 1px solid #e3e8ee; border-radius: 13px; box-shadow: 0 2px 12px rgba(0,0,0,.05);
+}
+.summary-title { font-size: 13px; font-weight: 700; color: #2d6cad; margin-bottom: 10px; }
+.summary-scroll { overflow-x: auto; }
+#summary { border-collapse: collapse; font-size: 11.5px; width: 100%; }
+#summary th, #summary td { padding: 5px 7px; border-bottom: 1px solid #eef2f6; text-align: center; white-space: nowrap; }
+#summary th { font-size: 10px; color: #8194a8; font-weight: 600; border-bottom: 2px solid #e3e8ee; }
+#summary td:first-child, #summary th:first-child { text-align: left; }
+#summary tr:hover td { background: #f6fafd; }
+#summary .yes { color: #2e8b47; font-weight: 700; }
+#summary .no  { color: #c0392b; font-weight: 700; }
+#summary tfoot td { border-top: 2px solid #e3e8ee; font-weight: 700; color: #2d5c8a; font-family: 'Outfit', sans-serif; }
+
+.grid {
+  max-width: 1400px; margin: 0 auto;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(430px, 1fr)); gap: 20px;
+}
+.card {
+  background: #fff; border: 1px solid #e3e8ee; border-radius: 15px;
+  padding: 15px 17px 17px; box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+  display: flex; flex-direction: column;
+}
+.card-head { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; flex-wrap: wrap; }
+.card-no {
+  font-family: 'Outfit', sans-serif; font-size: 12px; font-weight: 800;
+  color: #fff; background: #4891db; border-radius: 6px; padding: 2px 8px; flex-shrink: 0;
+}
+.card-name { font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 700; }
+.fit-badge {
+  margin-left: auto; font-size: 10.5px; font-weight: 700; border-radius: 999px;
+  padding: 3px 10px; font-family: 'Noto Sans Thai', sans-serif; white-space: nowrap;
+}
+.fit-badge.is-fit  { background: #e9f7ee; color: #2e8b47; border: 1px solid #bfe3c9; }
+.fit-badge.is-over { background: #fdeaea; color: #c0392b; border: 1px solid #f2c0be; }
+.card-note { font-size: 11.5px; color: #8194a8; line-height: 1.8; margin: 0 0 11px; font-weight: 300; }
+.card-note b { color: #5b7590; font-weight: 600; }
+.card-note .bad { color: #c0392b; font-weight: 600; }
+.card-note .ok { color: #2e8b47; font-weight: 600; }
+
+/* เวทีแสดงป้าย: ป้ายเป็นขนาดจริง แล้วขยายด้วย transform (ไม่กระทบการวัด) */
+.stage {
+  display: flex; align-items: center; justify-content: center;
+  background: repeating-conic-gradient(#f4f7fa 0% 25%, #fff 0% 50%) 50% / 14px 14px;
+  border: 1px solid #e3e8ee; border-radius: 10px; padding: 12px; overflow: hidden; margin-top: auto;
+}
+.scaler { transform-origin: center center; }
+
+/* ============================================================
+   ป้ายราคา — ลอกค่าจาก `@media print .label-print` ใน App.css ทุกตัว
+   ⚠️ ตัวเลขในบล็อกนี้คือของจริงที่ใช้พิมพ์ ห้ามแก้เพื่อให้ดีไซน์ดูดีขึ้น
+   ============================================================ */
+.lbl {
+  width: 4.5cm; height: 4cm;
+  border: 0.1cm solid #2F7F98;
+  padding: 0.1cm 0.12cm;
+  display: flex; flex-direction: column; gap: 0.03cm;
+  background: #fff; box-sizing: border-box;
+  font-family: 'Inter', 'Sarabun', sans-serif;
+}
+.lbl-header { display: flex; justify-content: flex-end; align-items: center; }
+.lbl-loc { margin-right: auto; font-size: 4pt; font-weight: 700; color: #2F7F98; line-height: 1; }
+.lbl-logo {
+  border: 0.3mm solid #2F7F98; border-radius: 20px; padding: 0.5pt 3pt;
+  font-size: 4pt; font-weight: 700; color: #2F7F98;
+}
+.lbl-mid { display: flex; flex-direction: column; justify-content: center; flex: 1; gap: 2pt; min-height: 0; }
+.lbl-name-row { display: flex; justify-content: space-between; align-items: baseline; gap: 4pt; }
+.lbl-name {
+  font-size: 9pt; font-weight: 800; color: #000; line-height: 1.2; flex: 1;
+  overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+.lbl-unit { font-size: 7pt; font-weight: 800; color: #000; white-space: nowrap; }
+.lbl-price-section { display: flex; align-items: center; gap: 2pt; margin-top: 1pt; }
+.lbl-price-labels { display: flex; flex-direction: column; font-size: 6pt; font-weight: 700; color: #000; line-height: 1.3; min-width: 0.7cm; }
+.lbl-price-value { display: flex; align-items: flex-end; flex: 1; justify-content: center; }
+.lbl-price-int { font-size: 26pt; font-weight: 900; color: #000; line-height: 1; }
+.lbl-baht { font-size: 5pt; font-weight: 700; color: #000; align-self: flex-end; margin-bottom: 1pt; }
+.lbl-footer { display: flex; justify-content: space-between; align-items: flex-end; margin-top: auto; }
+.lbl-codes { display: flex; flex-direction: column; font-size: 4pt; font-weight: 700; color: #000; line-height: 1.4; }
+.lbl-barcode { display: flex; flex-direction: column; align-items: center; min-width: 0; overflow: hidden; flex-shrink: 0; }
+/* แทนภาพบาร์โค้ดจริงด้วยลายเส้น — ขนาดเท่าของจริงเป๊ะ (3.28 × 0.82 cm) */
+.lbl-barcode .bars {
+  width: 3.28cm; height: 0.82cm;
+  background: repeating-linear-gradient(90deg, #000 0 0.6px, #fff 0.6px 1.1px, #000 1.1px 2.3px, #fff 2.3px 3.1px, #000 3.1px 3.5px, #fff 3.5px 4.6px);
+}
+.lbl-barcode-num { font-size: 3.5pt; color: #000; text-align: center; margin-top: 0.5pt; }
+
+/* ---------- ตัวแปรต่อดีไซน์ ---------- */
+/* 1. 3 บรรทัด */
+.v1 .lbl-name { -webkit-line-clamp: 3; }
+/* 2. 4 บรรทัด ฟอนต์เล็กลง */
+.v2 .lbl-name { font-size: 7.5pt; -webkit-line-clamp: 4; line-height: 1.15; }
+/* 3. auto-fit — ขนาดใส่จาก JS ตามความยาวชื่อ */
+.v3 .lbl-name { -webkit-line-clamp: 4; line-height: 1.15; }
+/* 4. หน่วยย้ายลงไปอยู่แถวราคา → ชื่อได้เต็มความกว้าง */
+.v4 .lbl-name-row .lbl-unit { display: none; }
+.v4 .lbl-name { -webkit-line-clamp: 3; }
+.v4 .lbl-unit-inline { font-size: 6.5pt; font-weight: 800; margin-left: 2pt; }
+/* 5. ฟอนต์แคบ */
+.v5 .lbl-name { -webkit-line-clamp: 3; transform: scaleX(0.82); transform-origin: left center; width: 122%; }
+/* 6. ราคาเล็กลง คืนที่ให้ชื่อ */
+.v6 .lbl-price-int { font-size: 19pt; }
+.v6 .lbl-name { -webkit-line-clamp: 5; font-size: 8pt; line-height: 1.15; }
+/* 7. ชื่อขึ้นบนสุดเต็มความกว้าง */
+.v7 .lbl-top-name {
+  font-size: 8pt; font-weight: 800; line-height: 1.18; color: #000;
+  overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+  border-bottom: 0.2mm solid #cfe0f2; padding-bottom: 1pt; margin-bottom: 1pt;
+}
+.v7 .lbl-header { align-items: flex-start; }
+.v7 .lbl-name-row { display: none; }
+/* 8. บรรทัดแรกเด่น ที่เหลือเล็ก */
+.v8 .lbl-name-brand { font-size: 9.5pt; font-weight: 900; line-height: 1.1; color: #000; }
+.v8 .lbl-name-rest {
+  font-size: 6.5pt; font-weight: 700; line-height: 1.2; color: #000;
+  overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+}
+.v8 .lbl-name { display: none; }
+/* 9. ตัดกลางคำได้ */
+.v9 .lbl-name { -webkit-line-clamp: 3; word-break: break-word; overflow-wrap: anywhere; hyphens: auto; }
+/* 10. รวมทุกอย่าง */
+.v10 .lbl-name-row .lbl-unit { display: none; }
+.v10 .lbl-name {
+  -webkit-line-clamp: 4; line-height: 1.14;
+  word-break: break-word; overflow-wrap: anywhere;
+  transform: scaleX(0.88); transform-origin: left center; width: 113%;
+}
+.v10 .lbl-unit-inline { font-size: 6.5pt; font-weight: 800; margin-left: 2pt; }
+</style>
+</head>
+<body>
+
+<div class="pg-head">
+  <h1>ป้ายราคา — ชื่อสินค้ายาวให้เห็นครบ</h1>
+  <p>ป้าย 4.5 × 4 cm · <code>.lbl-name</code> ปัจจุบัน <code>font-size: 9pt</code> + <code>-webkit-line-clamp: 2</code> → ชื่อเกิน ~2 บรรทัดถูกตัดด้วย <code>…</code></p>
+  <p>ป้ายทุกใบ<b>วาดที่ขนาดจริง (cm) แล้วขยายด้วย <code>transform: scale()</code></b> — ป้ายมุมขวาของแต่ละการ์ดจึงวัดตรงกับตอนพิมพ์จริง</p>
+</div>
+
+<div class="rule-box">
+  <b>พื้นที่ที่มีจริง</b> (คำนวณจาก <code>@media print</code> ใน App.css)<br>
+  ป้ายสูง 4cm − ขอบ 0.2 − padding 0.2 = <b>3.6cm</b> · หัวโลโก้ ~0.23cm · แถวล่าง (บาร์โค้ด 0.82 + เลข) ~0.96cm · gap 0.06<br>
+  → <code>.lbl-mid</code> เหลือ <b>~2.35cm</b> · ราคา 26pt กิน ~0.95cm → <b>แถวชื่อเหลือ ~1.33cm</b><br>
+  ที่ 9pt line-height 1.2 → บรรทัดละ 0.38cm → <b class="ok">ใส่ได้ 3 บรรทัดโดยไม่ต้องแก้อย่างอื่นเลย</b> (2 บรรทัดที่ใช้อยู่ = ยังเหลือที่ว่าง ~0.5cm)<br>
+  ความกว้าง: 4.5 − 0.2 − 0.24 = <b>4.06cm</b> แต่แถวชื่อแบ่งให้หน่วย (<code>ชิ้น</code>) + gap ไปอีก ~0.6cm → ชื่อได้จริง <b>~3.4cm/บรรทัด</b>
+</div>
+
+<div class="note-box">
+  <b>ชื่อยาวไม่ใช่เคสเดียว</b> — ตรวจ <code>products</code> ทั้ง 10,837 แถว:
+  ชื่อยาว <b>41-50 ตัว 17.8%</b> · <b>51-60 ตัว 5.9%</b> · <b>61 ตัวขึ้นไป 2.3%</b> → <b>รวม 26% ยาวเกิน 40 ตัวอักษร</b> ·
+  ยาวที่สุด <b>83 ตัวอักษร</b><br>
+  <b>ข้อดีที่ตรวจแล้ว</b> — ชื่อไทยที่ไม่มีเว้นวรรคเลย 45 ตัวรวด (<code>กระดาษโน้ต3x3"คละสี…โพสต์-อิท</code>)
+  <b>ไม่ได้เป็นปัญหาอย่างที่คิด</b> เพราะ Chrome ตัดบรรทัดภาษาไทยตามคำให้เองอยู่แล้ว — ทุกแบบในหน้านี้ผ่านเคสนี้หมด
+  (<code>word-break</code> จำเป็นเฉพาะโทเคนภาษาอังกฤษยาว ๆ ที่ไม่มีเว้นวรรค)<br>
+  <b>ไฟล์นี้เป็นแกลเลอรีเทียบดีไซน์เท่านั้น ยังไม่ได้แตะป้ายจริง</b> — ป้ายราคาถูกกำกับว่า FROZEN ใน CLAUDE.md
+</div>
+
+<div class="ctrl">
+  <span class="lab">ชื่อสินค้าที่ใช้ทดสอบ</span>
+  <select id="sample"></select>
+  <span class="sep"></span>
+  <span class="lab">ขยาย</span>
+  <button data-z="1">1×</button>
+  <button data-z="2" class="on">2×</button>
+  <button data-z="3">3×</button>
+  <span class="sep"></span>
+  <button id="only-fit">แสดงเฉพาะแบบที่ผ่าน</button>
+</div>
+
+<div class="summary-box">
+  <div class="summary-title">ตารางสรุป — วัดจริงทุกแบบ × ทุกชื่อทดสอบ ตอนเปิดหน้านี้</div>
+  <div class="summary-scroll"><table id="summary"></table></div>
+</div>
+
+<div class="grid" id="grid"></div>
+
+<script>
+/* ชื่อสินค้าจริงจากตาราง products (+ ชื่อที่ผู้ใช้ยกมา) */
+const SAMPLES = [
+  { label: '43 ตัว — ชื่อที่ยกมาถาม', name: 'Wego Syringe/Medicare(Luer Slip) 100 x 10 ml', unit: 'ชิ้น', sku: '701288', price: 14 },
+  { label: '35 ตัว — Wego ตัวที่มีในฐานข้อมูล', name: 'Wego Syringe (Luer Slip) 100 x 5 ml', unit: 'ชิ้น', sku: '701288', price: 14 },
+  { label: '22 ตัว — ชื่อสั้น (ปกติ 43% ของทั้งตาราง)', name: 'Antacil 1x10 (แผง)', unit: 'แผง', sku: '100098', price: 15 },
+  { label: '78 ตัว — ยาวจริงในฐานข้อมูล', name: '5585 Coloplast Alterna Uro Bag 375 ml 10-55 mm แป้นพร้อมถุงปัสสาวะ (20 pcs/bx)', unit: 'ชิ้น', sku: '700187', price: 1290 },
+  { label: '83 ตัว — ยาวที่สุดในฐานข้อมูล', name: 'Pontevia Solution For Injection In Pre-Filled Syringe 120 mg/ml Pre 09-25 Cli MOQ 1', unit: 'กล่อง', sku: '900835', price: 4850 },
+  { label: '45 ตัว — คำไทยติดกันไม่มีเว้นวรรค (โหดสุด)', name: 'กระดาษโน้ต3x3"คละสีพาสเทล(แพ็ค5เล่ม)โพสต์-อิท', unit: 'แพ็ค', sku: 'S00099', price: 89 },
+  { label: '77 ตัว — ไทยผสมอังกฤษ', name: 'ATZ ไม้ค้ำรักแร้ อะลูมิเนียม (L) FT-1000 (ระดับ134.5-154.8cm/115kg) NEW 07-26', unit: 'ชิ้น', sku: '701686', price: 690 },
+];
+
+const DESIGNS = [
+  {
+    no: 1, name: '3 บรรทัด', cls: 'v1',
+    note: '<b>เปลี่ยนเลขตัวเดียว</b> — <code>-webkit-line-clamp: 2 → 3</code> ที่เหลือไม่แตะเลย · <b class="ok">มีที่ว่างรออยู่แล้ว ~0.5cm</b> เพราะแถวราคาไม่ได้กินหมด · <b>เสี่ยงน้อยที่สุดในชุดนี้</b> ขนาดตัวอักษรเท่าเดิม อ่านง่ายเท่าเดิม · ชื่อ 60+ ตัวยังไม่พอ',
+  },
+  {
+    no: 2, name: '4 บรรทัด + ฟอนต์ 7.5pt', cls: 'v2',
+    note: 'ลดชื่อจาก 9pt เหลือ <b>7.5pt</b> แล้วได้ <b>4 บรรทัด</b> — รับชื่อได้ยาวขึ้นเกือบเท่าตัวจาก 3 บรรทัด · แลกด้วย<b>ตัวอักษรเล็กลง 17%</b> ซึ่งเป็นตัวที่ลูกค้าต้องอ่านจากระยะ 1 เมตรบนชั้นวาง',
+  },
+  {
+    no: 3, name: 'Auto-fit (ย่อตามความยาว)', cls: 'v3', autofit: true,
+    note: '<b>ชื่อสั้นได้ 9pt เท่าเดิม ชื่อยาวค่อยย่อลง</b> (9 → 8 → 7 → 6pt ตามจำนวนตัวอักษร) — สินค้า 74% ที่ชื่อไม่ยาวจะไม่เสียอะไรเลย มีแค่ 26% ที่ตัวเล็กลง · <b>ต้องเขียนโค้ดเพิ่มใน 3 จุดที่ JSX ป้ายซ้ำกัน</b>',
+  },
+  {
+    no: 4, name: 'ย้ายหน่วยลงแถวราคา', cls: 'v4', unitInline: true,
+    note: 'เอา <code>ชิ้น</code> ออกจากแถวชื่อไปต่อท้ายราคา → <b>ชื่อได้ความกว้างคืน ~0.6cm ต่อบรรทัด (+18%)</b> ที่ 3 บรรทัด · ขนาดตัวอักษรคงเดิม 9pt · หน่วยเล็กลงและอยู่คนละที่กับที่เคยชิน',
+  },
+  {
+    no: 5, name: 'ฟอนต์แคบ scaleX(0.82)', cls: 'v5',
+    note: 'บีบตัวอักษรให้แคบลงแนวนอน 18% ด้วย <code>transform: scaleX()</code> — <b>ความสูงตัวอักษรเท่าเดิม</b> จึงยังอ่านง่ายจากระยะไกล แต่ได้ตัวอักษรต่อบรรทัดมากขึ้น · ตัวหนังสือดูผอมผิดสัดส่วนถ้าสังเกต',
+  },
+  {
+    no: 6, name: 'ลดขนาดราคา 26 → 19pt', cls: 'v6',
+    note: 'ราคาเป็นตัวที่กินที่มากที่สุดในป้าย (0.95cm) — ลดลงเหลือ 19pt <b>คืนพื้นที่ให้ชื่อได้ 5 บรรทัด</b> · <b class="bad">แต่ราคาคือสิ่งที่ลูกค้ามองหาก่อนเสมอ</b> การลดขนาดราคาเพื่อชื่อสินค้าเป็นการสลับลำดับความสำคัญ ควรคิดให้ดี',
+  },
+  {
+    no: 7, name: 'ชื่อขึ้นบนสุดเต็มความกว้าง', cls: 'v7', topName: true,
+    note: 'ย้ายชื่อไปไว้ใต้โลโก้ <b>กินเต็มความกว้าง 4.06cm ไม่ต้องแบ่งให้หน่วย</b> แล้วเว้นเส้นคั่น · ราคาได้อยู่กลางป้ายเด่นเต็มที่ · <b>เปลี่ยนโครงป้ายเยอะที่สุด</b> ต้องแก้ JSX ทั้ง 3 จุดพร้อมกัน',
+  },
+  {
+    no: 8, name: 'แบรนด์เด่น + รายละเอียดเล็ก', cls: 'v8', splitName: true,
+    note: 'คำแรกคือ<b>ชื่อแบรนด์ 9.5pt ตัวหนา</b> ที่เหลือเป็นรายละเอียด 6.5pt 3 บรรทัด · <b>อ่านจากไกลเห็นแบรนด์ชัด</b> เดินเข้ามาใกล้ค่อยอ่านรายละเอียด ตรงกับพฤติกรรมจริงหน้าชั้นวาง · เดาว่า "คำแรก = แบรนด์" ซึ่งไม่จริงทุกตัว',
+  },
+  {
+    no: 9, name: 'ตัดกลางคำได้ (break-word)', cls: 'v9',
+    note: '<code>word-break: break-word</code> + <code>overflow-wrap: anywhere</code> ที่ 3 บรรทัด · <b>วัดแล้วได้ผลเท่าแบบ 1 พอดี (4/7)</b> — เพราะ Chrome ตัดบรรทัดภาษาไทยตามคำให้เองอยู่แล้ว และชื่อยาวในตารางนี้เป็นภาษาอังกฤษที่มีเว้นวรรคอยู่แล้ว · <b>ไม่ได้แก้ปัญหาด้วยตัวเอง</b> แต่ควรใส่พ่วงไปกับแบบที่เลือก เผื่อวันหน้ามีรหัสสินค้ายาว ๆ ที่ไม่มีเว้นวรรค',
+  },
+  {
+    no: 10, name: 'รวมทุกเทคนิค', cls: 'v10', unitInline: true,
+    note: 'หน่วยลงแถวราคา + 4 บรรทัด + ฟอนต์แคบ 12% + ตัดกลางคำได้ — <b>รับชื่อยาวได้มากที่สุดในชุดนี้</b> ครอบคลุมถึงชื่อ 83 ตัวอักษร · แลกด้วยการเปลี่ยนหน้าตาป้ายหลายจุดพร้อมกัน ป้ายจะดูแน่นขึ้นชัดเจน',
+  },
+];
+
+const esc = (s) => String(s).replace(/[<>&"]/g, m => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[m]));
+const el = (html) => { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstElementChild; };
+
+let current = SAMPLES[0];
+let zoom = 2;
+
+/* ป้าย 1 ใบตามดีไซน์ที่กำหนด */
+function buildLabel(d, s) {
+  const unitInline = d.unitInline ? `<span class="lbl-unit-inline">${esc(s.unit)}</span>` : '';
+  const nameRow = d.topName
+    ? ''
+    : d.splitName
+      ? `<div class="lbl-name-row">
+           <div style="flex:1;min-width:0">
+             <div class="lbl-name-brand">${esc(s.name.split(' ')[0])}</div>
+             <div class="lbl-name-rest">${esc(s.name.split(' ').slice(1).join(' ') || '—')}</div>
+           </div>
+           <span class="lbl-unit">${esc(s.unit)}</span>
+         </div>`
+      : `<div class="lbl-name-row">
+           <div class="lbl-name">${esc(s.name)}</div>
+           <span class="lbl-unit">${esc(s.unit)}</span>
+         </div>`;
+  return el(`<div class="lbl ${d.cls}">
+    <div class="lbl-header">
+      <span class="lbl-loc">A14</span>
+      <span class="lbl-logo">BIGYA</span>
+    </div>
+    ${d.topName ? `<div class="lbl-top-name">${esc(s.name)}</div>` : ''}
+    <div class="lbl-mid">
+      ${nameRow}
+      <div class="lbl-price-section">
+        <div class="lbl-price-labels"><span>Price</span><span>ราคา</span></div>
+        <div class="lbl-price-value"><span class="lbl-price-int">${s.price}</span></div>
+        <span class="lbl-baht">บาท${unitInline}</span>
+      </div>
+    </div>
+    <div class="lbl-footer">
+      <div class="lbl-codes"><span>16/8/2569</span><span>${esc(s.sku)}</span></div>
+      <div class="lbl-barcode"><div class="bars"></div><span class="lbl-barcode-num">${esc(s.sku)}</span></div>
+    </div>
+  </div>`);
+}
+
+/* auto-fit: ย่อขนาดตามความยาวชื่อ (แบบที่ 3) */
+function applyAutofit(label, s) {
+  const n = s.name.length;
+  const size = n <= 24 ? 9 : n <= 38 ? 8 : n <= 55 ? 7 : 6;
+  const target = label.querySelector('.lbl-name');
+  if (target) target.style.fontSize = size + 'pt';
+}
+
+/* วัดว่าชื่อถูกตัดไหม — เทียบ scrollHeight กับ clientHeight ของกล่องชื่อ
+   และเช็คว่าทั้งป้ายไม่ล้นออกนอกกรอบ 4×4.5cm */
+function measure(label) {
+  const names = [...label.querySelectorAll('.lbl-name, .lbl-top-name, .lbl-name-rest')];
+  let clipped = 0;
+  for (const n of names) {
+    if (n.scrollHeight > n.clientHeight + 1 || n.scrollWidth > n.clientWidth + 1) clipped++;
+  }
+  const labelOver = label.scrollHeight > label.clientHeight + 1;
+  return { clipped, labelOver };
+}
+
+const grid = document.getElementById('grid');
+const cards = [];
+
+DESIGNS.forEach(d => {
+  const card = el(`<div class="card">
+    <div class="card-head">
+      <span class="card-no">${String(d.no).padStart(2, '0')}</span>
+      <span class="card-name">${d.name}</span>
+      <span class="fit-badge"></span>
+    </div>
+    <p class="card-note">${d.note}</p>
+    <div class="stage"><div class="scaler"></div></div>
+  </div>`);
+  grid.appendChild(card);
+  cards.push({ d, card, scaler: card.querySelector('.scaler'), badge: card.querySelector('.fit-badge') });
+});
+
+function render() {
+  for (const c of cards) {
+    c.scaler.innerHTML = '';
+    const label = buildLabel(c.d, current);
+    c.scaler.appendChild(label);
+    if (c.d.autofit) applyAutofit(label, current);
+    c.scaler.style.transform = `scale(${zoom})`;
+    // ความสูงเวทีต้องเผื่อตามการขยาย ไม่งั้นป้ายทับกัน
+    c.scaler.style.height = '4cm';
+    c.scaler.style.width = '4.5cm';
+    c.card.querySelector('.stage').style.height = `calc(4cm * ${zoom} + 24px)`;
+  }
+  requestAnimationFrame(() => {
+    for (const c of cards) {
+      const label = c.scaler.querySelector('.lbl');
+      const { clipped, labelOver } = measure(label);
+      const ok = clipped === 0 && !labelOver;
+      c.badge.className = 'fit-badge ' + (ok ? 'is-fit' : 'is-over');
+      c.badge.textContent = ok ? '✅ เห็นชื่อครบ' : labelOver ? '⚠️ ล้นออกนอกป้าย' : '⚠️ ชื่อยังถูกตัด';
+      c.card.dataset.fit = ok ? '1' : '0';
+    }
+    applyFilter();
+  });
+}
+
+let onlyFit = false;
+function applyFilter() {
+  for (const c of cards) c.card.style.display = (onlyFit && c.card.dataset.fit !== '1') ? 'none' : '';
+}
+
+/* แถบควบคุม */
+const sel = document.getElementById('sample');
+SAMPLES.forEach((s, i) => sel.appendChild(el(`<option value="${i}">${esc(s.label)}</option>`)));
+sel.addEventListener('change', () => { current = SAMPLES[Number(sel.value)]; render(); });
+
+document.querySelectorAll('.ctrl button[data-z]').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('.ctrl button[data-z]').forEach(x => x.classList.remove('on'));
+    b.classList.add('on');
+    zoom = Number(b.dataset.z);
+    render();
+  });
+});
+document.getElementById('only-fit').addEventListener('click', (e) => {
+  onlyFit = !onlyFit;
+  e.target.classList.toggle('on', onlyFit);
+  e.target.textContent = onlyFit ? 'แสดงทุกแบบ' : 'แสดงเฉพาะแบบที่ผ่าน';
+  applyFilter();
+});
+
+/* ตารางสรุป — ไล่ทุกชื่อ × ทุกแบบแล้ววัดจริง ไม่ได้กรอกผลไว้ล่วงหน้า */
+function buildSummary() {
+  const keep = current;
+  const results = SAMPLES.map(s => {
+    current = s;
+    render();
+    return cards.map(c => {
+      const label = c.scaler.querySelector('.lbl');
+      const m = measure(label);
+      return m.clipped === 0 && !m.labelOver;
+    });
+  });
+  current = keep;
+  render();
+
+  const t = document.getElementById('summary');
+  const head = `<thead><tr><th>ชื่อสินค้าที่ใช้ทดสอบ</th>${DESIGNS.map(d => `<th title="${esc(d.name)}">${d.no}</th>`).join('')}</tr></thead>`;
+  const body = `<tbody>${SAMPLES.map((s, i) =>
+    `<tr><td>${esc(s.label)}</td>${results[i].map(ok => `<td class="${ok ? 'yes' : 'no'}">${ok ? '✅' : '✕'}</td>`).join('')}</tr>`).join('')}</tbody>`;
+  const totals = DESIGNS.map((_, j) => results.filter(r => r[j]).length);
+  const foot = `<tfoot><tr><td>ผ่านกี่ชื่อ (จาก ${SAMPLES.length})</td>${totals.map(n => `<td>${n}</td>`).join('')}</tr></tfoot>`;
+  t.innerHTML = head + body + foot;
+}
+
+document.fonts.ready.then(() => { render(); buildSummary(); });
+render();
+</script>
+</body>
+</html>

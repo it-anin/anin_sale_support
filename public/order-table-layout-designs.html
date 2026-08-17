@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ตาราง Order ไม่ต้องเลื่อนแนวนอน — 10 แบบ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   เมนู Order หน้า SaleSupport — 24 คอลัมน์ ล้นจอต้องเลื่อนแนวนอน
+   แกลเลอรีเลือกดีไซน์ 10 แบบ · ไม่ได้ import เข้าแอป
+   เปิดผ่าน dev server: /order-table-layout-designs.html
+   ============================================================ */
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: 26px 20px 90px;
+  background: #eef3f9; font-family: 'Noto Sans Thai', sans-serif; color: #2c3e50;
+}
+.pg-head { max-width: 1500px; margin: 0 auto 18px; }
+.pg-head h1 {
+  margin: 0 0 6px; font-family: 'Outfit', sans-serif; font-size: 27px;
+  font-weight: 800; color: #2d6cad; letter-spacing: -0.4px;
+}
+.pg-head p { margin: 0 0 4px; font-size: 13px; color: #5b7590; line-height: 1.75; font-weight: 300; }
+code {
+  background: #fff; border: 1px solid #cfe0f2; border-radius: 4px;
+  padding: 1px 5px; font-family: 'Outfit', monospace; font-size: 12px; color: #2d6cad;
+}
+.rule-box {
+  max-width: 1500px; margin: 0 auto 16px; padding: 13px 17px;
+  background: #eaf3fc; border: 1px solid #b8d3ee; border-left: 4px solid #4891db;
+  border-radius: 9px; font-size: 13px; line-height: 1.9; color: #2d5c8a;
+}
+.rule-box b { color: #1e4b7a; }
+.note-box {
+  max-width: 1500px; margin: 0 auto 18px; padding: 12px 16px;
+  background: #fff8e9; border: 1px solid #f0d9a8; border-left: 4px solid #e8a33d;
+  border-radius: 9px; font-size: 12.5px; line-height: 1.85; color: #6b5525;
+}
+.note-box b { color: #b57619; }
+
+.ctrl {
+  position: sticky; top: 0; z-index: 40;
+  max-width: 1500px; margin: 0 auto 24px; padding: 12px 16px;
+  background: #fff; border: 1px solid #cfe0f2; border-radius: 11px;
+  box-shadow: 0 3px 14px rgba(45, 108, 173, 0.1);
+  display: flex; flex-wrap: wrap; align-items: center; gap: 12px;
+}
+.ctrl .lab { font-size: 12.5px; color: #2d5c8a; font-weight: 600; }
+.ctrl .hint { font-size: 11.5px; color: #8194a8; font-weight: 300; }
+.ctrl .sep { width: 1px; height: 22px; background: #e3e8ee; }
+.ctrl button {
+  font-family: 'Noto Sans Thai', sans-serif; font-size: 12.5px; font-weight: 600;
+  padding: 7px 13px; border-radius: 8px; cursor: pointer; transition: all .18s ease;
+  border: 1px solid #b8d3ee; background: #fff; color: #2d6cad;
+}
+.ctrl button:hover { background: #eaf3fc; }
+.ctrl button.on { background: linear-gradient(135deg, #2d6cad, #4891db); border-color: #a9d0f5; color: #fff; }
+.ctrl label { display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: #2d5c8a; cursor: pointer; }
+.ctrl input[type=checkbox] { width: 15px; height: 15px; accent-color: #4891db; cursor: pointer; }
+
+/* ⚠️ กว้างตามจอที่จำลอง ไม่ใช่ 1500px ตายตัว — ไม่งั้นปุ่ม "1920" จะได้เวทีแค่ ~1460px
+   แล้วดีไซน์ดูแย่กว่าความจริง · เลือกจอกว้างกว่าหน้าต่างจริง = หน้านี้เลื่อนแนวนอนเอง (ตั้งใจ) */
+.grid { max-width: var(--gridw, 1778px); margin: 0 auto; display: flex; flex-direction: column; gap: 22px; }
+.card {
+  background: #fff; border: 1px solid #e3e8ee; border-radius: 15px;
+  padding: 16px 18px 18px; box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+}
+.card-head { display: flex; align-items: center; gap: 9px; margin-bottom: 4px; flex-wrap: wrap; }
+.card-no {
+  font-family: 'Outfit', sans-serif; font-size: 12px; font-weight: 800;
+  color: #fff; background: #4891db; border-radius: 6px; padding: 2px 8px; flex-shrink: 0;
+}
+.card-name { font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 700; }
+.card-tag {
+  font-size: 10.5px; font-weight: 600; border-radius: 999px; padding: 2px 9px;
+  border: 1px solid #e3e8ee; background: #f0f4f9; color: #5b7590;
+}
+.card-tag--all  { background: #e9f7ee; border-color: #bfe3c9; color: #2e8b47; }
+.card-tag--act  { background: #eaf3fc; border-color: #b8d3ee; color: #2d6cad; }
+.card-tag--hide { background: #fdf4e6; border-color: #f0d9a8; color: #b8791c; }
+.fit-badge {
+  margin-left: auto; font-size: 11px; font-weight: 700; border-radius: 999px;
+  padding: 3px 11px; font-family: 'Outfit', sans-serif; white-space: nowrap;
+}
+.fit-badge.is-fit  { background: #e9f7ee; color: #2e8b47; border: 1px solid #bfe3c9; }
+.fit-badge.is-over { background: #fdeaea; color: #c0392b; border: 1px solid #f2c0be; }
+.card-note { font-size: 11.5px; color: #8194a8; line-height: 1.8; margin: 0 0 12px; font-weight: 300; }
+.card-note b { color: #5b7590; font-weight: 600; }
+.card-note .bad { color: #c0392b; font-weight: 600; }
+
+/* เวที = พื้นที่ตารางจริง (กว้างจอ − sidebar 150px − padding) */
+.demo {
+  width: min(var(--tablew, 1738px), 100%);
+  overflow-x: auto; overflow-y: hidden;
+  border: 1px solid #e3e8ee; border-radius: 10px; background: #fff;
+}
+.demo::-webkit-scrollbar { height: 9px; }
+.demo::-webkit-scrollbar-thumb { background: #d9534f; border-radius: 5px; }
+
+/* ============================================================
+   ตารางฐาน — ลอกค่าจาก .ss-table ใน App.css
+   ============================================================ */
+table { border-collapse: collapse; width: 100%; font-size: 11.5px; }
+th {
+  padding: 6px 8px; color: #8194a8; font-weight: 600; font-size: 10.5px;
+  text-transform: uppercase; letter-spacing: .15px; text-align: left;
+  border-bottom: 2px solid #e3e8ee; background: #fff; white-space: nowrap;
+  position: sticky; top: 0; z-index: 2;
+}
+td {
+  padding: 6px 8px; border-bottom: 1px solid #eef2f6; border-right: 1px solid #eef2f6;
+  color: #2d3a48; vertical-align: middle; line-height: 1.35;
+}
+th:last-child, td:last-child { border-right: 0; }
+tbody tr:nth-child(even) td { background: #fbfcfd; }
+tbody tr:hover td { background: #f6fafd; }
+.showgrid th, .showgrid td { border-right: 1px solid #dce6f0 !important; }
+
+.chip { display: inline-block; padding: 2px 7px; border-radius: 999px; font-size: 10px; font-weight: 600; white-space: nowrap; }
+.chip--green  { background: #e5f5e9; color: #2e8b47; }
+.chip--orange { background: #fdf0e2; color: #c07a1f; }
+.chip--blue   { background: #e3effc; color: #2d6cad; }
+.num { font-family: 'Outfit', sans-serif; font-variant-numeric: tabular-nums; }
+.muted { color: #a9b7c6; }
+.sub { color: #8194a8; font-size: 10px; font-weight: 300; }
+.strong { font-weight: 600; }
+.ell { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---------- 1. Card Rows ---------- */
+.d1-list { display: flex; flex-direction: column; gap: 10px; padding: 11px; }
+.d1-card { border: 1px solid #e3e8ee; border-radius: 11px; overflow: hidden; background: #fff; }
+.d1-top {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 8px 12px; background: #f7fafd; border-bottom: 1px solid #eef2f6;
+}
+.d1-sku { font-weight: 700; font-size: 13px; }
+.d1-badge { font-size: 10px; font-weight: 700; background: #eaf3fc; color: #2d6cad; border-radius: 5px; padding: 2px 7px; }
+.d1-chips { margin-left: auto; display: flex; gap: 5px; }
+.d1-body { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px 14px; padding: 10px 12px; }
+.d1-f { min-width: 0; }
+.d1-f .k { font-size: 9.5px; color: #a1b0bf; text-transform: uppercase; letter-spacing: .3px; font-weight: 600; }
+.d1-f .v { font-size: 12px; margin-top: 1px; }
+
+/* ---------- 2. Two-line Row ---------- */
+.d2 td { padding: 5px 8px; }
+.d2 .l1 { font-size: 11.5px; }
+.d2 .l2 { font-size: 10px; color: #8194a8; font-weight: 300; margin-top: 1px; }
+.d2 th .h2 { display: block; font-size: 9px; color: #b3c1cf; text-transform: none; font-weight: 400; letter-spacing: 0; }
+
+/* ---------- 3. Grouped Columns ---------- */
+.d3 td { padding: 6px 9px; }
+.d3 .pair { display: flex; gap: 5px; flex-wrap: wrap; align-items: baseline; }
+.d3 .tagk { font-size: 9px; color: #a9b7c6; font-weight: 600; }
+.d3 .grp { display: flex; flex-direction: column; gap: 2px; }
+
+/* ---------- 4. Column Picker ---------- */
+.d4-bar { display: flex; align-items: center; gap: 9px; padding: 8px 11px; border-bottom: 1px solid #eef2f6; background: #fbfcfd; flex-wrap: wrap; }
+.d4-btn { font-family: 'Noto Sans Thai', sans-serif; font-size: 11.5px; font-weight: 600; border: 1px solid #b8d3ee; background: #fff; color: #2d6cad; border-radius: 7px; padding: 5px 11px; cursor: pointer; }
+.d4-btn:hover { background: #eaf3fc; }
+.d4-panel { display: none; padding: 10px 11px; border-bottom: 1px solid #eef2f6; background: #f7fafd; }
+.d4-panel.open { display: block; }
+.d4-cols { display: grid; grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); gap: 5px 12px; }
+.d4-cols label { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #4a5c6e; cursor: pointer; }
+.d4-cols input { width: 13px; height: 13px; accent-color: #4891db; cursor: pointer; }
+.d4-count { font-size: 11px; color: #8194a8; font-weight: 300; }
+
+/* ---------- 5. Expandable Row ---------- */
+.d5-chev { border: none; background: none; cursor: pointer; color: #6f8399; font-size: 11px; padding: 2px 5px; transition: transform .18s ease; display: inline-block; }
+.d5-chev.open { transform: rotate(90deg); color: #2d6cad; }
+.d5-detail td { background: #f7fafd !important; padding: 11px 14px; }
+.d5-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 9px 16px; }
+.d5-f .k { font-size: 9.5px; color: #a1b0bf; text-transform: uppercase; letter-spacing: .3px; font-weight: 600; }
+.d5-f .v { font-size: 12px; margin-top: 1px; }
+
+/* ---------- 6. Progress Timeline ---------- */
+.d6-line { display: flex; align-items: center; gap: 0; padding: 3px 0; }
+.d6-step { display: flex; flex-direction: column; align-items: center; gap: 3px; position: relative; min-width: 46px; }
+.d6-dot { width: 11px; height: 11px; border-radius: 50%; border: 2px solid #d4dee8; background: #fff; z-index: 1; }
+.d6-dot.done { background: #2e8b47; border-color: #2e8b47; }
+.d6-dot.now  { background: #e8a33d; border-color: #e8a33d; box-shadow: 0 0 0 3px rgba(232, 163, 61, .18); }
+.d6-bar { flex: 1; height: 2px; background: #e6ecf2; min-width: 8px; }
+.d6-bar.done { background: #9dd3ae; }
+.d6-lab { font-size: 8.5px; color: #93a3b4; white-space: nowrap; }
+.d6-dt  { font-size: 8.5px; color: #6f8399; font-family: 'Outfit', sans-serif; }
+
+/* ---------- 7. Compact Density ---------- */
+.d7 { font-size: 9.5px; }
+.d7 th { padding: 4px 4px; font-size: 8.5px; letter-spacing: 0; }
+.d7 td { padding: 3px 4px; line-height: 1.25; }
+.d7 .chip { font-size: 8.5px; padding: 1px 5px; }
+.d7 td.tight { max-width: 84px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---------- 8. Split Panel ---------- */
+.d8-wrap { display: flex; min-height: 300px; }
+.d8-left { width: 46%; border-right: 1px solid #e3e8ee; overflow: auto; }
+.d8-left tr { cursor: pointer; }
+.d8-left tr.sel td { background: #eaf3fc !important; box-shadow: inset 3px 0 0 #4891db; }
+.d8-right { flex: 1; padding: 12px 14px; overflow: auto; background: #fbfcfd; }
+.d8-title { font-size: 13px; font-weight: 700; margin-bottom: 2px; }
+.d8-sub { font-size: 11px; color: #8194a8; margin-bottom: 11px; font-weight: 300; }
+.d8-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 9px 14px; }
+.d8-f .k { font-size: 9.5px; color: #a1b0bf; text-transform: uppercase; letter-spacing: .3px; font-weight: 600; }
+.d8-f .v { font-size: 12px; margin-top: 1px; }
+
+/* ---------- 9. Tabbed Column Sets ---------- */
+.d9-tabs { display: flex; gap: 4px; padding: 8px 10px 0; border-bottom: 1px solid #eef2f6; background: #fbfcfd; flex-wrap: wrap; }
+.d9-tab {
+  font-family: 'Noto Sans Thai', sans-serif; font-size: 11.5px; font-weight: 600;
+  border: 1px solid transparent; border-bottom: none; background: none; color: #8194a8;
+  border-radius: 8px 8px 0 0; padding: 6px 13px; cursor: pointer;
+}
+.d9-tab:hover { color: #2d6cad; }
+.d9-tab.on { background: #fff; border-color: #e3e8ee; color: #2d6cad; margin-bottom: -1px; }
+.d9-tab .n { font-size: 9.5px; opacity: .7; font-family: 'Outfit', sans-serif; }
+
+/* ---------- 10. Icon Condensation ---------- */
+.d10 .dots { display: flex; gap: 3px; }
+.d10 .dot { width: 9px; height: 9px; border-radius: 50%; background: #e0e7ee; }
+.d10 .dot.on { background: #2e8b47; }
+.d10 .dchip {
+  display: inline-block; font-family: 'Outfit', sans-serif; font-size: 10px; font-weight: 600;
+  background: #f2f6fa; color: #5b7590; border-radius: 4px; padding: 1px 5px; white-space: nowrap;
+}
+.d10 .dchip.hot { background: #fdf4e6; color: #b8791c; }
+.d10 td.tight { max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+</style>
+</head>
+<body>
+
+<div class="pg-head">
+  <h1>ตาราง Order — ให้เห็นครบโดยไม่ต้องเลื่อนแนวนอน</h1>
+  <p>เมนู Order หน้า SaleSupport · <code>MENUS[order].columns</code> มี <b>24 คอลัมน์</b></p>
+  <p>ป้ายมุมขวาของแต่ละการ์ด <b>วัดจริงจากหน้าจอนี้</b> ว่ายังล้นอยู่ไหม — เปลี่ยนความกว้างจำลองด้านล่างแล้วดูป้ายเปลี่ยนตาม</p>
+</div>
+
+<div class="rule-box">
+  <b>ทำไมตอนนี้ถึงล้น</b><br>
+  รวม <code>min</code> ของ 24 คอลัมน์ = <b>2,780px</b> + คอลัมน์ปุ่มลบ 54px = <b>~2,834px</b><br>
+  จอ 1920 เหลือพื้นที่ตาราง = 1920 − sidebar 150 − padding ≈ <b>~1,738px</b> → <b class="bad">เกินไป ~63%</b><br>
+  แปลว่า <b>ตัดให้พอดีด้วยการบีบความกว้างอย่างเดียวไม่ได้</b> ต้องเลือกอย่างใดอย่างหนึ่ง:
+  (ก) เปลี่ยนโครงแถว · (ข) ยุบหลายคอลัมน์เป็นช่องเดียว · (ค) ซ่อนบางคอลัมน์ไว้หลังการกด
+</div>
+
+<div class="note-box">
+  <b>ป้ายบอกชนิดข้างชื่อแบบ</b> —
+  <span class="card-tag card-tag--all">เห็นครบ 24</span> เห็นทุกค่าพร้อมกันในหน้าจอเดียว ·
+  <span class="card-tag card-tag--act">ครบ · ต้องกด</span> ครบทุกค่าแต่บางส่วนต้องกดขยาย/สลับแท็บ ·
+  <span class="card-tag card-tag--hide">ซ่อนบาง</span> เห็นไม่ครบจนกว่าจะเปิดคอลัมน์เพิ่มเอง<br>
+  <b>ป้ายวัด "ล้นไหม" ไม่ได้วัด "อ่านออกไหม"</b> — ไฟล์นี้ไม่ได้บังคับ <code>min-width</code> ของคอลัมน์แบบในแอปจริง
+  เบราว์เซอร์จึงบีบคอลัมน์ได้เต็มที่ ✅ จึงแปลว่า "ไม่ต้องเลื่อน" เท่านั้น ต้องดูตาเองด้วยว่าคอลัมน์แคบเกินอ่านหรือยัง<br>
+  <b>ไฟล์นี้เป็นแกลเลอรีเทียบดีไซน์เท่านั้น ยังไม่ได้ใส่เข้าแอป</b> · ข้อมูลในตารางเป็น<b>ข้อมูลสมมติ</b> ไม่ใช่ลูกค้าจริง
+</div>
+
+<div class="ctrl">
+  <span class="lab">ความกว้างจอจำลอง</span>
+  <button data-w="1366">1366</button>
+  <button data-w="1600">1600</button>
+  <button data-w="1920" class="on">1920</button>
+  <button data-w="2560">2560</button>
+  <button data-w="0">เต็มหน้าต่างนี้</button>
+  <span class="hint" id="wnote"></span>
+  <span class="sep"></span>
+  <label><input type="checkbox" id="gridlines"> เน้นเส้นแบ่งคอลัมน์</label>
+</div>
+
+<div class="grid" id="grid"></div>
+
+<script>
+/* ── 24 คอลัมน์จริงจาก MENUS[order].columns ── */
+const COLS = [
+  { key: 'sku_name',             label: 'SKU / ชื่อสินค้า',        min: 200 },
+  { key: 'branch',               label: 'Branch',                  min: 70 },
+  { key: 'recipient_department', label: 'ส่งให้แผนก',              min: 110 },
+  { key: 'qty',                  label: 'จำนวน',                   min: 60 },
+  { key: 'unit',                 label: 'หน่วย',                   min: 70 },
+  { key: 'paid_date',            label: 'วันที่ลูกค้าชำระ',         min: 110, kind: 'date' },
+  { key: 'sale_bill_no',         label: 'เลขบิลขาย',               min: 160 },
+  { key: 'customer_name',        label: 'ชื่อลูกค้า',               min: 120 },
+  { key: 'pickup_date',          label: 'วันที่นัดรับ',             min: 100, kind: 'date' },
+  { key: 'note',                 label: 'หมายเหตุ',                min: 140 },
+  { key: 'delivery_method',      label: 'รับที่ร้าน/จัดส่ง',        min: 110 },
+  { key: 'order_type',           label: 'เบิก/สั่งซื้อ',            min: 90 },
+  { key: 'order_bill_no',        label: 'สั่งซื้อ/เบิก (เลขบิล)',   min: 130 },
+  { key: 'order_date',           label: 'วันที่สั่งซื้อ/เบิก',      min: 110, kind: 'date' },
+  { key: 'order_source',         label: 'สั่งลงที่ไหน',            min: 110 },
+  { key: 'eta_date',             label: 'วันที่คาดว่าของถึง',       min: 120, kind: 'date' },
+  { key: 'inbound_date',         label: 'Inbound วันที่รับของ',    min: 130, kind: 'date' },
+  { key: 'outbound_date',        label: 'Outbound วันที่ส่งของ',   min: 140, kind: 'date' },
+  { key: 'transfer_no',          label: 'เลขโอนสินค้า/เลขจัดส่ง',  min: 150 },
+  { key: 'arrived_branch',       label: 'ของถึงสาขา',              min: 100, kind: 'chip' },
+  { key: 'customer_notified',    label: 'แจ้งลูกค้า',               min: 100, kind: 'chip' },
+  { key: 'delivered',            label: 'ส่งมอบสินค้า',            min: 110, kind: 'chip' },
+  { key: 'phone',                label: 'เบอร์โทรติดต่อ',          min: 110 },
+  { key: 'created_at',           label: 'TimeStamp',               min: 130, kind: 'datetime' },
+];
+const COL = Object.fromEntries(COLS.map(c => [c.key, c]));
+
+/* ── ข้อมูลสมมติ ไม่ใช่ลูกค้าจริง ── */
+const ROWS = [
+  {
+    sku: '100098', product_name: 'Antacil 1x10 (แผง)', branch: 'SRC', recipient_department: 'จัดซื้อ',
+    qty: 12, unit: 'แผง', paid_date: '2026-08-03', sale_bill_no: 'SRC-INV-6808-00241',
+    customer_name: 'คุณสมชาย ใจดี', pickup_date: '2026-08-12', note: 'ลูกค้าขอใบเสร็จแยก',
+    delivery_method: 'รับที่ร้าน', order_type: 'สั่งซื้อ', order_bill_no: 'PO-6808-118',
+    order_date: '2026-08-04', order_source: 'ตัวแทน', eta_date: '2026-08-10',
+    inbound_date: '2026-08-09', outbound_date: '2026-08-10', transfer_no: 'TF-6808-0442',
+    arrived_branch: 'ถึงแล้ว', customer_notified: 'แจ้งแล้ว', delivered: 'ยังไม่ส่งมอบ',
+    phone: '081-234-5678', created_at: '2026-08-03T14:22',
+  },
+  {
+    sku: '100011', product_name: 'Aerius 5 mg 1x10 (เม็ด)', branch: 'SSS', recipient_department: 'คลังสินค้า',
+    qty: 4, unit: 'กล่อง', paid_date: '2026-08-06', sale_bill_no: 'SSS-INV-6808-01097',
+    customer_name: 'คุณมานี รักเรียน', pickup_date: '2026-08-14', note: '',
+    delivery_method: 'จัดส่ง', order_type: 'เบิก', order_bill_no: 'RQ-6808-0311',
+    order_date: '2026-08-07', order_source: 'คลังใหญ่', eta_date: '2026-08-13',
+    inbound_date: '', outbound_date: '2026-08-12', transfer_no: 'TF-6808-0518',
+    arrived_branch: 'ยังไม่ถึง', customer_notified: 'ยังไม่แจ้ง', delivered: 'ยังไม่ส่งมอบ',
+    phone: '089-777-1234', created_at: '2026-08-06T09:41',
+  },
+  {
+    sku: '100240', product_name: 'Vitamin C 1000mg 30 เม็ด', branch: 'KKL', recipient_department: 'จัดซื้อ',
+    qty: 24, unit: 'ขวด', paid_date: '2026-08-08', sale_bill_no: 'KKL-INV-6808-00655',
+    customer_name: 'ร้านยาเพื่อนบ้าน', pickup_date: '2026-08-18', note: 'สั่งประจำทุกเดือน · โทรก่อนส่ง',
+    delivery_method: 'จัดส่ง', order_type: 'สั่งซื้อ', order_bill_no: 'PO-6808-140',
+    order_date: '2026-08-09', order_source: 'ออนไลน์', eta_date: '2026-08-16',
+    inbound_date: '', outbound_date: '', transfer_no: '',
+    arrived_branch: 'ยังไม่ถึง', customer_notified: 'ยังไม่แจ้ง', delivered: 'ยังไม่ส่งมอบ',
+    phone: '02-455-8890', created_at: '2026-08-08T16:05',
+  },
+];
+
+/* ── ฟอร์แมตให้ตรงกับ formatCell ในแอป ── */
+const beDate = (s) => s ? new Date(s).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
+const beShort = (s) => s ? new Date(s).toLocaleDateString('th-TH', { day: 'numeric', month: 'numeric' }) : '';
+const beDT = (s) => s ? new Date(s).toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' }) : '';
+const done = (v) => !!v && v.includes('แล้ว') && !v.includes('ยังไม่');
+
+function val(r, key) {
+  const c = COL[key];
+  if (key === 'sku_name') return `${r.sku} · ${r.product_name}`;
+  const raw = r[key];
+  if (raw === '' || raw == null) return '';
+  if (c?.kind === 'date') return beDate(raw);
+  if (c?.kind === 'datetime') return beDT(raw);
+  return String(raw);
+}
+function cell(r, key) {
+  const c = COL[key];
+  const v = val(r, key);
+  if (!v) return '<span class="muted">—</span>';
+  if (c?.kind === 'chip') return `<span class="chip ${done(r[key]) ? 'chip--green' : 'chip--orange'}">${v}</span>`;
+  if (key === 'qty') return `<span class="num">${v}</span>`;
+  return v;
+}
+const esc = (s) => String(s).replace(/[<>&]/g, m => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[m]));
+// ⚠️ ต้องใช้ <template> ไม่ใช่ <div> — ตัว parser จะทิ้ง <tr>/<td> ที่ไม่ได้อยู่ในตารางเงียบ ๆ
+//    ทำให้ firstElementChild เป็น null แล้วโค้ดที่ตามมาพัง (แบบ 5 และ 8 สร้าง <tr> ตรง ๆ)
+const el = (html) => {
+  const t = document.createElement('template');
+  t.innerHTML = html.trim();
+  return t.content.firstElementChild;
+};
+
+/* ── ตารางธรรมดาจากรายการ key ที่ให้มา ── */
+function plainTable(keys, opts = {}) {
+  const cls = opts.cls ?? '';
+  const head = keys.map(k => `<th>${opts.short?.[k] ?? COL[k].label}</th>`).join('');
+  const body = ROWS.map(r => `<tr>${keys.map(k =>
+    `<td class="${opts.tight ? 'tight' : ''}">${cell(r, k)}</td>`).join('')}</tr>`).join('');
+  return `<table class="${cls}"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
+}
+
+/* ============================================================
+   10 ดีไซน์
+   ============================================================ */
+const DESIGNS = [
+  {
+    no: 1, name: 'Card Rows', kind: 'all', tag: 'เห็นครบ 24',
+    note: '<b>เลิกใช้ตาราง</b> — 1 ออเดอร์ = 1 การ์ด ข้อมูลไหลลงหลายบรรทัดตามความกว้างที่มี ไม่มีทางล้นแนวนอนไม่ว่าจอเล็กแค่ไหน · ข้อเสีย: <b>เทียบข้ามออเดอร์ยาก</b> (ตาเลื่อนตามคอลัมน์ไม่ได้) และ 1 หน้าจอเห็นได้แค่ 2-3 ออเดอร์ ต้องเลื่อนแนวตั้งเยอะ',
+    render: () => `<div class="d1-list">${ROWS.map(r => `
+      <div class="d1-card">
+        <div class="d1-top">
+          <span class="d1-sku">${esc(r.sku)} · ${esc(r.product_name)}</span>
+          <span class="d1-badge">${esc(r.branch)}</span>
+          <span class="d1-badge">${esc(r.recipient_department)}</span>
+          <span class="num strong">${r.qty} ${esc(r.unit)}</span>
+          <span class="d1-chips">
+            ${['arrived_branch', 'customer_notified', 'delivered'].map(k =>
+              `<span class="chip ${done(r[k]) ? 'chip--green' : 'chip--orange'}">${esc(r[k])}</span>`).join('')}
+          </span>
+        </div>
+        <div class="d1-body">
+          ${['paid_date', 'sale_bill_no', 'customer_name', 'phone', 'pickup_date', 'delivery_method',
+             'order_type', 'order_bill_no', 'order_date', 'order_source', 'eta_date',
+             'inbound_date', 'outbound_date', 'transfer_no', 'note', 'created_at']
+            .map(k => `<div class="d1-f"><div class="k">${COL[k].label}</div><div class="v">${cell(r, k)}</div></div>`).join('')}
+        </div>
+      </div>`).join('')}</div>`,
+  },
+  {
+    no: 2, name: 'Two-line Row', kind: 'all', tag: 'เห็นครบ 24', used: true,
+    note: '<b style="color:#2e8b47">✅ แบบนี้ถูกเลือกและใส่เข้าแอปแล้ว</b> — วัดจริงด้วย App.css ตัวจริง: ตารางเหลือ <b>1,500px</b> จาก 2,834px (ลด 47%) · จอ 1920 พอดีเหลือที่ว่าง 238px · จอ 1600 ล้น 82px (ลากคอลัมน์ SKU ให้แคบลงแล้วพอดี)<br>ยังเป็นตาราง แต่<b>ยัด 2 ค่าลงช่องเดียวคนละบรรทัด</b> — บรรทัดบนคือค่าหลัก บรรทัดล่างตัวเล็กสีจางคือค่ารอง (เช่น เลขบิลขาย / เลขบิลสั่งซื้อ) · เหลือ 12 คอลัมน์ · <b>ยังเทียบข้ามแถวได้</b> แต่แถวสูงขึ้นเท่าตัวและหัวคอลัมน์ต้องอ่าน 2 บรรทัด',
+    render: () => {
+      const P = [
+        ['sku_name', null], ['branch', 'recipient_department'], ['qty', 'unit'],
+        ['customer_name', 'phone'], ['sale_bill_no', 'order_bill_no'], ['paid_date', 'pickup_date'],
+        ['order_type', 'order_source'], ['order_date', 'eta_date'], ['inbound_date', 'outbound_date'],
+        ['transfer_no', 'delivery_method'], ['note', 'created_at'],
+      ];
+      const head = P.map(([a, b]) => `<th>${COL[a].label}${b ? `<span class="h2">${COL[b].label}</span>` : ''}</th>`).join('')
+        + '<th>สถานะ 3 ขั้น</th>';
+      const body = ROWS.map(r => `<tr>${P.map(([a, b]) =>
+        `<td><div class="l1">${cell(r, a)}</div>${b ? `<div class="l2">${val(r, b) || '—'}</div>` : ''}</td>`).join('')
+        + `<td><div style="display:flex;gap:3px;flex-wrap:wrap">${['arrived_branch', 'customer_notified', 'delivered']
+          .map(k => `<span class="chip ${done(r[k]) ? 'chip--green' : 'chip--orange'}">${esc(r[k])}</span>`).join('')}</div></td>`
+        }</tr>`).join('');
+      return `<table class="d2"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
+    },
+  },
+  {
+    no: 3, name: 'Grouped Columns', kind: 'all', tag: 'เห็นครบ 24',
+    note: '<b>ยุบคอลัมน์ที่เป็นเรื่องเดียวกันเข้าด้วยกัน</b> — 24 คอลัมน์เหลือ 8 กลุ่ม (สินค้า · ลูกค้า · บิลขาย · สั่งซื้อ/เบิก · คลัง · สถานะ · หมายเหตุ) แต่ละกลุ่มมีป้ายกำกับตัวจิ๋วหน้าค่า · <b>ประหยัดที่สุดโดยยังเห็นครบ</b> ข้อเสีย: เรียงตามคอลัมน์ย่อยไม่ได้แล้ว',
+    render: () => {
+      const kv = (r, k) => `<div class="pair"><span class="tagk">${COL[k].label}</span><span>${cell(r, k)}</span></div>`;
+      const G = [
+        ['สินค้า', r => `<div class="strong">${esc(r.sku)} · ${esc(r.product_name)}</div><div class="sub">${esc(r.branch)} · ${esc(r.recipient_department)} · <span class="num">${r.qty}</span> ${esc(r.unit)}</div>`],
+        ['ลูกค้า', r => `<div class="strong">${esc(r.customer_name)}</div><div class="sub">${esc(r.phone)} · ${esc(r.delivery_method)}</div>`],
+        ['บิลขาย', r => `<div>${esc(r.sale_bill_no)}</div><div class="sub">ชำระ ${beDate(r.paid_date)} · นัดรับ ${beDate(r.pickup_date)}</div>`],
+        ['สั่งซื้อ / เบิก', r => `<div>${esc(r.order_type)} · ${esc(r.order_bill_no) || '—'}</div><div class="sub">${beDate(r.order_date) || '—'} · ${esc(r.order_source) || '—'} · ETA ${beDate(r.eta_date) || '—'}</div>`],
+        ['คลัง', r => `<div class="sub">รับเข้า ${beDate(r.inbound_date) || '—'}</div><div class="sub">ส่งออก ${beDate(r.outbound_date) || '—'}</div><div class="sub">${esc(r.transfer_no) || '—'}</div>`],
+        ['สถานะ', r => `<div style="display:flex;flex-direction:column;gap:3px;align-items:flex-start">${['arrived_branch', 'customer_notified', 'delivered'].map(k => `<span class="chip ${done(r[k]) ? 'chip--green' : 'chip--orange'}">${esc(r[k])}</span>`).join('')}</div>`],
+        ['หมายเหตุ', r => `<div>${esc(r.note) || '<span class="muted">—</span>'}</div><div class="sub">ลง ${beDT(r.created_at)}</div>`],
+      ];
+      return `<table class="d3"><thead><tr>${G.map(g => `<th>${g[0]}</th>`).join('')}</tr></thead><tbody>${
+        ROWS.map(r => `<tr>${G.map(g => `<td><div class="grp">${g[1](r)}</div></td>`).join('')}</tr>`).join('')
+      }</tbody></table>`;
+    },
+  },
+  {
+    no: 4, name: 'Column Picker', kind: 'hide', tag: 'ซ่อนบาง',
+    note: '<b>ตารางเดิมทุกอย่าง แค่เลือกได้ว่าจะเปิดคอลัมน์ไหน</b> — กด ⚙️ เลือกคอลัมน์ แล้วติ๊กเอง (จำค่าไว้ใน localStorage ได้) · <b>แก้น้อยที่สุด เสี่ยงน้อยที่สุด</b> เพราะไม่แตะโครงตารางเลย · ข้อเสีย: ไม่ได้แก้ปัญหาจริง ถ้าติ๊กครบก็ล้นเหมือนเดิม · <b>ลองกดปุ่มดูได้</b>',
+    render: (stage) => {
+      const DEFAULT_ON = ['sku_name', 'branch', 'qty', 'unit', 'customer_name', 'pickup_date', 'order_type', 'outbound_date', 'arrived_branch', 'customer_notified', 'delivered'];
+      const on = new Set(DEFAULT_ON);
+      const wrap = el(`<div>
+        <div class="d4-bar">
+          <button class="d4-btn" data-toggle>⚙️ เลือกคอลัมน์</button>
+          <span class="d4-count"></span>
+        </div>
+        <div class="d4-panel"><div class="d4-cols"></div></div>
+        <div class="d4-table"></div>
+      </div>`);
+      const panel = wrap.querySelector('.d4-panel');
+      const cols = wrap.querySelector('.d4-cols');
+      const count = wrap.querySelector('.d4-count');
+      const table = wrap.querySelector('.d4-table');
+      COLS.forEach(c => {
+        const lab = el(`<label><input type="checkbox" ${on.has(c.key) ? 'checked' : ''}><span>${c.label}</span></label>`);
+        lab.querySelector('input').addEventListener('change', e => {
+          e.target.checked ? on.add(c.key) : on.delete(c.key);
+          draw();
+        });
+        cols.appendChild(lab);
+      });
+      const draw = () => {
+        const keys = COLS.map(c => c.key).filter(k => on.has(k));
+        table.innerHTML = keys.length ? plainTable(keys) : '<div style="padding:20px;text-align:center" class="muted">ยังไม่ได้เลือกคอลัมน์</div>';
+        count.textContent = `เปิดอยู่ ${keys.length} / ${COLS.length} คอลัมน์`;
+        checkFit();
+      };
+      wrap.querySelector('[data-toggle]').addEventListener('click', () => panel.classList.toggle('open'));
+      draw();
+      return wrap;
+    },
+  },
+  {
+    no: 5, name: 'Expandable Row', kind: 'act', tag: 'ครบ · ต้องกด',
+    note: '<b>แถวหลัก 9 คอลัมน์ที่ใช้บ่อย + กด ▸ กางอีก 15 ค่าที่เหลือ</b>ใต้แถวนั้นเลย · ตารางแคบลงมากแต่ยังเข้าถึงครบ ไม่ต้องเปิด popup · เข้ากับของเดิมได้ดีเพราะคลิกแถวเปิด popup อยู่แล้ว (ปุ่ม ▸ ต้อง <code>stopPropagation</code>) · <b>ลองกด ▸ ดูได้</b>',
+    render: (stage) => {
+      const MAIN = ['sku_name', 'branch', 'qty', 'unit', 'customer_name', 'pickup_date', 'arrived_branch', 'customer_notified', 'delivered'];
+      const REST = COLS.map(c => c.key).filter(k => !MAIN.includes(k));
+      const wrap = el(`<table class="d5"><thead><tr><th style="width:34px"></th>${MAIN.map(k => `<th>${COL[k].label}</th>`).join('')}</tr></thead><tbody></tbody></table>`);
+      const tb = wrap.querySelector('tbody');
+      ROWS.forEach(r => {
+        const tr = el(`<tr><td><button class="d5-chev">▸</button></td>${MAIN.map(k => `<td>${cell(r, k)}</td>`).join('')}</tr>`);
+        const det = el(`<tr class="d5-detail" style="display:none"><td colspan="${MAIN.length + 1}"><div class="d5-grid">${
+          REST.map(k => `<div class="d5-f"><div class="k">${COL[k].label}</div><div class="v">${cell(r, k)}</div></div>`).join('')
+        }</div></td></tr>`);
+        tr.querySelector('.d5-chev').addEventListener('click', e => {
+          e.stopPropagation();
+          const open = det.style.display === 'none';
+          det.style.display = open ? '' : 'none';
+          e.target.classList.toggle('open', open);
+        });
+        tb.appendChild(tr); tb.appendChild(det);
+      });
+      return wrap;
+    },
+  },
+  {
+    no: 6, name: 'Progress Timeline', kind: 'all', tag: 'เห็นครบ 24',
+    note: '<b>ยุบ 8 คอลัมน์วันที่+สถานะเป็นแถบ timeline อันเดียว</b> — สั่งซื้อ → ETA → รับเข้า → ส่งออก → ถึงสาขา → แจ้ง → ส่งมอบ จุดเขียว = ผ่านแล้ว จุดส้ม = ขั้นที่ค้างอยู่ พร้อมวันที่ใต้จุด · <b>ดูงานคืบหน้าถึงไหนได้ในแวบเดียว</b> ซึ่งตารางเดิมทำไม่ได้ · ข้อเสีย: วันที่ตัวเล็กมาก และเรียงตามวันที่ทีละช่องไม่ได้',
+    render: () => {
+      const STEPS = [
+        ['สั่งซื้อ', 'order_date'], ['ETA', 'eta_date'], ['รับเข้า', 'inbound_date'], ['ส่งออก', 'outbound_date'],
+        ['ถึงสาขา', 'arrived_branch'], ['แจ้ง', 'customer_notified'], ['ส่งมอบ', 'delivered'],
+      ];
+      const isDone = (r, k) => (COL[k].kind === 'chip' ? done(r[k]) : !!r[k]);
+      const line = (r) => {
+        let firstPending = STEPS.findIndex(([, k]) => !isDone(r, k));
+        return `<div class="d6-line">${STEPS.map(([lab, k], i) => {
+          const d = isDone(r, k);
+          const now = i === firstPending;
+          const dt = COL[k].kind === 'chip' ? (d ? '✓' : '') : beShort(r[k]);
+          return (i ? `<div class="d6-bar ${d ? 'done' : ''}"></div>` : '')
+            + `<div class="d6-step" title="${lab}${dt ? ' · ' + dt : ''}">
+                 <div class="d6-dot ${d ? 'done' : ''} ${now ? 'now' : ''}"></div>
+                 <div class="d6-lab">${lab}</div><div class="d6-dt">${dt || '—'}</div>
+               </div>`;
+        }).join('')}</div>`;
+      };
+      const MAIN = ['sku_name', 'branch', 'qty', 'unit', 'customer_name', 'phone', 'sale_bill_no', 'paid_date', 'pickup_date'];
+      const head = MAIN.map(k => `<th>${COL[k].label}</th>`).join('')
+        + '<th style="min-width:340px">ความคืบหน้า</th><th>อื่น ๆ</th>';
+      const body = ROWS.map(r => `<tr>${MAIN.map(k => `<td>${cell(r, k)}</td>`).join('')}
+        <td>${line(r)}</td>
+        <td><div class="sub">${esc(r.order_type)} · ${esc(r.order_bill_no) || '—'}</div>
+            <div class="sub">${esc(r.order_source) || '—'} · ${esc(r.delivery_method)}</div>
+            <div class="sub">${esc(r.transfer_no) || '—'}</div>
+            <div class="sub">${esc(r.recipient_department)} · ${esc(r.note) || '—'}</div></td></tr>`).join('');
+      return `<table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
+    },
+  },
+  {
+    no: 7, name: 'Compact Density', kind: 'all', tag: 'เห็นครบ 24',
+    note: '<b>ไม่เปลี่ยนโครงเลย แค่บีบทุกอย่างให้เล็กสุด</b> — ฟอนต์ 9.5px, padding 3px, หัวคอลัมน์ใช้คำย่อ, ข้อความยาวตัดด้วย <code>…</code> · <b>แก้ง่ายที่สุด (CSS อย่างเดียว)</b> แต่<b class="bad">จอ 1366 ยังล้น ~200px</b> · จอ 1600 ขึ้นไปถึงจะพอดี และต้องแลกด้วยตัวหนังสือเล็กมากกับชื่อสินค้าที่ถูกตัดเหลือไม่กี่ตัวอักษร',
+    render: () => plainTable(COLS.map(c => c.key), {
+      cls: 'd7', tight: true,
+      short: {
+        sku_name: 'SKU / ชื่อ', recipient_department: 'แผนก', paid_date: 'ชำระ', sale_bill_no: 'บิลขาย',
+        customer_name: 'ลูกค้า', pickup_date: 'นัดรับ', delivery_method: 'รับ/ส่ง', order_type: 'ประเภท',
+        order_bill_no: 'เลขสั่ง', order_date: 'วันสั่ง', order_source: 'สั่งที่', eta_date: 'ETA',
+        inbound_date: 'รับเข้า', outbound_date: 'ส่งออก', transfer_no: 'เลขโอน',
+        arrived_branch: 'ถึงสาขา', customer_notified: 'แจ้ง', delivered: 'ส่งมอบ', phone: 'โทร', created_at: 'ลงเมื่อ',
+      },
+    }),
+  },
+  {
+    no: 8, name: 'Split Panel', kind: 'act', tag: 'ครบ · ต้องกด',
+    note: '<b>ตารางแคบซ้าย 6 คอลัมน์ + แผงรายละเอียดขวา</b> — คลิกแถวไหน ขวาเปลี่ยนตาม ไล่ดูทีละใบได้เร็วโดยไม่ต้องเปิด-ปิด popup · เหมาะกับงาน "ไล่เคลียร์ทีละใบ" · ข้อเสีย: เห็นรายละเอียดได้ทีละใบเท่านั้น และกินพื้นที่แนวนอนไปครึ่งจอกับใบเดียว · <b>ลองคลิกแถวซ้ายดูได้</b>',
+    render: () => {
+      const LEFT = ['sku_name', 'branch', 'qty', 'customer_name', 'pickup_date', 'arrived_branch'];
+      const REST = COLS.map(c => c.key).filter(k => !LEFT.includes(k) && k !== 'sku_name');
+      const wrap = el(`<div class="d8-wrap">
+        <div class="d8-left"><table><thead><tr>${LEFT.map(k => `<th>${COL[k].label}</th>`).join('')}</tr></thead><tbody></tbody></table></div>
+        <div class="d8-right"></div>
+      </div>`);
+      const tb = wrap.querySelector('tbody');
+      const right = wrap.querySelector('.d8-right');
+      const show = (r, tr) => {
+        wrap.querySelectorAll('.d8-left tr').forEach(t => t.classList.remove('sel'));
+        tr?.classList.add('sel');
+        right.innerHTML = `<div class="d8-title">${esc(r.sku)} · ${esc(r.product_name)}</div>
+          <div class="d8-sub">${esc(r.branch)} · ${esc(r.recipient_department)} · <span class="num">${r.qty}</span> ${esc(r.unit)}</div>
+          <div class="d8-grid">${REST.map(k => `<div class="d8-f"><div class="k">${COL[k].label}</div><div class="v">${cell(r, k)}</div></div>`).join('')}</div>`;
+      };
+      ROWS.forEach((r, i) => {
+        const tr = el(`<tr>${LEFT.map(k => `<td>${cell(r, k)}</td>`).join('')}</tr>`);
+        tr.addEventListener('click', () => show(r, tr));
+        tb.appendChild(tr);
+        if (i === 0) setTimeout(() => show(r, tr), 0);
+      });
+      return wrap;
+    },
+  },
+  {
+    no: 9, name: 'Tabbed Column Sets', kind: 'act', tag: 'ครบ · ต้องกด',
+    note: '<b>แบ่ง 24 คอลัมน์เป็น 4 ชุดตามคนที่ใช้</b> — สาขา / ลูกค้า+ขาย / จัดซื้อ / คลัง+สถานะ · คอลัมน์ SKU ติดอยู่ทุกแท็บเพื่อไม่ให้หลงว่าดูแถวไหน · <b>เข้ากับที่หน้านี้แยกงานตามโปรไฟล์อยู่แล้ว</b> — ตั้งแท็บเริ่มต้นตามรหัสที่ล็อกอินได้เลย · ข้อเสีย: เทียบข้ามชุดต้องสลับแท็บไปมา · <b>ลองกดแท็บดูได้</b>',
+    render: () => {
+      const TABS = [
+        ['สาขา', ['branch', 'recipient_department', 'qty', 'unit', 'pickup_date', 'delivery_method', 'note', 'created_at']],
+        ['ลูกค้า + ขาย', ['customer_name', 'phone', 'paid_date', 'sale_bill_no', 'pickup_date', 'delivery_method']],
+        ['จัดซื้อ', ['order_type', 'order_bill_no', 'order_date', 'order_source', 'eta_date', 'recipient_department']],
+        ['คลัง + สถานะ', ['inbound_date', 'outbound_date', 'transfer_no', 'arrived_branch', 'customer_notified', 'delivered']],
+      ];
+      const wrap = el(`<div><div class="d9-tabs"></div><div class="d9-body"></div></div>`);
+      const tabs = wrap.querySelector('.d9-tabs');
+      const body = wrap.querySelector('.d9-body');
+      const draw = (i) => {
+        tabs.querySelectorAll('.d9-tab').forEach((b, j) => b.classList.toggle('on', i === j));
+        body.innerHTML = plainTable(['sku_name', ...TABS[i][1]]);
+        checkFit();
+      };
+      TABS.forEach(([name, keys], i) => {
+        const b = el(`<button class="d9-tab">${name} <span class="n">${keys.length + 1}</span></button>`);
+        b.addEventListener('click', () => draw(i));
+        tabs.appendChild(b);
+      });
+      draw(0);
+      return wrap;
+    },
+  },
+  {
+    no: 10, name: 'Icon Condensation', kind: 'all', tag: 'เห็นครบ 24',
+    note: '<b>เก็บครบทุกคอลัมน์ แต่ย่อ "รูปแบบการแสดง"</b> — วันที่เหลือ <code>3/8</code> (ตัดปี), 3 สถานะยุบเป็นจุดสี 3 จุดในช่องเดียว, ข้อความยาวตัดพร้อม tooltip · เหลือ 21 คอลัมน์ · <b>ตารางยังเป็นตารางเดิม เรียงได้ทุกคอลัมน์</b> ข้อเสีย: <b class="bad">จอ 1366 ยังล้น ~200px</b> (จอ 1600 ขึ้นไปพอดี) · ต้อง hover ถึงจะรู้ว่าจุดไหนคือขั้นไหน และปีหายไปจากทุกวันที่',
+    render: () => {
+      const KEYS = ['sku_name', 'branch', 'recipient_department', 'qty', 'unit', 'customer_name', 'phone',
+        'sale_bill_no', 'paid_date', 'pickup_date', 'order_type', 'order_bill_no', 'order_date',
+        'order_source', 'eta_date', 'inbound_date', 'outbound_date', 'transfer_no', 'note', 'created_at'];
+      const SHORT = {
+        sku_name: 'SKU / ชื่อสินค้า', recipient_department: 'แผนก', customer_name: 'ลูกค้า', phone: 'โทร',
+        sale_bill_no: 'บิลขาย', paid_date: 'ชำระ', pickup_date: 'นัดรับ', order_type: 'ประเภท',
+        order_bill_no: 'เลขสั่ง', order_date: 'วันสั่ง', order_source: 'สั่งที่', eta_date: 'ETA',
+        inbound_date: 'รับเข้า', outbound_date: 'ส่งออก', transfer_no: 'เลขโอน', note: 'หมายเหตุ', created_at: 'ลงเมื่อ',
+      };
+      const c10 = (r, k) => {
+        if (COL[k].kind === 'date') {
+          const s = beShort(r[k]);
+          return s ? `<span class="dchip ${k === 'eta_date' ? 'hot' : ''}" title="${beDate(r[k])}">${s}</span>` : '<span class="muted">—</span>';
+        }
+        if (COL[k].kind === 'datetime') return `<span class="dchip" title="${beDT(r[k])}">${beShort(r.created_at)}</span>`;
+        if (k === 'note' || k === 'sale_bill_no') return `<span title="${esc(r[k] || '')}">${cell(r, k)}</span>`;
+        return cell(r, k);
+      };
+      const head = KEYS.map(k => `<th>${SHORT[k] ?? COL[k].label}</th>`).join('') + '<th title="ถึงสาขา · แจ้งลูกค้า · ส่งมอบ">สถานะ</th>';
+      const body = ROWS.map(r => `<tr>${KEYS.map(k => `<td class="tight">${c10(r, k)}</td>`).join('')}
+        <td><div class="dots" title="${['arrived_branch', 'customer_notified', 'delivered'].map(k => `${COL[k].label}: ${r[k]}`).join(' · ')}">
+          ${['arrived_branch', 'customer_notified', 'delivered'].map(k => `<span class="dot ${done(r[k]) ? 'on' : ''}"></span>`).join('')}
+        </div></td></tr>`).join('');
+      return `<table class="d10"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
+    },
+  },
+];
+
+/* ── สร้างการ์ด ── */
+const grid = document.getElementById('grid');
+DESIGNS.forEach(d => {
+  const card = el(`<div class="card">
+    <div class="card-head">
+      <span class="card-no">${String(d.no).padStart(2, '0')}</span>
+      <span class="card-name">${d.name}</span>
+      <span class="card-tag card-tag--${d.kind}">${d.tag}</span>
+      ${d.used ? '<span class="card-tag card-tag--all">✅ ใช้จริงในแอปแล้ว</span>' : ''}
+      <span class="fit-badge"></span>
+    </div>
+    <p class="card-note">${d.note}</p>
+    <div class="demo"></div>
+  </div>`);
+  const demo = card.querySelector('.demo');
+  // กันแบบใดแบบหนึ่งพังแล้วลูปหยุด ทำให้การ์ดที่เหลือหายไปทั้งหมด
+  try {
+    const out = d.render(demo);
+    if (typeof out === 'string') demo.innerHTML = out; else demo.appendChild(out);
+  } catch (err) {
+    demo.innerHTML = `<div style="padding:18px;color:#c0392b;font-size:12px">
+      ⚠️ แบบนี้ render ไม่ผ่าน: ${esc(err && err.message || err)}</div>`;
+    console.error(`[design ${d.no} ${d.name}]`, err);
+  }
+  grid.appendChild(card);
+});
+
+/* ── วัดจริงว่าล้นไหม ── */
+function checkFit() {
+  document.querySelectorAll('.card').forEach(card => {
+    const demo = card.querySelector('.demo');
+    const badge = card.querySelector('.fit-badge');
+    const over = demo.scrollWidth - demo.clientWidth;
+    const w = Math.round(demo.clientWidth);
+    badge.className = 'fit-badge ' + (over > 1 ? 'is-over' : 'is-fit');
+    badge.textContent = over > 1
+      ? `⚠️ ยังล้น ${Math.round(over)}px (พื้นที่ ${w}px)`
+      : `✅ พอดี ไม่ต้องเลื่อน (พื้นที่ ${w}px)`;
+  });
+}
+
+/* ── แถบควบคุม ── */
+const wnote = document.getElementById('wnote');
+function setWidth(screen) {
+  const root = document.documentElement.style;
+  if (screen) {
+    // พื้นที่ตาราง = กว้างจอ − sidebar 150px − padding ซ้ายขวา ~32px
+    const tablew = screen - 182;
+    root.setProperty('--tablew', tablew + 'px');
+    // การ์ดต้องกว้างพอให้เวทีได้ความกว้างเต็มตามที่จำลอง (+ padding การ์ด 38px)
+    root.setProperty('--gridw', (tablew + 40) + 'px');
+    wnote.textContent = `พื้นที่ตาราง = ${screen} − sidebar 150 − padding 32 = ${tablew}px`;
+  } else {
+    root.setProperty('--tablew', '100%');
+    root.setProperty('--gridw', '1500px');
+    wnote.textContent = 'ใช้ความกว้างหน้าต่างเบราว์เซอร์นี้';
+  }
+  requestAnimationFrame(checkFit);
+}
+document.querySelectorAll('.ctrl button[data-w]').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('.ctrl button[data-w]').forEach(x => x.classList.remove('on'));
+    b.classList.add('on');
+    setWidth(Number(b.dataset.w));
+  });
+});
+document.getElementById('gridlines').addEventListener('change', e => {
+  document.querySelectorAll('.demo table').forEach(t => t.classList.toggle('showgrid', e.target.checked));
+});
+window.addEventListener('resize', checkFit);
+setWidth(1920);
+</script>
+</body>
+</html>

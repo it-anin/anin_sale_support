@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>แจ้งเตือนคลังส่งของแล้ว — 10 แบบ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   แจ้งเตือนฝั่งสาขา (SRC / KKL / SSS) — เมื่อคลังกรอก "Outbound วันที่ส่งของ"
+   แกลเลอรีเลือกดีไซน์ 10 แบบ · ไม่ได้ import เข้าแอป เปิดผ่าน dev server เพื่อเทียบแบบ
+   ============================================================ */
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: 26px 20px 70px;
+  background: #eef3f9; font-family: 'Noto Sans Thai', sans-serif; color: #2c3e50;
+}
+.pg-head { max-width: 1360px; margin: 0 auto 18px; }
+.pg-head h1 {
+  margin: 0 0 6px; font-family: 'Outfit', sans-serif; font-size: 27px;
+  font-weight: 800; color: #2d6cad; letter-spacing: -0.4px;
+}
+.pg-head p { margin: 0 0 4px; font-size: 13px; color: #5b7590; line-height: 1.75; font-weight: 300; }
+code {
+  background: #fff; border: 1px solid #cfe0f2; border-radius: 4px;
+  padding: 1px 5px; font-family: 'Outfit', monospace; font-size: 12px; color: #2d6cad;
+}
+
+.rule-box {
+  max-width: 1360px; margin: 0 auto 16px; padding: 13px 17px;
+  background: #eaf3fc; border: 1px solid #b8d3ee; border-left: 4px solid #4891db;
+  border-radius: 9px; font-size: 13px; line-height: 1.85; color: #2d5c8a;
+}
+.rule-box b { color: #1e4b7a; }
+.note-box {
+  max-width: 1360px; margin: 0 auto 18px; padding: 12px 16px;
+  background: #fff8e9; border: 1px solid #f0d9a8; border-left: 4px solid #e8a33d;
+  border-radius: 9px; font-size: 12.5px; line-height: 1.8; color: #6b5525;
+}
+.note-box b { color: #b57619; }
+
+.ctrl {
+  position: sticky; top: 0; z-index: 30;
+  max-width: 1360px; margin: 0 auto 24px; padding: 12px 16px;
+  background: #fff; border: 1px solid #cfe0f2; border-radius: 11px;
+  box-shadow: 0 3px 14px rgba(45, 108, 173, 0.1);
+  display: flex; flex-wrap: wrap; align-items: center; gap: 16px;
+}
+.ctrl label { display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: #2d5c8a; cursor: pointer; }
+.ctrl input { width: 15px; height: 15px; accent-color: #4891db; cursor: pointer; }
+.ctrl .hint { font-size: 11.5px; color: #8194a8; font-weight: 300; }
+
+.grid { max-width: 1360px; margin: 0 auto; display: flex; flex-direction: column; gap: 22px; }
+.card {
+  background: #fff; border: 1px solid #e3e8ee; border-radius: 15px;
+  padding: 16px 18px 18px; box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+}
+.card-head { display: flex; align-items: baseline; gap: 9px; margin-bottom: 3px; }
+.card-no {
+  font-family: 'Outfit', sans-serif; font-size: 12px; font-weight: 800;
+  color: #fff; background: #4891db; border-radius: 6px; padding: 2px 8px; flex-shrink: 0;
+}
+.card-name { font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 700; }
+.card-note { font-size: 11.5px; color: #8194a8; line-height: 1.75; margin: 0 0 12px; font-weight: 300; }
+.card-note b { color: #5b7590; font-weight: 600; }
+
+/* ============================================================
+   ตารางจำลอง — ลอกค่าจาก .ss-table / .ss-chip ใน App.css
+   ============================================================ */
+.wrap { border: 1px solid #e3e8ee; border-radius: 11px; overflow: auto; }
+table {
+  border-collapse: collapse; width: 100%; min-width: 900px;
+  font-size: 11px; font-family: 'Noto Sans Thai', sans-serif;
+}
+th {
+  padding: 6px 9px; color: #8194a8; font-weight: 600; font-size: 10.5px;
+  text-transform: uppercase; letter-spacing: 0.15px; text-align: left;
+  border-bottom: 2px solid #e3e8ee; background: #fff; height: 40px; vertical-align: middle;
+  white-space: nowrap;
+}
+td {
+  padding: 6px 9px; border-bottom: 1px solid #eef2f6; border-right: 1px solid #eef2f6;
+  color: #2d3a48; height: 38px; vertical-align: middle; line-height: 1.3; position: relative;
+}
+th:last-child, td:last-child { border-right: 0; }
+tbody tr:nth-child(even) td { background: #fbfcfd; }
+tbody tr:hover td { background: #f6fafd; }
+.c-name { min-width: 300px; }
+.c-num  { font-family: 'Outfit', sans-serif; font-variant-numeric: tabular-nums; }
+
+.chip { display: inline-block; padding: 2px 7px; border-radius: 999px; font-size: 10px; font-weight: 600; }
+.chip--green  { background: #e5f5e9; color: #2e8b47; }
+.chip--blue   { background: #e3effc; color: #2d6cad; }
+.chip--orange { background: #fdf0e2; color: #c07a1f; }
+.chip--red    { background: #fdeaea; color: #c0392b; }
+
+.muted { color: #b6c3d1; }
+.demo-tag {
+  display: inline-block; margin-left: 5px; padding: 0 4px; border-radius: 3px;
+  background: #f0f3f7; color: #a3b1c0; font-size: 8.5px; font-weight: 600; vertical-align: middle;
+}
+
+/* ============================================================
+   สีของสัญญาณ — ชุดเดียวกันทุกแบบ เพื่อให้เทียบ "วิธีแสดง" ไม่ใช่ "สี"
+     ฟ้าเขียว #1a9e8f = คลังส่งออกแล้ว รอสาขารับ
+     ไล่ตามอายุ: 0-1 วัน ฟ้าเขียว · 2-3 วัน ส้ม · 4 วันขึ้นไป แดง
+   ============================================================ */
+:root { --go: #1a9e8f; --go-bg: #e6f6f4; --go-bd: #a9e0d8; --warn: #e8a33d; --late: #d9534f; }
+.age0 { --tone: #1a9e8f; --tone-bg: #e6f6f4; --tone-bd: #a9e0d8; }
+.age1 { --tone: #e8a33d; --tone-bg: #fdf4e6; --tone-bd: #f0d9a8; }
+.age2 { --tone: #d9534f; --tone-bg: #fdeceb; --tone-bd: #f2c0be; }
+
+/* ---------- 1. Row Tint + Left Bar ---------- */
+.d1 tr.hit td { background: var(--tone-bg) !important; }
+.d1 tr.hit td:first-child { box-shadow: inset 3px 0 0 var(--tone); }
+
+/* ---------- 2. Outbound Cell Chip ---------- */
+.d2 .out-chip {
+  display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px 2px 6px;
+  border-radius: 999px; background: var(--tone-bg); color: var(--tone);
+  border: 1px solid var(--tone-bd); font-size: 10px; font-weight: 700; white-space: nowrap;
+}
+
+/* ---------- 3. Marker Column ---------- */
+.d3 .c-mark { width: 30px; min-width: 30px; text-align: center; padding: 0; }
+.d3 .mark {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 19px; height: 19px; border-radius: 50%; background: var(--tone); color: #fff;
+}
+.d3 .mark svg { width: 11px; height: 11px; }
+
+/* ---------- 4. Pulsing Dot ---------- */
+.d4 .pulse {
+  display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--tone); margin-right: 6px; vertical-align: middle;
+  animation: pulseRing 1.9s ease-out infinite;
+}
+@keyframes pulseRing {
+  0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--tone) 55%, transparent); }
+  70%  { box-shadow: 0 0 0 6px color-mix(in srgb, var(--tone) 0%, transparent); }
+  100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--tone) 0%, transparent); }
+}
+
+/* ---------- 5. Corner Ribbon ---------- */
+.d5 tr.hit td:first-child::before {
+  content: ''; position: absolute; top: 0; left: 0;
+  border-width: 13px 13px 0 0; border-style: solid;
+  border-color: var(--tone) transparent transparent transparent;
+}
+.d5 tr.hit td:first-child { padding-left: 17px; }
+
+/* ---------- 6. Status Chip Takeover ---------- */
+.d6 .takeover {
+  display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px 2px 6px;
+  border-radius: 999px; background: var(--tone); color: #fff;
+  font-size: 10px; font-weight: 700; white-space: nowrap;
+}
+.d6 .takeover svg { width: 11px; height: 11px; }
+
+/* ---------- 7. Summary Banner ---------- */
+.d7 .banner {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
+  padding: 10px 14px; border-radius: 10px;
+  background: var(--go-bg); border: 1px solid var(--go-bd); border-left: 4px solid var(--go);
+  font-size: 12.5px; color: #14766b;
+}
+.d7 .banner svg { width: 18px; height: 18px; flex-shrink: 0; }
+.d7 .banner b { font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 800; }
+.d7 .banner .spacer { margin-left: auto; }
+.d7 .banner button {
+  border: 1px solid var(--go); border-radius: 20px; background: #fff; color: var(--go);
+  font-family: 'Noto Sans Thai', sans-serif; font-size: 11.5px; font-weight: 600;
+  padding: 4px 12px; cursor: pointer;
+}
+.d7 .banner button:hover { background: var(--go); color: #fff; }
+.d7 tr.hit td { background: var(--go-bg) !important; }
+
+/* ---------- 8. Days Badge ---------- */
+.d8 .days {
+  display: inline-flex; align-items: center; gap: 4px; padding: 1px 7px 1px 5px;
+  border-radius: 5px; background: var(--tone); color: #fff;
+  font-size: 9.5px; font-weight: 700; white-space: nowrap; margin-left: 6px;
+}
+.d8 .days svg { width: 10px; height: 10px; }
+.d8 .days em { font-style: normal; font-family: 'Outfit', sans-serif; font-weight: 800; }
+
+/* ---------- 9. Outline Row ---------- */
+.d9 tr.hit td { box-shadow: inset 0 1.5px 0 var(--tone), inset 0 -1.5px 0 var(--tone); background: #fff !important; }
+.d9 tr.hit td:first-child { box-shadow: inset 1.5px 0 0 var(--tone), inset 0 1.5px 0 var(--tone), inset 0 -1.5px 0 var(--tone); }
+.d9 tr.hit td:last-child  { box-shadow: inset -1.5px 0 0 var(--tone), inset 0 1.5px 0 var(--tone), inset 0 -1.5px 0 var(--tone); }
+
+/* ---------- 10. Inline Action Button ---------- */
+.d10 .c-act { width: 118px; min-width: 118px; }
+.d10 .act {
+  display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px;
+  border: 1.5px solid var(--tone); border-radius: 20px; background: #fff; color: var(--tone);
+  font-family: 'Noto Sans Thai', sans-serif; font-size: 10.5px; font-weight: 600;
+  cursor: pointer; white-space: nowrap; transition: all 0.15s ease;
+}
+.d10 .act:hover { background: var(--tone); color: #fff; }
+.d10 .act svg { width: 11px; height: 11px; }
+.d10 tr.hit td { background: var(--tone-bg) !important; }
+
+/* ปิดสัญญาณเมื่อผู้ใช้เลือก "ไฮไลต์เฉพาะสาขาตัวเอง" แล้วแถวนั้นเป็นของสาขาอื่น */
+tr.off .only-hit { display: none !important; }
+tr.off td { background: inherit !important; box-shadow: none !important; }
+tr.off td:first-child::before { display: none; }
+
+.footer {
+  max-width: 1360px; margin: 30px auto 0; padding: 15px 18px;
+  background: #fff; border: 1px solid #e3e8ee; border-radius: 11px;
+  font-size: 12.5px; color: #5b7590; line-height: 1.9; font-weight: 300;
+}
+.footer b { color: #2d6cad; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="pg-head">
+  <h1>แจ้งเตือนสาขา — คลังส่งของแล้ว</h1>
+  <p>สำหรับโปรไฟล์ <b>SRC / KKL / SSS</b> · แจ้งในตาราง Order เมื่อคลังสินค้ากรอกช่อง <code>Outbound วันที่ส่งของ</code></p>
+</div>
+
+<div class="rule-box">
+  <b>เงื่อนไขที่ผมใช้:</b> <code>outbound_date</code> มีค่า <b>และ</b> <code>arrived_branch</code> ยังไม่ใช่ “ถึงแล้ว”<br>
+  เหตุผลที่ต้องมีเงื่อนไขที่สอง — พอสาขากดตรา <b>ของถึงสาขา</b> แล้ว แจ้งเตือนก็หมดหน้าที่ ถ้าดูแค่ <code>outbound_date</code>
+  แถวจะติดไฟค้างตลอดไปไม่มีวันดับ (ดูแถวสุดท้ายของทุกตาราง — คลังส่งแล้วแต่สาขายืนยันรับแล้ว จึงเงียบ)
+</div>
+
+<div class="note-box">
+  <b>ข้อมูลในตาราง:</b> 4 แถวแรกเป็นของจริงจาก <code>ss_orders</code> ตอนนี้ (มี 1 แถวที่เข้าเงื่อนไขจริง — SRC · Glyxambi 25 mg ที่คลังเพิ่งกรอกไป)
+  ส่วนแถวที่ติดป้าย <span class="demo-tag">สมมติ</span> ผมเติมเข้าไปเพื่อให้เห็นการไล่สีตามอายุ (ส่งมา 2 วัน / 5 วัน) และเคสที่ต้อง<b>ไม่</b>แจ้ง<br>
+  <b>ยังไม่ได้เขียนโค้ดจริง</b> — ไฟล์นี้เป็นตัวอย่างให้เลือกแบบก่อน
+</div>
+
+<div class="ctrl">
+  <label><input type="checkbox" id="ownOnly"> แจ้งเฉพาะออเดอร์ของสาขาตัวเอง (สมมติล็อกอิน <b>SRC</b>)</label>
+  <span class="hint">ตอนนี้ตาราง Order ไม่ได้กรองสาขา — สาขาเห็นออเดอร์ของทุกสาขา ติ๊กดูว่าจะให้แจ้งเฉพาะของตัวเองไหม</span>
+</div>
+
+<div class="grid" id="grid"></div>
+
+<div class="footer">
+  <b>เลือกแล้วบอกหมายเลข</b> เดี๋ยวผมเอาไปใส่จริงในตาราง Order — เห็นเฉพาะโปรไฟล์สาขา (<code>isBranchUser</code>)
+  ส่วนคลังกับจัดซื้อจะไม่เห็น เพราะไม่ใช่คนที่ต้องรับของ<br>
+  แบบ 10 ต่างจากแบบอื่นตรงที่ <b>กดจากในตารางได้เลย</b> ไม่ต้องเปิด popup ไปกดตรา — ถ้าอยากได้ทั้งแจ้งเตือนและทางลัด เลือกอันนี้
+</div>
+
+<script>
+/* ============================================================
+   ข้อมูล — 4 แถวแรกของจริงจาก ss_orders (13 ส.ค. 2569)
+   ============================================================ */
+const TODAY = new Date('2026-08-13');
+const ROWS = [
+  { sku:'900422', name:'Glyxambi 25 mg/5 mg 30\'s [ชมพู] Pre  01-26 MOQ 1', branch:'SRC', qty:3, unit:'กล่อง',
+    out:'2026-08-13', tno:'xxxxxxxx9999999', arrived:'ยังไม่ถึง', demo:false },
+  { sku:'101369', name:'FICEF 100 mg 10x10\'s NEW 07-26', branch:'KKL', qty:3, unit:'กล่อง',
+    out:null, tno:null, arrived:'ถึงแล้ว', demo:false },
+  { sku:'100238', name:'Binozyt 250 mg 1x6\'s', branch:'SRC', qty:1, unit:'กล่อง',
+    out:null, tno:null, arrived:'ถึงแล้ว', demo:false },
+  { sku:'100376', name:'Mymol Para (Burapha) 500 mg 10x10\'s  NEW 06-26', branch:'SRC', qty:1, unit:'แผง',
+    out:null, tno:null, arrived:'ถึงแล้ว', demo:false },
+  { sku:'900431', name:'Ozempic 1 mg 1x1\'s', branch:'SRC', qty:2, unit:'กล่อง',
+    out:'2026-08-11', tno:'TR26080455', arrived:'ยังไม่ถึง', demo:true },
+  { sku:'900418', name:'Jardiance 10 mg 30\'s', branch:'KKL', qty:4, unit:'กล่อง',
+    out:'2026-08-08', tno:'TR26080312', arrived:'ยังไม่ถึง', demo:true },
+  { sku:'900440', name:'Trulicity 1.5 mg 1x4\'s', branch:'SSS', qty:1, unit:'กล่อง',
+    out:'2026-08-05', tno:'TR26080190', arrived:'ถึงแล้ว', demo:true },
+];
+
+const MY_BRANCH = 'SRC';
+const thDate = s => s ? new Date(s).toLocaleDateString('th-TH', { day:'2-digit', month:'2-digit', year:'numeric' }) : '';
+const daysSince = s => Math.round((TODAY - new Date(s)) / 86400000);
+/* เข้าเงื่อนไขแจ้งเตือน = คลังส่งแล้ว และสาขายังไม่กดรับ */
+const isHit = r => !!r.out && r.arrived !== 'ถึงแล้ว';
+/* ไล่สีตามอายุ: 0-1 วัน ฟ้าเขียว · 2-3 วัน ส้ม · 4 วันขึ้นไป แดง */
+const ageClass = r => { const d = daysSince(r.out); return d <= 1 ? 'age0' : d <= 3 ? 'age1' : 'age2'; };
+
+const SVG = {
+  truck: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 3h13v13H1z"/><path d="M14 8h4l3 3v5h-7V8Z"/><circle cx="5.5" cy="18.5" r="2"/><circle cx="17.5" cy="18.5" r="2"/></svg>',
+  check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m4 12 5.5 5.5L20 6"/></svg>',
+  bell:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 1 0-12 0c0 6-3 8-3 8h18s-3-2-3-8"/><path d="M10.5 21a2 2 0 0 0 3 0"/></svg>',
+};
+
+/* ============================================================
+   10 ดีไซน์
+     cols  = คอลัมน์พิเศษที่แบบนี้เพิ่มเข้ามา (หัวตาราง)
+     cell  = แทนที่เนื้อในเซลล์บางช่อง
+     before/after = HTML นอกตาราง
+   ============================================================ */
+const DESIGNS = [
+  {
+    name: 'Row Tint + Left Bar',
+    note: 'ย้อมทั้งแถวอ่อน ๆ + ขีดสีขอบซ้าย · <b>เห็นชัดที่สุดโดยไม่เพิ่มอะไรในตาราง</b> แต่ถ้าค้างหลายแถวจะกลายเป็นแถบสีใหญ่',
+  },
+  {
+    name: 'Outbound Cell Chip',
+    note: 'เปลี่ยนวันที่ในช่อง Outbound เป็นชิปมีไอคอนรถ · <b>สัญญาณอยู่ตรงข้อมูลที่เป็นต้นเหตุพอดี</b> แต่ต้องเลื่อนตารางไปเห็นคอลัมน์นั้นก่อน',
+    cell: (r, hit) => hit ? { out: `<span class="out-chip only-hit">${SVG.truck} ${thDate(r.out)}</span>` } : {},
+  },
+  {
+    name: 'Marker Column',
+    note: 'เพิ่มคอลัมน์แคบสุดซ้ายไว้ปักหมุด · <b>กวาดตาหาได้เร็วสุดเพราะอยู่คงที่ตำแหน่งเดียว</b> แลกกับกินความกว้าง 30px ตลอดเวลา',
+    cols: [{ cls: 'c-mark', label: '' }],
+    lead: (r, hit) => hit ? `<span class="mark only-hit">${SVG.truck}</span>` : '',
+  },
+  {
+    name: 'Pulsing Dot',
+    note: 'จุดกะพริบหน้าชื่อสินค้า · <b>เบาที่สุด ไม่แย่งพื้นที่เลย</b> แต่ถ้าค้างหลายแถวจะกะพริบพร้อมกันจนรก',
+    cell: (r, hit) => hit ? { name: `<span class="pulse only-hit"></span>${r.sku} ${r.name}` } : {},
+  },
+  {
+    name: 'Corner Ribbon',
+    note: 'สามเหลี่ยมเล็กมุมบนซ้ายของแถว · <b>ไม่กินพื้นที่และไม่ย้อมสีทับข้อมูล</b> แต่เล็กมาก อาจมองข้ามได้',
+  },
+  {
+    name: 'Status Chip Takeover',
+    note: 'ชิป “ยังไม่ถึง” เปลี่ยนเป็น “กำลังมา · N วัน” · <b>ไม่เพิ่มองค์ประกอบใหม่เลย แค่เปลี่ยนคำในช่องเดิม</b> อ่านแล้วรู้ทันทีว่าต้องรออะไร',
+    cell: (r, hit) => hit ? { arrived: `<span class="takeover only-hit">${SVG.truck} กำลังมา · ${daysSince(r.out)} วัน</span>` } : {},
+  },
+  {
+    name: 'Summary Banner',
+    note: 'แถบสรุปเหนือตาราง + ย้อมแถวจาง ๆ · <b>เห็นยอดรวมทันทีโดยไม่ต้องกวาดทั้งตาราง</b> เหมาะถ้ามีปุ่มกรองให้กดต่อ',
+    before: hits => hits.length ? `<div class="banner">${SVG.truck}
+      <span>คลังส่งของออกแล้ว <b>${hits.length}</b> รายการ · รอสาขารับเข้า</span>
+      <span class="spacer"></span><button type="button">ดูเฉพาะรายการนี้</button></div>` : '',
+  },
+  {
+    name: 'Days Badge',
+    note: 'ป้ายนับวันต่อท้ายชื่อสินค้า สีไล่ตามอายุ <b>0-1 วัน ฟ้าเขียว → 2-3 วัน ส้ม → 4 วันขึ้นไป แดง</b> · แบบเดียวที่บอกว่าเรื่องนี้ดองมานานแค่ไหน',
+    cell: (r, hit) => hit ? { name: `${r.sku} ${r.name}<span class="days only-hit">${SVG.truck}<em>${daysSince(r.out)}</em> วัน</span>` } : {},
+  },
+  {
+    name: 'Outline Row',
+    note: 'ตีกรอบรอบแถวโดยไม่ย้อมพื้น · <b>อ่านตัวหนังสือได้สบายตาที่สุดเพราะพื้นยังขาว</b> แต่ถ้าแถวติดกันหลายแถวกรอบจะชนกันดูรก',
+  },
+  {
+    name: 'Inline Action Button',
+    note: 'ปุ่ม “รับเข้าสาขา” โผล่ในแถว กดแล้วประทับตราของถึงสาขาได้เลย · <b>เป็นทั้งแจ้งเตือนและทางลัด ไม่ต้องเปิด popup</b> แลกกับอีก 1 คอลัมน์',
+    cols: [{ cls: 'c-act', label: '' }, null],
+    trail: (r, hit) => hit ? `<button class="act only-hit" type="button">${SVG.check} รับเข้าสาขา</button>` : '',
+  },
+];
+
+/* ============================================================
+   render
+   ============================================================ */
+const HEAD = [
+  { key: 'name',    label: 'SKU / ชื่อสินค้า', cls: 'c-name' },
+  { key: 'branch',  label: 'Branch' },
+  { key: 'qty',     label: 'จำนวน', cls: 'c-num' },
+  { key: 'unit',    label: 'หน่วย' },
+  { key: 'out',     label: 'Outbound วันที่ส่งของ' },
+  { key: 'tno',     label: 'เลขโอนสินค้า/เลขจัดส่ง' },
+  { key: 'arrived', label: 'ของถึงสาขา' },
+];
+
+function baseCell(r, key) {
+  switch (key) {
+    case 'name':    return `${r.sku} ${r.name}${r.demo ? '<span class="demo-tag">สมมติ</span>' : ''}`;
+    case 'branch':  return r.branch;
+    case 'qty':     return r.qty;
+    case 'unit':    return r.unit;
+    case 'out':     return r.out ? thDate(r.out) : '<span class="muted">—</span>';
+    case 'tno':     return r.tno ?? '<span class="muted">—</span>';
+    case 'arrived': return `<span class="chip ${r.arrived === 'ถึงแล้ว' ? 'chip--green' : 'chip--orange'}">${r.arrived}</span>`;
+  }
+}
+
+function render() {
+  const ownOnly = document.getElementById('ownOnly').checked;
+  /* "ปิดเสียง" = เข้าเงื่อนไขแต่ผู้ใช้เลือกให้แจ้งเฉพาะสาขาตัวเอง แล้วแถวนี้เป็นของสาขาอื่น */
+  const muted = r => ownOnly && r.branch !== MY_BRANCH;
+  const hits = ROWS.filter(r => isHit(r) && !muted(r));
+
+  document.getElementById('grid').innerHTML = DESIGNS.map((d, i) => {
+    const extra = (d.cols ?? []).filter(Boolean);
+    const leadCol  = d.lead  ? `<th class="${extra[0].cls}"></th>` : '';
+    const trailCol = d.trail ? `<th class="${extra[0].cls}"></th>` : '';
+
+    const body = ROWS.map(r => {
+      const hit = isHit(r);
+      const show = hit && !muted(r);
+      const over = d.cell ? d.cell(r, show) : {};
+      const cells = HEAD.map(h => `<td class="${h.cls ?? ''}">${over[h.key] ?? baseCell(r, h.key)}</td>`).join('');
+      return `<tr class="${hit ? 'hit ' + ageClass(r) : ''}${hit && muted(r) ? ' off' : ''}">` +
+             (d.lead ? `<td class="${extra[0].cls}">${d.lead(r, show)}</td>` : '') +
+             cells +
+             (d.trail ? `<td class="${extra[0].cls}">${d.trail(r, show)}</td>` : '') +
+             `</tr>`;
+    }).join('');
+
+    return `<div class="card d${i + 1}">
+      <div class="card-head"><span class="card-no">${String(i + 1).padStart(2, '0')}</span><span class="card-name">${d.name}</span></div>
+      <p class="card-note">${d.note}</p>
+      ${d.before ? d.before(hits) : ''}
+      <div class="wrap"><table>
+        <thead><tr>${leadCol}${HEAD.map(h => `<th class="${h.cls ?? ''}">${h.label}</th>`).join('')}${trailCol}</tr></thead>
+        <tbody>${body}</tbody>
+      </table></div>
+    </div>`;
+  }).join('');
+}
+
+document.getElementById('ownOnly').addEventListener('change', render);
+render();
+</script>
+</body>
+</html>

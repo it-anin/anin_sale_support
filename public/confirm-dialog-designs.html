@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>กล่องยืนยัน "ยกเลิกสถานะ" — 10 แบบ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   กล่องยืนยัน "ยกเลิกสถานะ" — แทนที่ window.confirm() ของเบราว์เซอร์
+   ตอนนี้ใช้ในป๊อปอัป Order / BackOrder หน้า SaleSupport (toggleOrderStep)
+   → กด window.confirm(`ยกเลิกสถานะ "${step.label}" ?`) โผล่กล่องเบราว์เซอร์
+     "localhost:5200 บอกว่า" ซึ่งไม่มีดีไซน์ ไม่ใช่ฟอนต์/สีของแอปเลย
+
+   แกลเลอรีเลือกดีไซน์ 10 แบบ · ไม่ได้ import เข้าแอป
+   เปิดผ่าน dev server: /confirm-dialog-designs.html
+   ============================================================ */
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: 26px 20px 90px;
+  background: #eef3f9; font-family: 'Noto Sans Thai', sans-serif; color: #2c3e50;
+}
+.pg-head { max-width: 1400px; margin: 0 auto 18px; }
+.pg-head h1 {
+  margin: 0 0 6px; font-family: 'Outfit', sans-serif; font-size: 27px;
+  font-weight: 800; color: #2d6cad; letter-spacing: -0.4px;
+}
+.pg-head p { margin: 0 0 4px; font-size: 13px; color: #5b7590; line-height: 1.75; font-weight: 300; }
+code {
+  background: #fff; border: 1px solid #cfe0f2; border-radius: 4px;
+  padding: 1px 5px; font-family: 'Outfit', monospace; font-size: 12px; color: #2d6cad;
+}
+.rule-box {
+  max-width: 1400px; margin: 0 auto 16px; padding: 13px 17px;
+  background: #eaf3fc; border: 1px solid #b8d3ee; border-left: 4px solid #4891db;
+  border-radius: 9px; font-size: 13px; line-height: 1.9; color: #2d5c8a;
+}
+.rule-box b { color: #1e4b7a; }
+.note-box {
+  max-width: 1400px; margin: 0 auto 18px; padding: 12px 16px;
+  background: #fff8e9; border: 1px solid #f0d9a8; border-left: 4px solid #e8a33d;
+  border-radius: 9px; font-size: 12.5px; line-height: 1.85; color: #6b5525;
+}
+.note-box b { color: #b57619; }
+
+/* จำลองกล่อง window.confirm() ของจริง — เพื่อเทียบให้เห็นว่าต่างจากดีไซน์ใหม่แค่ไหน */
+.native-demo {
+  max-width: 1400px; margin: 0 auto 24px; display: flex; align-items: center; gap: 16px;
+  padding: 13px 16px; background: #fff; border: 1px solid #e3e8ee; border-radius: 11px;
+  box-shadow: 0 2px 12px rgba(0,0,0,.05);
+}
+.native-demo .lab { font-size: 12.5px; color: #5b7590; font-weight: 600; flex-shrink: 0; }
+.native-box {
+  font-family: Arial, sans-serif; background: #1e1e1e; color: #e8e8e8; border-radius: 6px;
+  padding: 14px 16px; font-size: 12.5px; min-width: 300px; box-shadow: 0 4px 18px rgba(0,0,0,.35);
+}
+.native-box .u { color: #9aa; font-size: 10.5px; margin-bottom: 8px; }
+.native-box .m { margin-bottom: 14px; }
+.native-box .btns { display: flex; justify-content: flex-end; gap: 8px; }
+.native-box button {
+  font-family: Arial, sans-serif; font-size: 12px; padding: 5px 14px; border-radius: 3px;
+  border: 1px solid #555; background: #3a3a3a; color: #fff; cursor: default;
+}
+.native-box button.ok { background: #2d6a2d; border-color: #3a8a3a; }
+
+.grid {
+  max-width: 1400px; margin: 0 auto;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(430px, 1fr)); gap: 20px;
+}
+.card {
+  background: #fff; border: 1px solid #e3e8ee; border-radius: 15px;
+  padding: 15px 17px 17px; box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+  display: flex; flex-direction: column;
+}
+.card-head { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; flex-wrap: wrap; }
+.card-no {
+  font-family: 'Outfit', sans-serif; font-size: 12px; font-weight: 800;
+  color: #fff; background: #4891db; border-radius: 6px; padding: 2px 8px; flex-shrink: 0;
+}
+.card-name { font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 700; }
+.card-tag {
+  font-size: 10.5px; font-weight: 600; color: #5b7590; background: #f0f4f9;
+  border: 1px solid #e3e8ee; border-radius: 999px; padding: 2px 9px;
+}
+.card-tag--used { background: #e9f7ee; border-color: #bfe3c9; color: #2e8b47; font-weight: 700; }
+.card:has(.card-tag--used) { border-color: #bfe3c9; box-shadow: 0 2px 14px rgba(46, 139, 71, 0.14); }
+.card-note { font-size: 11.5px; color: #8194a8; line-height: 1.8; margin: 8px 0 12px; font-weight: 300; }
+.card-note b { color: #5b7590; font-weight: 600; }
+.card-note .bad { color: #c0392b; font-weight: 600; }
+.card-note .ok { color: #2e8b47; font-weight: 600; }
+
+/* เวทีจำลอง — ป๊อปอัปรายละเอียด Order ย่อส่วน + แถวตราประทับ 3 ขั้นจริง */
+.stage {
+  position: relative; overflow: hidden; border-radius: 11px; background: #eef2f7;
+  min-height: 210px; display: flex; align-items: center; justify-content: center;
+  margin-top: auto; isolation: isolate;
+}
+.mini-popup {
+  width: 100%; max-width: 340px; background: #fff; border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(20,35,55,.12); overflow: hidden; font-family: 'Noto Sans Thai', sans-serif;
+}
+.mini-head {
+  padding: 10px 14px; background: linear-gradient(135deg, #2d6cad, #4891db); color: #fff;
+  font-size: 12.5px; font-weight: 600;
+}
+.mini-body { padding: 12px 14px 14px; }
+.mini-title {
+  font-size: 10.5px; font-weight: 600; color: #8194a8; text-transform: uppercase;
+  letter-spacing: .4px; margin-bottom: 9px;
+}
+.mini-stamps { display: flex; gap: 7px; flex-wrap: wrap; }
+
+/* ── ตราประทับจริง (ลอกจาก .ss-stamp / .ss-stamp-mark ใน App.css) ── */
+.stamp {
+  position: relative; padding: 7px 13px; border: 1.6px dashed #d5b98a; border-radius: 8px;
+  background: #fdf8ee; color: #a8894f; font-size: 11px; font-weight: 600; cursor: pointer;
+}
+.stamp-mark {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 800; color: #2e8b47; border: 2px solid #2e8b47; border-radius: 7px;
+  transform: rotate(-8deg) scale(1.4); opacity: 0; transition: all .25s cubic-bezier(.34,1.56,.64,1);
+  background: rgba(255,255,255,.9);
+}
+.stamp.done { border-style: solid; border-color: #bfe3c9; color: #b9c6b9; }
+.stamp.done .stamp-mark { opacity: 1; transform: rotate(-8deg) scale(1); }
+.hint-tap { margin-top: 9px; font-size: 10.5px; color: #a9b7c6; font-weight: 300; }
+
+/* ============================================================
+   โทนสี — ใช้ปุ่มยืนยัน "ยกเลิก" เป็นเหลืองอำพัน (โทนเดียวกับ .ss-stamp ที่ยังไม่ประทับ)
+   ไม่ใช่แดง เพราะการยกเลิกตราไม่ใช่การลบข้อมูลถาวร (ยังกดประทับใหม่ได้)
+   ============================================================ */
+.btn {
+  font-family: 'Noto Sans Thai', sans-serif; font-weight: 700; font-size: 12px;
+  padding: 7px 15px; border-radius: 8px; cursor: pointer; border: none;
+}
+.btn-cancel { background: #f0f4f9; color: #5b7590; }
+.btn-cancel:hover { background: #e3e8ee; }
+.btn-danger { background: linear-gradient(135deg, #c9822e, #e8a33d); color: #fff; }
+.btn-danger:hover { filter: brightness(1.06); }
+
+/* ---------- 1. Standard Modal — เหมือน .dl-modal-overlay ของแอปเป๊ะ ---------- */
+.d1-overlay {
+  position: absolute; inset: 0; background: rgba(20,35,55,.42);
+  display: none; align-items: center; justify-content: center; z-index: 10;
+}
+.d1-overlay.open { display: flex; }
+.d1-box {
+  width: 260px; background: #fff; border-radius: 13px; padding: 18px 18px 15px;
+  box-shadow: 0 14px 34px rgba(10,26,46,.26); text-align: center; animation: popIn .22s ease;
+}
+.d1-ico { font-size: 26px; margin-bottom: 8px; }
+.d1-msg { font-size: 12.5px; color: #2c3e50; line-height: 1.6; margin-bottom: 15px; }
+.d1-msg b { color: #1e3a54; }
+.d1-btns { display: flex; gap: 8px; justify-content: center; }
+.d1-btns .btn { flex: 1; }
+
+/* ---------- 2. Stamp Lift — ธีมตราประทับถูกยกออก ---------- */
+.d2-overlay {
+  position: absolute; inset: 0; background: rgba(20,35,55,.42);
+  display: none; align-items: center; justify-content: center; z-index: 10;
+}
+.d2-overlay.open { display: flex; }
+.d2-box {
+  width: 270px; background: #fff; border-radius: 13px; padding: 20px 18px 15px;
+  box-shadow: 0 14px 34px rgba(10,26,46,.26); text-align: center; animation: popIn .22s ease;
+}
+.d2-stamp-visual {
+  display: inline-flex; align-items: center; justify-content: center; margin-bottom: 10px;
+  padding: 8px 16px; border: 2px solid #2e8b47; border-radius: 8px; color: #2e8b47;
+  font-weight: 800; font-size: 12px; transform: rotate(-6deg); animation: stampFloat 1.4s ease-in-out infinite;
+}
+@keyframes stampFloat { 0%,100% { transform: rotate(-6deg) translateY(0); } 50% { transform: rotate(-6deg) translateY(-4px); } }
+.d2-msg { font-size: 12.5px; color: #2c3e50; line-height: 1.6; margin-bottom: 15px; }
+.d2-msg b { color: #1e3a54; }
+.d2-btns { display: flex; gap: 8px; justify-content: center; }
+.d2-btns .btn { flex: 1; }
+
+/* ---------- 3. Bottom Sheet — เลื่อนขึ้นจากขอบล่าง เหมาะจอสัมผัส ---------- */
+.d3-overlay {
+  position: absolute; inset: 0; background: rgba(20,35,55,.4);
+  display: none; align-items: flex-end; justify-content: center; z-index: 10;
+}
+.d3-overlay.open { display: flex; }
+.d3-sheet {
+  width: 100%; background: #fff; border-radius: 16px 16px 0 0; padding: 8px 18px 16px;
+  box-shadow: 0 -8px 24px rgba(10,26,46,.2); animation: sheetUp .26s cubic-bezier(.22,1,.36,1);
+}
+.d3-grip { width: 34px; height: 4px; border-radius: 2px; background: #dbe3ec; margin: 0 auto 12px; }
+.d3-msg { font-size: 12.5px; color: #2c3e50; line-height: 1.6; margin-bottom: 14px; text-align: center; }
+.d3-msg b { color: #1e3a54; }
+.d3-btns { display: flex; flex-direction: column; gap: 8px; }
+.d3-btns .btn { width: 100%; padding: 11px; font-size: 12.5px; }
+@keyframes sheetUp { from { transform: translateY(100%); } }
+
+/* ---------- 4. Anchored Popover — ลอยติดปุ่มที่กด มีลูกศรชี้ ---------- */
+.d4-pop {
+  position: absolute; display: none; z-index: 10; width: 220px;
+  background: #fff; border: 1px solid #e3e8ee; border-radius: 11px; padding: 12px 13px;
+  box-shadow: 0 10px 26px rgba(14,32,56,.18); animation: popIn .18s ease;
+}
+.d4-pop.open { display: block; }
+.d4-pop::before {
+  content: ''; position: absolute; top: -6px; left: 24px; width: 12px; height: 12px;
+  background: #fff; border-left: 1px solid #e3e8ee; border-top: 1px solid #e3e8ee; transform: rotate(45deg);
+}
+.d4-msg { font-size: 11.5px; color: #2c3e50; line-height: 1.55; margin-bottom: 10px; }
+.d4-msg b { color: #1e3a54; }
+.d4-btns { display: flex; gap: 6px; }
+.d4-btns .btn { flex: 1; padding: 5px 10px; font-size: 11px; }
+
+/* ---------- 5. Inline Ribbon — แถบเตือนโผล่ใต้หัวป๊อปอัปเลย ไม่มี overlay ---------- */
+.d5-ribbon {
+  display: none; align-items: center; gap: 10px; padding: 9px 14px;
+  background: #fdf4e6; border-bottom: 1px solid #f0d9a8; animation: ribbonDown .22s ease;
+}
+.d5-ribbon.open { display: flex; }
+.d5-msg { font-size: 11.5px; color: #8a5a1f; flex: 1; line-height: 1.5; }
+.d5-msg b { color: #6b4310; }
+.d5-btns { display: flex; gap: 6px; flex-shrink: 0; }
+.d5-btns .btn { padding: 5px 11px; font-size: 11px; }
+@keyframes ribbonDown { from { opacity: 0; transform: translateY(-8px); } }
+
+/* ---------- 6. Centered Icon Alert — สไตล์ iOS/macOS ---------- */
+.d6-overlay {
+  position: absolute; inset: 0; background: rgba(20,35,55,.42);
+  display: none; align-items: center; justify-content: center; z-index: 10;
+}
+.d6-overlay.open { display: flex; }
+.d6-box {
+  width: 250px; background: #fff; border-radius: 16px; overflow: hidden;
+  box-shadow: 0 14px 34px rgba(10,26,46,.26); text-align: center; animation: popIn .22s ease;
+}
+.d6-top { padding: 18px 16px 14px; }
+.d6-ico {
+  width: 42px; height: 42px; border-radius: 50%; background: #fdf4e6; color: #c9822e;
+  display: flex; align-items: center; justify-content: center; font-size: 19px; margin: 0 auto 9px;
+}
+.d6-title { font-size: 13px; font-weight: 700; color: #1e3a54; margin-bottom: 4px; }
+.d6-msg { font-size: 11.5px; color: #7a8a9b; line-height: 1.5; }
+.d6-btns { display: flex; border-top: 1px solid #eef2f6; }
+.d6-btns button {
+  flex: 1; border: none; background: none; padding: 11px; font-family: 'Noto Sans Thai', sans-serif;
+  font-size: 12.5px; font-weight: 600; cursor: pointer; color: #5b7590;
+}
+.d6-btns button:first-child { border-right: 1px solid #eef2f6; }
+.d6-btns button.confirm { color: #c9822e; font-weight: 800; }
+.d6-btns button:hover { background: #f7fafd; }
+
+/* ---------- 7. Press & Hold — ไม่มี dialog เลย ค้างปุ่มแทนกดยืนยัน ---------- */
+.d7-stamp { position: relative; overflow: hidden; }
+.d7-ring {
+  position: absolute; inset: 0; border-radius: 8px;
+  background: conic-gradient(#c9822e calc(var(--p,0) * 1%), transparent 0);
+  opacity: 0; pointer-events: none;
+}
+.d7-stamp.holding .d7-ring { opacity: .35; }
+.d7-caption { margin-top: 9px; font-size: 10.5px; color: #a9822e; font-weight: 600; opacity: 0; transition: opacity .15s; }
+.d7-stamp.holding + .d7-caption { opacity: 1; }
+
+/* ---------- 8. Instant + Undo — ยกเลิกทันที มี toast ย้อนกลับ ---------- */
+.d8-toast-wrap { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); z-index: 10; }
+.d8-toast {
+  display: none; align-items: center; gap: 10px; background: #26313f; color: #eef3f9;
+  border-radius: 10px; padding: 9px 9px 9px 14px; font-size: 11.5px; box-shadow: 0 10px 24px rgba(0,0,0,.3);
+  animation: riseUp .25s ease; white-space: nowrap;
+}
+.d8-toast.open { display: flex; }
+.d8-toast b { color: #fff; }
+.d8-toast button {
+  background: rgba(255,255,255,.12); border: none; color: #ffd699; font-family: 'Noto Sans Thai', sans-serif;
+  font-weight: 700; font-size: 11px; padding: 5px 10px; border-radius: 6px; cursor: pointer;
+}
+.d8-toast button:hover { background: rgba(255,255,255,.22); }
+@keyframes riseUp { from { opacity: 0; transform: translateY(14px); } }
+
+/* ---------- 9. Button Morph — ปุ่มเดิมสลับร่างเป็นแถบยืนยัน ---------- */
+.d9-morph {
+  display: inline-flex; align-items: center; border-radius: 8px; overflow: hidden;
+  border: 1.6px solid #f0d9a8; background: #fdf4e6; max-width: 82px; transition: max-width .24s ease;
+}
+.d9-morph.open { max-width: 210px; }
+.d9-ask {
+  display: flex; align-items: center; gap: 6px; padding: 0 4px 0 10px; white-space: nowrap;
+  font-size: 10.5px; color: #8a5a1f; opacity: 0; transition: opacity .18s ease .08s;
+}
+.d9-morph.open .d9-ask { opacity: 1; }
+.d9-morph button {
+  border: none; background: none; padding: 7px 10px; font-family: 'Noto Sans Thai', sans-serif;
+  font-size: 11px; font-weight: 700; cursor: pointer; flex-shrink: 0;
+}
+.d9-yes { color: #c0392b; }
+.d9-no { color: #5b7590; }
+
+/* ---------- 10. Danger Modal — โทนแดงเข้มกว่าเพื่อนเตือนชัดสุด ---------- */
+.d10-overlay {
+  position: absolute; inset: 0; background: rgba(40,15,15,.46);
+  display: none; align-items: center; justify-content: center; z-index: 10;
+}
+.d10-overlay.open { display: flex; }
+.d10-box {
+  width: 260px; background: #fff; border-radius: 13px; border-top: 4px solid #d9534f;
+  padding: 18px 18px 15px; box-shadow: 0 14px 34px rgba(10,26,46,.26); text-align: center;
+  animation: popIn .22s ease;
+}
+.d10-ico {
+  width: 38px; height: 38px; border-radius: 50%; background: #fdeaea; color: #c0392b;
+  display: flex; align-items: center; justify-content: center; font-size: 17px; margin: 0 auto 9px;
+}
+.d10-msg { font-size: 12.5px; color: #2c3e50; line-height: 1.6; margin-bottom: 6px; }
+.d10-msg b { color: #1e3a54; }
+.d10-sub { font-size: 10.5px; color: #a9b7c6; margin-bottom: 14px; }
+.d10-btns { display: flex; gap: 8px; }
+.d10-btns .btn { flex: 1; }
+.d10-btns .btn-confirm-danger {
+  background: linear-gradient(135deg, #a83226, #d9534f); color: #fff; font-weight: 800;
+}
+.d10-btns .btn-confirm-danger:hover { filter: brightness(1.08); }
+
+@keyframes popIn { from { opacity: 0; transform: scale(.9); } }
+</style>
+</head>
+<body>
+
+<div class="pg-head">
+  <h1>กล่องยืนยัน "ยกเลิกสถานะ" — 10 แบบ</h1>
+  <p>ป๊อปอัป Order / BackOrder หน้า SaleSupport → กดตราที่ประทับแล้วซ้ำ → <code>toggleOrderStep()</code></p>
+  <p>ตอนนี้ใช้ <code>window.confirm(`ยกเลิกสถานะ "${step.label}" ?`)</code> ที่ <code>SaleSupportPage.tsx</code> — กล่องเบราว์เซอร์ล้วน ไม่มีดีไซน์</p>
+</div>
+
+<div class="rule-box">
+  <b>ทำไมต้องเปลี่ยน</b> — <code>window.confirm()</code> ของเบราว์เซอร์:<br>
+  • ขึ้นข้อความ <b>"localhost:5200 บอกว่า"</b> ให้พนักงานเห็น — ดูไม่เป็นมืออาชีพ สับสนสำหรับคนที่ไม่คุ้นเว็บ<br>
+  • ฟอนต์/สีเป็นของเบราว์เซอร์ ไม่ใช่ Noto Sans Thai + โทนฟ้าของแอป<br>
+  • บล็อกทั้งหน้าจอแบบ synchronous จนกว่าจะกด<br>
+  • ใช้ซ้ำอีก 4 จุดในไฟล์เดียวกัน (ล้างประวัติ, อัปโหลด Supplier, อัปโหลด Product Master, ลบข้อมูล) — ถ้าออกแบบเป็นระบบเดียวจะแทนที่ได้ทั้งหมด ไม่ใช่แค่จุดนี้
+</div>
+
+<div class="native-demo">
+  <span class="lab">หน้าตาจริงตอนนี้ →</span>
+  <div class="native-box">
+    <div class="u">localhost:5200 บอกว่า</div>
+    <div class="m">ยกเลิกสถานะ "ของถึงสาขา" ?</div>
+    <div class="btns"><button class="ok">ตกลง</button><button>ยกเลิก</button></div>
+  </div>
+</div>
+
+<div class="note-box">
+  <b>คลิกตรา "ของถึงสาขา" (สีเขียว) ในแต่ละการ์ดเพื่อดูดีไซน์นั้นทำงานจริง</b> — ทุกแบบจำลองสถานการณ์เดียวกัน:
+  สาขากดตราไปแล้ว 1 ขั้น แล้วกดซ้ำเพื่อยกเลิก · กด "ยกเลิก" ในกล่อง = ตรายังเขียวอยู่ (ไม่มีอะไรเปลี่ยน) ·
+  กด "ยืนยัน" = ตรากลับเป็นค้างสถานะเดิม (ทองประ) เหมือนของจริงหลัง <code>toggleOrderStep</code> อัปเดตสำเร็จ<br>
+  <b>เลือกแล้ว: แบบที่ 6 Centered Icon Alert</b> — ใส่เข้าแอปแล้วในชื่อ <code>.ss-confirm-overlay</code> / <code>.ss-confirm-box</code>
+  (<code>App.css</code>) + <code>confirmCancelStep</code> state ใน <code>SaleSupportPage.tsx</code> ·
+  แบบที่เหลือเก็บไว้เทียบถ้าจะเปลี่ยนทีหลัง หรือเอาไปแทนที่ <code>window.confirm()</code> อีก 4 จุดที่เหลือในไฟล์เดียวกัน
+</div>
+
+<div class="grid" id="grid"></div>
+
+<script>
+const STEP_LABEL = 'ของถึงสาขา';
+
+const DESIGNS = [
+  {
+    no: 1, name: 'Standard Modal', tag: 'Overlay กลางจอ',
+    note: '<b>เหมือน <code>.dl-modal-overlay</code> ที่แอปใช้อยู่แล้วทุกป๊อปอัปเป๊ะ</b> — ไอคอน + ข้อความ + ปุ่ม 2 ช่อง กว้างเท่ากัน · <b class="ok">เสี่ยงน้อยสุด สลับเข้าไปแทน <code>window.confirm</code> ได้ทันทีโดยแอปดูกลมกลืน</b> ไม่มีอะไรใหม่ให้ผู้ใช้เรียนรู้',
+    render(stage) {
+      stage.innerHTML = miniPopup(`
+        <div class="d1-overlay" data-ov>
+          <div class="d1-box">
+            <div class="d1-ico">↩️</div>
+            <div class="d1-msg">ยกเลิกสถานะ<br><b>"${STEP_LABEL}"</b> ?</div>
+            <div class="d1-btns">
+              <button class="btn btn-cancel" data-no>ยกเลิก</button>
+              <button class="btn btn-danger" data-yes>ยืนยัน</button>
+            </div>
+          </div>
+        </div>`);
+      wire(stage, '.d1-overlay');
+    },
+  },
+  {
+    no: 2, name: 'Stamp Lift', tag: 'ธีมตราประทับ',
+    note: 'ไอคอนเป็น<b>ตราประทับลอยเด้งขึ้น-ลง</b> สื่อว่ากำลัง "ยกตราออก" — ภาษาเดียวกับ <code>.ss-stamp-mark</code> ที่ใช้อยู่แล้วในป๊อปอัป · <b>เข้ากับธีมของฟีเจอร์นี้โดยเฉพาะ</b> แต่ทำงานเหมือนแบบ 1 ทุกอย่าง (Overlay กลางจอ 2 ปุ่ม)',
+    render(stage) {
+      stage.innerHTML = miniPopup(`
+        <div class="d2-overlay" data-ov>
+          <div class="d2-box">
+            <div class="d2-stamp-visual">${STEP_LABEL} ✔</div>
+            <div class="d2-msg">ยกตราประทับนี้ออก?<br><span style="font-size:10.5px;color:#a9b7c6">กดยืนยันได้อีกครั้งภายหลัง</span></div>
+            <div class="d2-btns">
+              <button class="btn btn-cancel" data-no>ไม่ยกเลิก</button>
+              <button class="btn btn-danger" data-yes>ยกตราออก</button>
+            </div>
+          </div>
+        </div>`);
+      wire(stage, '.d2-overlay');
+    },
+  },
+  {
+    no: 3, name: 'Bottom Sheet', tag: 'เลื่อนจากขอบล่าง',
+    note: 'แผ่นเลื่อนขึ้นจากขอบล่าง ปุ่มเรียงเต็มความกว้าง <b>เป้าสัมผัสใหญ่</b> — เหมาะกับ<b>แท็บเล็ต/จอสัมผัสหน้าร้าน</b>ที่นิ้วกดไม่แม่นเท่าเมาส์ · บนจอคอมพิวเตอร์ทั่วไปดูไม่คุ้นเท่าโมดัลกลางจอ',
+    render(stage) {
+      stage.innerHTML = miniPopup(`
+        <div class="d3-overlay" data-ov>
+          <div class="d3-sheet">
+            <div class="d3-grip"></div>
+            <div class="d3-msg">ยกเลิกสถานะ <b>"${STEP_LABEL}"</b> ?</div>
+            <div class="d3-btns">
+              <button class="btn btn-danger" data-yes>ยืนยันยกเลิก</button>
+              <button class="btn btn-cancel" data-no>ไม่ยกเลิก</button>
+            </div>
+          </div>
+        </div>`);
+      wire(stage, '.d3-overlay');
+    },
+  },
+  {
+    no: 4, name: 'Anchored Popover', tag: 'ลอยติดปุ่ม',
+    note: 'กล่องเล็กมีลูกศรชี้ไปที่<b>ตราที่เพิ่งกด</b> ไม่บังทั้งจอ ไม่มีฉากหลังมืด — <b>เห็นบริบทรอบ ๆ ระหว่างตัดสินใจ</b> เหมาะกับจอกว้างที่มีข้อมูลอื่นให้เทียบ · ต้องคำนวณตำแหน่งไม่ให้ล้นขอบจอ (ซับซ้อนกว่าโมดัลกลางจอเล็กน้อย)',
+    render(stage) {
+      stage.innerHTML = miniPopup(`
+        <div class="d4-pop" data-ov style="top:38px;left:14px">
+          <div class="d4-msg">ยกเลิกสถานะ<br><b>"${STEP_LABEL}"</b> ?</div>
+          <div class="d4-btns">
+            <button class="btn btn-cancel" data-no>ยกเลิก</button>
+            <button class="btn btn-danger" data-yes>ยืนยัน</button>
+          </div>
+        </div>`, true);
+      wire(stage, '.d4-pop');
+    },
+  },
+  {
+    no: 5, name: 'Inline Ribbon', tag: 'แถบในป๊อปอัป',
+    note: 'แถบเตือนสีเหลืองอ่อนโผล่<b>ใต้หัวป๊อปอัปเดิมเลย</b> ไม่มี overlay แยก — <b>เบาที่สุด ไม่ตัดขาดจากป๊อปอัปหลัก</b> ผู้ใช้ยังเห็นแถวตราประทับอื่น ๆ อยู่ระหว่างตัดสินใจ · ดันเนื้อหาป๊อปอัปลงเล็กน้อยตอนโผล่',
+    render(stage) {
+      stage.innerHTML = miniPopupCustom(`
+        <div class="d5-ribbon" data-ov>
+          <span class="d5-msg">ยกเลิกสถานะ <b>"${STEP_LABEL}"</b> ?</span>
+          <div class="d5-btns">
+            <button class="btn btn-cancel" data-no>ไม่ยกเลิก</button>
+            <button class="btn btn-danger" data-yes>ยืนยัน</button>
+          </div>
+        </div>`);
+      wire(stage, '.d5-ribbon');
+    },
+  },
+  {
+    no: 6, name: 'Centered Icon Alert', tag: 'สไตล์ iOS/macOS', used: true,
+    note: '<b style="color:#2e8b47">✅ แบบนี้ถูกเลือกและใส่เข้าแอปแล้ว</b> — ไอคอนวงกลมใหญ่ + หัวข้อ + รายละเอียด + ปุ่มแถวล่างคั่นเส้น — <b>รูปแบบที่คนคุ้นเคยจากมือถือ</b> อ่านลำดับความสำคัญง่าย (หัวข้อสั้น เนื้อหาขยายความ) · ปุ่มยืนยันสีเดียวกับพื้นหลัง ต้องอ่านตัวหนังสือถึงจะรู้ว่าอันไหนคือยืนยัน',
+    render(stage) {
+      stage.innerHTML = miniPopup(`
+        <div class="d6-overlay" data-ov>
+          <div class="d6-box">
+            <div class="d6-top">
+              <div class="d6-ico">↩️</div>
+              <div class="d6-title">ยกเลิกสถานะ?</div>
+              <div class="d6-msg">"${STEP_LABEL}" จะกลับไปเป็น<br>ยังไม่ถึง — กดประทับใหม่ได้ภายหลัง</div>
+            </div>
+            <div class="d6-btns">
+              <button data-no>ไม่ยกเลิก</button>
+              <button class="confirm" data-yes>ยืนยัน</button>
+            </div>
+          </div>
+        </div>`);
+      wire(stage, '.d6-overlay');
+    },
+  },
+  {
+    no: 7, name: 'Press & Hold', tag: 'ไม่มี dialog เลย',
+    note: '<b>ตัดกล่องยืนยันออกทั้งหมด</b> — ค้างนิ้ว/เมาส์ที่ตรา 700ms วงแหวนสีส้มไล่รอบจนครบถึงยกเลิก ปล่อยก่อนครบ = ไม่มีอะไรเกิดขึ้น · <b>กันกดพลาดได้ดีกว่า dialog</b> (กดพลาดแค่แตะ ไม่ค้าง) แต่ผู้ใช้ต้องรู้วิธีใช้ก่อน ไม่ explicit เท่าปุ่ม 2 ช่อง · <b>ลองกดค้างที่ตราดูได้จริง</b>',
+    render(stage) {
+      stage.innerHTML = `<div class="mini-popup" style="max-width:300px">
+        <div class="mini-head">📋 รายละเอียด Order</div>
+        <div class="mini-body">
+          <div class="mini-title">สถานะการดำเนินการ</div>
+          <div class="mini-stamps">
+            <button type="button" class="stamp done d7-stamp" data-hold>
+              ${STEP_LABEL}<span class="stamp-mark">${STEP_LABEL} ✔</span>
+              <span class="d7-ring"></span>
+            </button>
+          </div>
+          <div class="d7-caption">กำลังยกเลิก... ค้างไว้จนครบ</div>
+        </div>
+      </div>`;
+      const btn = stage.querySelector('[data-hold]');
+      const caption = stage.querySelector('.d7-caption');
+      let raf, start;
+      const HOLD_MS = 700;
+      const step = (ts) => {
+        if (!start) start = ts;
+        const pct = Math.min(100, (ts - start) / HOLD_MS * 100);
+        btn.style.setProperty('--p', pct);
+        if (pct >= 100) { finish(true); return; }
+        raf = requestAnimationFrame(step);
+      };
+      const beginHold = () => { btn.classList.add('holding'); start = null; raf = requestAnimationFrame(step); };
+      const cancelHold = () => { cancelAnimationFrame(raf); btn.classList.remove('holding'); btn.style.setProperty('--p', 0); };
+      const finish = (yes) => {
+        cancelAnimationFrame(raf); btn.classList.remove('holding'); btn.style.setProperty('--p', 0);
+        if (yes) { btn.classList.remove('done'); caption.textContent = 'ยกเลิกแล้ว — กดค้างอีกครั้งเพื่อประทับใหม่'; }
+      };
+      btn.addEventListener('mousedown', beginHold);
+      btn.addEventListener('touchstart', beginHold, { passive: true });
+      ['mouseup', 'mouseleave', 'touchend', 'touchcancel'].forEach(ev => btn.addEventListener(ev, cancelHold));
+      btn.addEventListener('click', e => e.preventDefault());
+    },
+  },
+  {
+    no: 8, name: 'Instant + Undo', tag: 'ไม่บล็อก มีย้อนกลับ',
+    note: '<b>ยกเลิกทันทีที่กด ไม่ถามก่อนเลย</b> แล้วโผล่ toast ล่างจอพร้อม<b>ปุ่มย้อนกลับ 4 วิ</b> — เร็วที่สุดสำหรับคนที่ตั้งใจกดอยู่แล้ว (ส่วนใหญ่) และกันคนกดพลาดได้ด้วยการย้อนกลับ แทนที่จะถามทุกครั้ง · <b class="bad">เสี่ยงกับคนที่ตอบสนองช้าเกิน 4 วิ</b> จะย้อนกลับไม่ทัน · <b>ลองกดตราดูได้จริง</b>',
+    render(stage) {
+      stage.innerHTML = `<div class="mini-popup" style="max-width:300px">
+        <div class="mini-head">📋 รายละเอียด Order</div>
+        <div class="mini-body">
+          <div class="mini-title">สถานะการดำเนินการ</div>
+          <div class="mini-stamps">
+            <button type="button" class="stamp done" data-d8-stamp>${STEP_LABEL}<span class="stamp-mark">${STEP_LABEL} ✔</span></button>
+          </div>
+        </div>
+        <div class="d8-toast-wrap"><div class="d8-toast" data-toast>
+          <span>ยกเลิกสถานะ <b>"${STEP_LABEL}"</b> แล้ว</span>
+          <button data-undo>ย้อนกลับ</button>
+        </div></div>
+      </div>`;
+      const btn = stage.querySelector('[data-d8-stamp]');
+      const toast = stage.querySelector('[data-toast]');
+      let timer;
+      btn.addEventListener('click', () => {
+        if (!btn.classList.contains('done')) return;
+        btn.classList.remove('done');
+        toast.classList.add('open');
+        clearTimeout(timer);
+        timer = setTimeout(() => toast.classList.remove('open'), 4000);
+      });
+      toast.querySelector('[data-undo]').addEventListener('click', () => {
+        btn.classList.add('done');
+        toast.classList.remove('open');
+        clearTimeout(timer);
+      });
+    },
+  },
+  {
+    no: 9, name: 'Button Morph', tag: 'ปุ่มสลับร่างในที่',
+    note: '<b>ปุ่มเดิมขยายตัวในที่กลายเป็นแถบยืนยัน</b> ไม่มี overlay ไม่มีกล่องแยก — กด "ใช่" สีแดงเล็ก ๆ ในแถบเดียวกัน หรือกดที่ว่างรอบ ๆ เพื่อยกเลิก · <b>กะทัดรัดที่สุด</b> อยู่ในตำแหน่งเดิมไม่ขยับสายตาไปที่อื่นเลย · พื้นที่แคบอาจกดโดนปุ่มผิดถ้ารีบ · <b>ลองกดตราดูได้จริง</b>',
+    render(stage) {
+      stage.innerHTML = `<div class="mini-popup" style="max-width:300px">
+        <div class="mini-head">📋 รายละเอียด Order</div>
+        <div class="mini-body">
+          <div class="mini-title">สถานะการดำเนินการ</div>
+          <div class="mini-stamps">
+            <span class="d9-morph" data-morph>
+              <button type="button" class="stamp done" style="border:none;background:none;padding:7px 10px;margin:0" data-open>${STEP_LABEL}<span class="stamp-mark" style="position:static;transform:none;opacity:1;border:none;background:none;display:inline;font-size:11px">✔</span></button>
+              <span class="d9-ask">ยกเลิก?</span>
+              <button class="d9-yes" data-yes>ใช่</button>
+              <button class="d9-no" data-no>ไม่</button>
+            </span>
+          </div>
+        </div>
+      </div>`;
+      const morph = stage.querySelector('[data-morph]');
+      const openBtn = stage.querySelector('[data-open]');
+      openBtn.addEventListener('click', () => morph.classList.toggle('open'));
+      stage.querySelector('[data-yes]').addEventListener('click', () => {
+        morph.classList.remove('open');
+        openBtn.classList.remove('done');
+        openBtn.style.color = '#b9c6b9';
+      });
+      stage.querySelector('[data-no]').addEventListener('click', () => morph.classList.remove('open'));
+    },
+  },
+  {
+    no: 10, name: 'Danger Modal', tag: 'โทนแดงเข้ม',
+    note: 'เส้นขอบบนสีแดง + ไอคอนวงกลมแดง + ปุ่มยืนยันไล่สีแดงเข้ม — <b>เตือนหนักแน่นที่สุดในชุดนี้</b> ใช้โทนเดียวกับปุ่ม "ลบข้อมูล" ที่มีอยู่แล้วในแอป · <b class="bad">อาจเกินจริง</b> เพราะยกเลิกตราไม่ใช่การลบถาวร (กดประทับใหม่ได้) สีแดงเข้มระดับนี้ควรเก็บไว้กับการลบข้อมูลจริง ๆ มากกว่า',
+    render(stage) {
+      stage.innerHTML = miniPopup(`
+        <div class="d10-overlay" data-ov>
+          <div class="d10-box">
+            <div class="d10-ico">!</div>
+            <div class="d10-msg">ยกเลิกสถานะ <b>"${STEP_LABEL}"</b> ?</div>
+            <div class="d10-sub">สถานะจะกลับไปเป็น "ยังไม่ถึง"</div>
+            <div class="d10-btns">
+              <button class="btn btn-cancel" data-no>ยกเลิก</button>
+              <button class="btn btn-confirm-danger" data-yes>ยืนยัน</button>
+            </div>
+          </div>
+        </div>`);
+      wire(stage, '.d10-overlay');
+    },
+  },
+];
+
+/* ── ตัวช่วยสร้าง mini popup + ปุ่มตราประทับ ── */
+function miniPopup(dialogHtml, noOverlayBg) {
+  return `<div class="mini-popup" style="max-width:300px;position:relative">
+    <div class="mini-head">📋 รายละเอียด Order</div>
+    <div class="mini-body">
+      <div class="mini-title">สถานะการดำเนินการ</div>
+      <div class="mini-stamps">
+        <button type="button" class="stamp done" data-trigger>${STEP_LABEL}<span class="stamp-mark">${STEP_LABEL} ✔</span></button>
+      </div>
+      <div class="hint-tap">คลิกตราด้านบนเพื่อดูดีไซน์นี้ทำงาน</div>
+    </div>
+    ${dialogHtml}
+  </div>`;
+}
+function miniPopupCustom(ribbonHtml) {
+  return `<div class="mini-popup" style="max-width:300px">
+    <div class="mini-head">📋 รายละเอียด Order</div>
+    ${ribbonHtml}
+    <div class="mini-body">
+      <div class="mini-title">สถานะการดำเนินการ</div>
+      <div class="mini-stamps">
+        <button type="button" class="stamp done" data-trigger>${STEP_LABEL}<span class="stamp-mark">${STEP_LABEL} ✔</span></button>
+      </div>
+      <div class="hint-tap">คลิกตราด้านบนเพื่อดูดีไซน์นี้ทำงาน</div>
+    </div>
+  </div>`;
+}
+
+/* ── ผูก interaction: กดตรา → เปิดกล่อง → ยืนยัน/ยกเลิก ── */
+function wire(root, dialogSel) {
+  const trigger = root.querySelector('[data-trigger]');
+  const dialog = root.querySelector(dialogSel);
+  trigger.addEventListener('click', () => {
+    if (!trigger.classList.contains('done')) return;   // ยกเลิกไปแล้ว กดซ้ำไม่มีอะไรเกิดขึ้น (เหมือนของจริง — ตราที่ pending ไม่ขึ้น confirm)
+    dialog.classList.add('open');
+  });
+  dialog.querySelector('[data-no]').addEventListener('click', () => dialog.classList.remove('open'));
+  dialog.querySelector('[data-yes]').addEventListener('click', () => {
+    dialog.classList.remove('open');
+    trigger.classList.remove('done');
+  });
+}
+
+const grid = document.getElementById('grid');
+const esc = (s) => String(s).replace(/[<>&]/g, m => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[m]));
+const el = (html) => { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstElementChild; };
+
+DESIGNS.forEach(d => {
+  const card = el(`<div class="card">
+    <div class="card-head">
+      <span class="card-no">${String(d.no).padStart(2, '0')}</span>
+      <span class="card-name">${d.name}</span>
+      <span class="card-tag">${d.tag}</span>
+      ${d.used ? '<span class="card-tag card-tag--used">✅ ใช้จริงในแอปแล้ว</span>' : ''}
+    </div>
+    <p class="card-note">${d.note}</p>
+    <div class="stage"></div>
+  </div>`);
+  const stage = card.querySelector('.stage');
+  try {
+    d.render(stage);
+  } catch (err) {
+    stage.innerHTML = `<div style="padding:16px;color:#c0392b;font-size:12px">⚠️ แบบนี้ render ไม่ผ่าน: ${esc(err && err.message || err)}</div>`;
+    console.error(`[design ${d.no} ${d.name}]`, err);
+  }
+  grid.appendChild(card);
+});
+</script>
+</body>
+</html>

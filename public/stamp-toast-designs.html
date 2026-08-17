@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Toast ตราประทับ Order / BackOrder — 10 แบบ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   Toast แจ้งผลการกดตราประทับ — "สถานะการดำเนินการ · กดตราเพื่ออนุมัติ"
+   ในป๊อปอัป Order / BackOrder หน้า SaleSupport
+
+   แกลเลอรีเลือกดีไซน์ 10 แบบ · ไม่ได้ import เข้าแอป
+   เปิดผ่าน dev server: /stamp-toast-designs.html
+   ============================================================ */
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: 26px 20px 80px;
+  background: #eef3f9; font-family: 'Noto Sans Thai', sans-serif; color: #2c3e50;
+}
+.pg-head { max-width: 1360px; margin: 0 auto 18px; }
+.pg-head h1 {
+  margin: 0 0 6px; font-family: 'Outfit', sans-serif; font-size: 27px;
+  font-weight: 800; color: #2d6cad; letter-spacing: -0.4px;
+}
+.pg-head p { margin: 0 0 4px; font-size: 13px; color: #5b7590; line-height: 1.75; font-weight: 300; }
+code {
+  background: #fff; border: 1px solid #cfe0f2; border-radius: 4px;
+  padding: 1px 5px; font-family: 'Outfit', monospace; font-size: 12px; color: #2d6cad;
+}
+
+.rule-box {
+  max-width: 1360px; margin: 0 auto 16px; padding: 13px 17px;
+  background: #eaf3fc; border: 1px solid #b8d3ee; border-left: 4px solid #4891db;
+  border-radius: 9px; font-size: 13px; line-height: 1.85; color: #2d5c8a;
+}
+.rule-box b { color: #1e4b7a; }
+.note-box {
+  max-width: 1360px; margin: 0 auto 18px; padding: 12px 16px;
+  background: #fff8e9; border: 1px solid #f0d9a8; border-left: 4px solid #e8a33d;
+  border-radius: 9px; font-size: 12.5px; line-height: 1.8; color: #6b5525;
+}
+.note-box b { color: #b57619; }
+
+.ctrl {
+  position: sticky; top: 0; z-index: 40;
+  max-width: 1360px; margin: 0 auto 24px; padding: 12px 16px;
+  background: #fff; border: 1px solid #cfe0f2; border-radius: 11px;
+  box-shadow: 0 3px 14px rgba(45, 108, 173, 0.1);
+  display: flex; flex-wrap: wrap; align-items: center; gap: 14px;
+}
+.ctrl label { display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: #2d5c8a; cursor: pointer; }
+.ctrl input[type=checkbox] { width: 15px; height: 15px; accent-color: #4891db; cursor: pointer; }
+.ctrl .hint { font-size: 11.5px; color: #8194a8; font-weight: 300; }
+.ctrl .sep { width: 1px; height: 22px; background: #e3e8ee; }
+.ctrl button {
+  font-family: 'Noto Sans Thai', sans-serif; font-size: 12.5px; font-weight: 600;
+  padding: 7px 14px; border-radius: 8px; cursor: pointer; transition: all .18s ease;
+  border: 1px solid #b8d3ee; background: #fff; color: #2d6cad;
+}
+.ctrl button:hover { background: #eaf3fc; }
+.ctrl button.primary { background: linear-gradient(135deg, #2d6cad, #4891db); border-color: #a9d0f5; color: #fff; }
+.ctrl button.primary:hover { filter: brightness(1.07); }
+
+.grid { max-width: 1360px; margin: 0 auto; display: flex; flex-direction: column; gap: 22px; }
+.card {
+  background: #fff; border: 1px solid #e3e8ee; border-radius: 15px;
+  padding: 16px 18px 18px; box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+}
+.card-head { display: flex; align-items: baseline; gap: 9px; margin-bottom: 3px; flex-wrap: wrap; }
+.card-no {
+  font-family: 'Outfit', sans-serif; font-size: 12px; font-weight: 800;
+  color: #fff; background: #4891db; border-radius: 6px; padding: 2px 8px; flex-shrink: 0;
+}
+.card-name { font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 700; }
+.card-tag {
+  font-size: 10.5px; font-weight: 600; color: #5b7590; background: #f0f4f9;
+  border: 1px solid #e3e8ee; border-radius: 999px; padding: 2px 9px;
+}
+.card-tag--used { background: #e9f7ee; border-color: #bfe3c9; color: #2e8b47; font-weight: 700; }
+.card:has(.card-tag--used) { border-color: #bfe3c9; box-shadow: 0 2px 14px rgba(46, 139, 71, 0.14); }
+.card-note { font-size: 11.5px; color: #8194a8; line-height: 1.75; margin: 0 0 12px; font-weight: 300; }
+.card-note b { color: #5b7590; font-weight: 600; }
+
+.card-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.card-actions button {
+  font-family: 'Noto Sans Thai', sans-serif; font-size: 11.5px; font-weight: 600;
+  padding: 6px 12px; border-radius: 7px; cursor: pointer; border: 1px solid #dbe3ec;
+  background: #fff; color: #5b7590; transition: all .16s ease;
+}
+.card-actions button:hover { border-color: #b8d3ee; color: #2d6cad; background: #f7fbff; }
+
+/* ============================================================
+   เวที = จอจำลอง (ในแอปจริง toast จะ position: fixed เทียบ viewport
+   ที่นี่ทำเป็น absolute ในเวทีของแต่ละการ์ด เพื่อให้เทียบ 10 แบบพร้อมกันได้)
+   ============================================================ */
+.stage {
+  position: relative; overflow: hidden; height: 330px; border-radius: 11px;
+  background: rgba(28, 48, 74, 0.42);
+  display: flex; align-items: center; justify-content: center;
+  isolation: isolate;
+}
+.toast-layer { position: absolute; inset: 0; pointer-events: none; z-index: 5; }
+.toast-layer > * { pointer-events: auto; }
+
+/* ── ป๊อปอัปจำลอง — ลอกค่าจาก .dl-modal / .ss-* ใน App.css ── */
+.modal {
+  width: 470px; max-width: calc(100% - 36px); background: #fff; border-radius: 13px;
+  box-shadow: 0 18px 44px rgba(10, 26, 46, 0.28); overflow: hidden;
+  font-family: 'Noto Sans Thai', sans-serif;
+}
+.modal-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px; background: linear-gradient(135deg, #2d6cad, #4891db); color: #fff;
+  font-size: 13.5px; font-weight: 600;
+}
+.modal-head .x { opacity: .85; font-size: 14px; }
+.ribbon-slot { overflow: hidden; }
+.modal-body { padding: 14px 16px 16px; }
+.f-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 9px 16px; margin-bottom: 2px; }
+.f-lab { font-size: 10px; color: #8194a8; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; }
+.f-val { font-size: 12.5px; color: #2d3a48; margin-top: 1px; }
+
+.ss-detail-steps-title {
+  font-size: 11.5px; font-weight: 600; color: #8194a8; text-transform: uppercase;
+  letter-spacing: 0.4px; margin-top: 12px; margin-bottom: 10px;
+  border-top: 1px solid #edf0f4; padding-top: 14px;
+}
+.ss-stamp-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.ss-stamp {
+  position: relative; padding: 10px 20px; border: 2px dashed #d5b98a; border-radius: 10px;
+  background: #fdf8ee; color: #a8894f; font-size: 13px; font-weight: 600;
+  font-family: 'Noto Sans Thai', sans-serif; cursor: pointer; transition: all 0.22s ease;
+}
+.ss-stamp:hover { background: #faf1dd; }
+.ss-stamp-mark {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 800; color: #2e8b47; border: 2.5px solid #2e8b47;
+  border-radius: 8px; transform: rotate(-8deg) scale(1.4); opacity: 0;
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1); background: rgba(255, 255, 255, 0.88);
+}
+.ss-stamp--done { border-style: solid; border-color: #bfe3c9; color: #b9c6b9; }
+.ss-stamp--done .ss-stamp-mark { opacity: 1; transform: rotate(-8deg) scale(1); }
+
+/* ============================================================
+   โทนสี — ชุดเดียวกันทุกแบบ เพื่อให้เทียบ "วิธีแสดง" ไม่ใช่ "สี"
+     อนุมัติ  เขียว #2e8b47  (สีเดียวกับ .ss-stamp-mark)
+     ยกเลิก   ทอง  #b8791c  (โทนเดียวกับตราที่ยังไม่ประทับ #d5b98a)
+     ผิดพลาด  แดง  #c0392b  (สีเดียวกับ .ss-form-error)
+   ============================================================ */
+.tone-ok     { --tc: #2e8b47; --tbg: #e9f7ee; --tbd: #bfe3c9; }
+.tone-cancel { --tc: #b8791c; --tbg: #fdf4e6; --tbd: #f0d9a8; }
+.tone-error  { --tc: #c0392b; --tbg: #fdeaea; --tbd: #f2c0be; }
+
+.t-title { font-size: 13px; font-weight: 700; color: #2c3e50; line-height: 1.35; }
+.t-detail { font-size: 11.5px; color: #7a8a9b; margin-top: 2px; line-height: 1.5; font-weight: 300; }
+.t-detail b { color: var(--tc); font-weight: 600; }
+.t-close {
+  border: none; background: none; color: #b6c3d1; font-size: 13px; cursor: pointer;
+  padding: 0 2px; line-height: 1; align-self: flex-start;
+}
+.t-close:hover { color: #7a8a9b; }
+.t-undo {
+  border: 1px solid var(--tbd); background: var(--tbg); color: var(--tc);
+  font-family: 'Noto Sans Thai', sans-serif; font-size: 11.5px; font-weight: 700;
+  padding: 5px 11px; border-radius: 7px; cursor: pointer; white-space: nowrap;
+}
+.t-undo:hover { filter: brightness(0.96); }
+
+/* ---------- 1. Corner Slide — มุมขวาบน เลื่อนเข้าจากขวา ---------- */
+.t1-wrap { position: absolute; top: 14px; right: 14px; display: flex; flex-direction: column; gap: 9px; }
+.t1 {
+  display: flex; gap: 11px; align-items: flex-start; width: 296px;
+  background: #fff; border: 1px solid #e3e8ee; border-radius: 12px; padding: 12px 13px;
+  box-shadow: 0 10px 26px rgba(14, 32, 56, 0.2); animation: slideRight .34s cubic-bezier(.22, 1.2, .36, 1);
+}
+.t1-ico {
+  width: 32px; height: 32px; border-radius: 50%; background: var(--tbg); color: var(--tc);
+  display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0;
+}
+@keyframes slideRight { from { opacity: 0; transform: translateX(46px); } }
+.leaving-right { animation: leaveRight .24s ease forwards; }
+@keyframes leaveRight { to { opacity: 0; transform: translateX(46px); } }
+
+/* ---------- 2. Top Center Drop — pill เล็ก หล่นจากขอบบน ---------- */
+.t2-wrap { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: 7px; align-items: center; }
+.t2 {
+  display: flex; align-items: center; gap: 8px; background: var(--tbg); border: 1px solid var(--tbd);
+  color: var(--tc); border-radius: 999px; padding: 7px 15px 7px 11px;
+  font-size: 12.5px; font-weight: 600; white-space: nowrap;
+  box-shadow: 0 5px 16px rgba(14, 32, 56, 0.14); animation: dropDown .3s cubic-bezier(.22, 1.2, .36, 1);
+}
+.t2 .t2-ico { font-size: 13px; }
+.t2 .t2-sub { font-weight: 400; opacity: .78; }
+@keyframes dropDown { from { opacity: 0; transform: translateY(-18px); } }
+.leaving-up { animation: leaveUp .22s ease forwards; }
+@keyframes leaveUp { to { opacity: 0; transform: translateY(-18px); } }
+
+/* ---------- 3. Snackbar + Undo — แถบเข้มล่างกลาง มีปุ่มย้อนกลับ ---------- */
+.t3-wrap { position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); }
+.t3 {
+  display: flex; align-items: center; gap: 14px; min-width: 330px;
+  background: #26313f; color: #eef3f9; border-radius: 10px; padding: 10px 10px 10px 15px;
+  font-size: 12.5px; box-shadow: 0 10px 26px rgba(0, 0, 0, 0.32); animation: riseUp .3s ease;
+}
+.t3 .t3-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--tc); flex-shrink: 0; }
+.t3 .t3-text { flex: 1; line-height: 1.45; }
+.t3 .t3-text b { color: #fff; font-weight: 700; }
+.t3 button {
+  background: none; border: none; color: #7fc0f5; font-family: 'Noto Sans Thai', sans-serif;
+  font-weight: 700; font-size: 12.5px; cursor: pointer; padding: 5px 9px; border-radius: 6px;
+}
+.t3 button:hover { background: rgba(127, 192, 245, 0.14); }
+@keyframes riseUp { from { opacity: 0; transform: translateY(20px); } }
+.leaving-down { animation: leaveDown .22s ease forwards; }
+@keyframes leaveDown { to { opacity: 0; transform: translateY(20px); } }
+
+/* ---------- 4. Inline Slot — ไม่ลอย โผล่ใต้แถวตราประทับในป๊อปอัปเลย ---------- */
+.t4 {
+  display: flex; align-items: center; gap: 9px; margin-top: 12px;
+  background: var(--tbg); border: 1px solid var(--tbd); border-radius: 9px;
+  padding: 9px 12px; font-size: 12.5px; color: var(--tc); font-weight: 600;
+  animation: inlineIn .28s ease;
+}
+.t4 .t4-sub { font-weight: 400; color: #8194a8; }
+.t4 .t-close { margin-left: auto; align-self: center; }
+@keyframes inlineIn { from { opacity: 0; transform: translateY(-7px); } }
+.leaving-fade { animation: leaveFade .2s ease forwards; }
+@keyframes leaveFade { to { opacity: 0; } }
+
+/* ---------- 5. Progress Toast — มุมขวาล่าง + แถบนับถอยหลัง ---------- */
+.t5-wrap { position: absolute; right: 14px; bottom: 14px; display: flex; flex-direction: column; gap: 9px; }
+.t5 {
+  width: 286px; background: #fff; border: 1px solid #e3e8ee; border-radius: 11px;
+  padding: 12px 13px 0; box-shadow: 0 10px 26px rgba(14, 32, 56, 0.2);
+  overflow: hidden; animation: slideRight .32s cubic-bezier(.22, 1.2, .36, 1);
+}
+.t5-top { display: flex; gap: 10px; align-items: flex-start; }
+.t5-ico { font-size: 15px; color: var(--tc); line-height: 1.5; }
+.t5-bar { height: 3px; background: #eef2f6; margin: 11px -13px 0; }
+.t5-bar i { display: block; height: 100%; background: var(--tc); animation: countdown 3.4s linear forwards; }
+.t5.hold .t5-bar i { animation: none; width: 100%; }
+@keyframes countdown { from { width: 100%; } to { width: 0; } }
+
+/* ---------- 6. Stack — ซ้อนได้หลายใบ ใบใหม่อยู่บน ใบเก่าจางลง ---------- */
+.t6-wrap { position: absolute; top: 14px; right: 14px; display: flex; flex-direction: column; gap: 8px; }
+.t6 {
+  display: flex; align-items: center; gap: 10px; width: 268px;
+  background: #fff; border: 1px solid #e3e8ee; border-left: 4px solid var(--tc);
+  border-radius: 10px; padding: 10px 12px; box-shadow: 0 6px 18px rgba(14, 32, 56, 0.15);
+  animation: slideRight .3s cubic-bezier(.22, 1.2, .36, 1); transition: opacity .25s ease, transform .25s ease;
+}
+.t6-wrap .t6:nth-child(n+2) { opacity: .72; transform: scale(.965); }
+.t6-wrap .t6:nth-child(n+4) { opacity: .45; transform: scale(.93); }
+.t6-ico { color: var(--tc); font-size: 14px; }
+.t6-text { flex: 1; font-size: 12px; line-height: 1.4; }
+.t6-text b { font-weight: 700; }
+.t6-text span { color: #8194a8; font-weight: 300; }
+
+/* ---------- 7. Glass Center — กลางจอ กระจกฝ้า ไอคอนใหญ่ ไม่มีปุ่ม ---------- */
+.t7-wrap { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+.t7 {
+  display: flex; flex-direction: column; align-items: center; gap: 9px;
+  padding: 20px 32px; border-radius: 18px;
+  background: rgba(255, 255, 255, 0.74); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.9); box-shadow: 0 14px 38px rgba(10, 26, 46, 0.24);
+  animation: popIn .34s cubic-bezier(.34, 1.5, .64, 1);
+}
+.t7-ico {
+  width: 46px; height: 46px; border-radius: 50%; background: var(--tbg); color: var(--tc);
+  font-size: 22px; display: flex; align-items: center; justify-content: center;
+}
+.t7 .t-title { font-size: 14px; }
+.t7 .t-detail { text-align: center; }
+@keyframes popIn { from { opacity: 0; transform: scale(.86); } }
+.leaving-scale { animation: leaveScale .22s ease forwards; }
+@keyframes leaveScale { to { opacity: 0; transform: scale(.92); } }
+
+/* ---------- 8. Left Accent Card — โทนเดียวกับ .rule-box ในโปรเจกต์ ---------- */
+.t8-wrap { position: absolute; top: 14px; right: 14px; display: flex; flex-direction: column; gap: 9px; }
+.t8 {
+  display: flex; align-items: flex-start; gap: 11px; width: 300px;
+  background: #fff; border: 1px solid #e3e8ee; border-left: 4px solid var(--tc);
+  border-radius: 9px; padding: 12px 13px; box-shadow: 0 8px 22px rgba(14, 32, 56, 0.16);
+  animation: slideRight .32s cubic-bezier(.22, 1.2, .36, 1);
+}
+.t8-ico { color: var(--tc); font-size: 15px; line-height: 1.4; }
+.t8-body { flex: 1; }
+.t8 .t-undo { margin-top: 9px; }
+
+/* ---------- 9. Modal Ribbon — แถบเลื่อนลงใต้หัวป๊อปอัป ไม่หลุดออกนอกงาน ---------- */
+.t9 {
+  display: flex; align-items: center; gap: 9px; background: var(--tc); color: #fff;
+  padding: 9px 16px; font-size: 12.5px; font-weight: 600; animation: ribbonIn .3s ease;
+}
+.t9 .t9-sub { font-weight: 300; opacity: .88; }
+.t9 .t9-act {
+  margin-left: auto; background: rgba(255, 255, 255, 0.18); border: none; color: #fff;
+  font-family: 'Noto Sans Thai', sans-serif; font-size: 11.5px; font-weight: 700;
+  padding: 4px 10px; border-radius: 6px; cursor: pointer;
+}
+.t9 .t9-act:hover { background: rgba(255, 255, 255, 0.3); }
+@keyframes ribbonIn { from { transform: translateY(-100%); } }
+.leaving-ribbon { animation: leaveRibbon .24s ease forwards; }
+@keyframes leaveRibbon { to { transform: translateY(-100%); } }
+
+/* ---------- 10. Stamp Mark — ทรงตราประทับเอียง เหมือน .ss-stamp-mark ---------- */
+.t10-wrap { position: absolute; right: 20px; bottom: 20px; display: flex; flex-direction: column; gap: 12px; align-items: flex-end; }
+.t10 {
+  display: flex; align-items: center; gap: 8px; transform: rotate(-6deg);
+  border: 2.5px solid var(--tc); color: var(--tc); background: rgba(255, 255, 255, 0.94);
+  border-radius: 9px; padding: 10px 16px; font-weight: 800; font-size: 13px;
+  box-shadow: 0 8px 20px rgba(14, 32, 56, 0.18); animation: stampIn .36s cubic-bezier(.34, 1.56, .64, 1);
+}
+.t10 .t10-sub { font-weight: 500; font-size: 11.5px; opacity: .8; }
+@keyframes stampIn { from { opacity: 0; transform: rotate(-6deg) scale(1.55); } }
+.leaving-stamp { animation: leaveStamp .22s ease forwards; }
+@keyframes leaveStamp { to { opacity: 0; transform: rotate(-6deg) scale(1.12); } }
+</style>
+</head>
+<body>
+
+<div class="pg-head">
+  <h1>Toast แจ้งผลการกดตราประทับ — 10 แบบ</h1>
+  <p>ป๊อปอัป Order / BackOrder หน้า SaleSupport → <code>สถานะการดำเนินการ · กดตราเพื่ออนุมัติ</code></p>
+  <p>กดตราในแต่ละการ์ดได้จริง — กดครั้งแรก = <b>อนุมัติ</b> · กดซ้ำ = <b>ยกเลิกสถานะ</b></p>
+</div>
+
+<div class="rule-box">
+  <b>สิ่งที่ toast ต้องบอก</b> — มาจาก <code>ORDER_STEPS</code> ใน <code>SaleSupportPage.tsx</code> ตรง ๆ<br>
+  • <b>อนุมัติ</b> → <code>ของถึงสาขา → ถึงแล้ว</code> · <code>แจ้งลูกค้า → แจ้งแล้ว</code> · <code>ส่งมอบสินค้า → ส่งมอบแล้ว</code><br>
+  • <b>ยกเลิก</b> → กลับเป็นค่า pending: <code>ยังไม่ถึง</code> / <code>ยังไม่แจ้ง</code> / <code>ยังไม่ส่งมอบ</code><br>
+  • <b>ผิดพลาด</b> → ข้อความจาก <code>stampError</code> (ตอนนี้แสดงเป็น <code>.ss-form-error</code> ใต้แถวตรา)
+</div>
+
+<div class="note-box">
+  <b>พฤติกรรมปัจจุบันในแอป</b> — กดตราแล้ว<b>สำเร็จจะเงียบสนิท</b> ไม่มีอะไรยืนยันนอกจากตราเปลี่ยนสี ·
+  ตอนยกเลิกมี <code>window.confirm</code> ถามก่อน แต่หลังยกเลิกก็เงียบเหมือนกัน ·
+  ทุกแบบในหน้านี้เป็น<b>แกลเลอรีเทียบดีไซน์เท่านั้น ยังไม่ได้ใส่เข้าแอป</b><br>
+  <b>เลือกแล้ว: แบบที่ 2 Top Center Drop</b> — ใส่เข้าแอปแล้วในชื่อ <code>.ss-toast</code> / <code>.ss-toast-layer</code>
+  (<code>App.css</code>) + <code>pushStampToast()</code> ใน <code>SaleSupportPage.tsx</code> ·
+  แบบที่เหลือเก็บไว้เทียบถ้าจะเปลี่ยนทีหลัง<br>
+  <b>ข้อควรรู้</b> — ในแอปจริง toast จะเป็น <code>position: fixed</code> เทียบขอบจอ ·
+  ที่นี่จำกัดอยู่ในเวทีของแต่ละการ์ดเพื่อให้ดู 10 แบบพร้อมกันได้ ตำแหน่ง (มุมขวาบน / กลางบน / ล่างกลาง) ยังเทียบกันได้ตามจริง
+</div>
+
+<div class="ctrl">
+  <label><input type="checkbox" id="hold"> ค้าง toast ไว้ ไม่ปิดเอง</label>
+  <span class="hint">(ปกติปิดเองใน 3.4 วินาที)</span>
+  <span class="sep"></span>
+  <button class="primary" id="fire-all">▶ ยิงทุกแบบพร้อมกัน</button>
+  <button id="fire-cancel">↩ ยิงแบบ "ยกเลิก"</button>
+  <button id="fire-error">✕ ยิงแบบ "ผิดพลาด"</button>
+  <button id="clear-all">ล้างทั้งหมด</button>
+  <span class="sep"></span>
+  <button id="reset-stamps">รีเซ็ตตราประทับ</button>
+</div>
+
+<div class="grid" id="grid"></div>
+
+<script>
+/* ── 3 ขั้นตอน — ลอกจาก ORDER_STEPS ใน SaleSupportPage.tsx ── */
+const STEPS = [
+  { key: 'arrived_branch',    label: 'ของถึงสาขา',   done: 'ถึงแล้ว',    pending: 'ยังไม่ถึง' },
+  { key: 'customer_notified', label: 'แจ้งลูกค้า',    done: 'แจ้งแล้ว',   pending: 'ยังไม่แจ้ง' },
+  { key: 'delivered',         label: 'ส่งมอบสินค้า',  done: 'ส่งมอบแล้ว', pending: 'ยังไม่ส่งมอบ' },
+];
+
+const DESIGNS = [
+  { no: 1,  name: 'Corner Slide',      tag: 'มุมขวาบน',   note: 'การ์ดขาวเลื่อนเข้าจากขวา ไอคอนวงกลม + ปุ่มปิด — แบบมาตรฐานที่คนคุ้นที่สุด <b>ไม่บังเนื้อหาในป๊อปอัป</b> แต่สายตาต้องละจากปุ่มที่เพิ่งกดไปมุมจอ' },
+  { no: 2,  name: 'Top Center Drop',   tag: 'กลางบน', used: true, note: 'pill เล็กหล่นจากขอบบน ข้อความบรรทัดเดียว — <b>เบาที่สุดในชุดนี้</b> เหมาะกับงานที่กดถี่ ๆ แต่ใส่ปุ่มย้อนกลับไม่ได้' },
+  { no: 3,  name: 'Snackbar + Undo',   tag: 'ล่างกลาง',   note: 'แถบเข้มแบบ Material มี <b>ปุ่ม "ย้อนกลับ"</b> — ตัวเดียวที่ทำให้ตัด <code>window.confirm</code> ตอนยกเลิกตราออกได้ (กดพลาดแล้วกดคืนได้ใน 3 วิ)' },
+  { no: 4,  name: 'Inline Slot',       tag: 'ในป๊อปอัป',  note: 'ไม่ลอย — โผล่ใต้แถวตราประทับตรงจุดที่เพิ่งกด <b>อยู่ในสายตาแน่นอน</b> ที่เดียวกับที่ <code>stampError</code> แสดงอยู่แล้ว แต่ดันเนื้อหาด้านล่างขยับ' },
+  { no: 5,  name: 'Progress Toast',    tag: 'มุมขวาล่าง', note: 'การ์ดพร้อม<b>แถบเวลานับถอยหลัง</b> — เห็นชัดว่าจะหายเมื่อไหร่ ไม่ต้องเดา เหมาะถ้าจะให้ toast อยู่นานกว่า 3 วิ' },
+  { no: 6,  name: 'Stack',             tag: 'มุมขวาบน',   note: 'ซ้อนได้หลายใบ ใบเก่าเลื่อนลง+จางลง — <b>กดตรารัว 3 ขั้นติดกันแล้วเห็นครบทุกใบ</b> ไม่โดนใบใหม่ทับ' },
+  { no: 7,  name: 'Glass Center',      tag: 'กลางจอ',     note: 'กระจกฝ้าไอคอนใหญ่กลางจอ ไม่มีปุ่ม เฟดหายเอง — <b>เด่นสุด</b> แต่บังป๊อปอัปชั่วขณะ เหมาะกับหน้าจอสัมผัสที่ยืนดูไกล ๆ' },
+  { no: 8,  name: 'Left Accent Card',  tag: 'มุมขวาบน',   note: 'การ์ดขาวขอบซ้ายหนา 4px <b>โทนเดียวกับ <code>.rule-box</code>/<code>.ss-out-badge</code> ที่ใช้อยู่แล้วในโปรเจกต์</b> — กลืนกับของเดิมที่สุด มีปุ่มย้อนกลับได้' },
+  { no: 9,  name: 'Modal Ribbon',      tag: 'ในป๊อปอัป',  note: 'แถบสีเต็มความกว้างเลื่อนลงใต้หัวป๊อปอัป — <b>ผูกกับใบงานที่เปิดอยู่ชัดเจน</b> ไม่หลุดไปมุมจอ ไม่ดันเนื้อหา แต่ทับพื้นที่หัวป๊อปอัป' },
+  { no: 10, name: 'Stamp Mark',        tag: 'มุมขวาล่าง', note: 'ทรงตราประทับเอียง -6° ป๊อปขึ้นแบบเด้ง <b>ภาษาเดียวกับ <code>.ss-stamp-mark</code></b> ที่ใช้บนตราอยู่แล้ว — สื่อว่า "ประทับลงไปแล้ว" ตรงตัวที่สุด' },
+];
+
+/* ── โทน + ข้อความของ toast ตามชนิดเหตุการณ์ ── */
+function payload(type, step) {
+  if (type === 'approve') return {
+    tone: 'tone-ok', ico: '✔', title: 'อนุมัติแล้ว',
+    detail: `${step.label} → <b>${step.done}</b>`, plain: `${step.label} → ${step.done}`, undo: true,
+  };
+  if (type === 'cancel') return {
+    tone: 'tone-cancel', ico: '↩', title: 'ยกเลิกสถานะแล้ว',
+    detail: `${step.label} → <b>${step.pending}</b>`, plain: `${step.label} → ${step.pending}`, undo: true,
+  };
+  return {
+    tone: 'tone-error', ico: '✕', title: 'อัปเดตไม่สำเร็จ',
+    detail: `${step.label} · <b>เชื่อมต่อฐานข้อมูลไม่ได้</b>`, plain: `${step.label} · เชื่อมต่อฐานข้อมูลไม่ได้`, undo: false,
+  };
+}
+
+const el = (html) => { const d = document.createElement('div'); d.innerHTML = html.trim(); return d.firstElementChild; };
+const holdOn = () => document.getElementById('hold').checked;
+
+/* ── ตัวสร้าง toast แยกตามดีไซน์ ──
+   คืน { node, wrapSel, leaveCls, max } — max = จำนวนใบสูงสุดที่ค้างพร้อมกันได้ */
+const BUILDERS = {
+  1: (p, undo) => ({
+    wrap: 't1-wrap', leave: 'leaving-right', max: 3,
+    node: el(`<div class="toast t1 ${p.tone}">
+      <div class="t1-ico">${p.ico}</div>
+      <div style="flex:1">
+        <div class="t-title">${p.title}</div>
+        <div class="t-detail">${p.detail}</div>
+      </div>
+      <button class="t-close" data-close>✕</button>
+    </div>`),
+  }),
+  2: (p) => ({
+    wrap: 't2-wrap', leave: 'leaving-up', max: 2,
+    node: el(`<div class="toast t2 ${p.tone}">
+      <span class="t2-ico">${p.ico}</span>
+      <span>${p.title}</span>
+      <span class="t2-sub">· ${p.plain}</span>
+    </div>`),
+  }),
+  3: (p, undo) => ({
+    wrap: 't3-wrap', leave: 'leaving-down', max: 1,
+    node: el(`<div class="toast t3 ${p.tone}">
+      <span class="t3-dot"></span>
+      <span class="t3-text"><b>${p.title}</b> · ${p.plain}</span>
+      ${p.undo ? '<button data-undo>ย้อนกลับ</button>' : '<button data-close>ปิด</button>'}
+    </div>`),
+  }),
+  4: (p) => ({
+    wrap: 'inline-slot', leave: 'leaving-fade', max: 1,
+    node: el(`<div class="toast t4 ${p.tone}">
+      <span>${p.ico}</span>
+      <span>${p.title}</span>
+      <span class="t4-sub">${p.plain}</span>
+      <button class="t-close" data-close>✕</button>
+    </div>`),
+  }),
+  5: (p) => ({
+    wrap: 't5-wrap', leave: 'leaving-right', max: 2,
+    node: el(`<div class="toast t5 ${p.tone}${holdOn() ? ' hold' : ''}">
+      <div class="t5-top">
+        <span class="t5-ico">${p.ico}</span>
+        <div style="flex:1">
+          <div class="t-title">${p.title}</div>
+          <div class="t-detail">${p.detail}</div>
+        </div>
+        <button class="t-close" data-close>✕</button>
+      </div>
+      <div class="t5-bar"><i></i></div>
+    </div>`),
+  }),
+  6: (p) => ({
+    wrap: 't6-wrap', leave: 'leaving-right', max: 4, prepend: true,
+    node: el(`<div class="toast t6 ${p.tone}">
+      <span class="t6-ico">${p.ico}</span>
+      <span class="t6-text"><b>${p.title}</b><br><span>${p.plain}</span></span>
+    </div>`),
+  }),
+  7: (p) => ({
+    wrap: 't7-wrap', leave: 'leaving-scale', max: 1,
+    node: el(`<div class="toast t7 ${p.tone}">
+      <div class="t7-ico">${p.ico}</div>
+      <div class="t-title">${p.title}</div>
+      <div class="t-detail">${p.detail}</div>
+    </div>`),
+  }),
+  8: (p) => ({
+    wrap: 't8-wrap', leave: 'leaving-right', max: 3,
+    node: el(`<div class="toast t8 ${p.tone}">
+      <span class="t8-ico">${p.ico}</span>
+      <div class="t8-body">
+        <div class="t-title">${p.title}</div>
+        <div class="t-detail">${p.detail}</div>
+        ${p.undo ? '<button class="t-undo" data-undo>↩ ย้อนกลับ</button>' : ''}
+      </div>
+      <button class="t-close" data-close>✕</button>
+    </div>`),
+  }),
+  9: (p) => ({
+    wrap: 'ribbon-slot', leave: 'leaving-ribbon', max: 1,
+    node: el(`<div class="toast t9 ${p.tone}">
+      <span>${p.ico}</span>
+      <span>${p.title}</span>
+      <span class="t9-sub">· ${p.plain}</span>
+      ${p.undo ? '<button class="t9-act" data-undo>ย้อนกลับ</button>' : '<button class="t9-act" data-close>ปิด</button>'}
+    </div>`),
+  }),
+  10: (p) => ({
+    wrap: 't10-wrap', leave: 'leaving-stamp', max: 2,
+    node: el(`<div class="toast t10 ${p.tone}">
+      <span>${p.ico}</span>
+      <span>${p.title}</span>
+      <span class="t10-sub">${p.plain}</span>
+    </div>`),
+  }),
+};
+
+/* ── แสดง toast ในเวทีของการ์ดนั้น ── */
+function showToast(stage, no, type, step, onUndo) {
+  const p = payload(type, step);
+  const built = BUILDERS[no](p);
+  const wrap = stage.querySelector('.' + built.wrap);
+  const node = built.node;
+
+  built.prepend ? wrap.prepend(node) : wrap.appendChild(node);
+
+  // จำกัดจำนวนใบที่ค้างพร้อมกัน — เกินแล้วเอาใบเก่าสุดออกทันที
+  const extras = [...wrap.children].slice(built.max);
+  extras.forEach(n => n.remove());
+
+  const close = () => {
+    if (!node.isConnected) return;
+    node.classList.add(built.leave);
+    setTimeout(() => node.remove(), 260);
+  };
+  node.querySelector('[data-close]')?.addEventListener('click', close);
+  node.querySelector('[data-undo]')?.addEventListener('click', () => { onUndo?.(); close(); });
+
+  if (!holdOn()) setTimeout(close, 3400);
+  return close;
+}
+
+/* ── สร้างการ์ด 10 ใบ ── */
+const grid = document.getElementById('grid');
+
+DESIGNS.forEach(d => {
+  const card = el(`<div class="card">
+    <div class="card-head">
+      <span class="card-no">${String(d.no).padStart(2, '0')}</span>
+      <span class="card-name">${d.name}</span>
+      <span class="card-tag">${d.tag}</span>
+      ${d.used ? '<span class="card-tag card-tag--used">✅ ใช้จริงในแอปแล้ว · .ss-toast</span>' : ''}
+    </div>
+    <p class="card-note">${d.note}</p>
+    <div class="stage" data-no="${d.no}">
+      <div class="toast-layer">
+        <div class="t1-wrap"></div><div class="t2-wrap"></div><div class="t3-wrap"></div>
+        <div class="t5-wrap"></div><div class="t6-wrap"></div><div class="t7-wrap"></div>
+        <div class="t8-wrap"></div><div class="t10-wrap"></div>
+      </div>
+      <div class="modal">
+        <div class="modal-head"><span>📋 รายละเอียด Order</span><span class="x">✕</span></div>
+        <div class="ribbon-slot"></div>
+        <div class="modal-body">
+          <div class="f-grid">
+            <div><div class="f-lab">SKU / ชื่อสินค้า</div><div class="f-val">100098 · Antacil เม็ด</div></div>
+            <div><div class="f-lab">ชื่อลูกค้า</div><div class="f-val">คุณสมชาย ใจดี</div></div>
+          </div>
+          <div class="ss-detail-steps-title">สถานะการดำเนินการ · กดตราเพื่ออนุมัติ</div>
+          <div class="ss-stamp-row"></div>
+          <div class="inline-slot"></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-actions">
+      <button data-act="approve">✔ จำลอง "อนุมัติ"</button>
+      <button data-act="cancel">↩ จำลอง "ยกเลิก"</button>
+      <button data-act="error">✕ จำลอง "ผิดพลาด"</button>
+    </div>
+  </div>`);
+
+  const stage = card.querySelector('.stage');
+  const row = card.querySelector('.ss-stamp-row');
+
+  // ตราประทับ 3 ขั้น — กดได้จริง สลับสถานะแล้วยิง toast ตามผลลัพธ์
+  STEPS.forEach(step => {
+    const btn = el(`<button type="button" class="ss-stamp">${step.label}<span class="ss-stamp-mark">${step.label} ✔</span></button>`);
+    btn.addEventListener('click', () => {
+      const wasDone = btn.classList.contains('ss-stamp--done');
+      btn.classList.toggle('ss-stamp--done', !wasDone);
+      const revert = () => btn.classList.toggle('ss-stamp--done', wasDone);
+      showToast(stage, d.no, wasDone ? 'cancel' : 'approve', step, revert);
+    });
+    row.appendChild(btn);
+  });
+
+  card.querySelectorAll('.card-actions button').forEach(b => {
+    b.addEventListener('click', () => showToast(stage, d.no, b.dataset.act, STEPS[0]));
+  });
+
+  grid.appendChild(card);
+});
+
+/* ── แถบควบคุมด้านบน ── */
+const allStages = () => [...document.querySelectorAll('.stage')];
+const fire = (type) => allStages().forEach((s, i) => showToast(s, Number(s.dataset.no), type, STEPS[i % 3]));
+
+document.getElementById('fire-all').addEventListener('click', () => fire('approve'));
+document.getElementById('fire-cancel').addEventListener('click', () => fire('cancel'));
+document.getElementById('fire-error').addEventListener('click', () => fire('error'));
+document.getElementById('clear-all').addEventListener('click', () => {
+  document.querySelectorAll('.toast').forEach(t => t.remove());
+});
+document.getElementById('reset-stamps').addEventListener('click', () => {
+  document.querySelectorAll('.ss-stamp--done').forEach(s => s.classList.remove('ss-stamp--done'));
+  document.querySelectorAll('.toast').forEach(t => t.remove());
+});
+</script>
+</body>
+</html>

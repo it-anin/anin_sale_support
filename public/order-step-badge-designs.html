@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Order Step Badge — 20 แบบ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   Order Step Badge — แกลเลอรีเลือกดีไซน์ 20 แบบ
+   badge แยก 3 ขั้นตอน: ของถึงสาขา / แจ้งลูกค้า / ส่งมอบสินค้า
+   บนปุ่มเมนู Order ใน sidebar หน้า Sale Support
+   ไฟล์นี้ไม่ได้ import เข้าแอป — เปิดผ่าน dev server เพื่อเทียบแบบเท่านั้น
+   ============================================================ */
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: 26px 20px 70px;
+  background: #eef3f9;
+  font-family: 'Noto Sans Thai', sans-serif;
+  color: #2c3e50;
+}
+
+/* ---------- หัวเรื่อง ---------- */
+.pg-head { max-width: 1500px; margin: 0 auto 20px; }
+.pg-head h1 {
+  margin: 0 0 6px; font-family: 'Outfit', sans-serif; font-size: 27px;
+  font-weight: 800; color: #2d6cad; letter-spacing: -0.4px;
+}
+.pg-head p { margin: 0 0 4px; font-size: 13px; color: #5b7590; line-height: 1.75; font-weight: 300; }
+.pg-head code {
+  background: #fff; border: 1px solid #cfe0f2; border-radius: 4px;
+  padding: 1px 5px; font-family: 'Outfit', monospace; font-size: 12px; color: #2d6cad;
+}
+
+.note-box {
+  max-width: 1500px; margin: 0 auto 18px; padding: 12px 16px;
+  background: #fff8e9; border: 1px solid #f0d9a8; border-left: 4px solid #e8a33d;
+  border-radius: 9px; font-size: 12.5px; line-height: 1.8; color: #6b5525;
+}
+.note-box b { color: #b57619; }
+
+/* ---------- แถบควบคุมตัวเลข ---------- */
+.ctrl {
+  position: sticky; top: 0; z-index: 30;
+  max-width: 1500px; margin: 0 auto 24px; padding: 13px 16px;
+  background: #fff; border: 1px solid #cfe0f2; border-radius: 11px;
+  box-shadow: 0 3px 14px rgba(45, 108, 173, 0.1);
+  display: flex; flex-wrap: wrap; align-items: center; gap: 9px;
+}
+.ctrl-lbl { font-size: 12px; font-weight: 600; color: #2d6cad; margin-right: 3px; }
+.ctrl-field { display: flex; align-items: center; gap: 5px; }
+.ctrl-field span { font-size: 11.5px; color: #5b7590; }
+.ctrl-field i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.ctrl-field input {
+  width: 56px; padding: 5px 7px; border: 1px solid #cfe0f2; border-radius: 6px;
+  font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 700;
+  color: #2d6cad; text-align: center; outline: none;
+}
+.ctrl-field input:focus { border-color: #4891db; box-shadow: 0 0 0 3px rgba(72, 145, 219, 0.15); }
+.ctrl-sep { width: 1px; height: 24px; background: #e3e8ee; margin: 0 5px; }
+.preset {
+  padding: 6px 12px; border: 1.5px solid #b8d3ee; border-radius: 20px;
+  background: #fff; color: #2d6cad; font-family: 'Noto Sans Thai', sans-serif;
+  font-size: 11.5px; font-weight: 500; cursor: pointer; transition: all 0.15s ease;
+}
+.preset:hover { background: #2d6cad; border-color: #2d6cad; color: #fff; }
+.preset--real { border-color: #7fc08a; color: #3f8a4d; }
+.preset--real:hover { background: #3f8a4d; border-color: #3f8a4d; color: #fff; }
+
+/* ---------- ตารางการ์ด ---------- */
+.grid {
+  max-width: 1500px; margin: 0 auto;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(430px, 1fr)); gap: 22px;
+}
+.card {
+  background: #fff; border: 1px solid #e3e8ee; border-radius: 15px;
+  padding: 16px 18px 18px; box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+}
+.card-head { display: flex; align-items: baseline; gap: 9px; margin-bottom: 3px; }
+.card-no {
+  font-family: 'Outfit', sans-serif; font-size: 12px; font-weight: 800;
+  color: #fff; background: #4891db; border-radius: 6px; padding: 2px 8px; flex-shrink: 0;
+}
+.card-name { font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 700; color: #2c3e50; }
+.card-note { font-size: 11.5px; color: #8194a8; line-height: 1.7; margin: 0 0 12px; font-weight: 300; }
+.card-meta {
+  display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px;
+  font-family: 'Outfit', sans-serif; font-size: 10.5px; font-weight: 600;
+}
+.tag { padding: 2px 8px; border-radius: 20px; border: 1px solid; }
+.tag--ok   { color: #3f8a4d; border-color: #a8d9b1; background: #f0f9f2; }
+.tag--warn { color: #b57619; border-color: #f0d9a8; background: #fff8e9; }
+.tag--info { color: #2d6cad; border-color: #b8d3ee; background: #eaf3fc; }
+
+/* ============================================================
+   โครง sidebar จำลอง — ลอกค่าจริงจาก App.css ทุกตัว
+   .ss-layout / .ss-sidebar / .ss-menu-btn / .ss-menu-icon
+   ============================================================ */
+.mock {
+  display: flex; height: 232px; background: #fff;
+  border: 1px solid #e3e8ee; border-radius: 14px; overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+}
+.mock-sb {
+  display: flex; flex-direction: column; align-items: stretch;
+  background: #f7f9fb; border-right: 1px solid #e3e8ee;
+  min-width: 150px; padding: 7px 0; flex-shrink: 0; position: relative;
+}
+/* เส้นประบอกขอบ 150px = min-width จริงของ .ss-sidebar */
+.mock-sb::after {
+  content: ''; position: absolute; top: 0; bottom: 0; left: 150px;
+  border-left: 1px dashed #d9534f; opacity: 0.35; pointer-events: none;
+}
+.mock-btn {
+  display: flex; align-items: center; gap: 7px;
+  padding: 9px 13px; border: none; background: none;
+  color: #5b7590; font-size: 12px; font-weight: 500;
+  font-family: 'Noto Sans Thai', sans-serif; text-align: left;
+  border-left: 3px solid transparent; position: relative;
+}
+.mock-btn--active { background: #eaf3fc; color: #2d6cad; border-left-color: #4891db; font-weight: 600; }
+.mock-ic {
+  width: 24px; height: 24px; flex-shrink: 0; border-radius: 7px;
+  border: 1.2px solid currentColor; display: flex; align-items: center; justify-content: center;
+}
+.mock-ic svg {
+  display: block; width: 13px; height: 13px; fill: none; stroke: currentColor;
+  stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; overflow: visible;
+}
+.mock-panel { flex: 1; padding: 14px 16px; background: #fff; min-width: 0; }
+.mock-panel-bar { height: 27px; border-radius: 7px; background: #f2f6fa; margin-bottom: 9px; }
+.mock-panel-row { height: 13px; border-radius: 4px; background: #f7f9fb; margin-bottom: 7px; }
+.mock-panel-row:nth-child(3) { width: 88%; }
+.mock-panel-row:nth-child(4) { width: 71%; }
+.mock-panel-row:nth-child(5) { width: 81%; }
+.mock-panel-row:nth-child(6) { width: 62%; }
+
+/* ============================================================
+   สีประจำขั้นตอน — ใช้ชุดเดียวกันทั้ง 20 แบบ เพื่อให้เทียบ "เลย์เอาต์" ไม่ใช่ "สี"
+     ของถึงสาขา    #4891db  ฟ้า  (สีหลักของธีม)
+     แจ้งลูกค้า     #e8a33d  ส้ม  (สีเดียวกับ .ss-menu-badge เดิม)
+     ส่งมอบสินค้า   #d9534f  แดง  (สีเดียวกับ .ss-menu-badge--late เดิม)
+   ============================================================ */
+:root {
+  --s1: #4891db; --s1-bg: #eaf3fc; --s1-bd: #b8d3ee;
+  --s2: #e8a33d; --s2-bg: #fdf4e6; --s2-bd: #f0d9a8;
+  --s3: #d9534f; --s3-bg: #fdeceb; --s3-bd: #f2c0be;
+  --zero: #b6c3d1;
+}
+.z { opacity: 0.45; }               /* ค่า 0 → จางลง ไม่ซ่อน เพื่อไม่ให้เลย์เอาต์กระโดด */
+.num { font-family: 'Outfit', sans-serif; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* ---------- 1. Micro Pills ---------- */
+.d1 { margin-left: auto; display: flex; gap: 2px; }
+.d1 b { border-radius: 9px; padding: 0 4px; min-width: 15px; text-align: center; color: #fff; font-family: 'Outfit', sans-serif; font-size: 9px; font-weight: 700; line-height: 15px; }
+.d1 .p1 { background: var(--s1); } .d1 .p2 { background: var(--s2); } .d1 .p3 { background: var(--s3); }
+
+/* ---------- 2. Segmented Bar ---------- */
+.d2 { margin-left: auto; display: flex; border-radius: 20px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.14); }
+.d2 b { padding: 1px 5px; color: #fff; font-family: 'Outfit', sans-serif; font-size: 9.5px; font-weight: 700; line-height: 1.65; min-width: 17px; text-align: center; }
+.d2 .p1 { background: var(--s1); } .d2 .p2 { background: var(--s2); } .d2 .p3 { background: var(--s3); }
+
+/* ---------- 3. Stacked Micro ---------- */
+.d3 { margin-left: auto; display: flex; flex-direction: column; gap: 1.5px; }
+.d3 b { display: flex; align-items: center; gap: 3px; font-family: 'Outfit', sans-serif; font-size: 9px; font-weight: 700; line-height: 1.35; }
+.d3 i { width: 6px; height: 6px; border-radius: 50%; }
+.d3 .p1 { color: var(--s1); } .d3 .p1 i { background: var(--s1); }
+.d3 .p2 { color: var(--s2); } .d3 .p2 i { background: var(--s2); }
+.d3 .p3 { color: var(--s3); } .d3 .p3 i { background: var(--s3); }
+
+/* ---------- 4. Total + Dots ---------- */
+.d4 { margin-left: auto; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.d4 .tot { background: #6b7f94; color: #fff; border-radius: 20px; padding: 1px 7px; font-family: 'Outfit', sans-serif; font-size: 10.5px; font-weight: 700; line-height: 1.6; }
+.d4 .dots { display: flex; gap: 2.5px; }
+.d4 .dots i { width: 6px; height: 6px; border-radius: 50%; }
+.d4 .dots .p1 { background: var(--s1); } .d4 .dots .p2 { background: var(--s2); } .d4 .dots .p3 { background: var(--s3); }
+
+/* ---------- 5. Traffic Light ---------- */
+.d5 { margin-left: auto; display: flex; flex-direction: column; gap: 1.5px; background: #43566b; border-radius: 9px; padding: 2.5px; }
+.d5 b { width: 15px; height: 15px; border-radius: 50%; color: #fff; font-family: 'Outfit', sans-serif; font-size: 8.5px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+.d5 .p1 { background: var(--s1); } .d5 .p2 { background: var(--s2); } .d5 .p3 { background: var(--s3); }
+.d5 .z { background: #6b7f94; opacity: 1; color: #93a5b7; }
+
+/* ---------- 6. Sub-row Pills ---------- */
+.btn-2row { flex-wrap: wrap; row-gap: 5px; }
+.d6 { flex-basis: 100%; display: flex; gap: 3px; padding-left: 31px; }
+.d6 b { display: flex; align-items: center; gap: 3px; border-radius: 20px; padding: 1px 6px 1px 4px; font-size: 9.5px; font-weight: 600; border: 1px solid; }
+.d6 span { font-family: 'Outfit', sans-serif; font-weight: 700; }
+.d6 .p1 { color: var(--s1); background: var(--s1-bg); border-color: var(--s1-bd); }
+.d6 .p2 { color: var(--s2); background: var(--s2-bg); border-color: var(--s2-bd); }
+.d6 .p3 { color: var(--s3); background: var(--s3-bg); border-color: var(--s3-bd); }
+
+/* ---------- 7. Sub-row Progress ---------- */
+.d7 { flex-basis: 100%; padding-left: 31px; padding-right: 4px; }
+.d7 .bar { display: flex; height: 13px; border-radius: 20px; overflow: hidden; background: #e3e8ee; }
+.d7 .bar b { color: #fff; font-family: 'Outfit', sans-serif; font-size: 8.5px; font-weight: 700; display: flex; align-items: center; justify-content: center; transition: flex-grow 0.3s ease; }
+.d7 .p1 { background: var(--s1); } .d7 .p2 { background: var(--s2); } .d7 .p3 { background: var(--s3); }
+
+/* ---------- 8. Sub-row Icons ---------- */
+.d8 { flex-basis: 100%; display: flex; gap: 7px; padding-left: 31px; }
+.d8 b { display: flex; align-items: center; gap: 2.5px; font-family: 'Outfit', sans-serif; font-size: 10.5px; font-weight: 700; }
+.d8 svg { width: 11px; height: 11px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.d8 .p1 { color: var(--s1); } .d8 .p2 { color: var(--s2); } .d8 .p3 { color: var(--s3); }
+
+/* ---------- 9. Mini Table ---------- */
+.d9 { flex-basis: 100%; display: flex; padding-left: 31px; }
+.d9 b { flex: 1; display: flex; flex-direction: column; align-items: center; border-right: 1px solid #e3e8ee; }
+.d9 b:last-child { border-right: none; }
+.d9 u { text-decoration: none; font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 800; line-height: 1.15; }
+.d9 s { text-decoration: none; font-size: 8.5px; color: #8194a8; font-weight: 400; }
+.d9 .p1 u { color: var(--s1); } .d9 .p2 u { color: var(--s2); } .d9 .p3 u { color: var(--s3); }
+.d9 .z u { color: var(--zero); }
+
+/* ---------- 10. Breadcrumb Flow ---------- */
+.d10 { flex-basis: 100%; display: flex; align-items: center; gap: 3px; padding-left: 31px; }
+.d10 b { font-family: 'Outfit', sans-serif; font-size: 11px; font-weight: 800; }
+.d10 em { font-style: normal; color: #c3cfdb; font-size: 9px; }
+.d10 .p1 { color: var(--s1); } .d10 .p2 { color: var(--s2); } .d10 .p3 { color: var(--s3); }
+.d10 .z { color: var(--zero); }
+
+/* ---------- 11. Hover Popover ---------- */
+.d11 { margin-left: auto; position: relative; }
+.d11 .lead { background: var(--s1); color: #fff; border-radius: 20px; padding: 1px 6px; font-family: 'Outfit', sans-serif; font-size: 10.5px; font-weight: 700; line-height: 1.6; display: flex; align-items: center; gap: 3px; }
+.d11 .lead em { font-style: normal; font-size: 8px; opacity: 0.85; }
+.d11 .pop {
+  position: absolute; top: -6px; left: calc(100% + 9px); z-index: 12;
+  background: #fff; border: 1px solid #cfe0f2; border-radius: 9px; padding: 7px 9px;
+  box-shadow: 0 5px 18px rgba(45,108,173,.2); width: 132px;
+  opacity: 0; visibility: hidden; transform: translateX(-4px); transition: all 0.15s ease;
+}
+.mock-btn:hover .d11 .pop { opacity: 1; visibility: visible; transform: translateX(0); }
+.d11 .pop u { text-decoration: none; display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: #5b7590; padding: 2px 0; }
+.d11 .pop u span { font-family: 'Outfit', sans-serif; font-weight: 800; }
+.d11 .pop .p1 span { color: var(--s1); } .d11 .pop .p2 span { color: var(--s2); } .d11 .pop .p3 span { color: var(--s3); }
+.d11 .pop .z span { color: var(--zero); }
+.d11 .hint { font-size: 8.5px; color: #b6c3d1; margin-top: 3px; border-top: 1px dashed #e3e8ee; padding-top: 3px; }
+
+/* ---------- 12 + 13. Sub-nav items ---------- */
+.subnav { display: flex; flex-direction: column; background: #f1f6fb; border-left: 3px solid #4891db; }
+.subrow {
+  display: flex; align-items: center; gap: 6px; padding: 5px 13px 5px 33px;
+  font-size: 10.5px; color: #5b7590; position: relative; cursor: pointer;
+}
+.subrow:hover { background: #e4eef8; }
+.subrow i { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.subrow span { margin-left: auto; font-family: 'Outfit', sans-serif; font-size: 10px; font-weight: 800; }
+.subrow.p1 i { background: var(--s1); } .subrow.p1 span { color: var(--s1); }
+.subrow.p2 i { background: var(--s2); } .subrow.p2 span { color: var(--s2); }
+.subrow.p3 i { background: var(--s3); } .subrow.p3 span { color: var(--s3); }
+.subrow.z i { background: var(--zero); } .subrow.z span { color: var(--zero); }
+.caret { margin-left: auto; width: 9px; height: 9px; stroke: currentColor; stroke-width: 2.2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+/* 13 = แบบมีเส้นลำดับขั้น */
+.subnav--rail .subrow::before {
+  content: ''; position: absolute; left: 21px; top: 0; bottom: 0; border-left: 1.5px solid #cfe0f2;
+}
+.subnav--rail .subrow:first-child::before { top: 50%; }
+.subnav--rail .subrow:last-child::before { bottom: 50%; }
+
+/* ---------- 14. Primary + Ghosts ---------- */
+.d14 { margin-left: auto; display: flex; align-items: center; gap: 3px; }
+.d14 .big { background: var(--s1); color: #fff; border-radius: 20px; padding: 1.5px 8px; font-family: 'Outfit', sans-serif; font-size: 11.5px; font-weight: 800; line-height: 1.5; box-shadow: 0 1px 4px rgba(72,145,219,.4); }
+.d14 .gh { border: 1px solid; border-radius: 20px; padding: 0 4px; font-family: 'Outfit', sans-serif; font-size: 8.5px; font-weight: 700; line-height: 1.6; background: #fff; }
+.d14 .p2 { color: var(--s2); border-color: var(--s2-bd); }
+.d14 .p3 { color: var(--s3); border-color: var(--s3-bd); }
+.d14 .z { color: var(--zero); border-color: #dde5ed; }
+.d14 .big.z { background: #dde5ed; color: #8194a8; box-shadow: none; }
+
+/* ---------- 15. Lead + Superscript ---------- */
+.d15 { margin-left: auto; display: flex; align-items: flex-start; gap: 1px; }
+.d15 .big { color: var(--s1); font-family: 'Outfit', sans-serif; font-size: 17px; font-weight: 800; line-height: 1; }
+.d15 .sup { display: flex; flex-direction: column; line-height: 1.05; padding-top: 1px; }
+.d15 .sup b { font-family: 'Outfit', sans-serif; font-size: 8px; font-weight: 800; }
+.d15 .p2 { color: var(--s2); } .d15 .p3 { color: var(--s3); }
+.d15 .z { color: var(--zero); }
+
+/* ---------- 16. Stepper Rail ---------- */
+.d16 { margin-left: auto; display: flex; flex-direction: column; align-items: center; }
+.d16 b { border-radius: 50%; color: #fff; font-family: 'Outfit', sans-serif; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+.d16 .p1 { width: 19px; height: 19px; font-size: 9.5px; background: var(--s1); }
+.d16 .p2 { width: 15px; height: 15px; font-size: 8.5px; background: var(--s2); }
+.d16 .p3 { width: 12px; height: 12px; font-size: 7.5px; background: var(--s3); }
+.d16 .z { background: #dde5ed; color: #8194a8; }
+.d16 em { width: 1.5px; height: 3px; background: #cfe0f2; }
+
+/* ---------- 17. Ribbon Notch ---------- */
+.mock-btn.has-ribbon { overflow: visible; }
+.d17 {
+  position: absolute; right: -11px; top: 50%; transform: translateY(-50%); z-index: 8;
+  display: flex; border-radius: 4px; overflow: hidden;
+  box-shadow: 0 2px 7px rgba(0,0,0,.18); clip-path: polygon(0 0, 100% 0, calc(100% - 5px) 50%, 100% 100%, 0 100%);
+  padding-right: 5px;
+}
+.d17 b { padding: 2px 4px; color: #fff; font-family: 'Outfit', sans-serif; font-size: 9px; font-weight: 800; min-width: 16px; text-align: center; }
+.d17 .p1 { background: var(--s1); } .d17 .p2 { background: var(--s2); } .d17 .p3 { background: var(--s3); }
+
+/* ---------- 18. Corner Cluster ---------- */
+.d18 { position: absolute; top: 2px; right: 6px; width: 42px; height: 34px; }
+.d18 b {
+  position: absolute; border-radius: 50%; color: #fff; font-family: 'Outfit', sans-serif;
+  font-size: 8.5px; font-weight: 800; width: 17px; height: 17px;
+  display: flex; align-items: center; justify-content: center; border: 1.5px solid #f7f9fb;
+}
+.d18 .p1 { top: 0; right: 0; background: var(--s1); width: 19px; height: 19px; font-size: 9.5px; z-index: 3; }
+.d18 .p2 { top: 13px; right: 15px; background: var(--s2); z-index: 2; }
+.d18 .p3 { top: 16px; right: 1px; background: var(--s3); z-index: 1; }
+.d18 .z { background: #c7d3df; }
+.mock-btn--active .d18 b { border-color: #eaf3fc; }
+
+/* ---------- 19. Donut ---------- */
+.d19 { margin-left: auto; position: relative; width: 27px; height: 27px; flex-shrink: 0; }
+.d19 svg { width: 27px; height: 27px; transform: rotate(-90deg); }
+.d19 circle { fill: none; stroke-width: 4; }
+.d19 .c1 { stroke: var(--s1); } .d19 .c2 { stroke: var(--s2); } .d19 .c3 { stroke: var(--s3); }
+.d19 .bg { stroke: #e3e8ee; }
+.d19 .mid {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-family: 'Outfit', sans-serif; font-size: 10px; font-weight: 800; color: var(--s1);
+}
+.d19 .mid.z { color: var(--zero); opacity: 1; }
+
+/* ---------- 20. Ticker ---------- */
+.d20 { margin-left: auto; height: 16px; overflow: hidden; border-radius: 20px; }
+.d20 .reel { animation: tick20 9s cubic-bezier(.7,0,.3,1) infinite; }
+.d20 b { height: 16px; display: flex; align-items: center; gap: 3px; padding: 0 6px; color: #fff; font-size: 8.5px; font-weight: 600; }
+.d20 b span { font-family: 'Outfit', sans-serif; font-size: 10px; font-weight: 800; }
+.d20 .p1 { background: var(--s1); } .d20 .p2 { background: var(--s2); } .d20 .p3 { background: var(--s3); }
+.d20 .z { background: #b6c3d1; }
+@keyframes tick20 {
+  0%, 27%    { transform: translateY(0); }
+  33%, 60%   { transform: translateY(-16px); }
+  66%, 94%   { transform: translateY(-32px); }
+  100%       { transform: translateY(-48px); }
+}
+
+/* ---------- แถบท้าย ---------- */
+.footer {
+  max-width: 1500px; margin: 34px auto 0; padding: 15px 18px;
+  background: #fff; border: 1px solid #e3e8ee; border-radius: 11px;
+  font-size: 12.5px; color: #5b7590; line-height: 1.9; font-weight: 300;
+}
+.footer b { color: #2d6cad; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="pg-head">
+  <h1>Order Step Badge — 20 แบบ</h1>
+  <p>
+    badge แยก <b>3 ขั้นตอน</b> บนปุ่มเมนู <code>Order</code> ใน sidebar หน้า Sale Support —
+    นับจากคอลัมน์จริง <code>arrived_branch</code> / <code>customer_notified</code> / <code>delivered</code> ในตาราง <code>ss_orders</code>
+    ด้วยเกณฑ์เดียวกับตราประทับใน popup (<code>stepDone</code>: มีคำว่า “แล้ว” และไม่มี “ยังไม่”)
+  </p>
+  <p>เส้นประแดงในทุกภาพ = ขอบ <code>150px</code> ซึ่งเป็น <code>min-width</code> จริงของ <code>.ss-sidebar</code> — แบบไหนล้ำเส้น แปลว่าต้องขยาย sidebar</p>
+</div>
+
+<div class="note-box">
+  <b>ข้อมูลจริงตอนนี้:</b> <code>ss_orders</code> มี 5 รายการ · ค้างจริง ของถึงสาขา <b>0</b> · แจ้งลูกค้า <b>0</b> · ส่งมอบสินค้า <b>1</b> —
+  น้อยเกินกว่าจะเทียบดีไซน์ได้ จึงใส่ช่องปรับเลขไว้ด้านล่าง ลองกด “ตัวอย่าง” หรือ “เลข 3 หลัก” เพื่อดูว่าแต่ละแบบรับเลขยาวได้แค่ไหน<br>
+  <b>ตำแหน่ง badge:</b> ผมตีความว่า “อยู่ที่ ของถึงสาขา” = ให้ช่อง <b>ของถึงสาขา</b> เป็นตัวนำ/ตัวเด่นของกลุ่ม (มาก่อน หรือใหญ่กว่า) — ถ้าหมายถึงอย่างอื่น บอกได้ครับ แก้ให้
+</div>
+
+<div class="ctrl">
+  <span class="ctrl-lbl">จำนวนที่ยังค้าง:</span>
+  <label class="ctrl-field"><i style="background:#4891db"></i><span>ของถึงสาขา</span><input id="n1" type="number" min="0" value="3"></label>
+  <label class="ctrl-field"><i style="background:#e8a33d"></i><span>แจ้งลูกค้า</span><input id="n2" type="number" min="0" value="5"></label>
+  <label class="ctrl-field"><i style="background:#d9534f"></i><span>ส่งมอบสินค้า</span><input id="n3" type="number" min="0" value="2"></label>
+  <span class="ctrl-sep"></span>
+  <button class="preset preset--real" data-v="0,0,1">ข้อมูลจริงตอนนี้ (0/0/1)</button>
+  <button class="preset" data-v="3,5,2">ตัวอย่าง (3/5/2)</button>
+  <button class="preset" data-v="12,8,27">เลข 2 หลัก</button>
+  <button class="preset" data-v="128,64,205">เลข 3 หลัก</button>
+  <button class="preset" data-v="0,0,0">ไม่ค้างเลย (0/0/0)</button>
+</div>
+
+<div class="grid" id="grid"></div>
+
+<div class="footer">
+  <b>อ่านผลยังไง</b> — ป้าย <span class="tag tag--ok">กว้าง 150px</span> คือพอดี sidebar เดิม ไม่ต้องแก้อะไร ·
+  <span class="tag tag--warn">กว้าง 168px</span> คือต้องขยาย <code>min-width</code> ของ <code>.ss-sidebar</code> ·
+  <span class="tag tag--info">สูง +17px</span> คือปุ่ม Order จะสูงกว่าปุ่มอื่น (เมนูเรียงไม่เท่ากัน)<br>
+  ตัวเลขทั้งสองวัดจากของจริงบนหน้าจอตอน render ไม่ได้พิมพ์ไว้ล่วงหน้า — เปลี่ยนตัวเลขในช่องด้านบนแล้ววัดใหม่ทุกครั้ง
+</div>
+
+<script>
+/* ============================================================
+   ไอคอนเมนู — ลอกจาก SaleSupportPage.tsx ตรง ๆ
+   ============================================================ */
+const ICONS = {
+  products: '<rect x="2.5" y="9" width="19" height="6" rx="3"/><line x1="12" y1="9" x2="12" y2="15"/>',
+  order: '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 3h6v2a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1V3Z"/><path d="M8 11.5h8"/><path d="M8 15.5h5"/>',
+  request: '<path d="m12 2.3 8.6 4.95L12 12.2 3.4 7.25 12 2.3Z"/><path d="M2.5 8.7 11.2 13.7v8.3L2.5 17V8.7Z"/><path d="M12.8 13.7 21.5 8.7V17l-8.7 5v-8.3Z"/>',
+  newproduct: '<path d="M12 2.5 14.1 9.4 21 11.5 14.1 13.6 12 20.5 9.9 13.6 3 11.5 9.9 9.4Z"/>',
+  ticket: '<path d="M3 8.2a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 0 0 3.6v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-3.6Z"/><path d="M14 6.2v1.8M14 11v2M14 15.5v1.8" stroke-dasharray="0.1 3.2"/>',
+};
+/* ลำดับเมนูจริง: MENU_DISPLAY_ORDER */
+const MENUS = [
+  ['products', 'Products'], ['order', 'Order'], ['request', 'Request Item'],
+  ['newproduct', 'New Product'], ['ticket', 'Ticket'],
+];
+const ic = k => `<span class="mock-ic"><svg viewBox="0 0 24 24">${ICONS[k]}</svg></span>`;
+
+/* ไอคอนเล็กในแบบที่ 8 */
+const MINI = {
+  box: '<path d="M2.5 7 12 2l9.5 5v10L12 22l-9.5-5V7Z"/><path d="M2.5 7 12 12l9.5-5"/><path d="M12 12v10"/>',
+  phone: '<path d="M6 2.5h4l2 5-2.5 1.5a11 11 0 0 0 5 5L16 11.5l5 2v4a2 2 0 0 1-2.2 2A17.5 17.5 0 0 1 4 7.2 2 2 0 0 1 6 2.5Z"/>',
+  hand: '<path d="M3 12.5 8 8l3.5 3.5"/><path d="M8 8V3.5"/><path d="M4.5 20.5h15"/><path d="M12 11.5h8.5v9H12Z"/>',
+};
+const mini = k => `<svg viewBox="0 0 24 24">${MINI[k]}</svg>`;
+
+/* z(n) = คลาสจางเมื่อค่าเป็น 0 */
+const z = n => (n === 0 ? ' z' : '');
+
+/* ============================================================
+   20 ดีไซน์ — แต่ละตัวคืน { inner, after, cls }
+     inner = HTML ที่แทรกในปุ่ม Order · after = แถวเพิ่มใต้ปุ่ม · cls = คลาสเสริมบนปุ่ม
+   ============================================================ */
+const DESIGNS = [
+  {
+    name: 'Micro Pills',
+    note: 'เม็ดยาสามสีเรียงกันบรรทัดเดียว เล็กที่สุดเท่าที่ยังอ่านออก — ตัวที่กินที่น้อยสุดในกลุ่มบรรทัดเดียว',
+    build: c => ({ inner: `<span class="d1">
+      <b class="p1${z(c[0])}">${c[0]}</b><b class="p2${z(c[1])}">${c[1]}</b><b class="p3${z(c[2])}">${c[2]}</b></span>` }),
+  },
+  {
+    name: 'Segmented Bar',
+    note: 'แคปซูลเดียวแบ่ง 3 ช่องติดกัน อ่านเป็นก้อนเดียว ไม่แตกกระจายเหมือนแบบ 1',
+    build: c => ({ inner: `<span class="d2">
+      <b class="p1${z(c[0])}">${c[0]}</b><b class="p2${z(c[1])}">${c[1]}</b><b class="p3${z(c[2])}">${c[2]}</b></span>` }),
+  },
+  {
+    name: 'Stacked Micro',
+    note: 'ซ้อนแนวตั้งชิดขวา — ไม่กินความกว้างเลย แลกกับปุ่ม Order สูงขึ้น',
+    build: c => ({ inner: `<span class="d3">
+      <b class="p1${z(c[0])}"><i></i>${c[0]}</b><b class="p2${z(c[1])}"><i></i>${c[1]}</b><b class="p3${z(c[2])}"><i></i>${c[2]}</b></span>` }),
+  },
+  {
+    name: 'Total + Dots',
+    note: 'เลขรวมเป็นตัวหลัก จุดสามสีใต้บอกว่ามาจากขั้นไหนบ้าง — ต้องเอาเมาส์ชี้ถึงจะรู้เลขแยก',
+    build: c => ({ inner: `<span class="d4">
+      <b class="tot">${c[0] + c[1] + c[2]}</b>
+      <span class="dots"><i class="p1${z(c[0])}"></i><i class="p2${z(c[1])}"></i><i class="p3${z(c[2])}"></i></span></span>` }),
+  },
+  {
+    name: 'Traffic Light',
+    note: 'ไฟจราจรแนวตั้ง เลขอยู่ในดวงไฟ ขั้นที่ครบแล้วดับเป็นสีเทา — สื่อ “ยังไม่ผ่านขั้นนี้” ชัดที่สุด',
+    build: c => ({ inner: `<span class="d5">
+      <b class="p1${z(c[0])}">${c[0]}</b><b class="p2${z(c[1])}">${c[1]}</b><b class="p3${z(c[2])}">${c[2]}</b></span>` }),
+  },
+  {
+    name: 'Sub-row Pills',
+    note: 'ขึ้นบรรทัดที่สองใต้คำว่า Order มีป้ายกำกับครบ — อ่านง่ายสุดโดยไม่ต้องเดาสี',
+    cls: 'btn-2row',
+    build: c => ({ inner: `<span class="d6">
+      <b class="p1${z(c[0])}">ถึง <span>${c[0]}</span></b>
+      <b class="p2${z(c[1])}">แจ้ง <span>${c[1]}</span></b>
+      <b class="p3${z(c[2])}">ส่ง <span>${c[2]}</span></b></span>` }),
+  },
+  {
+    name: 'Sub-row Progress',
+    note: 'แถบสัดส่วน ความกว้างแต่ละสีผันตามจำนวน — เห็นทันทีว่างานไปกองอยู่ขั้นไหน',
+    cls: 'btn-2row',
+    build: c => {
+      const t = c[0] + c[1] + c[2] || 1;
+      const seg = (i, cls) => `<b class="${cls}" style="flex-grow:${c[i] || 0.001}">${c[i] > 0 && c[i] / t > 0.13 ? c[i] : ''}</b>`;
+      return { inner: `<span class="d7"><span class="bar">${seg(0, 'p1')}${seg(1, 'p2')}${seg(2, 'p3')}</span></span>` };
+    },
+  },
+  {
+    name: 'Sub-row Icons',
+    note: 'ไอคอนเส้นชุดเดียวกับ sidebar (กล่อง / โทรศัพท์ / ส่งมอบ) แทนป้ายข้อความ — ประหยัดที่กว่าแบบ 6',
+    cls: 'btn-2row',
+    build: c => ({ inner: `<span class="d8">
+      <b class="p1${z(c[0])}">${mini('box')}${c[0]}</b>
+      <b class="p2${z(c[1])}">${mini('phone')}${c[1]}</b>
+      <b class="p3${z(c[2])}">${mini('hand')}${c[2]}</b></span>` }),
+  },
+  {
+    name: 'Mini Table',
+    note: 'สามช่องเท่ากันมีเส้นคั่น เลขใหญ่บน ป้ายเล็กล่าง — เป็นทางการที่สุด เหมือนแดชบอร์ดย่อ',
+    cls: 'btn-2row',
+    build: c => ({ inner: `<span class="d9">
+      <b class="p1${z(c[0])}"><u>${c[0]}</u><s>ถึง</s></b>
+      <b class="p2${z(c[1])}"><u>${c[1]}</u><s>แจ้ง</s></b>
+      <b class="p3${z(c[2])}"><u>${c[2]}</u><s>ส่ง</s></b></span>` }),
+  },
+  {
+    name: 'Breadcrumb Flow',
+    note: 'เลขล้วนคั่นด้วยลูกศร สื่อว่าเป็นลำดับขั้นที่ไหลต่อกัน — เบาตาที่สุดในกลุ่มสองบรรทัด',
+    cls: 'btn-2row',
+    build: c => ({ inner: `<span class="d10">
+      <b class="p1${z(c[0])}">${c[0]}</b><em>›</em>
+      <b class="p2${z(c[1])}">${c[1]}</b><em>›</em>
+      <b class="p3${z(c[2])}">${c[2]}</b></span>` }),
+  },
+  {
+    name: 'Hover Popover',
+    note: 'ปกติเห็นแค่เลข “ของถึงสาขา” · เอาเมาส์ชี้ปุ่มแล้วกางรายละเอียดครบ 3 ขั้น — เงียบที่สุด แต่ต้องชี้ถึงจะเห็น',
+    build: c => ({ inner: `<span class="d11">
+      <b class="lead${z(c[0])}">${c[0]}<em>+${c[1] + c[2]}</em></b>
+      <span class="pop">
+        <u class="p1${z(c[0])}">ของถึงสาขา<span>${c[0]}</span></u>
+        <u class="p2${z(c[1])}">แจ้งลูกค้า<span>${c[1]}</span></u>
+        <u class="p3${z(c[2])}">ส่งมอบสินค้า<span>${c[2]}</span></u>
+        <span class="hint">ชี้เมาส์เพื่อกาง</span>
+      </span></span>`, hover: true }),
+  },
+  {
+    name: 'Accordion Sub-nav',
+    note: 'กด Order แล้วกางเมนูย่อย 3 อัน คลิกอันไหนก็กรองตารางเฉพาะขั้นนั้น — จาก badge กลายเป็นทางลัด',
+    build: c => ({
+      inner: `<svg class="caret" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>`,
+      after: `<div class="subnav">
+        <div class="subrow p1${z(c[0])}"><i></i>ของถึงสาขา<span>${c[0]}</span></div>
+        <div class="subrow p2${z(c[1])}"><i></i>แจ้งลูกค้า<span>${c[1]}</span></div>
+        <div class="subrow p3${z(c[2])}"><i></i>ส่งมอบสินค้า<span>${c[2]}</span></div>
+      </div>`,
+    }),
+  },
+  {
+    name: 'Stepper Sub-nav',
+    note: 'เหมือนแบบ 12 แต่กางค้างตลอด และมีเส้นแกนบอกว่าเป็นลำดับ 1→2→3 ไม่ใช่ตัวเลือกอิสระ',
+    build: c => ({
+      after: `<div class="subnav subnav--rail">
+        <div class="subrow p1${z(c[0])}"><i></i>ของถึงสาขา<span>${c[0]}</span></div>
+        <div class="subrow p2${z(c[1])}"><i></i>แจ้งลูกค้า<span>${c[1]}</span></div>
+        <div class="subrow p3${z(c[2])}"><i></i>ส่งมอบสินค้า<span>${c[2]}</span></div>
+      </div>`,
+    }),
+  },
+  {
+    name: 'Primary + Ghosts',
+    note: '“ของถึงสาขา” เป็นเม็ดทึบตัวใหญ่ อีกสองขั้นเป็นเม็ดโปร่งตัวเล็ก — ลำดับความสำคัญชัดที่สุด',
+    build: c => ({ inner: `<span class="d14">
+      <b class="big${z(c[0])}">${c[0]}</b>
+      <b class="gh p2${z(c[1])}">${c[1]}</b><b class="gh p3${z(c[2])}">${c[2]}</b></span>` }),
+  },
+  {
+    name: 'Lead + Superscript',
+    note: 'เลข “ของถึงสาขา” ตัวโต ๆ ไม่มีกรอบ อีกสองขั้นเป็นตัวห้อยจิ๋วข้าง ๆ — โมเดิร์น แต่เลข 3 หลักจะเบียด',
+    build: c => ({ inner: `<span class="d15">
+      <b class="big${z(c[0])}">${c[0]}</b>
+      <span class="sup"><b class="p2${z(c[1])}">${c[1]}</b><b class="p3${z(c[2])}">${c[2]}</b></span></span>` }),
+  },
+  {
+    name: 'Stepper Rail',
+    note: 'วงกลมไล่ขนาดใหญ่→เล็กตามลำดับขั้น มีขีดเชื่อม — “ของถึงสาขา” เด่นด้วยขนาด ไม่ใช่ด้วยสี',
+    build: c => ({ inner: `<span class="d16">
+      <b class="p1${z(c[0])}">${c[0]}</b><em></em>
+      <b class="p2${z(c[1])}">${c[1]}</b><em></em>
+      <b class="p3${z(c[2])}">${c[2]}</b></span>` }),
+  },
+  {
+    name: 'Ribbon Notch',
+    note: 'ริบบิ้นบากปลายแหลมยื่นล้ำขอบ sidebar เข้าไปในพื้นที่ตาราง — สะดุดตาที่สุด แต่ทับเนื้อหาฝั่งขวา',
+    cls: 'has-ribbon',
+    build: c => ({ inner: `<span class="d17">
+      <b class="p1${z(c[0])}">${c[0]}</b><b class="p2${z(c[1])}">${c[1]}</b><b class="p3${z(c[2])}">${c[2]}</b></span>` }),
+  },
+  {
+    name: 'Corner Cluster',
+    note: 'สามวงเหลื่อมกันเป็นพวงมุมขวาบน วงของ “ของถึงสาขา” อยู่หน้าสุดและใหญ่สุด — เล่นกับพื้นที่ที่ปกติว่าง',
+    build: c => ({ inner: `<span class="d18">
+      <b class="p1${z(c[0])}">${c[0]}</b><b class="p2${z(c[1])}">${c[1]}</b><b class="p3${z(c[2])}">${c[2]}</b></span>` }),
+  },
+  {
+    name: 'Donut',
+    note: 'โดนัทสามส่วนแสดงสัดส่วน เลขกลางวงคือ “ของถึงสาขา” — สวยแต่อ่านเลขอีกสองขั้นไม่ได้',
+    build: c => {
+      const t = c[0] + c[1] + c[2];
+      const R = 10.5, C = 2 * Math.PI * R;
+      let off = 0;
+      const arc = (v, cls) => {
+        if (!t || !v) return '';
+        const len = (v / t) * C;
+        const s = `<circle class="${cls}" cx="13.5" cy="13.5" r="${R}" stroke-dasharray="${len - 1.4} ${C - len + 1.4}" stroke-dashoffset="${-off}"/>`;
+        off += len; return s;
+      };
+      return { inner: `<span class="d19">
+        <svg viewBox="0 0 27 27">
+          <circle class="bg" cx="13.5" cy="13.5" r="${R}"/>
+          ${arc(c[0], 'c1')}${arc(c[1], 'c2')}${arc(c[2], 'c3')}
+        </svg>
+        <span class="mid${z(c[0])}">${c[0]}</span></span>` };
+    },
+  },
+  {
+    name: 'Ticker Rotate',
+    note: 'เม็ดเดียวหมุนสลับ 3 ขั้นทุก 3 วินาที มีป้ายกำกับครบ — ประหยัดที่สุด แต่ต้องรอถึงจะเห็นครบ',
+    build: c => ({ inner: `<span class="d20"><span class="reel">
+      <b class="p1${z(c[0])}">ถึง<span>${c[0]}</span></b>
+      <b class="p2${z(c[1])}">แจ้ง<span>${c[1]}</span></b>
+      <b class="p3${z(c[2])}">ส่ง<span>${c[2]}</span></b>
+      <b class="p1${z(c[0])}">ถึง<span>${c[0]}</span></b>
+    </span></span>` }),
+  },
+];
+
+/* ============================================================
+   render
+   ============================================================ */
+const grid = document.getElementById('grid');
+
+function sidebarHTML(d, c) {
+  const r = d.build(c);
+  const all0 = c[0] + c[1] + c[2] === 0;
+  return MENUS.map(([id, label]) => {
+    if (id !== 'order') return `<div class="mock-btn">${ic(id)}${label}</div>`;
+    /* ไม่ค้างเลย → ไม่ต้องโชว์อะไร (พฤติกรรมเดียวกับ badge เดิมที่เช็ค pendingOrders > 0) */
+    const inner = all0 ? '' : (r.inner || '');
+    const after = all0 ? '' : (r.after || '');
+    return `<div class="mock-btn mock-btn--active ${d.cls || ''}">${ic(id)}${label}${inner}</div>${after}`;
+  }).join('');
+}
+
+function render() {
+  const c = [1, 2, 3].map(i => Math.max(0, parseInt(document.getElementById('n' + i).value, 10) || 0));
+  grid.innerHTML = DESIGNS.map((d, i) => `
+    <div class="card">
+      <div class="card-head"><span class="card-no">${String(i + 1).padStart(2, '0')}</span><span class="card-name">${d.name}</span></div>
+      <p class="card-note">${d.note}</p>
+      <div class="mock">
+        <div class="mock-sb">${sidebarHTML(d, c)}</div>
+        <div class="mock-panel">
+          <div class="mock-panel-bar"></div>
+          <div class="mock-panel-row"></div><div class="mock-panel-row"></div>
+          <div class="mock-panel-row"></div><div class="mock-panel-row"></div>
+        </div>
+      </div>
+      <div class="card-meta" data-meta></div>
+    </div>`).join('');
+  measure();
+}
+
+/* วัดจากของจริงบนหน้าจอ ไม่ได้เขียนค่าไว้ล่วงหน้า */
+function measure() {
+  document.querySelectorAll('.card').forEach(card => {
+    const sb = card.querySelector('.mock-sb');
+    const rows = card.querySelectorAll('.mock-btn');
+    const order = card.querySelector('.mock-btn--active');
+    const sub = card.querySelector('.subnav');
+    const w = Math.ceil(sb.getBoundingClientRect().width);
+    /* ปุ่มอ้างอิง = ปุ่มแรกที่ไม่ใช่ Order */
+    const base = Math.round([...rows].find(r => !r.classList.contains('mock-btn--active')).getBoundingClientRect().height);
+    const oh = Math.round(order.getBoundingClientRect().height) + (sub ? Math.round(sub.getBoundingClientRect().height) : 0);
+    const dh = oh - base;
+    const meta = card.querySelector('[data-meta]');
+    meta.innerHTML =
+      `<span class="tag ${w <= 150 ? 'tag--ok' : 'tag--warn'}">กว้าง ${w}px${w > 150 ? ` (เกิน ${w - 150})` : ''}</span>` +
+      (dh > 0 ? `<span class="tag tag--info">สูง +${dh}px</span>` : `<span class="tag tag--ok">สูงเท่าปุ่มอื่น</span>`);
+  });
+}
+
+document.querySelectorAll('.ctrl input').forEach(el => el.addEventListener('input', render));
+document.querySelectorAll('.preset').forEach(b => b.addEventListener('click', () => {
+  b.dataset.v.split(',').forEach((v, i) => { document.getElementById('n' + (i + 1)).value = v; });
+  render();
+}));
+
+render();
+/* ฟอนต์โหลดช้ากว่า render รอบแรก → วัดซ้ำหลังฟอนต์พร้อม ไม่งั้นความกว้างเพี้ยน */
+if (document.fonts) document.fonts.ready.then(measure);
+</script>
+</body>
+</html>

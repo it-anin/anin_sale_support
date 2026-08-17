@@ -92,11 +92,16 @@ export const DEFAULT_VISIBILITY: PageVisibility = {
 export const PageVisibilityContext = createContext<PageVisibility>(DEFAULT_VISIBILITY);
 export const usePageVisibility = () => useContext(PageVisibilityContext);
 
+export type PageNotifications = Partial<Record<PageId, boolean | number>>;
+export const PageNotificationContext = createContext<PageNotifications>({});
+export const usePageNotifications = () => useContext(PageNotificationContext);
+
 export type NavHandlers = Record<PageId, () => void>;
 
 // แถวปุ่มนำทาง (ใช้ร่วมทุกหน้า) — ซ่อนปุ่มของหน้าที่ถูกปิด ยกเว้นหน้าปัจจุบัน (กันปุ่ม active หาย)
 export function PageNavRow({ current, handlers }: { current: PageId; handlers: NavHandlers }) {
   const visible = usePageVisibility();
+  const notifications = usePageNotifications();
   return (
     <div className="search-nav-row">
       {PAGE_NAV.filter(p => visible[p.id] || p.id === current).map(p => (
@@ -106,6 +111,9 @@ export function PageNavRow({ current, handlers }: { current: PageId; handlers: N
           onClick={handlers[p.id]}
           title={p.title}
         >
+          {!!notifications[p.id] && p.id !== current && (
+            <span className="page-nav-notification-dot" aria-label="มีข้อมูลอัปเดตใหม่" />
+          )}
           <span className="page-nav-icon">{p.icon}</span>
           <span className="page-nav-label">{p.label}</span>
         </button>

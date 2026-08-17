@@ -9,6 +9,9 @@ create table if not exists ss_orders (
   sku              text,                    -- 1.1 SKU
   product_name     text,                    -- 1.1 ชื่อสินค้า
   branch           text,                    -- 1.2 Branch
+  recipient_department text not null default 'BOTH'
+    check (recipient_department in ('WAREHOUSE', 'PURCHASING', 'BOTH')), -- แผนกผู้รับ Order
+  recipient_read_at timestamptz,            -- เวลาที่แผนกผู้รับเปิดดู Order
   qty              numeric,                 -- 1.3 จำนวน
   unit             text,                    -- 1.4 หน่วย
   paid_date        date,                    -- 1.5 วันที่ลูกค้าชำระ
@@ -25,16 +28,115 @@ create table if not exists ss_orders (
   inbound_date     date,                    -- 1.16 Inbound วันที่รับของ
   outbound_date    date,                    -- 1.17 Outbound วันที่ส่งของ
   transfer_no      text,                    -- 1.18 เลขโอนสินค้า/เลขจัดส่ง
-  arrived_branch   text,                    -- 1.19 ของถึงสาขา
-  customer_notified text,                   -- 1.20 แจ้งลูกค้า
-  delivered        text,                    -- 1.21 ส่งมอบสินค้า
+  arrived_branch   text not null default 'ยังไม่ถึง',     -- 1.19 ของถึงสาขา
+  customer_notified text not null default 'ยังไม่แจ้ง',   -- 1.20 แจ้งลูกค้า
+  delivered        text not null default 'ยังไม่ส่งมอบ',  -- 1.21 ส่งมอบสินค้า
   phone            text,                    -- 1.22 เบอร์โทรติดต่อ (ค่าที่กรอก)
   contact_channel  text,                    -- 1.22 ช่องทางการติดต่อ (Tel./Line/WhatsApp)
+  workflow_completed_at timestamptz,        -- เวลาที่สาขายืนยันครบทั้ง 3 ตรา
   created_at       timestamptz default now() -- 1.23 TimeStamp
 );
 
 -- เผื่อกรณีรันไฟล์เวอร์ชันเก่าไปแล้ว: เพิ่มคอลัมน์ช่องทางติดต่อย้อนหลัง
 alter table ss_orders add column if not exists contact_channel text;
+alter table ss_orders add column if not exists workflow_completed_at timestamptz;
+alter table ss_orders add column if not exists recipient_department text;
+alter table ss_orders add column if not exists recipient_read_at timestamptz;
+alter table ss_orders add column if not exists order_type text;
+alter table ss_orders add column if not exists order_bill_no text;
+alter table ss_orders add column if not exists order_date date;
+alter table ss_orders add column if not exists order_source text;
+alter table ss_orders add column if not exists eta_date date;
+
+-- ข้อมูลเก่าก่อนมีตัวเลือกผู้รับยังให้ทั้งคลังและจัดซื้อเห็น และไม่นับเป็นงานใหม่
+update ss_orders
+set recipient_department = 'BOTH',
+    recipient_read_at = coalesce(recipient_read_at, now())
+where recipient_department is null or btrim(recipient_department) = '';
+
+alter table ss_orders
+  alter column recipient_department set default 'BOTH',
+  alter column recipient_department set not null;
+alter table ss_orders drop constraint if exists ss_orders_recipient_department_check;
+alter table ss_orders add constraint ss_orders_recipient_department_check
+  check (recipient_department in ('WAREHOUSE', 'PURCHASING', 'BOTH'));
+create index if not exists ss_orders_recipient_unread_idx
+  on ss_orders (recipient_department, recipient_read_at)
+  where recipient_read_at is null;
+
+-- เติมสถานะเริ่มต้นให้ Order เก่า และป้องกัน Order ใหม่มีสถานะว่าง
+update ss_orders
+set
+  arrived_branch = coalesce(nullif(btrim(arrived_branch), ''), 'ยังไม่ถึง'),
+  customer_notified = coalesce(nullif(btrim(customer_notified), ''), 'ยังไม่แจ้ง'),
+  delivered = coalesce(nullif(btrim(delivered), ''), 'ยังไม่ส่งมอบ')
+where arrived_branch is null or btrim(arrived_branch) = ''
+   or customer_notified is null or btrim(customer_notified) = ''
+   or delivered is null or btrim(delivered) = '';
+
+alter table ss_orders
+  alter column arrived_branch set default 'ยังไม่ถึง',
+  alter column arrived_branch set not null,
+  alter column customer_notified set default 'ยังไม่แจ้ง',
+  alter column customer_notified set not null,
+  alter column delivered set default 'ยังไม่ส่งมอบ',
+  alter column delivered set not null;
+
+-- เริ่มนับอายุ 1 เดือนเมื่อยืนยันครบทั้ง 3 ตรา และหยุดนับทันทีเมื่อยกเลิกตราใดตราหนึ่ง
+create or replace function ss_track_order_workflow_completion()
+returns trigger language plpgsql set search_path = public as $$
+declare
+  all_steps_done boolean :=
+    upper(trim(coalesce(new.branch, ''))) in ('SRC', 'KKL', 'SSS')
+    and coalesce(new.arrived_branch, '') like '%แล้ว%'
+    and coalesce(new.arrived_branch, '') not like '%ยังไม่%'
+    and coalesce(new.customer_notified, '') like '%แล้ว%'
+    and coalesce(new.customer_notified, '') not like '%ยังไม่%'
+    and coalesce(new.delivered, '') like '%แล้ว%'
+    and coalesce(new.delivered, '') not like '%ยังไม่%';
+  old_all_steps_done boolean := false;
+begin
+  if tg_op = 'UPDATE' then
+    old_all_steps_done :=
+      upper(trim(coalesce(old.branch, ''))) in ('SRC', 'KKL', 'SSS')
+      and coalesce(old.arrived_branch, '') like '%แล้ว%'
+      and coalesce(old.arrived_branch, '') not like '%ยังไม่%'
+      and coalesce(old.customer_notified, '') like '%แล้ว%'
+      and coalesce(old.customer_notified, '') not like '%ยังไม่%'
+      and coalesce(old.delivered, '') like '%แล้ว%'
+      and coalesce(old.delivered, '') not like '%ยังไม่%';
+  end if;
+
+  if all_steps_done then
+    if tg_op = 'INSERT' then
+      new.workflow_completed_at := now();
+    elsif not old_all_steps_done or old.workflow_completed_at is null then
+      new.workflow_completed_at := now();
+    else
+      new.workflow_completed_at := old.workflow_completed_at;
+    end if;
+  else
+    new.workflow_completed_at := null;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists ss_track_order_workflow_completion_trigger on ss_orders;
+create trigger ss_track_order_workflow_completion_trigger
+before insert or update of branch, arrived_branch, customer_notified, delivered, workflow_completed_at
+on ss_orders for each row execute function ss_track_order_workflow_completion();
+
+-- รายการที่ครบอยู่ก่อนติดตั้ง เริ่มนับ 1 เดือนตั้งแต่วันที่รัน SQL นี้
+update ss_orders set workflow_completed_at = now()
+where workflow_completed_at is null
+  and upper(trim(coalesce(branch, ''))) in ('SRC', 'KKL', 'SSS')
+  and arrived_branch like '%แล้ว%' and arrived_branch not like '%ยังไม่%'
+  and customer_notified like '%แล้ว%' and customer_notified not like '%ยังไม่%'
+  and delivered like '%แล้ว%' and delivered not like '%ยังไม่%';
+
+create index if not exists ss_orders_workflow_completed_at_idx
+  on ss_orders (workflow_completed_at) where workflow_completed_at is not null;
 notify pgrst, 'reload schema';
 
 -- ── 2) Request Item — ขอสินค้าที่ไม่มีในสต๊อก ─────────────────
@@ -144,21 +246,240 @@ create table if not exists ss_tickets (
   status      text                          -- 4.6 Status
 );
 
+-- ── 5) BackOrder — สินค้าค้างส่ง (ABC ≠ P) ────────────────────
+-- เห็นเฉพาะโปรไฟล์สาขาและคลังสินค้า · จัดซื้อไม่เห็นเมนูนี้
+-- ⚠️ ค่า default ของ 3 สถานะต้องสะกดตรงกับ ss_orders เป๊ะ ๆ
+--    เพราะ stepDone() ฝั่งเว็บตัดสินด้วยการหาคำว่า "แล้ว" ในสตริง
+-- ⚠️ `unit` = หน่วยของ barcode ที่สแกน/เลือกตอนสร้าง (ใน products 1 barcode ผูก 1 หน่วยเสมอ)
+--    ส่วนตัวเลขคงเหลือในคอลัมน์ "คลังมีสินค้า" ดึงสดจาก stock ซึ่ง**นับด้วยหน่วยเล็กสุดเสมอ**
+--    จึงอาจคนละหน่วยกับคอลัมน์นี้ เช่น SKU 100098 คลังมี 530 แผง แต่สแกนบาร์โค้ดกล่องมาก็เก็บ 'กล่อง'
+create table if not exists ss_backorders (
+  id                uuid primary key default gen_random_uuid(),
+  sku               text,                                  -- 5.1 SKU
+  product_name      text,                                  -- 5.2 ชื่อสินค้า
+  unit              text,                                  -- 5.3 หน่วยตามบาร์โค้ดที่สแกน/เลือก
+  pending_qty       numeric,                               -- 5.3.1 ค้างส่งลูกค้า (สาขากรอกในฟอร์ม)
+  branch            text not null check (branch in ('SRC', 'KKL', 'SSS')),
+  customer_name     text,                                  -- 5.4 ชื่อลูกค้า
+  paid_date         date,                                  -- 5.5 วันที่ลูกค้าชำระ
+  sale_bill_no      text,                                  -- 5.6 เลขที่บิล
+  pickup_date       date,                                  -- 5.7 วันที่นัดรับ
+  note              text,                                  -- 5.8 หมายเหตุ
+  outbound_date     date,                                  -- 5.9 Outbound วันที่ส่งของ (คลังกรอก)
+  transfer_no       text,                                  -- 5.10 เลขโอนสินค้า/เลขจัดส่ง (คลังกรอก)
+  arrived_branch    text not null default 'ยังไม่ถึง',      -- 5.11 ของถึงสาขา
+  customer_notified text not null default 'ยังไม่แจ้ง',     -- 5.12 แจ้งลูกค้า
+  delivered         text not null default 'ยังไม่ส่งมอบ',   -- 5.13 ส่งมอบสินค้า
+  created_at        timestamptz not null default now()
+);
+
+alter table ss_backorders add column if not exists unit text;
+alter table ss_backorders add column if not exists transfer_no text;
+alter table ss_backorders add column if not exists pending_qty numeric;
+
+create index if not exists ss_backorders_branch_created_idx
+  on ss_backorders (branch, created_at desc);
+
 -- ── RLS: ให้ anon key อ่าน/เพิ่ม/แก้ไขได้ (เหมือนตารางอื่นของแอป) ──
 alter table ss_orders        enable row level security;
+alter table ss_backorders    enable row level security;
 alter table ss_request_items enable row level security;
 alter table ss_new_products  enable row level security;
 alter table ss_tickets       enable row level security;
 
 drop policy if exists "anon all ss_orders"        on ss_orders;
+drop policy if exists "anon all ss_backorders"    on ss_backorders;
 drop policy if exists "anon all ss_request_items" on ss_request_items;
 drop policy if exists "anon all ss_new_products"  on ss_new_products;
 drop policy if exists "anon all ss_tickets"       on ss_tickets;
 
 create policy "anon all ss_orders"        on ss_orders        for all using (true) with check (true);
+create policy "anon all ss_backorders"    on ss_backorders    for all using (true) with check (true);
 create policy "anon all ss_request_items" on ss_request_items for all using (true) with check (true);
 create policy "anon all ss_new_products"  on ss_new_products  for all using (true) with check (true);
 create policy "anon all ss_tickets"       on ss_tickets       for all using (true) with check (true);
+
+-- ── แจ้งเตือนหน้า SaleSupport แยกตามสาขา ─────────────────────
+-- last_update_at อัปเดตเมื่อคลัง/จัดซื้อแก้ข้อมูล
+-- last_read_at อัปเดตเมื่อสาขาเปิดแผงประวัติแจ้งเตือน
+create table if not exists ss_branch_notifications (
+  branch         text primary key check (branch in ('SRC', 'KKL', 'SSS')),
+  last_update_at timestamptz,
+  last_read_at   timestamptz
+);
+
+insert into ss_branch_notifications (branch)
+values ('SRC'), ('KKL'), ('SSS')
+on conflict (branch) do nothing;
+
+alter table ss_branch_notifications enable row level security;
+drop policy if exists "anon all ss_branch_notifications" on ss_branch_notifications;
+create policy "anon all ss_branch_notifications" on ss_branch_notifications
+  for all using (true) with check (true);
+
+create table if not exists ss_branch_notification_events (
+  id          uuid primary key default gen_random_uuid(),
+  branch      text not null check (branch in ('SRC', 'KKL', 'SSS')),
+  actor_code  text not null check (actor_code in ('WAREHOUSE', 'PURCHASING')),
+  menu_id     text not null,
+  table_name  text not null,
+  record_id   text,
+  title       text not null,
+  detail      text,
+  item_sku    text,
+  item_name   text,
+  created_at  timestamptz not null default now(),
+  read_at     timestamptz
+);
+
+alter table ss_branch_notification_events add column if not exists item_sku text;
+alter table ss_branch_notification_events add column if not exists item_name text;
+
+create index if not exists ss_branch_notification_events_branch_created_idx
+  on ss_branch_notification_events (branch, created_at desc);
+create index if not exists ss_branch_notification_events_unread_idx
+  on ss_branch_notification_events (branch, read_at) where read_at is null;
+
+alter table ss_branch_notification_events enable row level security;
+drop policy if exists "anon all ss_branch_notification_events" on ss_branch_notification_events;
+create policy "anon all ss_branch_notification_events" on ss_branch_notification_events
+  for all using (true) with check (true);
+
+create or replace function ss_create_branch_notifications(
+  target_branches text[], target_actor_code text, target_menu_id text,
+  target_table_name text, target_record_id text, event_title text, event_detail text,
+  event_item_sku text, event_item_name text
+)
+returns void language plpgsql security invoker set search_path = public as $$
+declare event_time timestamptz := now();
+begin
+  insert into ss_branch_notification_events
+    (branch, actor_code, menu_id, table_name, record_id, title, detail, item_sku, item_name, created_at)
+  select distinct
+    upper(trim(value)),
+    case when upper(trim(target_actor_code)) = 'WAREHOUSE' then 'WAREHOUSE' else 'PURCHASING' end,
+    coalesce(nullif(trim(target_menu_id), ''), 'salesupport'),
+    coalesce(nullif(trim(target_table_name), ''), 'unknown'),
+    nullif(trim(target_record_id), ''),
+    coalesce(nullif(trim(event_title), ''), 'อัปเดตข้อมูล'),
+    nullif(trim(event_detail), ''),
+    nullif(trim(event_item_sku), ''),
+    nullif(trim(event_item_name), ''),
+    event_time
+  from unnest(coalesce(target_branches, array[]::text[])) as branches(value)
+  where upper(trim(value)) in ('SRC', 'KKL', 'SSS');
+
+  insert into ss_branch_notifications (branch, last_update_at)
+  select distinct upper(trim(value)), event_time
+  from unnest(coalesce(target_branches, array[]::text[])) as branches(value)
+  where upper(trim(value)) in ('SRC', 'KKL', 'SSS')
+  on conflict (branch) do update set last_update_at = excluded.last_update_at;
+end;
+$$;
+
+-- Keep the legacy signature for older frontend versions during deployment.
+create or replace function ss_create_branch_notifications(
+  target_branches text[], target_actor_code text, target_menu_id text,
+  target_table_name text, target_record_id text, event_title text, event_detail text
+)
+returns void language plpgsql security invoker set search_path = public as $$
+begin
+  perform ss_create_branch_notifications(
+    target_branches, target_actor_code, target_menu_id, target_table_name,
+    target_record_id, event_title, event_detail, null, null
+  );
+end;
+$$;
+
+create or replace function ss_mark_branch_notifications_read(target_branch text)
+returns void language plpgsql security invoker set search_path = public as $$
+declare
+  read_time timestamptz := now();
+  normalized_branch text := upper(trim(target_branch));
+begin
+  if normalized_branch not in ('SRC', 'KKL', 'SSS') then return; end if;
+  update ss_branch_notification_events set read_at = read_time
+  where branch = normalized_branch and read_at is null;
+  insert into ss_branch_notifications (branch, last_read_at)
+  values (normalized_branch, read_time)
+  on conflict (branch) do update set last_read_at = excluded.last_read_at;
+end;
+$$;
+
+grant select, insert, update on ss_branch_notifications to anon, authenticated;
+grant select, insert, update on ss_branch_notification_events to anon, authenticated;
+grant execute on function ss_create_branch_notifications(text[], text, text, text, text, text, text) to anon, authenticated;
+grant execute on function ss_create_branch_notifications(text[], text, text, text, text, text, text, text, text) to anon, authenticated;
+grant execute on function ss_mark_branch_notifications_read(text) to anon, authenticated;
+
+-- ลบเฉพาะ Order ที่ครบทั้ง 3 ตรามาแล้ว 1 เดือน พร้อมประวัติอัพเดทของ Order นั้น
+create or replace function ss_delete_expired_completed_orders()
+returns bigint language plpgsql security definer set search_path = public as $$
+declare deleted_count bigint;
+begin
+  delete from ss_branch_notification_events as event
+  using ss_orders as order_row
+  where event.table_name = 'ss_orders'
+    and event.record_id = order_row.id::text
+    and order_row.workflow_completed_at < now() - interval '1 month'
+    and upper(trim(coalesce(order_row.branch, ''))) in ('SRC', 'KKL', 'SSS')
+    and order_row.arrived_branch like '%แล้ว%' and order_row.arrived_branch not like '%ยังไม่%'
+    and order_row.customer_notified like '%แล้ว%' and order_row.customer_notified not like '%ยังไม่%'
+    and order_row.delivered like '%แล้ว%' and order_row.delivered not like '%ยังไม่%';
+
+  delete from ss_orders
+  where workflow_completed_at < now() - interval '1 month'
+    and upper(trim(coalesce(branch, ''))) in ('SRC', 'KKL', 'SSS')
+    and arrived_branch like '%แล้ว%' and arrived_branch not like '%ยังไม่%'
+    and customer_notified like '%แล้ว%' and customer_notified not like '%ยังไม่%'
+    and delivered like '%แล้ว%' and delivered not like '%ยังไม่%';
+  get diagnostics deleted_count = row_count;
+  return deleted_count;
+end;
+$$;
+
+revoke all on function ss_delete_expired_completed_orders() from public, anon, authenticated;
+
+-- ทำงานทุกวัน 02:30 น. เวลาไทย (19:30 UTC)
+create extension if not exists pg_cron;
+select cron.schedule(
+  'salesupport-delete-completed-orders-after-one-month',
+  '30 19 * * *',
+  $$select public.ss_delete_expired_completed_orders();$$
+);
+
+do $$
+begin
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime')
+     and not exists (
+       select 1 from pg_publication_tables
+       where pubname = 'supabase_realtime'
+         and schemaname = 'public'
+         and tablename = 'ss_orders'
+     ) then
+    alter publication supabase_realtime add table public.ss_orders;
+  end if;
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime')
+     and not exists (
+       select 1 from pg_publication_tables
+       where pubname = 'supabase_realtime'
+         and schemaname = 'public'
+         and tablename = 'ss_branch_notifications'
+     ) then
+    alter publication supabase_realtime add table public.ss_branch_notifications;
+  end if;
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime')
+     and not exists (
+       select 1 from pg_publication_tables
+       where pubname = 'supabase_realtime'
+         and schemaname = 'public'
+         and tablename = 'ss_branch_notification_events'
+     ) then
+    alter publication supabase_realtime add table public.ss_branch_notification_events;
+  end if;
+end $$;
+
+notify pgrst, 'reload schema';
 
 -- ── Storage bucket สำหรับรูปสินค้าที่แนบ (public อ่านได้ผ่าน URL) ──
 insert into storage.buckets (id, name, public)

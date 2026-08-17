@@ -13,7 +13,7 @@ import { AnimatedLogoText } from './AnimatedLogo';
 import { SearchIcon } from './SearchIcon';
 import { LoginPage } from './LoginPage';
 import { loadAuthProfile, saveAuthProfile, clearAuthProfile, type Profile } from './auth';
-import { PageVisibilityContext, PageNavRow, PAGE_NAV, DEFAULT_VISIBILITY, type PageId, type PageVisibility, type NavHandlers } from './pageAccess';
+import { PageVisibilityContext, PageNotificationContext, PageNavRow, PAGE_NAV, DEFAULT_VISIBILITY, type PageId, type PageVisibility, type NavHandlers } from './pageAccess';
 import './App.css';
 
 // Types
@@ -92,6 +92,21 @@ function guessBranchFromFileName(name: string): string | null {
 }
 
 const CAT_PREFIX_RE = /^\s*(\d{1,2})\s*\./;
+
+/** สิ่งที่กำลังเลือกอยู่บนตาราง — หมวด หรือ กลุ่มชั้นวาง (เลือกได้ทีละอย่าง)
+ *  locGroup เก็บรายชื่อชั้นวางในกลุ่มมาด้วย เพื่อ query ด้วย .in() แบบตรงตัว
+ *  (ไม่ใช้ LIKE 'A%' เพราะถ้าวันหน้ามีกลุ่ม A กับ AB พร้อมกัน prefix จะกินกัน) */
+type CatSelection =
+  | { kind: 'category'; no: number }
+  | { kind: 'locGroup'; prefix: string; locs: string[] };
+
+/** กลุ่มของรหัสชั้นวาง = ตัดเลขท้ายออก — 1A12→1A · U42→U · M2→M · K→K */
+const locationGroupOf = (v: string) => v.replace(/\d+$/, '') || v;
+
+/** เรียงรหัสชั้นวางแบบ natural — string sort ธรรมดาจะได้ M1 M11 M12 M2
+ *  ที่ถูกคือ M1 M2 M3 M11 (ข้อมูลจริงมีทั้ง M2 และ M11 อยู่ด้วยกัน) */
+const compareLocation = (a: string, b: string) =>
+  a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
 
 // ── Barcode generator + cache ────────────────────────────────
 // ⚠️ ต้อง cache: .print-only render ตลอดเวลา (ซ่อนด้วย CSS display:none เท่านั้น)
@@ -354,8 +369,14 @@ const App: React.FC = () => {
 
   // ── เลือกตามหมวด ──
   const [showCategoryMenu, setShowCategoryMenu] = useState(false);
-  const [activeCategory, setActiveCategory] = useState<number | null>(null);
+  const [showLocationMenu, setShowLocationMenu] = useState(false);
+  // เลือกได้ทีละอย่าง — หมวด หรือ location ใช้ตาราง/loader/สถานะชุดเดียวกัน
+  const [activeSel, setActiveSel] = useState<CatSelection | null>(null);
+  const activeCategory = activeSel?.kind === 'category' ? activeSel.no : null;
+  const activeLocGroup = activeSel?.kind === 'locGroup' ? activeSel.prefix : null;
   const [categoryProducts, setCategoryProducts] = useState<Product[]>([]);
+  // รหัสชั้นวางทั้งหมดของสาขา (โหลดครั้งเดียว) — ยุบเป็นกลุ่มตัวอักษรใน locationGroups
+  const [locationOptions, setLocationOptions] = useState<string[] | null>(null);
   // แยกจาก isLoading เพราะ search effect เรียก setIsLoading(false) ตอน early-return
   // ซึ่งจะยิงตอน loadCategory เคลียร์ searchTerm แล้วฆ่า spinner กลางคัน
   const [categoryLoading, setCategoryLoading] = useState(false);
@@ -369,10 +390,79 @@ const App: React.FC = () => {
   const locationFileRef = useRef<HTMLInputElement>(null);
   const [currentPage, setCurrentPage] = useState<PageId>('pricetag');
   const [authProfile, setAuthProfile] = useState<Profile | null>(loadAuthProfile);
+  const [saleSupportUnreadCount, setSaleSupportUnreadCount] = useState(0);
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
   }, [currentPage]);
+
+  // จุดแดงหน้า SaleSupport:
+  // - สาขา: อัพเดทจากคลัง/จัดซื้อที่ยังไม่อ่าน
+  // - คลัง/จัดซื้อ: Order ใหม่ที่สาขาส่งให้รหัสนั้นและยังไม่ได้เปิดเมนู Order
+  useEffect(() => {
+    const branch = authProfile?.branch ?? '';
+    const isNotifiedBranch = branch === 'SRC' || branch === 'KKL' || branch === 'SSS';
+    const profileCode = authProfile?.id ?? '';
+    const departmentCode = profileCode === 'WAREHOUSE' || profileCode === 'PURCHASING' ? profileCode : '';
+    if (!isNotifiedBranch && !departmentCode) {
+      setSaleSupportUnreadCount(0);
+      return;
+    }
+
+    let cancelled = false;
+    setSaleSupportUnreadCount(0);
+
+    const loadUnread = async () => {
+      const { count, error } = isNotifiedBranch
+        ? await supabase
+            .from('ss_branch_notification_events')
+            .select('id', { count: 'exact', head: true })
+            .eq('branch', branch)
+            .is('read_at', null)
+        : await supabase
+            .from('ss_orders')
+            .select('id', { count: 'exact', head: true })
+            // 'BOTH' ต้องนับด้วย — SKU ที่หาไม่เจอใน Product Master ตอนบันทึก Order จะได้ recipient_department = 'BOTH'
+            // (กันออเดอร์ไม่มีใครเห็นเลย) ถ้าใช้ .eq() เฉยๆ แถวพวกนี้จะไม่ขึ้นแจ้งเตือนให้ทั้งคลังและจัดซื้อเลย
+            .in('recipient_department', [departmentCode, 'BOTH'])
+            .is('recipient_read_at', null);
+      if (cancelled || error) return;
+      setSaleSupportUnreadCount(count ?? 0);
+    };
+
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') void loadUnread();
+    };
+    void loadUnread();
+    const notificationChannel = isNotifiedBranch
+      ? supabase
+          .channel(`ss-branch-notifications-${branch}`)
+          .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'ss_branch_notifications', filter: `branch=eq.${branch}` },
+            () => { void loadUnread(); },
+          )
+          .subscribe()
+      : supabase
+          .channel(`ss-department-orders-${departmentCode}`)
+          .on(
+            'postgres_changes',
+            // in.() ให้ตรงกับ loadUnread ด้านบน — ต้องรับรู้แถว 'BOTH' ด้วย ไม่ใช่แค่แผนกตัวเอง
+            { event: '*', schema: 'public', table: 'ss_orders', filter: `recipient_department=in.(${departmentCode},BOTH)` },
+            () => { void loadUnread(); },
+          )
+          .subscribe();
+    const timer = window.setInterval(loadUnread, 30_000);
+    window.addEventListener('focus', loadUnread);
+    document.addEventListener('visibilitychange', refreshWhenVisible);
+    return () => {
+      cancelled = true;
+      void supabase.removeChannel(notificationChannel);
+      window.clearInterval(timer);
+      window.removeEventListener('focus', loadUnread);
+      document.removeEventListener('visibilitychange', refreshWhenVisible);
+    };
+  }, [authProfile?.branch, authProfile?.id]);
 
   // ── เปิด/ปิดปุ่มแต่ละหน้า (ตั้งค่าโดย admin, ซิงค์ผ่าน Supabase) ──
   const [pageVisibility, setPageVisibility] = useState<PageVisibility>(DEFAULT_VISIBILITY);
@@ -410,11 +500,15 @@ const App: React.FC = () => {
   // component ไม่ได้ unmount ตอน logout state จึงค้างอยู่ถ้าไม่ล้าง
   useEffect(() => {
     categoryReqRef.current++;
-    setActiveCategory(null);
+    setActiveSel(null);
     setCategoryProducts([]);
     setCategoryError('');
     setCategoryLoading(false);
     setShowCategoryMenu(false);
+    setShowLocationMenu(false);
+    setLocationOptions(null);   // รหัสชั้นวางเป็นของแต่ละสาขา ต้องโหลดใหม่
+    // key เป็น sku-unit ซึ่งข้ามสาขาชนกันได้ ไม่ล้างแล้วสินค้าของสาขาใหม่จะถูกซ่อนโดยไม่มีสาเหตุ
+    setHiddenKeys(new Set());
     setLocationStatus('');
   }, [authProfile?.id]);
 
@@ -664,8 +758,9 @@ const App: React.FC = () => {
         ` · ข้าม ${skipped.toLocaleString()} แถว` +
         (conflicts.length ? ` · ⚠️ ซ้ำคนละหมวด ${conflicts.length}` : '')
       );
-      setCategoryCounts(null);                                            // ล้าง cache badge
-      if (activeCategory !== null) loadCategory(activeCategory, branch);  // reload หมวดที่เปิดอยู่
+      setCategoryCounts(null);              // ล้าง cache badge
+      setLocationOptions(null);             // รหัสชั้นวางอาจเปลี่ยนจากไฟล์ใหม่
+      if (activeSel) loadSelection(activeSel, branch);   // reload สิ่งที่เปิดค้างอยู่
     } catch (e) {
       setLocationStatus(`❌ ${e instanceof Error ? e.message : String(e)}`);
     } finally {
@@ -681,7 +776,7 @@ const App: React.FC = () => {
   const handleSearchChange = (value: string) => {
     // พิมพ์อะไรก็ตาม (รวมถึงลบจนว่าง) = ออกจากโหมดหมวด
     // กันสถานะซ่อนเร้นแบบ "ช่องค้นหาว่างแต่ยังอยู่ในหมวด"
-    if (activeCategory !== null) exitCategory();
+    if (activeSel !== null) exitCategory();
     setSearchInput(value);
     const trimmed = value.trim();
     
@@ -733,8 +828,11 @@ const App: React.FC = () => {
       let query = supabase.from('products').select('*');
 
       if (isSkuSearch) {
-        // Exact match for SKU (6 digits)
-        const { data, error } = await query.eq('sku', search).limit(30);
+        // เลข 6 หลักเป็นได้ทั้ง SKU และ barcode — ค้นทั้งสองคอลัมน์แบบตรงตัว
+        // ⚠️ ห้ามกลับไปใช้ `.eq('sku', …)` อย่างเดียว: ในตารางมี barcode 6 หลัก 1,308 แถว
+        //    ซึ่ง 159 แถวไม่ตรงกับ sku ของตัวเอง (เช่น barcode 109331 = sku 100056)
+        //    ถ้าค้นแค่ sku เลขพวกนี้จะหาไม่เจอเลยทั้งที่มีสินค้าอยู่จริง
+        const { data, error } = await query.or(`sku.eq.${search},barcode.eq.${search}`).limit(30);
         if (!controller.signal.aborted) {
           if (error) {
             console.error('Supabase search error:', error);
@@ -777,14 +875,29 @@ const App: React.FC = () => {
     return () => { clearTimeout(timer); controller.abort(); };
   }, [searchTerm]);
 
+  // จัดรหัสชั้นวางเป็นกลุ่มตามตัวอักษร — 488 รหัสของ SRC ยุบเหลือ 27 ปุ่ม
+  const locationGroups = useMemo(() => {
+    if (!locationOptions) return null;
+    const g = new Map<string, string[]>();
+    for (const v of locationOptions) {
+      const k = locationGroupOf(v);
+      const arr = g.get(k);
+      if (arr) arr.push(v); else g.set(k, [v]);
+    }
+    return [...g.entries()]
+      .map(([prefix, locs]) => ({ prefix, locs }))
+      .sort((a, b) => compareLocation(a.prefix, b.prefix));
+  }, [locationOptions]);
+
   // ลำดับความสำคัญ: category > search > scan
   const visibleProducts = useMemo(() => {
     const strip = (list: Product[]) =>
       list.filter((p: Product) => !hiddenKeys.has(`${p.sku}-${p.unit}`))
           .map((p: Product, i: number) => ({ ...p, rowIndex: i }));
 
-    // category mode — categoryProducts dedupe sku-unit มาแล้วตอน fetch
-    if (activeCategory !== null) return strip(categoryProducts);
+    // โหมดเลือก (หมวด หรือ กลุ่มชั้นวาง) — categoryProducts dedupe sku-unit มาแล้วตอน fetch
+    // ⚠️ ต้องเช็ค activeSel ไม่ใช่ activeCategory ไม่งั้นโหมด location จะตกไป branch search แล้วว่างเปล่า
+    if (activeSel !== null) return strip(categoryProducts);
 
     //  search term  show only filteredProducts
     if (searchTerm.trim()) return strip(filteredProducts);
@@ -796,12 +909,19 @@ const App: React.FC = () => {
       if (!hiddenKeys.has(key)) map.set(key, p);
     }
     return Array.from(map.values()).map((p, i) => ({ ...p, rowIndex: i }));
-  }, [activeCategory, categoryProducts, filteredProducts, hiddenKeys, scannedHistory, searchTerm]);
+  }, [activeSel, categoryProducts, filteredProducts, hiddenKeys, scannedHistory, searchTerm]);
 
   // Auto-add เมื่อค้นหาด้วย barcode ตรง (เช่น สแกนเนอร์)
   useEffect(() => {
     const search = searchTerm.trim();
     if (!search || filteredProducts.length === 0) return;
+    // ⚠️ ได้หลายแถว = คำค้นกำกวม ห้าม auto-add เด็ดขาด
+    //    สินค้า 647 SKU ใช้เลข SKU เป็น barcode ของหน่วยเล็ก (ไม่มี EAN จริง)
+    //    พิมพ์ "100074" จึงตรงทั้ง sku (แผง + กล่อง) และ barcode (แผง)
+    //    ของเดิม auto-add แถวแผงแล้ว setSearchTerm('') ทำให้ตารางตกไปโหมด scan
+    //    เหลือโชว์แถวเดียว — แถวกล่องหายไปทั้งที่ผู้ใช้อาจอยากปริ้นป้ายกล่อง
+    //    ตอนนี้ปล่อยให้แสดงครบทุกหน่วยแล้วให้ผู้ใช้กด 🛒 เลือกเองว่าจะเอาอันไหน
+    if (filteredProducts.length > 1) return;
     const exact = filteredProducts.find(p => p.barcode === search);
     if (!exact) return;
     if (lastAutoAddedBarcode.current === search) return;
@@ -858,22 +978,25 @@ const App: React.FC = () => {
     });
   }, [visibleProducts, rowQty]);
 
-  // ── เลือกตามหมวด: ดึงสินค้าทั้งหมดของหมวดผ่าน view v_products_by_category ──
+  // ── เลือกตามหมวด / ตาม Location: ใช้ view v_products_by_category ตัวเดียวกัน ──
+  // ต่างกันแค่เงื่อนไข filter ที่เหลือ (dedupe, pagination, race token, error) ใช้ร่วมกันหมด
   const exitCategory = useCallback(() => {
     categoryReqRef.current++;          // ยกเลิกคำขอที่ค้างอยู่
-    setActiveCategory(null);
+    setActiveSel(null);
     setCategoryProducts([]);
     setCategoryError('');
     setCategoryLoading(false);
     setShowCategoryMenu(false);
+    setShowLocationMenu(false);
     setHiddenKeys(new Set());
   }, []);
 
-  const loadCategory = useCallback(async (no: number, branch: string) => {
+  const loadSelection = useCallback(async (sel: CatSelection, branch: string) => {
     const token = ++categoryReqRef.current;
     setShowCategoryMenu(false);
+    setShowLocationMenu(false);
     setShowCart(false);
-    setActiveCategory(no);
+    setActiveSel(sel);
     setCategoryProducts([]);
     setCategoryError('');
     setCategoryLoading(true);
@@ -886,11 +1009,12 @@ const App: React.FC = () => {
     const seen = new Set<string>();    // dedupe sku-unit — products มีคู่ซ้ำ 80 คู่
     try {
       for (let from = 0; ; from += PAGE) {
-        const { data, error } = await supabase
+        let q = supabase
           .from('v_products_by_category')
           .select('barcode, sku, name, unit, price, category_name, location')
-          .eq('category_no', no)
-          .eq('branch', branch)
+          .eq('branch', branch);
+        q = sel.kind === 'category' ? q.eq('category_no', sel.no) : q.in('location', sel.locs);
+        const { data, error } = await q
           .order('sku', { ascending: true })
           .order('unit', { ascending: true })
           .order('barcode', { ascending: true })
@@ -925,11 +1049,32 @@ const App: React.FC = () => {
           ? 'schema ไม่ตรง — รัน product-category-setup.sql ใน Supabase ก่อน'
           : (e instanceof Error ? e.message : String(e))
       );
-      setActiveCategory(null);
+      setActiveSel(null);
     } finally {
       if (token === categoryReqRef.current) setCategoryLoading(false);
     }
   }, []);
+
+  // รหัสชั้นวางทั้งหมดของสาขา — ยิงตอนเปิด dropdown, cache ทั้ง session
+  // PostgREST ไม่มี DISTINCT เลยต้องวนอ่านทีละ 1000 (ดึงคอลัมน์เดียว payload เล็ก)
+  const ensureLocationOptions = useCallback(async (branch: string) => {
+    if (locationOptions) return;
+    const found = new Set<string>();
+    for (let from = 0; ; from += 1000) {
+      const { data, error } = await supabase
+        .from('product_category')
+        .select('location')
+        .eq('branch', branch)
+        .range(from, from + 999);
+      if (error || !data) return;      // โหลดไม่ได้ก็ไม่ต้องโชว์รายการ
+      for (const r of data) {
+        const v = String(r.location ?? '').trim();
+        if (v) found.add(v);
+      }
+      if (data.length < 1000) break;
+    }
+    setLocationOptions([...found].sort(compareLocation));
+  }, [locationOptions]);
 
   // นับจำนวนต่อสาขา+หมวด — ยิงตอนเปิด dropdown ไม่ใช่ตอน mount, cache ทั้ง session
   const ensureCategoryCounts = useCallback(async () => {
@@ -983,11 +1128,12 @@ const App: React.FC = () => {
     setSearchTerm('');
     setScannedHistory(new Map());
     categoryReqRef.current++;
-    setActiveCategory(null);
+    setActiveSel(null);
     setCategoryProducts([]);
     setCategoryError('');
     setCategoryLoading(false);
     setShowCategoryMenu(false);
+    setShowLocationMenu(false);
     localStorage.removeItem('cartItems');
     localStorage.removeItem('scannedHistory');
   };
@@ -1228,6 +1374,7 @@ ${sheetsHtml}
 
   return (
     <PageVisibilityContext.Provider value={pageVisibility}>
+    <PageNotificationContext.Provider value={{ salesupport: saleSupportUnreadCount }}>
     <div className="app-container">
       {/* แถบผู้ใช้ปัจจุบัน + ออกจากระบบ (แสดงทุกหน้า) */}
       <div className="app-userbar">
@@ -1285,7 +1432,7 @@ ${sheetsHtml}
           <div className="product-table-wrap" style={{ opacity: (isLoading || categoryLoading) ? 0.5 : 1, transition: 'opacity 0.15s' }}>
               <div className="selected-table-header">
                 <span>
-                  {!searchTerm.trim() && activeCategory === null && scannedHistory.size > 0 && (
+                  {!searchTerm.trim() && activeSel === null && scannedHistory.size > 0 && (
                     <span className="scan-mode-badge"></span>
                   )}
                   {activeCategory !== null && (
@@ -1293,8 +1440,13 @@ ${sheetsHtml}
                       {profileBranch} · หมวด {activeCategory} · {PRODUCT_CATEGORIES.find(c => c.no === activeCategory)?.label}
                     </span>
                   )}
+                  {activeSel?.kind === 'locGroup' && (
+                    <span className="cat-mode-badge">
+                      {profileBranch} · ชั้นวาง {activeSel.prefix} ({activeSel.locs.length} ชั้น)
+                    </span>
+                  )}
                   {categoryLoading
-                    ? 'กำลังโหลดหมวด...'
+                    ? 'กำลังโหลด...'
                     : categoryError
                       ? `❌ ${categoryError}`
                       : <>{visibleProducts.length.toLocaleString()} รายการ {totalItems > 0 && `· เลือกแล้ว ${totalItems.toLocaleString()} (${totalLabels.toLocaleString()} ป้าย)`}</>}
@@ -1311,7 +1463,7 @@ ${sheetsHtml}
                         // (StrictMode เรียกซ้ำ จะทำให้ ensureCategoryCounts ยิง 2 รอบ)
                         const next = !showCategoryMenu;
                         setShowCategoryMenu(next);
-                        if (next) { setShowCart(false); ensureCategoryCounts(); }
+                        if (next) { setShowCart(false); setShowLocationMenu(false); ensureCategoryCounts(); }
                       }}
                     >
                       เลือกตามหมวด{activeCategory !== null ? ` · ${activeCategory}` : ''}
@@ -1333,7 +1485,7 @@ ${sheetsHtml}
                                 key={c.no}
                                 className={`cat-dropdown-item${activeCategory === c.no ? ' is-active' : ''}`}
                                 disabled={categoryLoading || (categoryCounts != null && !n)}
-                                onClick={() => loadCategory(c.no, profileBranch)}
+                                onClick={() => loadSelection({ kind: 'category', no: c.no }, profileBranch)}
                               >
                                 <span className="cat-item-no">{c.no}</span>
                                 <span className="cat-item-label">{c.label}</span>
@@ -1364,12 +1516,73 @@ ${sheetsHtml}
                     )}
                   </div>
                   )}
+
+                  {/* เลือกตาม Location — ใช้ข้อมูล/loader ชุดเดียวกับเลือกตามหมวด */}
+                  {profileBranch && (
+                  <div className="cat-dropdown-wrap">
+                    {showLocationMenu && <div className="cat-overlay" onClick={() => setShowLocationMenu(false)} />}
+                    <button
+                      className={`btn-nav-style${activeLocGroup !== null ? ' btn-nav-style--on' : ''}`}
+                      onClick={() => {
+                        const next = !showLocationMenu;
+                        setShowLocationMenu(next);
+                        if (next) { setShowCart(false); setShowCategoryMenu(false); ensureLocationOptions(profileBranch); }
+                      }}
+                    >
+                      เลือกตาม Location{activeLocGroup !== null ? ` · ${activeLocGroup}` : ''}
+                    </button>
+                    {showLocationMenu && (
+                      <div className="cat-dropdown cat-dropdown--loc">
+                        <div className="cat-dropdown-header">
+                          <span>เลือกตาม Location</span>
+                          <button className="cat-dropdown-close" onClick={() => setShowLocationMenu(false)}>✕</button>
+                        </div>
+                        <div className="cat-branch-locked" title="สาขาล็อกตามผู้ใช้ที่ล็อกอิน">
+                          🔒 สาขา <strong>{profileBranch}</strong>
+                          {locationGroups && (
+                            <span className="cat-loc-total">
+                              {locationGroups.length} กลุ่ม · {locationOptions?.length} ชั้นวาง
+                            </span>
+                          )}
+                        </div>
+                        {locationGroups === null ? (
+                          <div className="cat-dropdown-status">กำลังโหลดรหัสชั้นวาง...</div>
+                        ) : locationGroups.length === 0 ? (
+                          <div className="cat-dropdown-status">
+                            สาขา {profileBranch} ยังไม่มีข้อมูลชั้นวาง — อัปโหลดไฟล์ Location ของสาขานี้ก่อน
+                          </div>
+                        ) : (
+                          <div className="cat-loc-grid">
+                            {locationGroups.map(g => (
+                              <button
+                                key={g.prefix}
+                                className={`cat-loc-chip${activeLocGroup === g.prefix ? ' is-active' : ''}`}
+                                disabled={categoryLoading}
+                                title={`${g.locs.length} ชั้นวาง: ${g.locs.slice(0, 12).join(' ')}${g.locs.length > 12 ? ' ...' : ''}`}
+                                onClick={() => loadSelection({ kind: 'locGroup', prefix: g.prefix, locs: g.locs }, profileBranch)}
+                              >
+                                <span className="cat-loc-name">{g.prefix}</span>
+                                <span className="cat-loc-sub">{g.locs.length}</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        {activeLocGroup !== null && (
+                          <div className="cat-dropdown-footer">
+                            <button className="btn-clear-small" onClick={exitCategory}>ล้าง Location</button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  )}
+
                   <div className="cart-dropdown-wrap">
                     {showCart && <div className="cart-overlay" onClick={() => setShowCart(false)} />}
                     <button className="btn-nav-style" onClick={() => {
                       const next = !showCart;
                       setShowCart(next);
-                      if (next) setShowCategoryMenu(false);
+                      if (next) { setShowCategoryMenu(false); setShowLocationMenu(false); }
                     }}>
                       รายการที่เลือก{totalItems > 0 ? ` (${totalItems})` : ''}
                     </button>
@@ -1675,6 +1888,8 @@ ${sheetsHtml}
           onGoOutbound={() => setCurrentPage('outbound')}
           onGoSaleSupport={() => setCurrentPage('salesupport')}
           isPurchasing={authProfile.id === 'PURCHASING'}
+          isWarehouse={authProfile.group === 'คลังสินค้า'}
+          userBranch={authProfile.branch ?? undefined}
         />
       )}
 
@@ -2002,6 +2217,7 @@ ${sheetsHtml}
         </div>
       )}
     </div>
+    </PageNotificationContext.Provider>
     </PageVisibilityContext.Provider>
   );
 };
