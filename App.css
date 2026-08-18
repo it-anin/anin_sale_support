@@ -3352,6 +3352,19 @@ body.pulse-b .cart-inline-btn.in-cart {
 /* คลังสินค้ากดแล้ว = แถวนี้ถูกแจ้งว่าของหมด (กดซ้ำเพื่อยกเลิก) */
 .outbound-del-btn--active { background: rgba(176, 74, 58, 0.16); color: #8f3626; font-weight: 700; }
 
+/* ฝั่งคลังสินค้ามี 2 ปุ่มในเซลล์เดียว: ✕ = แจ้งของหมด (กดซ้ำยกเลิกได้) · 🗑️ = ลบทิ้งถาวร (ต้องใส่รหัส) */
+.outbound-del-cell { display: inline-flex; align-items: center; gap: 4px; }
+.outbound-del-btn svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vertical-align: middle;
+}
+
 /* ตราประทับ "ของหมด ✕" — คลังสินค้ากด ✕ แล้วสาขาจะเห็นตราประทับนี้
    ทรงเดียวกับ .outbound-approved-stamp แต่เป็นสีแดง (เอียงคนละทางให้แยกออกจากกันชัด) */
 .outbound-outofstock-mark {

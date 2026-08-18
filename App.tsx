@@ -1880,6 +1880,7 @@ ${sheetsHtml}
           onGoOutbound={() => setCurrentPage('outbound')}
           onGoSaleSupport={() => setCurrentPage('salesupport')}
           isWarehouse={authProfile.group === 'คลังสินค้า'}
+          isPurchasing={authProfile.id === 'PURCHASING'}
           userBranch={authProfile.group === 'สาขา' ? authProfile.id : undefined}
         />
       )}
