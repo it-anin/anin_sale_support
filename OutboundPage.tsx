@@ -30,6 +30,8 @@ interface OutboundRow {
   outOfStock: boolean;
   stockQty?: string;     // จำนวนคงเหลือในคลังสินค้า ('' = ไม่มีในสต็อค) — ไม่ persist ดึงสดทุกครั้ง
   stockChecked?: boolean; // เช็คสต็อคแล้วหรือยัง — ไม่ persist
+  // หน่วยทั้งหมดที่ SKU นี้มี (แผง/กล่อง ฯลฯ) ใช้ทำ dropdown คอลัมน์ Unit — ไม่ persist ดึงสดทุกครั้ง
+  unitOptions?: { unit: string; barcode: string }[];
   persisted: boolean;    // แถวนี้ insert ลง Supabase แล้วหรือยัง (false = ยัง local-only)
 }
 
@@ -163,6 +165,30 @@ export function OutboundPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGo
     }));
   };
 
+  // ดึงหน่วยทั้งหมดของแต่ละ SKU มาเป็นตัวเลือกใน dropdown คอลัมน์ Unit (pattern เดียวกับ refreshStock)
+  // ⚠️ จำเป็นเพราะ unitOptions ไม่ได้เก็บใน outbound_requests — คนที่เปิดหน้ามาทีหลัง (หรือหลัง refetch)
+  // จะไม่มีตัวเลือกให้กดเลย ถ้าไม่ดึงใหม่ทุกครั้งที่โหลดแถว
+  const refreshUnitOptions = async (skus: string[]) => {
+    const unique = [...new Set(skus.map(s => s.trim()).filter(Boolean))];
+    if (unique.length === 0) return;
+    const { data, error } = await supabase.from('products').select('sku, unit, barcode').in('sku', unique);
+    if (error) return;
+    const map = new Map<string, { unit: string; barcode: string }[]>();
+    for (const r of data ?? []) {
+      const key = String(r.sku ?? '').trim();
+      const unit = String(r.unit ?? '').trim();
+      if (!key || !unit) continue;
+      const list = map.get(key) ?? [];
+      if (!list.some(o => o.unit === unit)) list.push({ unit, barcode: String(r.barcode ?? '') });
+      map.set(key, list);
+    }
+    setRows(prev => prev.map(r => {
+      const key = r.sku.trim();
+      if (!key) return r;
+      return { ...r, unitOptions: map.get(key) ?? [] };
+    }));
+  };
+
   // โหลดแถวจาก Supabase ตาม role + subscribe realtime ให้ทุกโปรไฟล์เห็นข้อมูลเดียวกันสด ๆ
   // สาขาเห็นเฉพาะของตัวเอง · คลังสินค้า/จัดซื้อเห็นทุกสาขา (จัดซื้อดูอย่างเดียว ดูข้อ isPurchasing ด้านล่าง)
   useEffect(() => {
@@ -177,10 +203,18 @@ export function OutboundPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGo
       if (cancelled || error) return;
       const fetched = (data ?? []).map(rowFromDb);
       setRows(prev => {
+        // คงค่าที่ไม่ได้เก็บใน DB (คงเหลือคลัง + ตัวเลือกหน่วย) ของแถวเดิมไว้ ไม่งั้นทุก refetch (ทุก 30 วิ/realtime)
+        // dropdown หน่วยจะกลายเป็นข้อความแวบนึงแล้วค่อยกลับมา และเลขคงเหลือจะกะพริบหายทุกครั้ง
+        const prevById = new Map(prev.map(r => [r.id, r]));
+        const merged = fetched.map(r => {
+          const old = prevById.get(r.id);
+          return old ? { ...r, stockQty: old.stockQty, stockChecked: old.stockChecked, unitOptions: old.unitOptions } : r;
+        });
         const drafts = prev.filter(r => !r.persisted);
-        return [...fetched, ...drafts];
+        return [...merged, ...drafts];
       });
       void refreshStock(fetched.map(r => r.sku));
+      void refreshUnitOptions(fetched.map(r => r.sku));
     };
 
     void fetchRows();
@@ -243,7 +277,8 @@ export function OutboundPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGo
       const { data, error } = await supabase.from('outbound_requests').insert(body).select().single();
       if (error || !data) { window.alert(`บันทึกไม่สำเร็จ: ${error?.message ?? 'ไม่ทราบสาเหตุ'}`); return; }
       const saved = rowFromDb(data as DbOutboundRow);
-      setRows(prev => prev.map(r => (r.id === id ? { ...saved, stockQty: r.stockQty, stockChecked: r.stockChecked } : r)));
+      // `saved` มาจาก rowFromDb ซึ่งไม่มีค่าที่ไม่ได้เก็บใน DB — ต้องยกมาจากแถวเดิมเอง ไม่งั้น dropdown หน่วยหายทันทีหลัง insert
+      setRows(prev => prev.map(r => (r.id === id ? { ...saved, stockQty: r.stockQty, stockChecked: r.stockChecked, unitOptions: merged.unitOptions ?? r.unitOptions } : r)));
     } else {
       const { error } = await supabase.from('outbound_requests').update(body).eq('id', merged.id);
       if (error) { window.alert(`บันทึกไม่สำเร็จ: ${error.message}`); return; }
@@ -256,12 +291,30 @@ export function OutboundPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGo
     const q = term.trim();
     if (!q) return null;
 
+    // ⚠️ ห้ามใส่ .limit(1) — สินค้าตัวเดียวกันมีได้หลายหน่วย (แผง/กล่อง) เป็นคนละแถวใน products
+    // คนละ barcode คนละราคา · เอามาให้ครบเพื่อทำ dropdown เลือกหน่วยในคอลัมน์ Unit (เหมือนหน้าป้ายราคาที่โชว์ทุกหน่วย)
     const { data: pdata } = await supabase
       .from('products')
       .select('sku, barcode, name, unit')
-      .or(`sku.eq.${q},barcode.eq.${q}`)
-      .limit(1);
-    const product = pdata?.[0];
+      .or(`sku.eq.${q},barcode.eq.${q}`);
+    let matches = pdata ?? [];
+
+    // พิมพ์/สแกน barcode มา → ได้แถวเดียวเฉพาะหน่วยนั้น ต้องดึงหน่วยพี่น้องของ SKU เดียวกันมาด้วย
+    // ไม่งั้นสาขาที่สแกนกล่องมาจะสลับไปเบิกแผงไม่ได้
+    if (matches.length === 1 && matches[0]?.sku) {
+      const { data: siblings } = await supabase
+        .from('products')
+        .select('sku, barcode, name, unit')
+        .eq('sku', matches[0].sku);
+      if (siblings && siblings.length > 1) matches = siblings;
+    }
+
+    // ถ้าค้นด้วย barcode ให้เลือกหน่วยของ barcode นั้นเป็นค่าตั้งต้น ไม่งั้นใช้แถวแรกของ SKU
+    const product = matches.find(r => String(r.barcode ?? '') === q) ?? matches[0];
+    const unitOptions = matches
+      .filter(r => String(r.unit ?? '').trim())
+      .map(r => ({ unit: String(r.unit), barcode: String(r.barcode ?? '') }))
+      .filter((o, i, arr) => arr.findIndex(x => x.unit === o.unit) === i);
 
     // barcode เช็คใน stock ไม่ได้เพราะ stock ไม่มีคอลัมน์ barcode — ใช้เป็น fallback ชื่อ/หน่วยเท่านั้น
     const skuForStock = product?.sku ?? (/^\d+$/.test(q) ? q : null);
@@ -282,10 +335,11 @@ export function OutboundPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGo
         barcode: product?.barcode ?? '',
         name: product?.name ?? stockRow?.name ?? '',
         unit: product?.unit ?? stockRow?.unit ?? '',
+        unitOptions,
         notFound: false,
       };
     }
-    return { name: '', unit: '', notFound: true };
+    return { name: '', unit: '', unitOptions: [], notFound: true };
   };
 
   const commitSkuOrBarcode = async (id: string, field: 'sku' | 'barcode', value: string) => {
@@ -391,8 +445,8 @@ export function OutboundPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGo
 
   // คลังสินค้าลบรายการทิ้งถาวร — ต้องใส่รหัสทุกครั้ง ไม่ใช้ shortcut `unlocked` เหมือนปุ่มอนุมัติ
   // (ลบแล้วกู้คืนไม่ได้ ต่างจากอนุมัติที่ยังแก้ไขสถานะสาขาอื่นต่อได้)
+  // ⚠️ ลบได้แม้แถวจะ approved แล้ว (2569-08-18 กลับกฎเดิมตามคำขอผู้ใช้) — รหัสผ่านทุกครั้งคือด่านกันพลาดเดียวที่เหลืออยู่
   const handleWarehouseDelete = (row: OutboundRow) => {
-    if (row.approved) { window.alert('รายการนี้อนุมัติไปแล้ว ลบไม่ได้'); return; }
     setPwAction('delete');
     setPwInput('');
     setPwError('');
@@ -461,25 +515,26 @@ export function OutboundPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGo
                 </button>
               )}
               {!isPurchasing && (
-                <>
-                  <button className="outbound-3d-btn" onClick={addRow} title="เพิ่มแถว">
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                      <line x1="12" y1="5" x2="12" y2="19" />
-                      <line x1="5" y1="12" x2="19" y2="12" />
-                    </svg>
-                    <span className="outbound-3d-btn-txt">เพิ่มแถว</span>
-                  </button>
-                  <button className="outbound-3d-btn outbound-3d-btn--clear" onClick={() => void clearAll()} title="ล้างทั้งหมด">
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                      <path d="M3 6h18" />
-                      <path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" />
-                      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-                      <line x1="10" y1="11" x2="10" y2="17" />
-                      <line x1="14" y1="11" x2="14" y2="17" />
-                    </svg>
-                    <span className="outbound-3d-btn-txt">ล้างหมด</span>
-                  </button>
-                </>
+                <button className="outbound-3d-btn" onClick={addRow} title="เพิ่มแถว">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+                  <span className="outbound-3d-btn-txt">เพิ่มแถว</span>
+                </button>
+              )}
+              {/* ⚠️ "ล้างหมด" ให้เฉพาะคลังสินค้า — ถ้าสาขากดได้ จะเลี่ยงข้อห้ามลบรายแถวไปลบรวดเดียวทั้งสาขาได้ */}
+              {isWarehouse && (
+                <button className="outbound-3d-btn outbound-3d-btn--clear" onClick={() => void clearAll()} title="ล้างทั้งหมด">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M3 6h18" />
+                    <path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" />
+                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                    <line x1="10" y1="11" x2="10" y2="17" />
+                    <line x1="14" y1="11" x2="14" y2="17" />
+                  </svg>
+                  <span className="outbound-3d-btn-txt">ล้างหมด</span>
+                </button>
               )}
             </div>
           </div>
@@ -553,7 +608,24 @@ export function OutboundPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGo
                       ? <span className="outbound-notfound">ไม่พบสินค้า</span>
                       : row.name || <span className="outbound-hint">สแกน/พิมพ์ SKU หรือ Barcode แล้วกด Enter</span>}
                   </td>
-                  <td className="ob-col-unit">{row.unit}</td>
+                  <td className="ob-col-unit">
+                    {/* สินค้าที่มีหลายหน่วย (เช่น แผง/กล่อง) ให้เลือกได้ — เปลี่ยนหน่วยแล้ว barcode ตามไปด้วยอัตโนมัติ
+                        เพราะแต่ละหน่วยเป็นคนละแถวใน products มีบาร์โค้ด/ราคาของตัวเอง */}
+                    {!isPurchasing && !row.approved && (row.unitOptions?.length ?? 0) > 1 ? (
+                      <select
+                        className="outbound-select"
+                        value={row.unit}
+                        onChange={e => {
+                          const picked = row.unitOptions?.find(o => o.unit === e.target.value);
+                          void persistRow(row.id, { unit: e.target.value, barcode: picked?.barcode ?? row.barcode });
+                        }}
+                      >
+                        {row.unitOptions!.map(o => <option key={o.unit} value={o.unit}>{o.unit}</option>)}
+                      </select>
+                    ) : (
+                      row.unit
+                    )}
+                  </td>
                   <td className="ob-col-stock">
                     {!row.stockChecked || row.notFound ? null
                       : row.stockQty !== '' && row.stockQty !== undefined && Number(row.stockQty) > 0
@@ -629,21 +701,21 @@ export function OutboundPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGo
                         <div className="outbound-pending-mark">รออนุมัติ</div>
                       ) : (
                         <button className="outbound-approve-btn" onClick={() => handleOutboundClick(row)}>
-                          Outbound
+                          บันทึกรายการ
                         </button>
                       )
+                    ) : !row.requested ? (
+                      // สาขายังไม่กด Outbound — ยังไม่มีคำขอให้ตัดสินใจ จึงซ่อนทั้งปุ่มอนุมัติและของหมด
+                      // (กันคลังสินค้าเผลอตอบรายการที่สาขายังกรอกไม่เสร็จ)
+                      <div className="outbound-waiting-mark">รอสาขาส่งรายการ</div>
                     ) : (
                       // คลังสินค้า: ปุ่มตัดสินใจ 2 ทางอยู่คู่กัน — อนุมัติ ↔ ของหมด
                       // ⚠️ "ของหมด" ต้องอยู่ช่องนี้ ไม่ใช่ช่องท้ายแถว เพราะเป็นการตอบคำขอ ไม่ใช่การจัดการแถว
                       // (เดิมใช้ปุ่ม ✕ ท้ายแถวคู่กับถังขยะ แล้วพนักงานสับสนว่าอันไหนลบจริง)
                       <div className="outbound-action-group">
-                        {row.requested ? (
-                          <button className="outbound-ok-btn" onClick={() => handleOutboundClick(row)}>
-                            <span className="outbound-btn-ico">✓</span>อนุมัติ
-                          </button>
-                        ) : (
-                          <span className="outbound-waiting-mark">รอสาขาส่งรายการ</span>
-                        )}
+                        <button className="outbound-ok-btn" onClick={() => handleOutboundClick(row)}>
+                          <span className="outbound-btn-ico">✓</span>อนุมัติ
+                        </button>
                         <button className="outbound-oos-btn" title="แจ้งสาขาว่าสินค้าหมด" onClick={() => toggleOutOfStock(row)}>
                           <span className="outbound-btn-ico">⊘</span>ของหมด
                         </button>
@@ -651,15 +723,15 @@ export function OutboundPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGo
                     )}
                   </td>
                   <td className="ob-col-del">
-                    {/* ช่องนี้ทำหน้าที่เดียวคือ "ลบแถว" ทั้ง 2 โปรไฟล์ — ใช้ไอคอนถังขยะเหมือนกัน
+                    {/* ช่องนี้ทำหน้าที่เดียวคือ "ลบแถว" และ ⚠️ ให้เฉพาะคลังสินค้าเท่านั้น
+                        เหตุผล: กันเบิกซ้ำ — ถ้าสาขาลบแถวที่คลังจ่ายของไปแล้วได้ แล้วลงรายการใหม่ ของจะถูกเบิกออกสองรอบ
+                        สาขาที่ลงผิดต้องแก้ค่าในแถวเดิม (ช่องยังแก้ได้ตราบใดที่ยังไม่อนุมัติ) หรือแจ้งคลังให้ลบให้
                         ⚠️ ห้ามเอา ✕ กลับมาใช้สื่อความหมายอื่นที่นี่อีก (เดิมสาขา ✕ = ลบ แต่คลัง ✕ = ของหมด คนละเรื่องกันจนพนักงานสับสน) */}
-                    {isPurchasing ? null : (
+                    {isWarehouse && (
                       <button
                         className="outbound-del-btn"
-                        title={isWarehouse
-                          ? (row.approved ? 'อนุมัติแล้ว ลบไม่ได้' : 'ลบรายการนี้ทิ้งถาวร (ต้องใส่รหัสผ่าน)')
-                          : 'ลบแถวนี้'}
-                        onClick={() => { if (isWarehouse) handleWarehouseDelete(row); else void removeRow(row.id); }}
+                        title="ลบรายการนี้ทิ้งถาวร (ต้องใส่รหัสผ่าน)"
+                        onClick={() => handleWarehouseDelete(row)}
                       >
                         <svg viewBox="0 0 24 24" aria-hidden="true">
                           <path d="M3 6h18" />

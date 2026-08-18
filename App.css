@@ -3161,8 +3161,9 @@ body.pulse-b .cart-inline-btn.in-cart {
 .outbound-table .ob-col-entered  { width: 9%;  white-space: nowrap; text-align: center; }
 .outbound-table .ob-col-sku      { width: 10%; white-space: nowrap; }
 .outbound-table .ob-col-barcode  { width: 10%; white-space: nowrap; }
-.outbound-table .ob-col-name     { width: 21%; white-space: normal; word-break: break-word; line-height: 1.4; }
-.outbound-table .ob-col-unit     { width: 7%;  white-space: nowrap; }
+.outbound-table .ob-col-name     { width: 18%; white-space: normal; word-break: break-word; line-height: 1.4; }
+/* ⚠️ table-layout: fixed — คอลัมน์นี้ต้องกว้างพอใส่ dropdown เลือกหน่วย (แผง/กล่อง) ไม่ใช่แค่ข้อความ */
+.outbound-table .ob-col-unit     { width: 10%; white-space: nowrap; }
 .outbound-table .ob-col-stock    { width: 12%; white-space: nowrap; text-align: center; }
 .outbound-table .ob-col-qty      { width: 7%;  white-space: nowrap; }
 .outbound-table .ob-col-request-date { width: 11%; white-space: nowrap; }
