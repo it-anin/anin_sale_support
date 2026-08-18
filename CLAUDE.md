@@ -10,8 +10,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 npm run dev       # Start dev server (http://localhost:5200, LAN: http://192.168.x.x:5200)
 npm run build     # TypeScript compile + Vite build
 npm run preview   # Preview production build
-npx vercel --prod # Deploy to Vercel
+npx vercel --prod # Deploy to Vercel (ปกติไม่ต้องรัน — ดูด้านล่าง)
 ```
+
+**Deploy: Vercel ต่อกับ GitHub ไว้แล้ว auto-deploy ทุกครั้งที่ push ขึ้น `master`** (ยืนยัน 2569-08-18: build เสร็จ ~90 วินาทีหลัง push) เว็บจริงคือ https://anin-label.vercel.app/ — ไม่ต้องรัน `npx vercel --prod` เอง (และเครื่อง BigYa-spare รันไม่ได้อยู่แล้วเพราะไม่มีโฟลเดอร์ `.vercel` CLI จะเด้งถาม login แบบโต้ตอบ)
+
+> ⚠️ **ผู้ใช้ทดสอบงานจากเว็บจริง ไม่ใช่ localhost** — ถ้าผู้ใช้บอกว่า "แก้แล้วยังไม่เห็น" **อย่าเพิ่งไล่แก้โค้ดซ้ำ** ให้เช็คตามลำดับนี้ก่อน:
+> 1. `curl -s https://anin-label.vercel.app/ | grep -o 'assets/index-[A-Za-z0-9_-]*\.\(js\|css\)'` → เทียบ hash กับ `dist/assets/` ที่เพิ่ง build
+> 2. CSS hash ตรง = deploy แล้ว · **JS hash ไม่ตรงไม่ได้แปลว่ายังไม่ deploy** — JS มีค่าจาก `.env` ฝังอยู่ Vercel ใช้ค่าของตัวเอง hash เลยต่างเสมอ → ให้ `curl` ไฟล์ JS มา grep หาข้อความใหม่ที่เพิ่งเขียนแทน
+> 3. ยืนยันแล้วว่า deploy จริง → บอกผู้ใช้กด **Ctrl+Shift+R** (F5 เฉยๆ ได้ไฟล์เก่าจาก cache)
 
 ## Architecture
 
@@ -287,7 +294,7 @@ Cart and scan history survive browser close / power loss — no need to re-scan 
 - ⚠️ **SKU/Barcode/Qty เป็น uncontrolled input** (`defaultValue` + `key` ผูกกับค่าปัจจุบัน คอมมิตตอน `onBlur`/Enter) — กัน 2 ปัญหาพร้อมกัน: (1) ไม่ยิง Supabase ทุกตัวอักษรเหมือนที่เคยแก้ไว้กับ MOQ/SKU ของ Request Item (2) กัน realtime refetch จากคนอื่นมาทับค่าที่กำลังพิมพ์อยู่กลางคัน (React ไม่ remount input จนกว่า `key` จะเปลี่ยนคือคอมมิตสำเร็จแล้วเท่านั้น)
 - **แถวใหม่เป็น local-only (`persisted: false`) จนกว่าจะมีการกรอกจริงครั้งแรก** ถึงจะ insert ลง Supabase (กันแถวว่างเปล่าค้างฐานข้อมูลทุกครั้งที่กดเพิ่มแถวเฉยๆ) — insert สำเร็จแล้วสลับ `id` จาก client-generated เป็นของ DB
 - ปุ่ม **Outbound** ต่อแถว (สาขากด) = ส่งขออนุมัติ: ต้องมี sku+name และ qty > 0 → คลังสินค้ากด "อนุมัติ" ใส่รหัส login คลังสินค้า (`WAREHOUSE_PASSWORD` อ่านจาก `auth.ts`, ครั้งแรกครั้งเดียว — unlock ทั้ง session 🔓) → แถวเปลี่ยนเป็น ✅ อนุมัติแล้ว + timestamp พื้นเขียว แก้ไขไม่ได้
-- ⚠️ **ตาราง Outbound ใช้ `table-layout: fixed`** (มาจาก `.product-table` ใน App.css) — ความกว้าง `%` ที่ประกาศต่อคอลัมน์เป็น**ค่าบังคับ ไม่ขยายตามเนื้อหา** เพิ่มปุ่ม/ข้อความในเซลล์ไหนต้องไปเพิ่ม `width` ของคอลัมน์นั้นด้วยเสมอ ไม่งั้นล้นออกไปโดน `overflow: auto` ของ `.outbound-table-wrap` ตัดหายทั้งที่ element อยู่ใน DOM (เคยเกิดกับปุ่มถังขยะตอนคอลัมน์กว้าง 3%)
+- ⚠️ ตารางนี้เป็น `table-layout: fixed` — เพิ่มปุ่ม/ข้อความในเซลล์ไหนต้องขยาย `width` คอลัมน์นั้นด้วยเสมอ **อ่านหัวข้อ "UI — Table Layout" ก่อนแตะโครงตาราง** (ปุ่มถังขยะเคยหายไปทั้งที่โค้ดถูกเพราะข้อนี้)
 - **คอลัมน์ท้ายแถวฝั่งคลังสินค้ามี 2 ปุ่มคนละจุดประสงค์** (`.outbound-del-cell`): `✕` = แจ้งของหมด (toggle กดซ้ำยกเลิกได้ ไม่ต้องใส่รหัส) · 🗑️ = **ลบรายการทิ้งถาวร** — ⚠️ ปุ่มลบ**ต้องใส่รหัสคลังสินค้าทุกครั้ง ไม่ใช้ shortcut `unlocked` ของ session เหมือนปุ่มอนุมัติ** เพราะลบแล้วกู้คืนไม่ได้ · กดที่แถว `approved` แล้ว → alert ปฏิเสธทันที ไม่เปิด modal (ประวัติที่อนุมัติแล้วห้ามลบ) · `pwAction` state เป็นตัวบอก modal ว่าจะ approve หรือ delete — **ต้อง set ก่อน `setPwRowId` เสมอทั้ง 2 จุดเรียก** ไม่งั้นค่าค้างจากการกดครั้งก่อนจะทำผิด action
 - `clearAll` มี `window.confirm` ก่อนล้าง — **ล้างเฉพาะแถวของสาขาที่กำลังดูอยู่ (`activeBranch`) เท่านั้น** ⚠️ ห้ามล้างทุกสาขาทีเดียว (คลังสินค้าเห็นได้หลายสาขาผ่านแท็บ ถ้าล้างแบบเดิมที่ล้างทั้ง state จะลบของสาขาอื่นที่ไม่ได้กำลังดูไปด้วย — คนละพฤติกรรมกับตอนเก็บ localStorage ที่แต่ละเบราว์เซอร์เห็นแค่สาขาตัวเองอยู่แล้ว)
 - ปุ่ม เพิ่มแถว / ล้างทั้งหมด (`.outbound-3d-btn`) และ Outbound (`.outbound-approve-btn`) ใช้สไตล์ **Luxe Double Border** โทนฟ้า: พื้นขาว ขอบ `#4891db` 2 ชั้น (border + outline) → hover พื้น `#2d6cad` ตัวอักษรขาว
@@ -312,6 +319,19 @@ Two separate `.live-preview-panel` blocks, each rendered **conditionally**:
 2. **ป้ายบาร์โค้ด** — shows only when `previewBarcodeProduct != null` (click 🔍 in ปริ้นป้ายบาร์โค้ด column)
 
 Each panel has a close (✕) button and includes product name in subheader.
+
+## UI — Table Layout ⚠️ (บทเรียนจากบั๊กจริง 2569-08-18)
+
+**ตารางหลัก 4 หน้าเป็น `table-layout: fixed`** — ป้ายราคา / เช็คสต๊อค / ประวัติลูกค้า / เบิกด่วน ทั้งหมดใช้ class `.product-table` ซึ่งตั้ง `table-layout: fixed` ไว้ที่ [App.css](App.css) (`.stock-table` ตั้งซ้ำอีกชั้น) · **ยกเว้น `.ss-table` ของหน้า Sale Support ที่เป็น auto ปกติ**
+
+ผลที่ตามมา — `width: %` ที่ประกาศต่อคอลัมน์เป็น **ค่าบังคับ ไม่ขยายตามเนื้อหา**:
+- เพิ่มปุ่ม/ข้อความในเซลล์ไหน **ต้องขยาย `width` ของคอลัมน์นั้นด้วยเสมอ** แล้วหั่นจากคอลัมน์อื่นให้ผลรวมเท่าเดิม
+- เนื้อหาที่ล้นจะถูก `overflow: auto` ของ wrapper ตัดหาย **ทั้งที่ element อยู่ใน DOM ครบและ CSS ถูกต้องทุกบรรทัด** → เปิด DevTools เห็น element แต่ตาไม่เห็น
+- `white-space: nowrap` **ไม่ช่วย** ให้คอลัมน์ขยาย (ต่างจาก auto layout ที่ browser จะเผื่อ min-content ให้)
+
+> 🚨 **กับดักที่เคยพลาดจริง — ห้ามอนุมานซ้ำ:** ผลรวม `%` ของคอลัมน์ที่ประกาศไว้ **เกิน 100% (เช่น `.outbound-table` รวมได้ 109%) ไม่ได้แปลว่าตารางเป็น auto layout** — มันแค่เขียนไว้เกินแล้ว browser normalize ให้เอง · เคยอนุมานจากตรงนี้ว่า "ไม่ต้องแก้ความกว้างคอลัมน์" แล้วปุ่มถังขยะหน้า Outbound หายไปเลย (คอลัมน์ 3% ≈ 36px แต่ปุ่ม 2 อันต้องใช้ ~54px) เสียเวลาไล่หา 3 รอบเพราะทุกอย่างที่เช็ค "ผ่าน" หมด — JS มี, CSS มี, deploy แล้ว, ข้อมูลลง DB จริง
+>
+> **วิธีที่ถูก: `grep -n "table-layout" App.css` แล้วไล่ดูว่า base class ของตารางนั้นตั้งอะไรไว้ ก่อนสรุปพฤติกรรม layout ทุกครั้ง**
 
 ## UI — Misc
 
