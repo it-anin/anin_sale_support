@@ -225,6 +225,10 @@ export function OutboundPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGo
     }));
   };
 
+  // "กรอกจริงแล้วหรือยัง" — ใช้ตัดสินว่าแถวร่างควรถูก insert ลง Supabase ได้หรือยัง
+  // ⚠️ วันที่เบิกไม่นับเป็นเนื้อหา เพราะ makeRow เติมวันที่วันนี้ให้ทุกแถวใหม่อยู่แล้ว
+  const hasContent = (r: OutboundRow) => Boolean(r.sku.trim() || r.barcode.trim() || r.name.trim() || r.qty.trim());
+
   // เซฟจริงลง Supabase — แถวใหม่ (persisted=false) จะ insert ครั้งแรก แล้วสลับ id เป็นของ DB
   // แถวที่มีอยู่แล้วจะ update ตาม id — เรียกตอน blur/Enter/กดปุ่ม ไม่ใช่ทุก keystroke
   const persistRow = async (id: string, patch: Partial<OutboundRow> = {}) => {
@@ -233,6 +237,9 @@ export function OutboundPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGo
     const merged: OutboundRow = { ...current, ...patch };
     const body = toDbBody(merged);
     if (!merged.persisted) {
+      // ⚠️ ยังว่างอยู่ → เก็บไว้ใน state เฉย ๆ ห้าม insert
+      // (blur ช่อง SKU/Barcode/Qty ที่ยังว่าง หรือแตะช่องวันที่ ก็เรียกฟังก์ชันนี้ — เคยทำให้แถวเปล่าค้างฐานข้อมูลจริงมาแล้ว)
+      if (!hasContent(merged)) { setRows(prev => prev.map(r => (r.id === id ? merged : r))); return; }
       const { data, error } = await supabase.from('outbound_requests').insert(body).select().single();
       if (error || !data) { window.alert(`บันทึกไม่สำเร็จ: ${error?.message ?? 'ไม่ทราบสาเหตุ'}`); return; }
       const saved = rowFromDb(data as DbOutboundRow);
