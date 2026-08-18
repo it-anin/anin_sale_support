@@ -301,18 +301,29 @@ export function OutboundPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGo
     return [...prev, makeRow(formatDocumentNo(nextNo), activeBranch)];
   });
 
-  const removeRow = (id: string) => {
+  const dropRowLocally = (id: string) => setRows(prev => {
+    const next = prev.filter(r => r.id !== id);
+    return next.length > 0 ? next : [makeRow('0001', activeBranch)];
+  });
+
+  // ⚠️ ต้องรอผลลบจาก Supabase ให้สำเร็จก่อนค่อยเอาแถวออกจากหน้าจอ — ห้าม optimistic
+  // บั๊กเดิม (2569-08-18): ยิง `void supabase.delete()` แบบไม่รอผล/ไม่เช็ค error แล้วลบออกจาก state ทันที
+  // → ถ้าคำสั่งไม่สำเร็จ หน้าจอบอกว่าลบแล้วแต่ DB ยังมีอยู่ พอ refresh แถวก็กลับมา ไม่มีอะไรเตือนเลย
+  // และเช็ค id ว่าขึ้นต้น `local-` ไหมแทนการเชื่อ flag `persisted` อย่างเดียว (flag เพี้ยน = ข้ามการลบเงียบ ๆ)
+  const removeRow = async (id: string) => {
     const target = rows.find(r => r.id === id);
-    setRows(prev => {
-      const next = prev.filter(r => r.id !== id);
-      return next.length > 0 ? next : [makeRow('0001', activeBranch)];
-    });
-    if (target?.persisted) {
-      void supabase.from('outbound_requests').delete().eq('id', id);
+    const isDraft = id.startsWith('local-') && !target?.persisted;
+    if (isDraft) { dropRowLocally(id); return; }   // แถวร่างที่ยังไม่เคยลง DB — ลบจาก state ได้เลย
+
+    const { data, error } = await supabase.from('outbound_requests').delete().eq('id', id).select('id');
+    if (error) { window.alert(`ลบไม่สำเร็จ: ${error.message}\nแถวนี้ยังอยู่ในระบบ`); return; }
+    if (!data || data.length === 0) {
+      window.alert('ไม่พบรายการนี้ในฐานข้อมูลแล้ว (อาจมีคนอื่นลบไปก่อน) — จะเอาออกจากหน้าจอให้');
     }
+    dropRowLocally(id);
   };
 
-  // คลังสินค้ากด ✕ = แจ้งว่าของหมด (ไม่ใช่ลบแถว) — กดซ้ำเพื่อยกเลิกสถานะ
+  // คลังสินค้ากดปุ่ม [⊘ ของหมด] = แจ้งว่าของหมด (ไม่ใช่ลบแถว) — ยกเลิกได้ที่ลิงก์ใต้ตราประทับ
   const toggleOutOfStock = (row: OutboundRow) => {
     if (row.approved) { window.alert('รายการนี้อนุมัติไปแล้ว'); return; }
     void persistRow(row.id, { outOfStock: !row.outOfStock });
@@ -320,13 +331,15 @@ export function OutboundPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGo
 
   // ล้างเฉพาะแถวของสาขาที่กำลังดูอยู่ (activeBranch) เท่านั้น — ⚠️ ห้ามล้างทุกสาขา
   // ตอนนี้ rows ของคลัง/จัดซื้อมีข้อมูลทุกสาขาปนกัน ถ้าล้างแบบเดิม (ล้างทั้ง state) จะลบของสาขาอื่นที่ไม่ได้กำลังดูไปด้วย
-  const clearAll = () => {
+  // ⚠️ รอผลลบให้สำเร็จก่อนล้างออกจากหน้าจอ เหตุผลเดียวกับ removeRow (ห้าม optimistic)
+  const clearAll = async () => {
     if (!window.confirm(`ลบรายการเบิกทั้งหมดของสาขา ${activeBranch}?`)) return;
-    const idsToDelete = rows.filter(r => r.branch === activeBranch && r.persisted).map(r => r.id);
-    setRows(prev => [...prev.filter(r => r.branch !== activeBranch), makeRow('0001', activeBranch)]);
+    const idsToDelete = rows.filter(r => r.branch === activeBranch && !r.id.startsWith('local-')).map(r => r.id);
     if (idsToDelete.length > 0) {
-      void supabase.from('outbound_requests').delete().in('id', idsToDelete);
+      const { error } = await supabase.from('outbound_requests').delete().in('id', idsToDelete);
+      if (error) { window.alert(`ลบไม่สำเร็จ: ${error.message}\nรายการยังอยู่ในระบบ`); return; }
     }
+    setRows(prev => [...prev.filter(r => r.branch !== activeBranch), makeRow('0001', activeBranch)]);
   };
 
   const exportXlsx = () => {
@@ -390,7 +403,7 @@ export function OutboundPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGo
     if (pwInput === WAREHOUSE_PASSWORD) {
       setUnlocked(true);
       if (pwRowId) {
-        if (pwAction === 'delete') removeRow(pwRowId);
+        if (pwAction === 'delete') void removeRow(pwRowId);
         else approveRow(pwRowId);
       }
       setPwRowId(null);
@@ -456,7 +469,7 @@ export function OutboundPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGo
                     </svg>
                     <span className="outbound-3d-btn-txt">เพิ่มแถว</span>
                   </button>
-                  <button className="outbound-3d-btn outbound-3d-btn--clear" onClick={clearAll} title="ล้างทั้งหมด">
+                  <button className="outbound-3d-btn outbound-3d-btn--clear" onClick={() => void clearAll()} title="ล้างทั้งหมด">
                     <svg viewBox="0 0 24 24" aria-hidden="true">
                       <path d="M3 6h18" />
                       <path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" />
@@ -646,7 +659,7 @@ export function OutboundPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGo
                         title={isWarehouse
                           ? (row.approved ? 'อนุมัติแล้ว ลบไม่ได้' : 'ลบรายการนี้ทิ้งถาวร (ต้องใส่รหัสผ่าน)')
                           : 'ลบแถวนี้'}
-                        onClick={() => (isWarehouse ? handleWarehouseDelete(row) : removeRow(row.id))}
+                        onClick={() => { if (isWarehouse) handleWarehouseDelete(row); else void removeRow(row.id); }}
                       >
                         <svg viewBox="0 0 24 24" aria-hidden="true">
                           <path d="M3 6h18" />

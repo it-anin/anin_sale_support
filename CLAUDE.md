@@ -105,6 +105,15 @@ Six-page React app sharing the same `App.css` and Supabase project.
 | `customer_history` (id, purchase_date, phone, first_name, last_name, sku, product_name, dedupe_key, uploaded_at) | read-only (ไม่มี public write) | มี PII (เบอร์โทร/ชื่อลูกค้า) · upload เป็น incremental ผ่าน `upload-customer-history.mjs` |
 | SaleSupport tables (`ss_orders`, `ss_backorders`, `ss_request_items`, `ss_new_products`, `ss_tickets`, `product_master`, `ss_suppliers`) | anon `for all` | ดูรายละเอียดที่ [`docs/salesupport.md`](docs/salesupport.md) |
 
+### 🚨 `void supabase.from(...)` = คำสั่งไม่เคยถูกส่ง (บั๊กจริง 2569-08-18)
+
+query builder ของ supabase-js เป็น **thenable ไม่ใช่ Promise** — HTTP request จะวิ่งก็ต่อเมื่อมีคนเรียก `.then()` (คือตอน `await` หรือต่อ `.then()` เอง) การเขียน `void supabase.from('t').delete().eq('id', x)` เฉย ๆ จึงสร้าง object ทิ้งไว้แล้วจบ **ไม่มี request ออกไปเลย ไม่มี error ไม่มีอะไรเตือน**
+
+- เคยทำให้ปุ่มลบหน้า Outbound "ลบสำเร็จ" บนหน้าจอแต่แถวไม่เคยหายจาก DB — refresh แล้วกลับมาทุกครั้ง (ยืนยันด้วยการทดสอบจริง: `void ...delete()` → แถวยังอยู่ · `await ...delete()` → หายจริง)
+- ✅ ใช้ `await supabase...` เสมอสำหรับคำสั่งที่เปลี่ยนข้อมูล และเช็ค `error` ทุกครั้ง
+- ✅ `void supabase.removeChannel(ch)` ปลอดภัย (คืน Promise จริง) · `void supabase.from(...)....then(cb)` ปลอดภัย (มี `.then` เรียกให้แล้ว — ดูตัวอย่างที่ `SaleSupportPage.tsx` มาร์ค read_at)
+- ⚠️ **ห้ามลบแถวออกจาก state ก่อนที่ DB จะยืนยันสำเร็จ** (optimistic delete) — ถ้าคำสั่งพัง หน้าจอจะโกหกผู้ใช้ กว่าจะรู้ตัวคือตอน refresh
+
 ## Customer History — Search Behavior
 
 - Debounce 200ms · ค้นหาแบบ search-first (ไม่โหลดตอน mount)
