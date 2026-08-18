@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Outbound Action Buttons — 10 แบบ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Mitr:wght@300;400;500;600&family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: #eef2f6;
+    font-family: 'Noto Sans Thai', sans-serif;
+    color: #24303c;
+    padding: 32px 24px 80px;
+  }
+  .page-head { max-width: 1500px; margin: 0 auto 28px; }
+  .page-head h1 { font-size: 26px; margin: 0 0 6px; font-weight: 700; }
+  .page-head p { margin: 0 0 6px; font-size: 14px; color: #5c6b7a; line-height: 1.7; }
+  .page-head code { background: #dde6ee; padding: 1px 6px; border-radius: 4px; font-family: 'Outfit', monospace; font-size: 13px; }
+  .page-head .note { background: #fff; border-left: 4px solid #4891db; padding: 12px 16px; border-radius: 8px; margin-top: 14px; font-size: 13.5px; line-height: 1.75; }
+
+  .grid {
+    max-width: 1500px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(620px, 1fr));
+    gap: 22px;
+  }
+
+  .design {
+    background: #fff;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 3px 14px rgba(0,0,0,0.08);
+    display: flex;
+    flex-direction: column;
+  }
+  .design-head { padding: 14px 18px 8px; }
+  .design-title { font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+  .design-num {
+    width: 24px; height: 24px; flex-shrink: 0;
+    border-radius: 7px; background: #2d6cad; color: #fff;
+    font-family: 'Outfit', sans-serif; font-size: 12px; font-weight: 700;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .design-desc { font-size: 12.5px; color: #6b7a89; margin-top: 5px; line-height: 1.65; padding-left: 32px; padding-bottom: 12px; }
+
+  /* ===== ตารางจำลองของจริง (.outbound-table) ===== */
+  .stage { background: #f6f9fc; padding: 16px; border-top: 1px solid #eef2f6; }
+  table.mock {
+    width: 100%; border-collapse: collapse; table-layout: fixed;
+    background: #fff; border-radius: 12px; overflow: hidden;
+    font-family: 'Mitr', sans-serif; font-size: 12.5px;
+    box-shadow: 0 1px 6px rgba(0,0,0,.06);
+  }
+  table.mock thead tr { background: linear-gradient(135deg, #7bb5e4, #a9d0f5); color: #fff; }
+  table.mock th { padding: 9px 10px; text-align: left; font-weight: 500; font-size: 11.5px; }
+  table.mock td { padding: 9px 10px; border-top: 1px solid #eef2f6; color: #3c4a58; vertical-align: middle; }
+  .c-sku { width: 15%; } .c-name { width: 33%; } .c-qty { width: 9%; text-align: center; }
+  .c-act { width: 32%; text-align: center; } .c-del { width: 11%; text-align: center; }
+  .mock .nm { color: #24303c; }
+  .mock .muted { color: #9aa7b3; font-size: 11.5px; }
+  .state-tag {
+    display: inline-block; margin: 14px 0 6px; padding: 2px 10px; border-radius: 999px;
+    background: #e4ecf4; color: #5c6b7a; font-size: 11px; font-family: 'Outfit', sans-serif; letter-spacing: .04em;
+  }
+  .state-tag:first-child { margin-top: 0; }
+
+  /* ===== ปุ่มพื้นฐาน (แต่ละแบบ override ทับ) ===== */
+  .act { display: inline-flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap; }
+  .btn-ok, .btn-oos {
+    display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+    padding: 8px 16px; border-radius: 10px;
+    border: 2px dashed transparent;
+    font-family: 'Noto Sans Thai', sans-serif; font-weight: 600; font-size: 12.5px;
+    letter-spacing: .02em; cursor: pointer; white-space: nowrap;
+    transition: all .2s ease;
+  }
+  .btn-ok  { border-color: #9cc4e8; background: #f4f9fe; color: #4a7bab; }
+  .btn-oos { border-color: #e0a9a0; background: #fdf5f4; color: #b04a3a; }
+  .btn-ok:active, .btn-oos:active { transform: scale(.96); }
+
+  .btn-del {
+    display: inline-flex; align-items: center; justify-content: center;
+    border: none; background: none; color: #b04a3a;
+    padding: 5px 7px; border-radius: 7px; cursor: pointer; transition: all .2s ease;
+  }
+  .btn-del svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .btn-del:hover { background: rgba(176,74,58,.12); }
+
+  /* สถานะหลังกด "ของหมด" */
+  .stamp-oos {
+    display: inline-block; padding: 5px 12px;
+    border: 2.5px solid #c0392b; border-radius: 8px;
+    background: rgba(255,255,255,.88); color: #c0392b;
+    font-family: 'Noto Sans Thai', sans-serif; font-size: 11.5px; font-weight: 800;
+    letter-spacing: .5px; white-space: nowrap; transform: rotate(-8deg);
+  }
+  .undo {
+    border: none; background: none; padding: 2px 6px;
+    color: #8494a3; font-family: inherit; font-size: 10.5px;
+    text-decoration: underline; cursor: pointer;
+  }
+  .undo:hover { color: #2d6cad; }
+  .waiting { display: inline-block; padding: 6px 12px; border-radius: 999px; background: #f2f2f2; color: #888; font-size: 11.5px; }
+
+  /* สถานะหลังกด "อนุมัติ" — ตราประทับเขียว ทรงเดียวกับตราของหมด (มีอยู่ในระบบจริงแล้ว) */
+  .approved-wrap { display: inline-flex; flex-direction: column; align-items: center; gap: 3px; }
+  .stamp-ok {
+    display: inline-block; padding: 5px 12px;
+    border: 2.5px solid #2e8b47; border-radius: 8px;
+    background: rgba(255,255,255,.88); color: #2e8b47;
+    font-family: 'Noto Sans Thai', sans-serif; font-size: 11.5px; font-weight: 800;
+    letter-spacing: .5px; white-space: nowrap; transform: rotate(-8deg);
+  }
+  .stamp-time { font-size: 10px; color: #4a7a52; }
+  tr.approved td { background: #eaf7ea; }
+
+  /* ============ 1. แบบปัจจุบัน — Dashed Stamp Pair ============ */
+  .d1 .btn-ok:hover  { background: #eaf3fc; border-color: #4891db; color: #2d6cad; }
+  .d1 .btn-oos:hover { background: #fbeae7; border-color: #c0392b; color: #8f3626; }
+
+  /* ============ 2. Solid Duo ============ */
+  .d2 .btn-ok  { border: none; background: linear-gradient(135deg,#2e8b47,#48a865); color: #fff; box-shadow: 0 2px 7px rgba(46,139,71,.32); }
+  .d2 .btn-oos { border: none; background: linear-gradient(135deg,#c0392b,#dc6153); color: #fff; box-shadow: 0 2px 7px rgba(192,57,43,.32); }
+  .d2 .btn-ok:hover, .d2 .btn-oos:hover { transform: translateY(-1px); filter: brightness(1.06); }
+  .d2 .btn-del { background: #f4f6f8; color: #8494a3; }
+  .d2 .btn-del:hover { background: #fbe6e3; color: #c0392b; }
+
+  /* ============ 3. Segmented — ปุ่มเดียวแบ่งครึ่ง ============ */
+  .d3 .act { gap: 0; border: 1.5px solid #d6dfe8; border-radius: 999px; overflow: hidden; background: #fff; }
+  .d3 .btn-ok, .d3 .btn-oos { border: none; border-radius: 0; background: none; padding: 9px 20px; font-weight: 600; }
+  .d3 .btn-ok  { color: #2d6cad; border-right: 1.5px solid #e6ecf2; }
+  .d3 .btn-ok:hover  { background: #2d6cad; color: #fff; }
+  .d3 .btn-oos { color: #b04a3a; }
+  .d3 .btn-oos:hover { background: #c0392b; color: #fff; }
+
+  /* ============ 4. Icon + Label ============ */
+  .d4 .btn-ok, .d4 .btn-oos { border-style: solid; border-width: 1.5px; border-radius: 9px; }
+  .d4 .btn-ok  { border-color: #2e8b47; background: #fff; color: #2e8b47; }
+  .d4 .btn-ok::before  { content: "✓"; font-size: 14px; font-weight: 800; }
+  .d4 .btn-oos { border-color: #c0392b; background: #fff; color: #c0392b; }
+  .d4 .btn-oos::before { content: "⊘"; font-size: 14px; font-weight: 800; }
+  .d4 .btn-ok:hover  { background: #2e8b47; color: #fff; }
+  .d4 .btn-oos:hover { background: #c0392b; color: #fff; }
+
+  /* ============ 5. Primary + Ghost ============ */
+  .d5 .btn-ok { border: none; background: #2d6cad; color: #fff; padding: 9px 20px; box-shadow: 0 2px 6px rgba(45,108,173,.28); }
+  .d5 .btn-ok:hover { background: #24578b; }
+  .d5 .btn-oos { border: none; background: none; color: #8494a3; font-weight: 500; text-decoration: underline; padding: 8px 10px; }
+  .d5 .btn-oos:hover { color: #c0392b; }
+
+  /* ============ 6. Stacked — เรียงแนวตั้งเต็มความกว้าง ============ */
+  .d6 .act { flex-direction: column; gap: 5px; width: 100%; max-width: 160px; }
+  .d6 .btn-ok, .d6 .btn-oos { width: 100%; border-style: solid; border-width: 1.5px; border-radius: 8px; padding: 7px 12px; }
+  .d6 .btn-ok  { border-color: #9cc4e8; background: #eaf3fc; color: #2d6cad; }
+  .d6 .btn-oos { border-color: #e8b4ac; background: #fdf0ee; color: #b04a3a; }
+  .d6 .btn-ok:hover  { background: #2d6cad; color: #fff; border-color: #2d6cad; }
+  .d6 .btn-oos:hover { background: #c0392b; color: #fff; border-color: #c0392b; }
+
+  /* ============ 7. Pill Soft ============ */
+  .d7 .btn-ok  { border: none; background: #e3f3e8; color: #23703a; border-radius: 999px; padding: 9px 20px; }
+  .d7 .btn-oos { border: none; background: #fbe6e3; color: #a8332a; border-radius: 999px; padding: 9px 20px; }
+  .d7 .btn-ok:hover  { background: #cfe9d8; }
+  .d7 .btn-oos:hover { background: #f7d3ce; }
+  .d7 .btn-del { border-radius: 999px; }
+
+  /* ============ 8. Big Touch — ไอคอนบน ข้อความล่าง ============ */
+  .d8 .act { gap: 8px; }
+  .d8 .btn-ok, .d8 .btn-oos {
+    flex-direction: column; gap: 1px; width: 66px; height: 56px;
+    border: none; border-radius: 14px; font-size: 10.5px; font-weight: 500;
+    font-family: 'Mitr', sans-serif; padding: 0;
+  }
+  .d8 .btn-ok  { background: #e3f3e8; color: #23703a; box-shadow: 0 2px 5px rgba(35,112,58,.16); }
+  .d8 .btn-oos { background: #fbe6e3; color: #a8332a; box-shadow: 0 2px 5px rgba(168,51,42,.16); }
+  .d8 .btn-ok::before  { content: "✓"; font-size: 19px; line-height: 1; font-weight: 700; }
+  .d8 .btn-oos::before { content: "⊘"; font-size: 19px; line-height: 1; font-weight: 700; }
+  .d8 .btn-ok:hover, .d8 .btn-oos:hover { transform: translateY(-2px); }
+  .d8 .btn-del { width: 44px; height: 56px; border-radius: 14px; background: #f4f6f8; color: #8494a3; }
+  .d8 .btn-del svg { width: 18px; height: 18px; }
+
+  /* ============ 9. Neon Blue — ตามธีมหลักของแอป ============ */
+  .d9 .btn-ok {
+    border: 1.5px solid #a9d0f5; background: linear-gradient(135deg,#2d6cad,#4891db);
+    color: #fff; padding: 9px 20px;
+  }
+  .d9 .btn-ok:hover { box-shadow: 0 0 12px rgba(72,145,219,.65); transform: translateY(-1px); }
+  .d9 .btn-oos { border: 1.5px solid #e8b4ac; background: #fff; color: #c0392b; padding: 9px 18px; }
+  .d9 .btn-oos:hover { background: #c0392b; border-color: #c0392b; color: #fff; box-shadow: 0 0 12px rgba(192,57,43,.45); }
+
+  /* ============ 10. Accent Bar — แถบสีนำ พื้นขาวสะอาด ============ */
+  .d10 .btn-ok, .d10 .btn-oos {
+    border: 1px solid #e2e9f0; border-radius: 8px; background: #fff;
+    color: #24303c; padding: 8px 16px 8px 13px; font-weight: 500;
+  }
+  .d10 .btn-ok  { border-left: 4px solid #2e8b47; }
+  .d10 .btn-oos { border-left: 4px solid #c0392b; }
+  .d10 .btn-ok:hover  { background: #f2faf5; border-color: #bfe0cb; border-left-color: #2e8b47; }
+  .d10 .btn-oos:hover { background: #fdf5f4; border-color: #f0cdc7; border-left-color: #c0392b; }
+</style>
+</head>
+<body>
+
+<div class="page-head">
+  <h1>Outbound Action Buttons — 10 แบบ</h1>
+  <p>ปุ่มในคอลัมน์ <code>Outbound</code> (อนุมัติ / ของหมด) + ปุ่มลบท้ายแถว ของหน้า <strong>เบิกด่วน</strong> ฝั่งคลังสินค้า</p>
+  <div class="note">
+    <strong>โจทย์:</strong> พนักงานสับสนว่าปุ่มไหนคือ "แจ้งของหมด" ปุ่มไหนคือ "ลบทิ้ง" — ดีไซน์ที่ดีต้องแยก 2 อย่างนี้ออกจากกันได้<strong>ตั้งแต่ยังไม่ต้องอ่านข้อความ</strong><br>
+    แต่ละแบบแสดง 3 สถานะจริง: <strong>รออนุมัติ</strong> (เห็นปุ่มคู่) · <strong>ยังไม่ส่งรายการ</strong> (สาขายังไม่กด Outbound) · <strong>แจ้งของหมดแล้ว</strong> (ตราประทับ + ปุ่มยกเลิก)<br>
+    เลือกได้ว่าจะเอาแบบไหน หรือผสมข้ามแบบก็ได้ (เช่น เอาปุ่มจากแบบ 2 แต่เอาปุ่มลบจากแบบ 8)
+  </div>
+</div>
+
+<div class="grid" id="grid"></div>
+
+<script>
+const TRASH = `<svg viewBox="0 0 24 24" aria-hidden="true">
+  <path d="M3 6h18"/>
+  <path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/>
+  <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+  <line x1="10" y1="11" x2="10" y2="17"/>
+  <line x1="14" y1="11" x2="14" y2="17"/>
+</svg>`;
+
+const DESIGNS = [
+  { n: 1,  cls: 'd1',  t: 'แบบปัจจุบัน — Dashed Stamp Pair',
+    d: 'ที่ใช้อยู่ตอนนี้ · ทรงตราประทับขอบประเหมือนกันทั้งคู่ ต่างกันแค่สี — เอาไว้เทียบว่าแบบอื่นดีขึ้นแค่ไหน' },
+  { n: 2,  cls: 'd2',  t: 'Solid Duo — พื้นทึบเขียว/แดง',
+    d: 'อ่านออกไวที่สุดจากระยะไกล เขียว=ผ่าน แดง=ไม่ผ่าน · ปุ่มลบถูกลดความเด่นเป็นสีเทา ให้ปุ่มสำคัญเด่นกว่าปุ่มอันตราย' },
+  { n: 3,  cls: 'd3',  t: 'Segmented — ปุ่มเดียวแบ่งครึ่ง',
+    d: 'มัด 2 ตัวเลือกเป็นก้อนเดียว สื่อชัดว่า "เลือกอย่างใดอย่างหนึ่ง" · กินที่น้อย และแยกขาดจากปุ่มลบที่อยู่เดี่ยวๆ' },
+  { n: 4,  cls: 'd4',  t: 'Icon + Label — ✓ กับ ⊘',
+    d: 'มีสัญลักษณ์นำหน้าข้อความ อ่านไม่ทันก็เดาถูก · ⊘ (ห้าม/หมด) ต่างจากถังขยะ (ลบ) ชัดเจน ไม่ชนกับ ✕ เดิม' },
+  { n: 5,  cls: 'd5',  t: 'Primary + Ghost — เน้นอนุมัติอย่างเดียว',
+    d: 'อนุมัติคือสิ่งที่ทำบ่อยสุด ให้เด่นตัวเดียว ส่วนของหมดเป็นลิงก์จาง · หน้าจอสะอาด แต่ "ของหมด" อาจหาไม่เจอถ้าไม่คุ้น' },
+  { n: 6,  cls: 'd6',  t: 'Stacked — เรียงบนล่าง',
+    d: 'ปุ่มเต็มความกว้าง กดง่ายไม่พลาด แถวสูงขึ้นเล็กน้อย · เหมาะถ้าจอแคบหรือใช้บนแท็บเล็ต' },
+  { n: 7,  cls: 'd7',  t: 'Pill Soft — มนนุ่ม พื้นอ่อน',
+    d: 'สีอ่อนสบายตากว่าพื้นทึบ เหมาะกับการนั่งดูทั้งวัน · ยังแยกเขียว/แดงได้ แต่เบากว่าแบบ 2' },
+  { n: 8,  cls: 'd8',  t: 'Big Touch — ไอคอนใหญ่ + ข้อความล่าง',
+    d: 'ทรงเดียวกับปุ่ม Export/เพิ่มแถว ที่หัวตาราง ทำให้ทั้งหน้าดูเป็นชุดเดียวกัน · เป้ากดใหญ่ เหมาะกับจอสัมผัส' },
+  { n: 9,  cls: 'd9',  t: 'Neon Blue — ตามธีมหลักของแอป',
+    d: 'อนุมัติใช้ gradient น้ำเงินเรืองแสงแบบเดียวกับปุ่มหลักหน้าป้ายราคา · กลมกลืนกับทั้งระบบที่สุด' },
+  { n: 10, cls: 'd10', t: 'Accent Bar — แถบสีนำ พื้นขาว',
+    d: 'พื้นขาวสะอาด ใช้แถบสีซ้ายบอกความหมายแทนการถมสีทั้งปุ่ม · ดูเรียบ ไม่แย่งสายตากับข้อมูลในตาราง' },
+];
+
+function row(label, sku, name, qty, actionHtml, delHtml) {
+  return `<tr>
+    <td class="c-sku">${sku}</td>
+    <td class="c-name nm">${name}</td>
+    <td class="c-qty">${qty}</td>
+    <td class="c-act">${actionHtml}</td>
+    <td class="c-del">${delHtml}</td>
+  </tr>`;
+}
+
+function card(cfg) {
+  const del = `<button class="btn-del" title="ลบรายการนี้ทิ้งถาวร (ต้องใส่รหัสผ่าน)">${TRASH}</button>`;
+  const pair = `<div class="act">
+      <button class="btn-ok">อนุมัติ</button>
+      <button class="btn-oos">ของหมด</button>
+    </div>`;
+  const waiting = `<div class="act">
+      <span class="waiting">รอสาขาส่งรายการ</span>
+      <button class="btn-oos">ของหมด</button>
+    </div>`;
+  const stamped = `<div class="act">
+      <span class="stamp-oos">ของหมด ⊘</span>
+      <button class="undo">ยกเลิกสถานะนี้</button>
+    </div>`;
+  const approved = `<div class="approved-wrap">
+      <span class="stamp-ok">อนุมัติแล้ว ✓</span>
+      <span class="stamp-time">18/08/69 14:32</span>
+    </div>`;
+
+  return `<div class="design ${cfg.cls}">
+    <div class="design-head">
+      <div class="design-title"><span class="design-num">${cfg.n}</span>${cfg.t}</div>
+      <div class="design-desc">${cfg.d}</div>
+    </div>
+    <div class="stage">
+      <span class="state-tag">สาขาส่งรายการแล้ว — รออนุมัติ</span>
+      <table class="mock">
+        <thead><tr><th>SKU</th><th>Name</th><th>Qty</th><th style="text-align:center">Outbound</th><th></th></tr></thead>
+        <tbody>
+          ${row('', '100074', 'Benarone 100 mg 10x10 tab Pre 04-26', '1', pair, del)}
+          ${row('', '204518', 'Paracetamol 500 mg 10x10 tab', '12', pair, del)}
+        </tbody>
+      </table>
+
+      <span class="state-tag">หลังกดปุ่ม — อนุมัติแล้ว / ของหมด / สาขายังไม่ส่ง</span>
+      <table class="mock">
+        <thead><tr><th>SKU</th><th>Name</th><th>Qty</th><th style="text-align:center">Outbound</th><th></th></tr></thead>
+        <tbody>
+          <tr class="approved">
+            <td class="c-sku">552103</td>
+            <td class="c-name nm">Betadine solution 15 ml</td>
+            <td class="c-qty">2</td>
+            <td class="c-act">${approved}</td>
+            <td class="c-del">${del}</td>
+          </tr>
+          ${row('', '118840', 'Alcohol pad 100 pcs', '5', stamped, del)}
+          ${row('', '331902', 'Vitamin C 1000 mg 30 tab', '3', waiting, del)}
+        </tbody>
+      </table>
+    </div>
+  </div>`;
+}
+
+document.getElementById('grid').innerHTML = DESIGNS.map(card).join('');
+</script>
+
+</body>
+</html>

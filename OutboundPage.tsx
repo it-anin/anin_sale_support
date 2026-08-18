@@ -603,7 +603,8 @@ export function OutboundPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGo
                     ) : row.outOfStock ? (
                       // คลังสินค้าเห็นปุ่มยกเลิกใต้ตราประทับ (เดิมกดปุ่ม ✕ ท้ายแถวซ้ำเพื่อยกเลิก)
                       <div className="outbound-action-group">
-                        <span className="outbound-outofstock-mark">ของหมด ✕</span>
+                        {/* ใช้ ⊘ ให้ตรงกับไอคอนบนปุ่ม "ของหมด" (เดิมเป็น ✕ ซึ่งซ้ำความหมายกับปุ่มลบ) */}
+                        <span className="outbound-outofstock-mark">ของหมด ⊘</span>
                         {isWarehouse && (
                           <button className="outbound-oos-undo" onClick={() => toggleOutOfStock(row)}>ยกเลิกสถานะนี้</button>
                         )}
@@ -624,14 +625,14 @@ export function OutboundPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGo
                       // (เดิมใช้ปุ่ม ✕ ท้ายแถวคู่กับถังขยะ แล้วพนักงานสับสนว่าอันไหนลบจริง)
                       <div className="outbound-action-group">
                         {row.requested ? (
-                          <button className="outbound-approve-btn" onClick={() => handleOutboundClick(row)}>
-                            อนุมัติ
+                          <button className="outbound-ok-btn" onClick={() => handleOutboundClick(row)}>
+                            <span className="outbound-btn-ico">✓</span>อนุมัติ
                           </button>
                         ) : (
                           <span className="outbound-waiting-mark">รอสาขาส่งรายการ</span>
                         )}
                         <button className="outbound-oos-btn" title="แจ้งสาขาว่าสินค้าหมด" onClick={() => toggleOutOfStock(row)}>
-                          ของหมด
+                          <span className="outbound-btn-ico">⊘</span>ของหมด
                         </button>
                       </div>
                     )}

@@ -3281,25 +3281,35 @@ body.pulse-b .cart-inline-btn.in-cart {
 }
 .outbound-approve-btn:active { transform: scale(0.96); transition-duration: 0.08s; }
 
-/* ปุ่ม "ของหมด" — คู่ตรงข้ามของปุ่มอนุมัติ วางคู่กันในคอลัมน์ Outbound
-   ทรงเดียวกับ .outbound-approve-btn (ตราประทับขอบประ) แต่โทนแดง → อ่านออกทันทีว่าคนละผลลัพธ์
-   ⚠️ ห้ามย้ายกลับไปเป็นไอคอน ✕ ท้ายแถว — เคยทำแล้วพนักงานสับสนกับปุ่มลบ */
+/* ปุ่มคู่ตัดสินใจของคลังสินค้าในคอลัมน์ Outbound — ดีไซน์ "Icon + Label"
+   (แบบที่ 4 จาก public/outbound-action-btn-designs.html) · ✓ = อนุมัติ · ⊘ = ของหมด
+   ⚠️ ห้ามย้ายกลับไปเป็นไอคอนเดี่ยวท้ายแถว และห้ามใช้ ✕ กับ 2 ปุ่มนี้ — เคยทำแล้วพนักงานสับสนกับปุ่มลบ
+   ⚠️ คนละ class กับ .outbound-approve-btn ที่สาขาใช้กด "Outbound" (ส่งขออนุมัติ) — อย่ารวมกัน คนละ role คนละความหมาย */
+.outbound-ok-btn,
 .outbound-oos-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
   padding: 8px 16px;
-  border: 2px dashed #e0a9a0;
-  border-radius: 10px;
-  background: #fdf5f4;
-  color: #b04a3a;
+  border: 1.5px solid;
+  border-radius: 9px;
+  background: #fff;
   font-family: 'Noto Sans Thai', sans-serif;
   font-weight: 600;
   font-size: 0.9em;
+  letter-spacing: 0.02em;
   cursor: pointer;
-  letter-spacing: 0.03em;
   white-space: nowrap;
   transition: all 0.22s ease;
 }
-.outbound-oos-btn:hover { background: #fbeae7; border-color: #c0392b; color: #8f3626; }
+.outbound-ok-btn  { border-color: #2e8b47; color: #2e8b47; }
+.outbound-ok-btn:hover  { background: #2e8b47; color: #fff; }
+.outbound-oos-btn { border-color: #c0392b; color: #c0392b; }
+.outbound-oos-btn:hover { background: #c0392b; color: #fff; }
+.outbound-ok-btn:active,
 .outbound-oos-btn:active { transform: scale(0.96); transition-duration: 0.08s; }
+.outbound-btn-ico { font-size: 1.05em; font-weight: 800; line-height: 1; }
 
 /* ปุ่ม/สถานะในคอลัมน์ Outbound วางเรียงกัน — wrap ลงบรรทัดใหม่ได้ถ้าคอลัมน์แคบ */
 .outbound-action-group {
