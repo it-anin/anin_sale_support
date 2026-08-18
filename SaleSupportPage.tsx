@@ -856,6 +856,9 @@ interface Props {
   isPurchasing: boolean;
   isWarehouse: boolean;
   userBranch?: string;
+  /** จำนวน `ss_branch_notification_events` ที่ยังไม่อ่านของคลังสินค้า (branch='WAREHOUSE')
+   *  คนละตัวนับกับ pageNotifications.salesupport ที่ใช้กับปุ่ม "Order ใหม่" เดิม — ดูจุดประกาศ notificationHistoryUnreadCount */
+  warehouseUpdateUnreadCount?: number;
 }
 
 const REQUEST_STATUS_OPTIONS = ['อนุมัติ', 'กำลังติดต่อ', 'ไม่อนุมัติ'] as const;
@@ -919,7 +922,7 @@ async function insertWithContactChannelFallback(table: string, payload: Record<s
   return { error, id: data?.[0]?.id ? String(data[0].id) : null };
 }
 
-export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGoCustomerHistory, onGoOutbound, onGoSaleSupport, isPurchasing, isWarehouse, userBranch }: Props) {
+export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGoCustomerHistory, onGoOutbound, onGoSaleSupport, isPurchasing, isWarehouse, userBranch, warehouseUpdateUnreadCount = 0 }: Props) {
   const [activeMenu, setActiveMenu] = useState<MenuId>('products');
   const [skuNameWidth, setSkuNameWidth] = useState(320);
   const [rows, setRows] = useState<Record<string, unknown>[]>([]);
@@ -1013,11 +1016,16 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
 
   // ผู้รับแจ้งเตือนของโปรไฟล์นี้ = ค่าที่ใช้ query คอลัมน์ `branch` ในตารางเหตุการณ์
   // (ชื่อคอลัมน์ยังเป็น "branch" ตามเดิม แต่ความหมายคือ "ผู้รับ" แล้ว — ดู comment ใน salesupport-setup.sql)
-  // null = โปรไฟล์นี้ไม่ใช้แผงประวัติ (คลังสินค้า — ยังใช้ recipient_department บน ss_orders)
-  const notificationRecipient = isBranchUser ? (userBranch ?? null) : isPurchasing ? 'PURCHASING' : null;
+  // ⚠️ คลังสินค้าเข้าร่วมทิศทางนี้แล้ว (2569-08-18) — คู่กับ 'WAREHOUSE' ใหม่ในทั้ง CHECK constraint และ RPC
+  //    ยังใช้ recipient_department บน ss_orders ต่อไปด้วยสำหรับปุ่ม "Order ใหม่" (ไม่ได้แทนที่ แค่เพิ่ม)
+  const notificationRecipient = isBranchUser ? (userBranch ?? null) : isPurchasing ? 'PURCHASING' : isWarehouse ? 'WAREHOUSE' : null;
   // ⚠️ แยกจาก NOTIFICATION_ACTOR_LABELS โดยตั้งใจ — ถ้าเอา map นั้นมาใช้ หัว drawer ของสาขา
   //    จะเปลี่ยนจาก "SRC · รายการล่าสุด" เป็น "สาขา SRC · รายการล่าสุด" โดยไม่ได้ขอ
-  const notificationRecipientLabel = isPurchasing ? 'จัดซื้อ' : (userBranch ?? '');
+  const notificationRecipientLabel = isWarehouse ? 'คลังสินค้า' : isPurchasing ? 'จัดซื้อ' : (userBranch ?? '');
+  // ตัวเลขบนปุ่ม "🔔 อัพเดท" เท่านั้น — แยกจาก notificationUnreadCount (ปุ่ม "Order ใหม่") โดยตั้งใจ
+  // เพราะคลังสินค้าตอนนี้มี 2 ตัวนับพร้อมกันจากคนละแหล่ง (ss_orders vs ss_branch_notification_events)
+  // โปรไฟล์อื่นไม่กระทบ — ยังเป็นค่าเดียวกับ notificationUnreadCount เป๊ะ
+  const notificationHistoryUnreadCount = isWarehouse ? warehouseUpdateUnreadCount : notificationUnreadCount;
 
   // เมื่อคลังสินค้าเปิดเมนู Order ถือว่าเห็นงานใหม่แล้ว จึงล้างจุดแจ้งเตือน
   // ⚠️ **เฉพาะคลังสินค้าเท่านั้นแล้ว** (2569-08-17) — จัดซื้อย้ายไปใช้ตารางเหตุการณ์
@@ -1090,6 +1098,19 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
   const notifyPurchasingUpdate = async (meta: NotificationMeta = {}) => {
     if (!isBranchUser || !userBranch) return;
     await createNotificationEvents(['PURCHASING'], userBranch, meta);
+  };
+
+  // ── ทิศที่ 3: สาขา → คลังสินค้า (เพิ่ม 2569-08-18) ─────────────────────
+  // ผู้กระทำ = สาขาที่ล็อกอิน · ผู้รับ = 'WAREHOUSE' เสมอ · ครอบคลุมเฉพาะ Order + BackOrder
+  // (ไม่รวม Request Item — SKU/MOQ เป็นงานฝั่งจัดซื้อ คลังไม่ได้ดูแลเมนูนั้น)
+  // ⚠️ guard/รูปร่างเหมือน notifyPurchasingUpdate เป๊ะ ห้ามใช้ notifyBranchUpdate แทนด้วยเหตุผลเดียวกัน —
+  //    fallback fan-out ของมันจะสแปมทั้ง 3 สาขาแทนที่จะแจ้งคลัง
+  // ⚠️ ปุ่ม "Order ใหม่" เดิม (นับจาก ss_orders.recipient_department) ยังทำงานคู่ขนานอยู่ ไม่ได้ถูกแทนที่
+  //    ทิศนี้ครอบคลุมกว้างกว่า (ไม่กรอง recipient_department) เพราะคลังกรอกฟอร์ม Inbound/Outbound/เลขโอน
+  //    ให้ Order ทุกใบอยู่แล้ว ไม่ใช่แค่ใบที่ recipient_department เป็นของคลัง
+  const notifyWarehouseUpdate = async (meta: NotificationMeta = {}) => {
+    if (!isBranchUser || !userBranch) return;
+    await createNotificationEvents(['WAREHOUSE'], userBranch, meta);
   };
 
   const openNotificationHistory = async () => {
@@ -1642,6 +1663,13 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
       itemSku: backOrderForm.sku,
       itemName: backOrderForm.product_name,
     });
+    // สาขาสร้าง BackOrder → แจ้งคลังสินค้า (BackOrder ไม่เคยมีทิศนี้มาก่อนเลย — เพิ่มใหม่ทั้งหมด)
+    void notifyWarehouseUpdate({
+      menuId: 'backorder', tableName: 'ss_backorders', title: 'สาขาเพิ่ม BackOrder ใหม่',
+      detail: `จำนวนค้างส่ง ${backOrderForm.pending_qty}${backOrderForm.unit ? ` ${backOrderForm.unit}` : ''}`,
+      itemSku: backOrderForm.sku,
+      itemName: backOrderForm.product_name,
+    });
     setShowAddBackOrder(false);
     setActiveMenu('backorder');
     setRefreshKey(k => k + 1);
@@ -1722,14 +1750,24 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
       // ⚠️ ห้าม gate ด้วย recipientDepartment === 'PURCHASING' — ค่า 'BOTH' (SKU ไม่มีใน
       //    Product Master) จัดซื้อก็ต้องเห็น ไม่งั้นจะเป็นบั๊กตัวเดียวกับที่แก้ไปเมื่อ 2569-08-17
       // detail ไม่ซ้ำ SKU/ชื่อ เพราะ 2 ค่านั้นมีบล็อกแสดงผลของตัวเองอยู่แล้วใน drawer
+      const newOrderDetail = [
+        `จำนวน ${orderForm.qty}${orderForm.unit ? ` ${orderForm.unit}` : ''}`,
+        orderForm.pickup_date ? `นัดรับ ${new Date(orderForm.pickup_date).toLocaleDateString('th-TH')}` : '',
+        orderForm.sale_bill_no ? `บิล ${orderForm.sale_bill_no}` : '',
+      ].filter(Boolean).join(' · ');
       void notifyPurchasingUpdate({
         menuId: 'order', tableName: 'ss_orders', recordId: newOrderId,
         title: 'สาขาเพิ่ม Order ใหม่',
-        detail: [
-          `จำนวน ${orderForm.qty}${orderForm.unit ? ` ${orderForm.unit}` : ''}`,
-          orderForm.pickup_date ? `นัดรับ ${new Date(orderForm.pickup_date).toLocaleDateString('th-TH')}` : '',
-          orderForm.sale_bill_no ? `บิล ${orderForm.sale_bill_no}` : '',
-        ].filter(Boolean).join(' · '),
+        detail: newOrderDetail,
+        itemSku: orderForm.sku,
+        itemName: orderForm.product_name,
+      });
+      // สาขาสร้าง Order → แจ้งคลังด้วย (คู่ขนานกับที่แจ้งจัดซื้อ) — คลังกรอก Inbound/Outbound/เลขโอนให้ทุกใบ
+      // ไม่ใช่แค่ใบที่ recipient_department เป็นของคลัง จึงไม่กรองด้วยค่านั้นเหมือนกับที่แจ้งจัดซื้อไม่กรอง
+      void notifyWarehouseUpdate({
+        menuId: 'order', tableName: 'ss_orders', recordId: newOrderId,
+        title: 'สาขาเพิ่ม Order ใหม่',
+        detail: newOrderDetail,
         itemSku: orderForm.sku,
         itemName: orderForm.product_name,
       });
@@ -2104,6 +2142,14 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
         itemName: selectedOrder.product_name,
       });
     }
+    // สาขากดตรา → แจ้งคลังด้วยเสมอ ไม่กรองตาราง (ต่างจากจัดซื้อด้านบนที่กรองเฉพาะ ss_orders)
+    // เพราะคลังดูแลทั้ง Order และ BackOrder ตามที่ตกลงไว้
+    void notifyWarehouseUpdate({
+      menuId: orderDetailMenuId, tableName: selectedOrderTable, recordId: selectedOrder.id,
+      title: `สาขาอัปเดตสถานะ ${orderDetailLabel}`, detail: `${step.label} → ${next}`,
+      itemSku: selectedOrder.sku,
+      itemName: selectedOrder.product_name,
+    });
   };
 
   // กดตราประทับใน Popup Order/BackOrder: อนุมัติทันที / ยกเลิกต้องยืนยันก่อน (เปิดกล่อง Centered Icon Alert)
@@ -2546,8 +2592,8 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
                     <button className="ss-notification-history-btn" onClick={openNotificationHistory}>
                       <span aria-hidden="true">🔔</span>
                       อัพเดท
-                      {notificationUnreadCount > 0 && (
-                        <span className="ss-notification-count">{notificationUnreadCount > 99 ? '99+' : notificationUnreadCount}</span>
+                      {notificationHistoryUnreadCount > 0 && (
+                        <span className="ss-notification-count">{notificationHistoryUnreadCount > 99 ? '99+' : notificationHistoryUnreadCount}</span>
                       )}
                     </button>
                   )}
@@ -2607,8 +2653,8 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
                       <button className="ss-notification-history-btn" onClick={openNotificationHistory}>
                         <span aria-hidden="true">🔔</span>
                         อัพเดท
-                        {notificationUnreadCount > 0 && (
-                          <span className="ss-notification-count">{notificationUnreadCount > 99 ? '99+' : notificationUnreadCount}</span>
+                        {notificationHistoryUnreadCount > 0 && (
+                          <span className="ss-notification-count">{notificationHistoryUnreadCount > 99 ? '99+' : notificationHistoryUnreadCount}</span>
                         )}
                       </button>
                     )}

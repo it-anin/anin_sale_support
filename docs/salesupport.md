@@ -69,54 +69,65 @@ helper กลางตัวเดียวใช้ทั้ง 2 ฟอร์�
 | `100034` | 1 รายการ — `แผง` | **3 รายการ — `แผง` \| `10แผง` \| `กล่อง`** |
 | `109331` (barcode ของ sku `100056`) | **0 รายการ — หาไม่เจอ** | **1 รายการ — `100056 แผง`** |
 
-## จุดแจ้งเตือนหน้า SaleSupport — 3 โปรไฟล์ 2 กลไก
+## จุดแจ้งเตือนหน้า SaleSupport — 3 โปรไฟล์ 3 กลไก (คลังสินค้ามี 2 พร้อมกัน)
 
-จุดแดงบนไอคอน Support (เห็นจากทุกหน้าผ่าน `PageNotificationContext`) + ปุ่ม 🔔 ในหน้า SaleSupport เอง — **ครอบคลุมเฉพาะเมนู Order เท่านั้น** (BackOrder/Request Item/เมนูอื่นไม่มี)
+จุดแดงบนไอคอน Support (เห็นจากทุกหน้าผ่าน `PageNotificationContext`) + ปุ่ม 🔔 ในหน้า SaleSupport เอง
 
-| โปรไฟล์ | ปุ่ม | นับจาก | มาร์คว่าอ่าน |
-|---|---|---|---|
-| สาขา SRC/KKL/SSS | **🔔 อัพเดท** (drawer ประวัติ) | `ss_branch_notification_events` `branch = <สาขา>` | เปิด drawer → RPC `ss_mark_branch_notifications_read` |
-| **จัดซื้อ** | **🔔 อัพเดท** (drawer เดียวกัน) | ตารางเดียวกัน `branch = 'PURCHASING'` | เปิด drawer → RPC ตัวเดียวกัน |
-| คลังสินค้า | 🔔 **Order ใหม่** (ไม่มีประวัติ) | `ss_orders` `.in('recipient_department',['WAREHOUSE','BOTH'])` + `recipient_read_at is null` | เปิดเมนู Order → `update recipient_read_at` |
+| โปรไฟล์ | ปุ่ม | ครอบคลุม | นับจาก | มาร์คว่าอ่าน |
+|---|---|---|---|---|
+| สาขา SRC/KKL/SSS | **🔔 อัพเดท** (drawer ประวัติ) | Order, Request Item | `ss_branch_notification_events` `branch = <สาขา>` | เปิด drawer → RPC `ss_mark_branch_notifications_read` |
+| จัดซื้อ | **🔔 อัพเดท** (drawer เดียวกัน) | Order, Request Item | ตารางเดียวกัน `branch = 'PURCHASING'` | เปิด drawer → RPC ตัวเดียวกัน |
+| **คลังสินค้า** | 🔔 **Order ใหม่** (ไม่มีประวัติ, ของเดิม) | เฉพาะ Order ที่ `recipient_department` เป็นของคลัง | `ss_orders` `.in('recipient_department',['WAREHOUSE','BOTH'])` + `recipient_read_at is null` | เปิดเมนู Order → `update recipient_read_at` |
+| **คลังสินค้า** | **🔔 อัพเดท** (drawer ประวัติ, เพิ่ม 2569-08-18) | Order + BackOrder **ทุกใบ** (ไม่กรอง `recipient_department`) | `ss_branch_notification_events` `branch = 'WAREHOUSE'` | เปิด drawer → RPC ตัวเดียวกัน |
 
-- `App.tsx` รวม 3 เคสไว้ที่ **`notificationSource` (useMemo, discriminated union)** — `kind: 'events'` (สาขา + จัดซื้อ) หรือ `'orders'` (คลัง) แล้ว effect เช็คแค่ `src.kind` · ⚠️ **ต้อง `useMemo`** ไม่งั้น object ใหม่ทุก render → resubscribe realtime ทุกครั้ง
-- ฝั่ง `'events'` subscribe ตาราง **`ss_branch_notifications` (ตัวสรุป)** ไม่ใช่ `_events` — RPC upsert `last_update_at` ที่นั่น การเขียนแถวนั้นคือสิ่งที่ปลุก `loadUnread()`
-- ปุ่มในหน้า: `notificationRecipient && …` (อัพเดท) · `isWarehouse && …` (Order ใหม่) — ตัวแปร `departmentCode` เดิมถูกลบทิ้งแล้วทั้ง 2 ไฟล์
+- **คลังสินค้ามี 2 ปุ่มพร้อมกัน คนละแหล่งข้อมูล ไม่ได้แทนที่กัน** — "Order ใหม่" นับเฉพาะ Order ที่ส่งมาถึงคลังจริง (`recipient_department`) ส่วน "อัพเดท" ครอบคลุมกว้างกว่าเพราะคลังกรอกฟอร์ม Inbound/Outbound/เลขโอนให้ Order **ทุกใบ** ไม่ใช่แค่ใบที่ส่งถึงคลัง และครอบคลุม BackOrder ที่ "Order ใหม่" ไม่เคยเห็นเลย
+- `App.tsx` มี **2 effect แยกกัน** สำหรับคลัง: `notificationSource` (`kind:'orders'`, ของเดิม, ให้ "Order ใหม่") + effect ใหม่ต่างหากที่ query `ss_branch_notification_events` ตรงๆ (ให้ `warehouseUpdateUnreadCount`) — **จงใจไม่ยัดเข้า `notificationSource` เดิม** เพราะตัวนั้นเป็น discriminated union คืนได้แค่ 1 ค่าต่อโปรไฟล์ (`useMemo` ต้องมี identity เดียว ไม่งั้น resubscribe ทุก render) การแยก effect ยังกันความเสี่ยงต่อ 2 โปรไฟล์เดิม (สาขา/จัดซื้อ) ที่ทดสอบผ่านแล้วไม่ให้กระทบ
+- ฝั่ง `'events'` (สาขา/จัดซื้อ) และ effect ใหม่ของคลัง ทั้งคู่ subscribe ตาราง **`ss_branch_notifications` (ตัวสรุป)** ไม่ใช่ `_events` — RPC upsert `last_update_at` ที่นั่น การเขียนแถวนั้นคือสิ่งที่ปลุก `loadUnread()`
+- ปุ่มในหน้า: `notificationRecipient && …` (อัพเดท — ตอนนี้ `isWarehouse` ก็ทำให้ `notificationRecipient === 'WAREHOUSE'` แล้ว) · `isWarehouse && notificationUnreadCount > 0 && …` (Order ใหม่ — ยังอ่าน `notificationUnreadCount`/`pageNotifications.salesupport` เดิม ไม่ยุ่งกับตัวนับใหม่) — ตัวแปร `departmentCode` เดิมถูกลบทิ้งแล้วทั้ง 2 ไฟล์
+- ⚠️ **`notificationUnreadCount` (Order ใหม่) กับ `notificationHistoryUnreadCount` (อัพเดท) เป็นคนละตัวแปรโดยตั้งใจ** — สำหรับคลังสินค้า `notificationHistoryUnreadCount = warehouseUpdateUnreadCount` (prop ใหม่จาก `App.tsx`) ส่วนสาขา/จัดซื้อสองตัวนี้ค่าเท่ากันเป๊ะ (ไม่กระทบพฤติกรรมเดิม) — ปุ่ม "🔔 อัพเดท" ต้องใช้ `notificationHistoryUnreadCount` เท่านั้น ถ้าเผลอใช้ `notificationUnreadCount` แทน คลังจะเห็นเลข "Order ใหม่" โผล่ผิดที่ปุ่ม "อัพเดท"
 
-**ทิศทางแจ้งเตือน 2 ทาง ใช้ตาราง `ss_branch_notification_events` ร่วมกัน:**
+**ทิศทางแจ้งเตือน 3 ทาง ใช้ตาราง `ss_branch_notification_events` ร่วมกัน:**
 
 | ทิศ | ฟังก์ชัน | guard | ผู้รับ (`branch`) | ผู้กระทำ (`actor_code`) |
 |---|---|---|---|---|
 | แผนก → สาขา (เดิม) | `notifyBranchUpdate(branchValue, meta)` | `isPurchasing \|\| isWarehouse` | สาขาของแถวนั้น · ไม่รู้จัก = **fan-out ทั้ง 3 สาขา** | `WAREHOUSE`/`PURCHASING` |
-| **สาขา → จัดซื้อ** (2569-08-17) | `notifyPurchasingUpdate(meta)` | `isBranchUser` | `'PURCHASING'` เสมอ ไม่มี fan-out | สาขาที่ล็อกอิน |
+| สาขา → จัดซื้อ (2569-08-17) | `notifyPurchasingUpdate(meta)` | `isBranchUser` | `'PURCHASING'` เสมอ ไม่มี fan-out | สาขาที่ล็อกอิน |
+| **สาขา → คลังสินค้า** (2569-08-18) | `notifyWarehouseUpdate(meta)` | `isBranchUser` | `'WAREHOUSE'` เสมอ ไม่มี fan-out | สาขาที่ล็อกอิน |
 
-- ทั้งคู่เรียกผ่าน helper กลาง **`createNotificationEvents(targets, actorCode, meta)`** — จุดเดียวที่รู้จักรูปร่าง argument ของ RPC
-- ⚠️ **guard 2 ตัวนี้ตรงข้ามกันสนิท** จึงเรียกคู่กันในฟังก์ชันเดียวได้โดยไม่มีทางยิงซ้ำ (`saveOrder`/`applyStepChange` เรียกทั้งคู่) — **ถ้าใครคลาย guard ตัวใดตัวหนึ่ง จัดซื้อจะได้แจ้งเตือนซ้ำทันที**
-- ⚠️ **ห้ามเอา `notifyBranchUpdate` มาใช้ทิศ สาขา→จัดซื้อ** — fallback fan-out ของมันจะสแปมทั้ง 3 สาขาแทนที่จะแจ้งจัดซื้อ
+- ทั้งสามเรียกผ่าน helper กลาง **`createNotificationEvents(targets, actorCode, meta)`** — จุดเดียวที่รู้จักรูปร่าง argument ของ RPC
+- ⚠️ **guard ของทิศ "แผนก → สาขา" ตรงข้ามกับอีก 2 ทิศสนิท** (`isPurchasing||isWarehouse` ผู้กระทำ vs `isBranchUser` ผู้กระทำ) จึงเรียกคู่กันในฟังก์ชันเดียวได้โดยไม่มีทางยิงซ้ำ (`saveOrder`/`applyStepChange`/`saveBackOrder` เรียกได้พร้อมกันหลายทิศ) — **ถ้าใครคลาย guard ตัวใดตัวหนึ่งจะยิงข้ามทิศทันที**
+- ⚠️ **ห้ามเอา `notifyBranchUpdate` มาใช้ 2 ทิศใหม่** — fallback fan-out ของมันจะสแปมทั้ง 3 สาขาแทนที่จะแจ้งจัดซื้อ/คลัง
+- **`notifyWarehouseUpdate` ไม่กรอง `recipient_department`/ตาราง** (ต่างจาก `notifyPurchasingUpdate` ที่กรองเฉพาะ `ss_orders`) — ยิงทั้ง Order ทุกใบและ BackOrder ทุกใบ เพราะคลังทำงานกับทั้งคู่อยู่แล้ว (กรอกฟอร์ม Inbound/Outbound/เลขโอนใน Order ทุกใบ ไม่ใช่แค่ใบที่ส่งถึงคลัง)
 
-**Trigger ที่แจ้งจัดซื้อ (4 จุด · 2 เมนู):**
+**Trigger ที่แจ้งจัดซื้อ (4 จุด · 2 เมนู) และคลังสินค้า (3 จุด · 2 เมนู):**
 
-| เมนู | จุด | title |
-|---|---|---|
-| Order | `saveOrder` — สาขาสร้าง Order ใหม่ | `สาขาเพิ่ม Order ใหม่` |
-| Order | `applyStepChange` — สาขากดตรา 3 ขั้น | `สาขาอัปเดตสถานะ Order` |
-| Request Item | `saveRequest` — สาขาขอสินค้าใหม่ | `สาขาขอสินค้าใหม่ (Request Item)` |
-| Request Item | `applyEditPatch` — สาขาแก้ไขคำขอ | `สาขาแก้ไข Request Item` |
+| เมนู | จุด | แจ้งจัดซื้อ | แจ้งคลัง |
+|---|---|---|---|
+| Order | `saveOrder` — สาขาสร้าง Order ใหม่ | ✓ `สาขาเพิ่ม Order ใหม่` | ✓ `สาขาเพิ่ม Order ใหม่` |
+| Order | `applyStepChange` (`selectedOrderTable === 'ss_orders'`) — สาขากดตรา 3 ขั้น | ✓ `สาขาอัปเดตสถานะ Order` | ✓ `สาขาอัปเดตสถานะ Order` |
+| BackOrder | `saveBackOrder` — สาขาสร้าง BackOrder ใหม่ | ✕ (นอกขอบเขต) | ✓ `สาขาเพิ่ม BackOrder ใหม่` |
+| BackOrder | `applyStepChange` (`selectedOrderTable === 'ss_backorders'`) — สาขากดตรา 3 ขั้น | ✕ (นอกขอบเขต) | ✓ `สาขาอัปเดตสถานะ BackOrder` |
+| Request Item | `saveRequest` — สาขาขอสินค้าใหม่ | ✓ `สาขาขอสินค้าใหม่ (Request Item)` | ✕ (นอกขอบเขต — SKU/MOQ เป็นงานจัดซื้อ) |
+| Request Item | `applyEditPatch` — สาขาแก้ไขคำขอ | ✓ `สาขาแก้ไข Request Item` | ✕ (นอกขอบเขต) |
 
-- ⚠️ `applyStepChange` **ใช้ร่วมกับ BackOrder** จึงต้องครอบ `if (selectedOrderTable === 'ss_orders')` — BackOrder อยู่นอกขอบเขตโดยตั้งใจ (จัดซื้อไม่เห็นเมนูนั้นด้วยซ้ำ ถ้าแจ้งไปจะคลิกแล้วตันที่ whitelist ใน `openNotificationEvent`)
-- ⚠️ `applyEditPatch` **ใช้ร่วมกับ products/newproduct/ticket และ popup Order** จึงต้องครอบ `if (meta.menuId === 'request')` — ไม่งั้นทุกเมนูจะแจ้งจัดซื้อหมด
-  - เงื่อนไข `meta.detail !== ''` ที่ครอบอยู่แล้วกันกรณีกดบันทึกทั้งที่ไม่ได้แก้อะไร (`describeChangedFields` คืน `''`) — ทั้ง 2 ทิศจึงเงียบเหมือนกัน
-- ⚠️ **ห้าม gate `saveOrder` ด้วย `recipientDepartment === 'PURCHASING'`** — ค่า `'BOTH'` (SKU ไม่มีใน Product Master) จัดซื้อก็ต้องเห็น
+- ⚠️ `applyStepChange` **ใช้ร่วมกับ BackOrder** — ฝั่งจัดซื้อครอบ `if (selectedOrderTable === 'ss_orders')` (BackOrder นอกขอบเขต จัดซื้อไม่เห็นเมนูนั้นด้วยซ้ำ ถ้าแจ้งไปจะคลิกแล้วตันที่ whitelist ใน `openNotificationEvent`) ส่วนฝั่งคลัง**ไม่กรองตาราง** เพราะคลังเห็นทั้ง 2 เมนู
+- ⚠️ `applyEditPatch` **ใช้ร่วมกับ products/newproduct/ticket และ popup Order** จึงต้องครอบ `if (meta.menuId === 'request')` ก่อนแจ้งจัดซื้อ — ไม่งั้นทุกเมนูจะแจ้งจัดซื้อหมด (ทิศนี้ไม่มีสมการเทียบเท่าฝั่งคลัง — Request Item อยู่นอกขอบเขตของคลังทั้งหมด)
+  - เงื่อนไข `meta.detail !== ''` ที่ครอบอยู่แล้วกันกรณีกดบันทึกทั้งที่ไม่ได้แก้อะไร (`describeChangedFields` คืน `''`) — ทั้ง 3 ทิศจึงเงียบเหมือนกัน
+- ⚠️ **ห้าม gate `saveOrder` ด้วย `recipientDepartment === 'PURCHASING'`** — ค่า `'BOTH'` (SKU ไม่มีใน Product Master) จัดซื้อก็ต้องเห็น (คลังไม่ต้องกังวลข้อนี้เพราะไม่กรอง `recipient_department` อยู่แล้ว)
 - จัดซื้อเห็น Request Item **ทุกสาขา** (query ไม่กรอง branch สำหรับเมนูนี้) คลิกแจ้งเตือนจึงเปิดใบนั้นได้เสมอ ต่างจาก Order ที่จัดซื้อกรอง `recipient_department`
+- คลิกแจ้งเตือนของคลังเปิดใบได้เสมอเพราะ `id: 'order'` ไม่มี `roles` (ทุกโปรไฟล์เห็น) และ `id: 'backorder'` มี `roles: ['branch','warehouse']` ซึ่งครอบคลุมคลังอยู่แล้ว — ไม่ชนกับ whitelist ใน `openNotificationEvent`
 
-**Schema (migration `202608170001_purchasing_notification_events.sql`):**
-- ⚠️ คอลัมน์ยังชื่อ **`branch` แต่ความหมายคือ "ผู้รับ"** แล้ว (`SRC/KKL/SSS` = สาขา, `PURCHASING` = จัดซื้อ) — ไม่ rename เพราะมี query/RPC/retention/realtime filter อ้างอยู่หลายจุด · มี `comment on column` กำกับไว้ใน DB
-- CHECK `branch` = 4 ค่า · CHECK `actor_code` = 5 ค่า · **ไม่ใส่ `'WAREHOUSE'` ในฝั่งผู้รับ** เพราะคลังยังใช้ `recipient_department` (ถ้าวันหลังย้ายคลังมา ต้องแก้ 4 จุดตามคอมเมนต์ในไฟล์ migration)
+**Schema (migration `202608170001_purchasing_notification_events.sql` เพิ่มจัดซื้อ, `202608180001_warehouse_notification_events.sql` เพิ่มคลังสินค้า):**
+- ⚠️ คอลัมน์ยังชื่อ **`branch` แต่ความหมายคือ "ผู้รับ"** แล้ว (`SRC/KKL/SSS` = สาขา, `PURCHASING` = จัดซื้อ, `WAREHOUSE` = คลังสินค้า) — ไม่ rename เพราะมี query/RPC/retention/realtime filter อ้างอยู่หลายจุด · มี `comment on column` กำกับไว้ใน DB
+- CHECK `branch` = **5 ค่า** (`SRC/KKL/SSS/PURCHASING/WAREHOUSE`) · CHECK `actor_code` = 5 ค่าเท่าเดิม (`WAREHOUSE` เป็นผู้กระทำได้อยู่แล้วตั้งแต่ก่อนหน้านี้ ไม่ต้องแก้)
 - ⚠️ RPC `ss_create_branch_notifications` มี filter `in (...)` **2 จุด** (insert เหตุการณ์ + upsert ตารางสรุป) — **ลืมจุดที่สอง = เหตุการณ์ลงตารางแต่ realtime ไม่ยิง** badge ขึ้นช้า 30 วิแบบสุ่ม หาสาเหตุยากมาก
-- ⚠️ `salesupport-setup.sql` ใช้ `create table if not exists` → CHECK ที่เขียน inline **ไม่ถูกใช้กับตารางที่มีอยู่แล้ว** จึงต้องมีทั้งแบบ inline (ติดตั้งใหม่) และแบบ `drop/add constraint` (DB เดิม) คู่กันเสมอ
+- ⚠️ `salesupport-setup.sql` ใช้ `create table if not exists` → CHECK ที่เขียน inline **ไม่ถูกใช้กับตารางที่มีอยู่แล้ว** จึงต้องมีทั้งแบบ inline (ติดตั้งใหม่) และแบบ `drop/add constraint` (DB เดิม) คู่กันเสมอ — migration ของคลังอัปเดตทั้ง 2 แบบในไฟล์เดียวกันแล้ว
+- ⚠️ **ต้องรัน `202608180001_warehouse_notification_events.sql` ก่อน deploy frontend ที่เรียก `notifyWarehouseUpdate`** เหมือนกับ migration ของจัดซื้อ — ไม่งั้น RPC กรอง `'WAREHOUSE'` ทิ้งเงียบๆ ปุ่ม "🔔 อัพเดท" ของคลังขึ้นมาแต่ค้าง 0 ตลอด ไม่มี error ให้เห็น
+- **ไม่ backfill เหตุการณ์ย้อนหลังให้คลัง** ต่างจาก migration ของจัดซื้อที่ backfill จาก Order ค้างอยู่ ณ ตอน cutover — เพราะทิศนี้ไม่ได้แทนที่ "Order ใหม่" เดิม (ยังใช้คู่ขนานกันต่อไป) จึงไม่มีอะไรต้อง cutover ให้ต่อเนื่อง เริ่มนับจากศูนย์พอ
 
-- ⚠️ **บั๊ก 2569-08-17 (แก้แล้ว):** เดิมทั้ง 3 จุดของฝั่งแผนกใช้ `.eq('recipient_department', departmentCode)` เฉยๆ — Order ที่ `recipient_department = 'BOTH'` จึง **ไม่เคยขึ้นแจ้งเตือนให้ใครเลย** ทั้งที่เห็นในตารางปกติ (ตารางใช้ `.in()` อยู่แล้ว) เจอจากเคสจริง SKU `101369` ของสาขา SSS · ตอนนี้เหลือใช้กับคลังอย่างเดียวและใช้ `.in()` แล้ว
-- **Request Item แจ้งจัดซื้อแล้ว (2569-08-18)** — ผ่าน `notifyPurchasingUpdate` เหมือน Order ไม่ต้องเพิ่มคอลัมน์ใน `ss_request_items` เลย เพราะตารางเหตุการณ์เก็บ `menu_id`/`table_name`/`record_id` เป็น text อยู่แล้ว · เมนูอื่น (New Product / Ticket / BackOrder) ยังไม่มี ถ้าจะเพิ่มใช้ pattern เดียวกันได้ทันที
+- ⚠️ **บั๊ก 2569-08-17 (แก้แล้ว):** เดิมทั้ง 3 จุดของฝั่งแผนกใช้ `.eq('recipient_department', departmentCode)` เฉยๆ — Order ที่ `recipient_department = 'BOTH'` จึง **ไม่เคยขึ้นแจ้งเตือนให้ใครเลย** ทั้งที่เห็นในตารางปกติ (ตารางใช้ `.in()` อยู่แล้ว) เจอจากเคสจริง SKU `101369` ของสาขา SSS · ตอนนี้เหลือใช้กับคลังอย่างเดียวและใช้ `.in()` แล้ว (ปุ่ม "Order ใหม่" เดิม — ไม่เกี่ยวกับปุ่ม "อัพเดท" ใหม่ของคลังที่ไม่กรอง `recipient_department` เลย)
+- **Request Item แจ้งจัดซื้อแล้ว (2569-08-18)** — ผ่าน `notifyPurchasingUpdate` เหมือน Order ไม่ต้องเพิ่มคอลัมน์ใน `ss_request_items` เลย เพราะตารางเหตุการณ์เก็บ `menu_id`/`table_name`/`record_id` เป็น text อยู่แล้ว · เมนูอื่น (New Product / Ticket) ยังไม่มี ถ้าจะเพิ่มใช้ pattern เดียวกันได้ทันที
+- **BackOrder แจ้งคลังแล้ว (2569-08-18)** — ผ่าน `notifyWarehouseUpdate` เหมือนกัน ไม่ต้องเพิ่มคอลัมน์เช่นกัน
 
 ## ตาราง Order — ดีไซน์ Two-line Row (ไม่ต้องเลื่อนแนวนอน)
 

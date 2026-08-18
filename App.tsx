@@ -391,6 +391,11 @@ const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<PageId>('pricetag');
   const [authProfile, setAuthProfile] = useState<Profile | null>(loadAuthProfile);
   const [saleSupportUnreadCount, setSaleSupportUnreadCount] = useState(0);
+  // ตัวนับปุ่ม "🔔 อัพเดท" ของคลังสินค้าเท่านั้น (2569-08-18) — คนละแหล่งกับ saleSupportUnreadCount
+  // ด้านบน (ปุ่ม "Order ใหม่" เดิม ยังอ่านจาก ss_orders เหมือนเดิม ไม่ได้ถูกแทนที่) จึงแยก effect ต่างหาก
+  // แทนที่จะยัดเข้า notificationSource ตัวเดิม — กัน resubscribe/พังของ 2 โปรไฟล์เดิม (สาขา/จัดซื้อ)
+  // ที่ผ่านการทดสอบมาแล้ว ไม่อยากแตะ discriminated union ที่มีคำเตือนไว้เยอะ
+  const [warehouseUpdateUnreadCount, setWarehouseUpdateUnreadCount] = useState(0);
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
@@ -469,6 +474,51 @@ const App: React.FC = () => {
       document.removeEventListener('visibilitychange', refreshWhenVisible);
     };
   }, [notificationSource]);
+
+  // ปุ่ม "🔔 อัพเดท" ของคลังสินค้า (2569-08-18) — สาขากระทำกับ Order/BackOrder ของตัวเอง
+  // (สร้างใหม่/กดตรา) → notifyWarehouseUpdate เขียนเหตุการณ์ branch='WAREHOUSE' ใน SaleSupportPage.tsx
+  // pattern เดียวกับฝั่ง 'events' ของ notificationSource ด้านบนเป๊ะ (subscribe ตารางสรุป ss_branch_notifications
+  // ไม่ใช่ _events) แต่แยก effect ต่างหากเพราะ notificationSource เป็น union แค่ 1 ค่าต่อโปรไฟล์
+  // ส่วนคลังสินค้าต้องมี 2 ตัวนับพร้อมกัน (Order ใหม่ จาก ss_orders + อัพเดท จากตารางเหตุการณ์)
+  useEffect(() => {
+    if (authProfile?.id !== 'WAREHOUSE') {
+      setWarehouseUpdateUnreadCount(0);
+      return;
+    }
+    let cancelled = false;
+
+    const loadUnread = async () => {
+      const { count, error } = await supabase
+        .from('ss_branch_notification_events')
+        .select('id', { count: 'exact', head: true })
+        .eq('branch', 'WAREHOUSE')
+        .is('read_at', null);
+      if (cancelled || error) return;
+      setWarehouseUpdateUnreadCount(count ?? 0);
+    };
+
+    void loadUnread();
+    const channel = supabase
+      .channel('ss-branch-notifications-WAREHOUSE')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'ss_branch_notifications', filter: 'branch=eq.WAREHOUSE' },
+        () => { void loadUnread(); },
+      )
+      .subscribe();
+    const refreshWhenVisible = () => { if (document.visibilityState === 'visible') void loadUnread(); };
+    window.addEventListener('focus', loadUnread);
+    document.addEventListener('visibilitychange', refreshWhenVisible);
+    const timer = window.setInterval(loadUnread, 30_000);
+
+    return () => {
+      cancelled = true;
+      void supabase.removeChannel(channel);
+      window.clearInterval(timer);
+      window.removeEventListener('focus', loadUnread);
+      document.removeEventListener('visibilitychange', refreshWhenVisible);
+    };
+  }, [authProfile?.id]);
 
   // ── เปิด/ปิดปุ่มแต่ละหน้า (ตั้งค่าโดย admin, ซิงค์ผ่าน Supabase) ──
   const [pageVisibility, setPageVisibility] = useState<PageVisibility>(DEFAULT_VISIBILITY);
@@ -1897,6 +1947,7 @@ ${sheetsHtml}
           isPurchasing={authProfile.id === 'PURCHASING'}
           isWarehouse={authProfile.group === 'คลังสินค้า'}
           userBranch={authProfile.branch ?? undefined}
+          warehouseUpdateUnreadCount={warehouseUpdateUnreadCount}
         />
       )}
 
