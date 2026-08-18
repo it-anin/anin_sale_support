@@ -601,7 +601,13 @@ export function OutboundPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGo
                         </span>
                       </div>
                     ) : row.outOfStock ? (
-                      <span className="outbound-outofstock-mark">ของหมด ✕</span>
+                      // คลังสินค้าเห็นปุ่มยกเลิกใต้ตราประทับ (เดิมกดปุ่ม ✕ ท้ายแถวซ้ำเพื่อยกเลิก)
+                      <div className="outbound-action-group">
+                        <span className="outbound-outofstock-mark">ของหมด ✕</span>
+                        {isWarehouse && (
+                          <button className="outbound-oos-undo" onClick={() => toggleOutOfStock(row)}>ยกเลิกสถานะนี้</button>
+                        )}
+                      </div>
                     ) : isPurchasing ? (
                       <div className="outbound-pending-mark">{row.requested ? 'รอคลังอนุมัติ' : 'สาขายังไม่ส่งรายการ'}</div>
                     ) : !isWarehouse ? (
@@ -612,38 +618,43 @@ export function OutboundPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGo
                           Outbound
                         </button>
                       )
-                    ) : row.requested ? (
-                      <button className="outbound-approve-btn" onClick={() => handleOutboundClick(row)}>
-                        อนุมัติ
-                      </button>
                     ) : (
-                      <div className="outbound-waiting-mark">รอสาขาส่งรายการ</div>
+                      // คลังสินค้า: ปุ่มตัดสินใจ 2 ทางอยู่คู่กัน — อนุมัติ ↔ ของหมด
+                      // ⚠️ "ของหมด" ต้องอยู่ช่องนี้ ไม่ใช่ช่องท้ายแถว เพราะเป็นการตอบคำขอ ไม่ใช่การจัดการแถว
+                      // (เดิมใช้ปุ่ม ✕ ท้ายแถวคู่กับถังขยะ แล้วพนักงานสับสนว่าอันไหนลบจริง)
+                      <div className="outbound-action-group">
+                        {row.requested ? (
+                          <button className="outbound-approve-btn" onClick={() => handleOutboundClick(row)}>
+                            อนุมัติ
+                          </button>
+                        ) : (
+                          <span className="outbound-waiting-mark">รอสาขาส่งรายการ</span>
+                        )}
+                        <button className="outbound-oos-btn" title="แจ้งสาขาว่าสินค้าหมด" onClick={() => toggleOutOfStock(row)}>
+                          ของหมด
+                        </button>
+                      </div>
                     )}
                   </td>
                   <td className="ob-col-del">
-                    {isPurchasing ? null : isWarehouse ? (
-                      <div className="outbound-del-cell">
-                        <button
-                          className={`outbound-del-btn${row.outOfStock ? ' outbound-del-btn--active' : ''}`}
-                          title={row.outOfStock ? 'ยกเลิกสถานะของหมด' : 'แจ้งสาขาว่าของหมด'}
-                          onClick={() => toggleOutOfStock(row)}
-                        >✕</button>
-                        <button
-                          className="outbound-del-btn"
-                          title={row.approved ? 'อนุมัติแล้ว ลบไม่ได้' : 'ลบรายการนี้ทิ้งถาวร (ต้องใส่รหัสผ่าน)'}
-                          onClick={() => handleWarehouseDelete(row)}
-                        >
-                          <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <path d="M3 6h18" />
-                            <path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" />
-                            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-                            <line x1="10" y1="11" x2="10" y2="17" />
-                            <line x1="14" y1="11" x2="14" y2="17" />
-                          </svg>
-                        </button>
-                      </div>
-                    ) : (
-                      <button className="outbound-del-btn" title="ลบแถว" onClick={() => removeRow(row.id)}>✕</button>
+                    {/* ช่องนี้ทำหน้าที่เดียวคือ "ลบแถว" ทั้ง 2 โปรไฟล์ — ใช้ไอคอนถังขยะเหมือนกัน
+                        ⚠️ ห้ามเอา ✕ กลับมาใช้สื่อความหมายอื่นที่นี่อีก (เดิมสาขา ✕ = ลบ แต่คลัง ✕ = ของหมด คนละเรื่องกันจนพนักงานสับสน) */}
+                    {isPurchasing ? null : (
+                      <button
+                        className="outbound-del-btn"
+                        title={isWarehouse
+                          ? (row.approved ? 'อนุมัติแล้ว ลบไม่ได้' : 'ลบรายการนี้ทิ้งถาวร (ต้องใส่รหัสผ่าน)')
+                          : 'ลบแถวนี้'}
+                        onClick={() => (isWarehouse ? handleWarehouseDelete(row) : removeRow(row.id))}
+                      >
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                          <path d="M3 6h18" />
+                          <path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" />
+                          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                          <line x1="10" y1="11" x2="10" y2="17" />
+                          <line x1="14" y1="11" x2="14" y2="17" />
+                        </svg>
+                      </button>
                     )}
                   </td>
                 </tr>

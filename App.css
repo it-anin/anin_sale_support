@@ -3160,19 +3160,19 @@ body.pulse-b .cart-inline-btn.in-cart {
 
 .outbound-table .ob-col-entered  { width: 9%;  white-space: nowrap; text-align: center; }
 .outbound-table .ob-col-sku      { width: 10%; white-space: nowrap; }
-.outbound-table .ob-col-barcode  { width: 12%; white-space: nowrap; }
+.outbound-table .ob-col-barcode  { width: 10%; white-space: nowrap; }
 .outbound-table .ob-col-name     { width: 21%; white-space: normal; word-break: break-word; line-height: 1.4; }
 .outbound-table .ob-col-unit     { width: 7%;  white-space: nowrap; }
 .outbound-table .ob-col-stock    { width: 12%; white-space: nowrap; text-align: center; }
-.outbound-table .ob-col-qty      { width: 8%;  white-space: nowrap; }
+.outbound-table .ob-col-qty      { width: 7%;  white-space: nowrap; }
 .outbound-table .ob-col-request-date { width: 11%; white-space: nowrap; }
 .outbound-table .ob-col-document-no  { width: 10%; white-space: nowrap; text-align: center; }
 .outbound-table .ob-col-branch   { width: 8%;  white-space: nowrap; }
-.outbound-table .ob-col-outbound { width: 14%; white-space: nowrap; text-align: center; }
 /* ⚠️ .product-table เป็น table-layout: fixed — ความกว้างที่ประกาศไว้เป็นค่าบังคับ ไม่ขยายตามเนื้อหา
-   คอลัมน์นี้ต้องกว้างพอสำหรับ 2 ปุ่มของคลังสินค้า (✕ + ถังขยะ) ไม่งั้นปุ่มที่ 2 จะล้นออกไปโดน overflow ตัดทิ้ง
-   เคยตั้งไว้ 3% (~36px) แล้วปุ่มถังขยะหายไปเลยทั้งที่อยู่ใน DOM */
-.outbound-table .ob-col-del      { width: 8%;  white-space: nowrap; text-align: center; }
+   ถ้าเพิ่มปุ่ม/ข้อความในเซลล์ไหนต้องเพิ่ม width ของคอลัมน์นั้นด้วยเสมอ ไม่งั้นล้นออกไปโดน overflow ตัดหาย
+   คอลัมน์นี้ต้องกว้างพอสำหรับปุ่มตัดสินใจ 2 อันของคลังสินค้า (อนุมัติ + ของหมด) */
+.outbound-table .ob-col-outbound { width: 20%; white-space: nowrap; text-align: center; }
+.outbound-table .ob-col-del      { width: 5%;  white-space: nowrap; text-align: center; }
 .outbound-date-input { min-width: 135px; }
 .outbound-document-no { display: inline-block; padding: .4rem .55rem; border-radius: 6px; background: #f5f1ea; color: #594931; font-weight: 700; letter-spacing: .06em; }
 .ob-col-request-date, .ob-col-document-no { display: none !important; }
@@ -3281,6 +3281,48 @@ body.pulse-b .cart-inline-btn.in-cart {
 }
 .outbound-approve-btn:active { transform: scale(0.96); transition-duration: 0.08s; }
 
+/* ปุ่ม "ของหมด" — คู่ตรงข้ามของปุ่มอนุมัติ วางคู่กันในคอลัมน์ Outbound
+   ทรงเดียวกับ .outbound-approve-btn (ตราประทับขอบประ) แต่โทนแดง → อ่านออกทันทีว่าคนละผลลัพธ์
+   ⚠️ ห้ามย้ายกลับไปเป็นไอคอน ✕ ท้ายแถว — เคยทำแล้วพนักงานสับสนกับปุ่มลบ */
+.outbound-oos-btn {
+  padding: 8px 16px;
+  border: 2px dashed #e0a9a0;
+  border-radius: 10px;
+  background: #fdf5f4;
+  color: #b04a3a;
+  font-family: 'Noto Sans Thai', sans-serif;
+  font-weight: 600;
+  font-size: 0.9em;
+  cursor: pointer;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  transition: all 0.22s ease;
+}
+.outbound-oos-btn:hover { background: #fbeae7; border-color: #c0392b; color: #8f3626; }
+.outbound-oos-btn:active { transform: scale(0.96); transition-duration: 0.08s; }
+
+/* ปุ่ม/สถานะในคอลัมน์ Outbound วางเรียงกัน — wrap ลงบรรทัดใหม่ได้ถ้าคอลัมน์แคบ */
+.outbound-action-group {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* ยกเลิกสถานะของหมด — เป็นลิงก์เล็ก ๆ ใต้ตราประทับ ไม่ใช่ปุ่มเด่น (ใช้ไม่บ่อย) */
+.outbound-oos-undo {
+  border: none;
+  background: none;
+  padding: 2px 6px;
+  color: #8494a3;
+  font-family: inherit;
+  font-size: 0.78em;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.outbound-oos-undo:hover { color: #2d6cad; }
+
 /* ปุ่มยืนยันใน popup "ใส่รหัสผ่านเพื่ออนุมัติ" — ดีไซน์ "Outline Check"
    เลือกจาก public/approve-confirm-btn-designs.html แบบที่ 4 */
 .outbound-confirm-btn {
@@ -3352,11 +3394,6 @@ body.pulse-b .cart-inline-btn.in-cart {
   border-radius: 6px;
 }
 .outbound-del-btn:hover { background: rgba(176, 74, 58, 0.12); }
-/* คลังสินค้ากดแล้ว = แถวนี้ถูกแจ้งว่าของหมด (กดซ้ำเพื่อยกเลิก) */
-.outbound-del-btn--active { background: rgba(176, 74, 58, 0.16); color: #8f3626; font-weight: 700; }
-
-/* ฝั่งคลังสินค้ามี 2 ปุ่มในเซลล์เดียว: ✕ = แจ้งของหมด (กดซ้ำยกเลิกได้) · 🗑️ = ลบทิ้งถาวร (ต้องใส่รหัส) */
-.outbound-del-cell { display: inline-flex; align-items: center; gap: 4px; }
 .outbound-del-btn svg {
   width: 14px;
   height: 14px;
