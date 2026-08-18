@@ -299,17 +299,20 @@ create policy "anon all ss_request_items" on ss_request_items for all using (tru
 create policy "anon all ss_new_products"  on ss_new_products  for all using (true) with check (true);
 create policy "anon all ss_tickets"       on ss_tickets       for all using (true) with check (true);
 
--- ── แจ้งเตือนหน้า SaleSupport แยกตามสาขา ─────────────────────
--- last_update_at อัปเดตเมื่อคลัง/จัดซื้อแก้ข้อมูล
--- last_read_at อัปเดตเมื่อสาขาเปิดแผงประวัติแจ้งเตือน
+-- ── แจ้งเตือนหน้า SaleSupport แยกตามผู้รับ ─────────────────────
+-- last_update_at อัปเดตเมื่อมีคนแก้ข้อมูลถึงผู้รับรายนั้น
+-- last_read_at อัปเดตเมื่อผู้รับเปิดแผงประวัติแจ้งเตือน
+-- ⚠️ คอลัมน์ชื่อ `branch` แต่ความหมายคือ "ผู้รับแจ้งเตือน" — SRC/KKL/SSS = สาขา,
+--    PURCHASING = จัดซื้อ (ตั้งแต่ 2569-08-17 ที่เพิ่มทิศ สาขา → จัดซื้อ)
+--    ไม่ rename เพราะมี query/RPC/retention/realtime filter อ้างชื่อนี้อยู่หลายจุด
 create table if not exists ss_branch_notifications (
-  branch         text primary key check (branch in ('SRC', 'KKL', 'SSS')),
+  branch         text primary key check (branch in ('SRC', 'KKL', 'SSS', 'PURCHASING')),
   last_update_at timestamptz,
   last_read_at   timestamptz
 );
 
 insert into ss_branch_notifications (branch)
-values ('SRC'), ('KKL'), ('SSS')
+values ('SRC'), ('KKL'), ('SSS'), ('PURCHASING')
 on conflict (branch) do nothing;
 
 alter table ss_branch_notifications enable row level security;
@@ -317,10 +320,12 @@ drop policy if exists "anon all ss_branch_notifications" on ss_branch_notificati
 create policy "anon all ss_branch_notifications" on ss_branch_notifications
   for all using (true) with check (true);
 
+-- ⚠️ `branch` = ผู้รับ (SRC/KKL/SSS = สาขา, PURCHASING = จัดซื้อ)
+--    `actor_code` = ผู้กระทำ (WAREHOUSE/PURCHASING = ทิศแผนก→สาขา, SRC/KKL/SSS = ทิศสาขา→จัดซื้อ)
 create table if not exists ss_branch_notification_events (
   id          uuid primary key default gen_random_uuid(),
-  branch      text not null check (branch in ('SRC', 'KKL', 'SSS')),
-  actor_code  text not null check (actor_code in ('WAREHOUSE', 'PURCHASING')),
+  branch      text not null check (branch in ('SRC', 'KKL', 'SSS', 'PURCHASING')),
+  actor_code  text not null check (actor_code in ('WAREHOUSE', 'PURCHASING', 'SRC', 'KKL', 'SSS')),
   menu_id     text not null,
   table_name  text not null,
   record_id   text,
@@ -334,6 +339,33 @@ create table if not exists ss_branch_notification_events (
 
 alter table ss_branch_notification_events add column if not exists item_sku text;
 alter table ss_branch_notification_events add column if not exists item_name text;
+
+-- ⚠️ `create table if not exists` ข้าม CHECK ที่เขียน inline ไว้ข้างบนถ้าตารางมีอยู่แล้ว
+--    จึงต้องมีแบบ alter คู่กันเสมอ สำหรับ DB ที่สร้างไว้ก่อนหน้า (แบบเดียวกับ ss_orders ข้างบน)
+alter table ss_branch_notifications
+  drop constraint if exists ss_branch_notifications_branch_check;
+alter table ss_branch_notifications
+  add constraint ss_branch_notifications_branch_check
+  check (branch in ('SRC', 'KKL', 'SSS', 'PURCHASING'));
+
+alter table ss_branch_notification_events
+  drop constraint if exists ss_branch_notification_events_branch_check;
+alter table ss_branch_notification_events
+  add constraint ss_branch_notification_events_branch_check
+  check (branch in ('SRC', 'KKL', 'SSS', 'PURCHASING'));
+
+alter table ss_branch_notification_events
+  drop constraint if exists ss_branch_notification_events_actor_code_check;
+alter table ss_branch_notification_events
+  add constraint ss_branch_notification_events_actor_code_check
+  check (actor_code in ('WAREHOUSE', 'PURCHASING', 'SRC', 'KKL', 'SSS'));
+
+comment on column ss_branch_notification_events.branch is
+  'ผู้รับแจ้งเตือน ไม่ใช่ "สาขา" อย่างเดียวแล้ว — SRC/KKL/SSS = สาขา, PURCHASING = จัดซื้อ';
+comment on column ss_branch_notifications.branch is
+  'ผู้รับแจ้งเตือน — SRC/KKL/SSS = สาขา, PURCHASING = จัดซื้อ';
+comment on column ss_branch_notification_events.actor_code is
+  'ผู้กระทำ — WAREHOUSE/PURCHASING (ทิศ แผนก → สาขา) หรือ SRC/KKL/SSS (ทิศ สาขา → จัดซื้อ)';
 
 create index if not exists ss_branch_notification_events_branch_created_idx
   on ss_branch_notification_events (branch, created_at desc);
@@ -357,7 +389,13 @@ begin
     (branch, actor_code, menu_id, table_name, record_id, title, detail, item_sku, item_name, created_at)
   select distinct
     upper(trim(value)),
-    case when upper(trim(target_actor_code)) = 'WAREHOUSE' then 'WAREHOUSE' else 'PURCHASING' end,
+    -- ส่งค่าจริงผ่านไปถ้าอยู่ในชุดที่รู้จัก · คง else 'PURCHASING' ไว้ตามเดิม
+    -- → call site เดิมที่ส่ง 'WAREHOUSE'/'PURCHASING' ตรง ๆ พฤติกรรมไม่เปลี่ยน
+    case
+      when upper(trim(coalesce(target_actor_code, ''))) in ('WAREHOUSE', 'PURCHASING', 'SRC', 'KKL', 'SSS')
+        then upper(trim(target_actor_code))
+      else 'PURCHASING'
+    end,
     coalesce(nullif(trim(target_menu_id), ''), 'salesupport'),
     coalesce(nullif(trim(target_table_name), ''), 'unknown'),
     nullif(trim(target_record_id), ''),
@@ -367,12 +405,14 @@ begin
     nullif(trim(event_item_name), ''),
     event_time
   from unnest(coalesce(target_branches, array[]::text[])) as branches(value)
-  where upper(trim(value)) in ('SRC', 'KKL', 'SSS');
+  where upper(trim(value)) in ('SRC', 'KKL', 'SSS', 'PURCHASING');
 
+  -- ⚠️ filter ตรงนี้ต้องตรงกับข้างบนเป๊ะ ๆ — ลืมขยายจุดนี้จุดเดียว เหตุการณ์จะลงตาราง
+  --    แต่ last_update_at ไม่ขยับ → realtime ไม่ยิง badge ขึ้นช้า 30 วิ แบบสุ่ม
   insert into ss_branch_notifications (branch, last_update_at)
   select distinct upper(trim(value)), event_time
   from unnest(coalesce(target_branches, array[]::text[])) as branches(value)
-  where upper(trim(value)) in ('SRC', 'KKL', 'SSS')
+  where upper(trim(value)) in ('SRC', 'KKL', 'SSS', 'PURCHASING')
   on conflict (branch) do update set last_update_at = excluded.last_update_at;
 end;
 $$;
@@ -397,7 +437,7 @@ declare
   read_time timestamptz := now();
   normalized_branch text := upper(trim(target_branch));
 begin
-  if normalized_branch not in ('SRC', 'KKL', 'SSS') then return; end if;
+  if normalized_branch not in ('SRC', 'KKL', 'SSS', 'PURCHASING') then return; end if;
   update ss_branch_notification_events set read_at = read_time
   where branch = normalized_branch and read_at is null;
   insert into ss_branch_notifications (branch, last_read_at)

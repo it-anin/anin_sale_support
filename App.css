@@ -4085,6 +4085,9 @@ body.pulse-b .cart-inline-btn.in-cart {
 }
 .ss-notification-actor--warehouse { background: #e8f1fb; color: #2d6cad; }
 .ss-notification-actor--purchasing { background: #fff1dc; color: #a76408; }
+/* ผู้กระทำเป็นสาขา — ทิศ สาขา → จัดซื้อ (จัดซื้อเห็นในแผงของตัวเอง)
+   ใช้โทนเขียวชุดเดียวกับ .ss-chip--green ให้อยู่ในพาเลตต์เดิม */
+.ss-notification-actor--branch { background: #e5f5e9; color: #2e8b47; }
 .ss-notification-new { position: absolute; top: 11px; right: 12px; color: #e33f4f; font-size: 10px; font-weight: 800; }
 .ss-notification-product {
   display: flex;

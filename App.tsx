@@ -396,35 +396,41 @@ const App: React.FC = () => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
   }, [currentPage]);
 
-  // จุดแดงหน้า SaleSupport:
-  // - สาขา: อัพเดทจากคลัง/จัดซื้อที่ยังไม่อ่าน
-  // - คลัง/จัดซื้อ: Order ใหม่ที่สาขาส่งให้รหัสนั้นและยังไม่ได้เปิดเมนู Order
-  useEffect(() => {
+  // แหล่งจุดแดงหน้า SaleSupport — 3 เคส แต่มีแค่ 2 ทรง query
+  //  สาขา SRC/KKL/SSS → ตารางเหตุการณ์ (คลัง/จัดซื้อแก้ข้อมูล)
+  //  จัดซื้อ          → ตารางเหตุการณ์เดียวกัน ใช้ 'PURCHASING' เป็นค่า branch (= ผู้รับ) — เพิ่ม 2569-08-17
+  //  คลังสินค้า       → Order ใหม่ที่ยังไม่เปิด (recipient_department บน ss_orders) — ไม่ย้ายโดยตั้งใจ
+  // ⚠️ ต้อง useMemo — ถ้าสร้าง object ใหม่ทุก render effect จะ resubscribe realtime ทุกครั้ง
+  const notificationSource = useMemo(() => {
     const branch = authProfile?.branch ?? '';
-    const isNotifiedBranch = branch === 'SRC' || branch === 'KKL' || branch === 'SSS';
-    const profileCode = authProfile?.id ?? '';
-    const departmentCode = profileCode === 'WAREHOUSE' || profileCode === 'PURCHASING' ? profileCode : '';
-    if (!isNotifiedBranch && !departmentCode) {
+    if (branch === 'SRC' || branch === 'KKL' || branch === 'SSS') return { kind: 'events', key: branch } as const;
+    if (authProfile?.id === 'PURCHASING') return { kind: 'events', key: 'PURCHASING' } as const;
+    if (authProfile?.id === 'WAREHOUSE') return { kind: 'orders', key: 'WAREHOUSE' } as const;
+    return null;
+  }, [authProfile?.branch, authProfile?.id]);
+
+  useEffect(() => {
+    if (!notificationSource) {
       setSaleSupportUnreadCount(0);
       return;
     }
-
+    const src = notificationSource;
     let cancelled = false;
     setSaleSupportUnreadCount(0);
 
     const loadUnread = async () => {
-      const { count, error } = isNotifiedBranch
+      const { count, error } = src.kind === 'events'
         ? await supabase
             .from('ss_branch_notification_events')
             .select('id', { count: 'exact', head: true })
-            .eq('branch', branch)
+            .eq('branch', src.key)
             .is('read_at', null)
         : await supabase
             .from('ss_orders')
             .select('id', { count: 'exact', head: true })
             // 'BOTH' ต้องนับด้วย — SKU ที่หาไม่เจอใน Product Master ตอนบันทึก Order จะได้ recipient_department = 'BOTH'
-            // (กันออเดอร์ไม่มีใครเห็นเลย) ถ้าใช้ .eq() เฉยๆ แถวพวกนี้จะไม่ขึ้นแจ้งเตือนให้ทั้งคลังและจัดซื้อเลย
-            .in('recipient_department', [departmentCode, 'BOTH'])
+            // (กันออเดอร์ไม่มีใครเห็นเลย) ถ้าใช้ .eq() เฉยๆ แถวพวกนี้จะไม่ขึ้นแจ้งเตือนให้คลังเลย
+            .in('recipient_department', [src.key, 'BOTH'])
             .is('recipient_read_at', null);
       if (cancelled || error) return;
       setSaleSupportUnreadCount(count ?? 0);
@@ -434,21 +440,21 @@ const App: React.FC = () => {
       if (document.visibilityState === 'visible') void loadUnread();
     };
     void loadUnread();
-    const notificationChannel = isNotifiedBranch
+    const notificationChannel = src.kind === 'events'
       ? supabase
-          .channel(`ss-branch-notifications-${branch}`)
+          .channel(`ss-branch-notifications-${src.key}`)
           .on(
             'postgres_changes',
-            { event: '*', schema: 'public', table: 'ss_branch_notifications', filter: `branch=eq.${branch}` },
+            { event: '*', schema: 'public', table: 'ss_branch_notifications', filter: `branch=eq.${src.key}` },
             () => { void loadUnread(); },
           )
           .subscribe()
       : supabase
-          .channel(`ss-department-orders-${departmentCode}`)
+          .channel(`ss-department-orders-${src.key}`)
           .on(
             'postgres_changes',
             // in.() ให้ตรงกับ loadUnread ด้านบน — ต้องรับรู้แถว 'BOTH' ด้วย ไม่ใช่แค่แผนกตัวเอง
-            { event: '*', schema: 'public', table: 'ss_orders', filter: `recipient_department=in.(${departmentCode},BOTH)` },
+            { event: '*', schema: 'public', table: 'ss_orders', filter: `recipient_department=in.(${src.key},BOTH)` },
             () => { void loadUnread(); },
           )
           .subscribe();
@@ -462,7 +468,7 @@ const App: React.FC = () => {
       window.removeEventListener('focus', loadUnread);
       document.removeEventListener('visibilitychange', refreshWhenVisible);
     };
-  }, [authProfile?.branch, authProfile?.id]);
+  }, [notificationSource]);
 
   // ── เปิด/ปิดปุ่มแต่ละหน้า (ตั้งค่าโดย admin, ซิงค์ผ่าน Supabase) ──
   const [pageVisibility, setPageVisibility] = useState<PageVisibility>(DEFAULT_VISIBILITY);

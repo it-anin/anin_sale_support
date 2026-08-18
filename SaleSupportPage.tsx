@@ -864,6 +864,19 @@ const REQUEST_AVAILABILITY_OPTIONS = ['ต้องสั่ง', 'มีขอ�
 const TICKET_STATUS_OPTIONS = ['Done', 'Cancel'] as const;
 const NOTIFIED_BRANCHES = ['SRC', 'KKL', 'SSS'] as const;
 
+/** ป้ายผู้กระทำในแผงประวัติ — ต้องครอบคลุมทั้ง 2 ทิศทาง (แผนก→สาขา และ สาขา→จัดซื้อ)
+ *  ⚠️ ของเดิมเขียนเป็น ternary `=== 'WAREHOUSE' ? 'คลังสินค้า' : 'จัดซื้อ'` ซึ่งทำให้ค่าอื่น
+ *     ทั้งหมดตกไปเป็น "จัดซื้อ" — พอสาขาเป็นผู้กระทำได้ จัดซื้อจะเห็นว่าตัวเองแจ้งเตือนตัวเอง */
+const NOTIFICATION_ACTOR_LABELS: Record<string, string> = {
+  WAREHOUSE: 'คลังสินค้า',
+  PURCHASING: 'จัดซื้อ',
+  SRC: 'สาขา SRC',
+  KKL: 'สาขา KKL',
+  SSS: 'สาขา SSS',
+};
+const notificationActorTone = (code: string) =>
+  code === 'WAREHOUSE' ? 'warehouse' : code === 'PURCHASING' ? 'purchasing' : 'branch';
+
 interface BranchNotificationEvent {
   id: string;
   branch: string;
@@ -889,17 +902,21 @@ interface NotificationMeta {
   itemName?: unknown;
 }
 
+/** insert แล้วคืน id ของแถวที่เพิ่งสร้าง — ใช้ผูกกับ record_id ของแจ้งเตือน (คลิกแล้วเปิด popup ใบนั้นได้)
+ *  ⚠️ ใช้ `.select('id')` แบบ array ห้ามใช้ `.single()` — `.single()` จะ error เมื่อได้ 0 แถว
+ *     ทำให้ insert ที่สำเร็จถูกรายงานว่าล้มเหลว แล้วผู้ใช้กดซ้ำจนได้ Order ซ้ำ */
 async function insertWithContactChannelFallback(table: string, payload: Record<string, unknown>) {
-  let { error } = await supabase.from(table).insert(payload);
+  const run = (body: Record<string, unknown>) => supabase.from(table).insert(body).select('id');
+  let { data, error } = await run(payload);
   const missingContactChannel = error
     && error.message.includes('contact_channel')
     && (error.message.includes('schema cache') || error.message.includes('Could not find'));
   if (missingContactChannel) {
     const legacyPayload = { ...payload };
     delete legacyPayload.contact_channel;
-    ({ error } = await supabase.from(table).insert(legacyPayload));
+    ({ data, error } = await run(legacyPayload));
   }
-  return error;
+  return { error, id: data?.[0]?.id ? String(data[0].id) : null };
 }
 
 export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGoCustomerHistory, onGoOutbound, onGoSaleSupport, isPurchasing, isWarehouse, userBranch }: Props) {
@@ -983,7 +1000,6 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
 
   const menu = MENUS.find(m => m.id === activeMenu)!;
   const isBranchUser = userBranch === 'SRC' || userBranch === 'KKL' || userBranch === 'SSS';
-  const departmentCode = isWarehouse ? 'WAREHOUSE' : isPurchasing ? 'PURCHASING' : null;
   // เมนูที่โปรไฟล์นี้เห็น — ใช้ทั้งกับ sidebar และเป็น whitelist ตอนเปิดจากลิงก์แจ้งเตือน
   const currentRole: MenuRole = isBranchUser ? 'branch' : isWarehouse ? 'warehouse' : 'purchasing';
   const visibleMenus = useMemo(
@@ -995,44 +1011,51 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
   const pageNotifications = usePageNotifications();
   const notificationUnreadCount = Number(pageNotifications.salesupport ?? 0);
 
-  // เมื่อคลัง/จัดซื้อเปิดเมนู Order ถือว่าเห็นงานใหม่แล้ว จึงล้างจุดแจ้งเตือนเฉพาะรหัสนั้น
-  // ⚠️ ตั้งใจให้ **จุดแจ้งเตือนยังผูกกับ recipient_department** ทั้งที่ตารางของคลังไม่กรองแล้ว —
-  //    `recipient_read_at` มีคอลัมน์เดียวใช้ร่วมกันทั้ง 2 แผนก ถ้าคลังมาร์คอ่านให้ใบของจัดซื้อด้วย
-  //    จุดแดงของจัดซื้อจะดับทั้งที่ยังไม่เคยเปิดดู · ผลคือ badge = "ใบใหม่ที่ส่งถึงฉัน" ส่วนตาราง = ทุกใบที่ต้องแตะ
+  // ผู้รับแจ้งเตือนของโปรไฟล์นี้ = ค่าที่ใช้ query คอลัมน์ `branch` ในตารางเหตุการณ์
+  // (ชื่อคอลัมน์ยังเป็น "branch" ตามเดิม แต่ความหมายคือ "ผู้รับ" แล้ว — ดู comment ใน salesupport-setup.sql)
+  // null = โปรไฟล์นี้ไม่ใช้แผงประวัติ (คลังสินค้า — ยังใช้ recipient_department บน ss_orders)
+  const notificationRecipient = isBranchUser ? (userBranch ?? null) : isPurchasing ? 'PURCHASING' : null;
+  // ⚠️ แยกจาก NOTIFICATION_ACTOR_LABELS โดยตั้งใจ — ถ้าเอา map นั้นมาใช้ หัว drawer ของสาขา
+  //    จะเปลี่ยนจาก "SRC · รายการล่าสุด" เป็น "สาขา SRC · รายการล่าสุด" โดยไม่ได้ขอ
+  const notificationRecipientLabel = isPurchasing ? 'จัดซื้อ' : (userBranch ?? '');
+
+  // เมื่อคลังสินค้าเปิดเมนู Order ถือว่าเห็นงานใหม่แล้ว จึงล้างจุดแจ้งเตือน
+  // ⚠️ **เฉพาะคลังสินค้าเท่านั้นแล้ว** (2569-08-17) — จัดซื้อย้ายไปใช้ตารางเหตุการณ์
+  //    (ss_branch_notification_events.read_at เคลียร์ผ่าน RPC ตอนเปิด drawer) ถ้าปล่อย effect นี้
+  //    ทำงานกับจัดซื้อด้วย มันจะยิง update recipient_read_at จากสัญญาณคนละเรื่อง
+  //    เพราะ notificationUnreadCount ของจัดซื้อตอนนี้มาจากตารางเหตุการณ์ ไม่ใช่ ss_orders
   // ⚠️ ต้องรวม 'BOTH' ด้วยเสมอ ให้ตรงกับ filter นับเลข badge ใน App.tsx — ไม่งั้นใบที่หา SKU ไม่เจอใน
   //    Product Master (recipient_department = 'BOTH') จะถูกนับเป็นเลขค้างใน badge ตลอดไป เพราะเปิดเมนูแล้ว
   //    ก็ไม่เคยมี query ไหนมาร์คว่าอ่านแล้วสักที (2569-08-17: 'BOTH' ไม่เคยแจ้งเตือนใครมาก่อน — ดูจุดเดียวกันใน App.tsx)
+  // หมายเหตุ: แถวที่ recipient_department = 'PURCHASING' จะมี recipient_read_at ค้าง null ตลอดไป
+  //    ตั้งใจปล่อยไว้ — ไม่มีใครอ่านแล้ว และการเขียนทับจะทำลาย audit trail
+  //    (คอลัมน์นี้ยังใช้กรองตาราง + นับเมนูย่อยอยู่ ห้ามลบ)
   useEffect(() => {
-    if (activeMenu !== 'order' || !departmentCode || notificationUnreadCount <= 0) return;
+    if (activeMenu !== 'order' || !isWarehouse || notificationUnreadCount <= 0) return;
     let cancelled = false;
     void supabase
       .from('ss_orders')
       .update({ recipient_read_at: new Date().toISOString() })
-      .in('recipient_department', [departmentCode, 'BOTH'])
+      .in('recipient_department', ['WAREHOUSE', 'BOTH'])
       .is('recipient_read_at', null)
       .then(({ error: readError }) => {
         if (cancelled || readError) return;
         setRefreshKey(key => key + 1);
       });
     return () => { cancelled = true; };
-  }, [activeMenu, departmentCode, notificationUnreadCount]);
+  }, [activeMenu, isWarehouse, notificationUnreadCount]);
 
+  /** ปุ่ม "🔔 Order ใหม่" — เหลือเฉพาะคลังสินค้าแล้ว (จัดซื้อใช้ drawer ประวัติแทน) */
   const openDepartmentOrders = () => {
     setStepFilter(null);
     setActiveMenu('order');
   };
 
-  // แจ้งเฉพาะการเปลี่ยนข้อมูลที่ทำโดยคลังสินค้า/จัดซื้อ
-  // ถ้าแถวมีสาขา ให้แจ้งสาขานั้นสาขาเดียว; ข้อมูลกลางอย่าง Product/Supplier แจ้งทั้ง 3 สาขา
-  const notifyBranchUpdate = async (branchValue?: unknown, meta: NotificationMeta = {}) => {
-    if (!isPurchasing && !isWarehouse) return;
-    const normalized = String(branchValue ?? '').trim().toUpperCase();
-    const targets = (NOTIFIED_BRANCHES as readonly string[]).includes(normalized)
-      ? [normalized]
-      : [...NOTIFIED_BRANCHES];
+  /** จุดเดียวที่รู้จักรูปร่าง argument ของ RPC — ทั้ง 2 ทิศทางเรียกผ่านตัวนี้ */
+  const createNotificationEvents = async (targets: string[], actorCode: string, meta: NotificationMeta) => {
     const { error } = await supabase.rpc('ss_create_branch_notifications', {
       target_branches: targets,
-      target_actor_code: isWarehouse ? 'WAREHOUSE' : 'PURCHASING',
+      target_actor_code: actorCode,
       target_menu_id: meta.menuId ?? activeMenu,
       target_table_name: meta.tableName ?? menu.table,
       target_record_id: meta.recordId === null || meta.recordId === undefined ? null : String(meta.recordId),
@@ -1044,15 +1067,40 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
     if (error) console.error('บันทึกการแจ้งเตือน SaleSupport ไม่สำเร็จ:', error.message);
   };
 
-  const openNotificationHistory = async () => {
+  // ── ทิศที่ 1: แผนก → สาขา ────────────────────────────────────────────
+  // แจ้งเฉพาะการเปลี่ยนข้อมูลที่ทำโดยคลังสินค้า/จัดซื้อ
+  // ถ้าแถวมีสาขา ให้แจ้งสาขานั้นสาขาเดียว; ข้อมูลกลางอย่าง Product/Supplier แจ้งทั้ง 3 สาขา
+  // ⚠️ guard ด้านล่างตรงข้ามกับ notifyPurchasingUpdate สนิท (ดูคำเตือนที่ฟังก์ชันนั้น)
+  const notifyBranchUpdate = async (branchValue?: unknown, meta: NotificationMeta = {}) => {
+    if (!isPurchasing && !isWarehouse) return;
+    const normalized = String(branchValue ?? '').trim().toUpperCase();
+    const targets = (NOTIFIED_BRANCHES as readonly string[]).includes(normalized)
+      ? [normalized]
+      : [...NOTIFIED_BRANCHES];
+    await createNotificationEvents(targets, isWarehouse ? 'WAREHOUSE' : 'PURCHASING', meta);
+  };
+
+  // ── ทิศที่ 2: สาขา → จัดซื้อ (เพิ่ม 2569-08-17) ────────────────────────
+  // ผู้กระทำ = สาขาที่ล็อกอิน · ผู้รับ = 'PURCHASING' เสมอ
+  // ⚠️ ไม่มี fan-out แบบ notifyBranchUpdate — ผู้รับมีรายเดียว ไม่มีเคส "ไม่รู้ว่าใคร"
+  // ⚠️ คลังสินค้าไม่รับทางนี้ ยังใช้ recipient_department บน ss_orders เหมือนเดิม (ตั้งใจ ไม่ใช่ของตกหล่น)
+  // ⚠️ guard ของ 2 ฟังก์ชันนี้แยกกันคนละทิศ 100% (ตัวโน้นต้องเป็นคลัง/จัดซื้อ · ตัวนี้ต้องเป็นสาขา)
+  //    จึงเรียกคู่กันในฟังก์ชันเดียวได้โดยไม่มีทางยิงซ้ำ — **ถ้าใครคลาย guard ตัวใดตัวหนึ่ง
+  //    จะยิงทั้งคู่ทันที แล้วจัดซื้อจะได้แจ้งเตือนซ้ำ**
+  const notifyPurchasingUpdate = async (meta: NotificationMeta = {}) => {
     if (!isBranchUser || !userBranch) return;
+    await createNotificationEvents(['PURCHASING'], userBranch, meta);
+  };
+
+  const openNotificationHistory = async () => {
+    if (!notificationRecipient) return;
     setShowNotificationHistory(true);
     setNotificationLoading(true);
     setNotificationError('');
     const { data, error } = await supabase
       .from('ss_branch_notification_events')
       .select('id, branch, actor_code, menu_id, table_name, record_id, title, detail, item_sku, item_name, created_at, read_at')
-      .eq('branch', userBranch)
+      .eq('branch', notificationRecipient)
       .order('created_at', { ascending: false })
       .limit(100);
     setNotificationLoading(false);
@@ -1080,24 +1128,24 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
     }
     setNotificationEvents(events);
     // เปิดแผงแล้วจึงถือว่าอ่าน ไม่ใช่เพียงแค่เข้าหน้า SaleSupport
-    const { error: readError } = await supabase.rpc('ss_mark_branch_notifications_read', { target_branch: userBranch });
+    const { error: readError } = await supabase.rpc('ss_mark_branch_notifications_read', { target_branch: notificationRecipient });
     if (readError) setNotificationError(`บันทึกสถานะอ่านไม่สำเร็จ: ${readError.message}`);
   };
 
-  // ล้างประวัติอัพเดท — ลบเฉพาะสาขาตัวเอง ไม่แตะของสาขาอื่น (แผงนี้ก็แสดงแค่ของสาขาตัวเองอยู่แล้ว)
+  // ล้างประวัติอัพเดท — ลบเฉพาะของผู้รับตัวเอง ไม่แตะของคนอื่น (แผงนี้ก็แสดงแค่ของตัวเองอยู่แล้ว)
   const confirmClearHistory = async () => {
-    if (!isBranchUser || !userBranch) return;
+    if (!notificationRecipient) return;
     if (clearHistoryPw !== ADMIN_PASSWORD) {
       setClearHistoryError('รหัส Admin ไม่ถูกต้อง');
       return;
     }
-    if (!window.confirm(`ล้างประวัติอัพเดทของสาขา ${userBranch} ทั้งหมด? การลบนี้ย้อนกลับไม่ได้`)) return;
+    if (!window.confirm(`ล้างประวัติอัพเดทของ ${notificationRecipientLabel} ทั้งหมด? การลบนี้ย้อนกลับไม่ได้`)) return;
     setClearingHistory(true);
     setClearHistoryError('');
     const { error } = await supabase
       .from('ss_branch_notification_events')
       .delete()
-      .eq('branch', userBranch);
+      .eq('branch', notificationRecipient);
     setClearingHistory(false);
     if (error) {
       setClearHistoryError(`ล้างประวัติไม่สำเร็จ: ${error.message}`);
@@ -1659,7 +1707,7 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
       ...ORDER_INITIAL_STATUSES,
       // created_at (TimeStamp) บันทึกอัตโนมัติจากฝั่งฐานข้อมูล
     };
-    const error = await insertWithContactChannelFallback('ss_orders', orderPayload);
+    const { error, id: newOrderId } = await insertWithContactChannelFallback('ss_orders', orderPayload);
     setSaving(false);
     if (error) {
       setSaveError(`บันทึกไม่สำเร็จ: ${error.message}`);
@@ -1667,6 +1715,21 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
       void notifyBranchUpdate(orderBranch, {
         menuId: 'order', tableName: 'ss_orders', title: 'เพิ่ม Order ใหม่',
         detail: [orderForm.sku, orderForm.product_name].filter(Boolean).join(' · '),
+        itemSku: orderForm.sku,
+        itemName: orderForm.product_name,
+      });
+      // สาขาสร้าง Order → แจ้งจัดซื้อ (ทิศตรงข้ามกับบรรทัดบน — ยิงคนละโปรไฟล์ ไม่ซ้ำกัน)
+      // ⚠️ ห้าม gate ด้วย recipientDepartment === 'PURCHASING' — ค่า 'BOTH' (SKU ไม่มีใน
+      //    Product Master) จัดซื้อก็ต้องเห็น ไม่งั้นจะเป็นบั๊กตัวเดียวกับที่แก้ไปเมื่อ 2569-08-17
+      // detail ไม่ซ้ำ SKU/ชื่อ เพราะ 2 ค่านั้นมีบล็อกแสดงผลของตัวเองอยู่แล้วใน drawer
+      void notifyPurchasingUpdate({
+        menuId: 'order', tableName: 'ss_orders', recordId: newOrderId,
+        title: 'สาขาเพิ่ม Order ใหม่',
+        detail: [
+          `จำนวน ${orderForm.qty}${orderForm.unit ? ` ${orderForm.unit}` : ''}`,
+          orderForm.pickup_date ? `นัดรับ ${new Date(orderForm.pickup_date).toLocaleDateString('th-TH')}` : '',
+          orderForm.sale_bill_no ? `บิล ${orderForm.sale_bill_no}` : '',
+        ].filter(Boolean).join(' · '),
         itemSku: orderForm.sku,
         itemName: orderForm.product_name,
       });
@@ -1726,11 +1789,25 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
         status: 'รอตรวจสอบ',
         // created_at (DateTime/TimeStamp) บันทึกอัตโนมัติจากฝั่งฐานข้อมูล
       };
-      const error = await insertWithContactChannelFallback('ss_request_items', requestPayload);
+      const { error, id: newRequestId } = await insertWithContactChannelFallback('ss_request_items', requestPayload);
       if (error) throw new Error(`บันทึกไม่สำเร็จ: ${error.message}`);
       void notifyBranchUpdate(requestBranch, {
         menuId: 'request', tableName: 'ss_request_items', title: 'เพิ่ม Request Item ใหม่',
         detail: [requestForm.sku, requestForm.product_name].filter(Boolean).join(' · '),
+        itemSku: requestForm.sku,
+        itemName: requestForm.product_name,
+      });
+      // สาขาขอสินค้าใหม่ → แจ้งจัดซื้อ (จัดซื้อเป็นคนหาของ/ลง SKU+MOQ ต่อ)
+      // detail ไม่ซ้ำ SKU/ชื่อ เพราะ 2 ค่านั้นมีบล็อกแสดงผลของตัวเองอยู่แล้วใน drawer
+      void notifyPurchasingUpdate({
+        menuId: 'request', tableName: 'ss_request_items', recordId: newRequestId,
+        title: 'สาขาขอสินค้าใหม่ (Request Item)',
+        detail: [
+          `จำนวน ${requestForm.qty}`,
+          [requestForm.generic_name.trim(), requestForm.strength.trim()].filter(Boolean).join(' '),
+          requestForm.need_date ? `ต้องการ ${new Date(requestForm.need_date).toLocaleDateString('th-TH')}` : '',
+          requestForm.supplier.trim() ? `supplier ${requestForm.supplier.trim()}` : '',
+        ].filter(Boolean).join(' · '),
         itemSku: requestForm.sku,
         itemName: requestForm.product_name,
       });
@@ -2015,6 +2092,18 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
       itemSku: selectedOrder.sku,
       itemName: selectedOrder.product_name,
     });
+    // สาขากดตรา → แจ้งจัดซื้อ
+    // ⚠️ ฟังก์ชันนี้ใช้ร่วมกับ BackOrder (selectedOrderTable เป็นได้ทั้ง ss_orders / ss_backorders)
+    //    BackOrder อยู่นอกขอบเขตโดยตั้งใจ — จัดซื้อไม่เห็นเมนูนั้นด้วยซ้ำ (MENUS roles) ถ้าไม่กัน
+    //    จะแจ้งเตือนแล้วคลิกไปตันที่ whitelist ใน openNotificationEvent โดยไม่มี feedback
+    if (selectedOrderTable === 'ss_orders') {
+      void notifyPurchasingUpdate({
+        menuId: 'order', tableName: 'ss_orders', recordId: selectedOrder.id,
+        title: 'สาขาอัปเดตสถานะ Order', detail: `${step.label} → ${next}`,
+        itemSku: selectedOrder.sku,
+        itemName: selectedOrder.product_name,
+      });
+    }
   };
 
   // กดตราประทับใน Popup Order/BackOrder: อนุมัติทันที / ยกเลิกต้องยืนยันก่อน (เปิดกล่อง Centered Icon Alert)
@@ -2180,14 +2269,20 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
     setDetailView(d => (d && String(d.row.id) === id ? { ...d, row: { ...d.row, ...patch } } : d));
     setEditing(false);
     if (meta.detail !== '') {
-      void notifyBranchUpdate(notificationBranch, {
+      const resolved = {
         ...meta,
         recordId: meta.recordId ?? id,
         detail: meta.detail ?? `แก้ไข ${Object.keys(patch).join(', ')}`,
         itemSku: meta.itemSku ?? patch.sku ?? sourceRow?.sku,
         itemName: meta.itemName ?? patch.product_name ?? patch.name ?? patch.name_brand
           ?? sourceRow?.product_name ?? sourceRow?.name ?? sourceRow?.name_brand,
-      });
+      };
+      void notifyBranchUpdate(notificationBranch, resolved);
+      // สาขาแก้ Request Item (เช่น เปลี่ยนจำนวน/วันที่ต้องการ) → แจ้งจัดซื้อด้วย
+      // ⚠️ กันเฉพาะเมนู request เท่านั้น — ฟังก์ชันนี้ใช้ร่วมกับ products/newproduct/ticket
+      //    และ popup Order ซึ่งอยู่นอกขอบเขต (Order แจ้งผ่าน applyStepChange อยู่แล้ว)
+      // เงื่อนไข meta.detail !== '' ด้านบนกันกรณีกดบันทึกทั้งที่ไม่ได้แก้อะไรให้แล้ว
+      if (meta.menuId === 'request') void notifyPurchasingUpdate({ ...resolved, title: 'สาขาแก้ไข Request Item' });
     }
     // แก้ ABC ผ่านฟอร์มแก้ไขก็ทำให้รายการ chip ค้างได้เหมือนกัน
     if (activeMenu === 'products') { supplierMapRef.current = null; setAbcOptions(null); setRefreshKey(k => k + 1); }
@@ -2447,7 +2542,7 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
                   {activeMenu === 'ticket' && (
                     <button className="ss-add-btn" onClick={openAddTicket}>➕ Add</button>
                   )}
-                  {isBranchUser && (
+                  {notificationRecipient && (
                     <button className="ss-notification-history-btn" onClick={openNotificationHistory}>
                       <span aria-hidden="true">🔔</span>
                       อัพเดท
@@ -2456,7 +2551,7 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
                       )}
                     </button>
                   )}
-                  {departmentCode && notificationUnreadCount > 0 && (
+                  {isWarehouse && notificationUnreadCount > 0 && (
                     <button className="ss-notification-history-btn" onClick={openDepartmentOrders}>
                       <span aria-hidden="true">🔔</span>
                       Order ใหม่
@@ -2508,7 +2603,7 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
                     {!isBranchUser && (
                       <button className="ss-add-btn" onClick={openAddMaster}>➕ New Product</button>
                     )}
-                    {isBranchUser && (
+                    {notificationRecipient && (
                       <button className="ss-notification-history-btn" onClick={openNotificationHistory}>
                         <span aria-hidden="true">🔔</span>
                         อัพเดท
@@ -2517,7 +2612,7 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
                         )}
                       </button>
                     )}
-                    {departmentCode && notificationUnreadCount > 0 && (
+                    {isWarehouse && notificationUnreadCount > 0 && (
                       <button className="ss-notification-history-btn" onClick={openDepartmentOrders}>
                         <span aria-hidden="true">🔔</span>
                         Order ใหม่
@@ -2743,7 +2838,7 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
             <div className="ss-notification-header">
               <div>
                 <strong>🔔 ประวัติอัพเดท</strong>
-                <span>{userBranch} · รายการล่าสุด</span>
+                <span>{notificationRecipientLabel} · รายการล่าสุด</span>
               </div>
               <button className="dl-modal-close" onClick={() => setShowNotificationHistory(false)} aria-label="ปิด">✕</button>
             </div>
@@ -2761,8 +2856,8 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
                   className={`ss-notification-item${event.read_at ? '' : ' is-unread'}`}
                   onClick={() => openNotificationEvent(event)}
                 >
-                  <span className={`ss-notification-actor ss-notification-actor--${event.actor_code === 'WAREHOUSE' ? 'warehouse' : 'purchasing'}`}>
-                    {event.actor_code === 'WAREHOUSE' ? 'คลังสินค้า' : 'จัดซื้อ'}
+                  <span className={`ss-notification-actor ss-notification-actor--${notificationActorTone(event.actor_code)}`}>
+                    {NOTIFICATION_ACTOR_LABELS[event.actor_code] ?? event.actor_code}
                   </span>
                   {!event.read_at && <span className="ss-notification-new">ใหม่</span>}
                   <strong>{event.title}</strong>
@@ -2799,12 +2894,12 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
         <div className="dl-modal-overlay" onClick={() => !clearingHistory && setShowClearHistory(false)}>
           <div className="dl-modal dl-modal-sm" onClick={e => e.stopPropagation()}>
             <div className="dl-modal-header">
-              <span>ล้างประวัติอัพเดท {userBranch}</span>
+              <span>ล้างประวัติอัพเดท {notificationRecipientLabel}</span>
               <button className="dl-modal-close" onClick={() => setShowClearHistory(false)} disabled={clearingHistory}>✕</button>
             </div>
             <div className="dl-modal-body">
               <p className="ss-delete-warning">
-                ประวัติอัพเดทของสาขา {userBranch} ทั้งหมด {notificationEvents.length} รายการ
+                ประวัติอัพเดทของ {notificationRecipientLabel} ทั้งหมด {notificationEvents.length} รายการ
                 จะถูกลบออกจาก Supabase อย่างถาวร (ไม่กระทบข้อมูล Order / BackOrder)
               </p>
               <input
