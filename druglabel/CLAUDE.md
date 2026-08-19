@@ -75,6 +75,8 @@ Supabase permissions required:
 ## Drug Label — Translation Rate Limit
 
 - ใช้ Groq API (`openai/gpt-oss-120b`) ผ่าน Edge Function `translate-medicine` — เดิมใช้ `llama-3.3-70b-versatile` แต่ Groq เลิกรองรับ (deprecated) 2569-08 เปลี่ยนเป็นโมเดลนี้ตามคำแนะนำของ Groq
-- Free tier limit: 100,000 tokens/day — เมื่อถึง limit แสดง "ถึง rate limit — รอประมาณ xx นาที"
+- Free tier ของ org นี้: **8,000 TPM (tokens/min) ต่อ request** + 200K TPD (tokens/day) — TPM ใช้ร่วมกันทุกโมเดล chat ที่ Groq free tier มีตอนนี้ (`gpt-oss-120b`/`gpt-oss-20b`/`qwen3.6-27b` ล้วน 8K TPM เท่ากัน) เปลี่ยนโมเดลไม่ช่วยแก้ TPM
+- 🚨 **TPM นับรวม prompt + max_tokens ที่ "ขอจอง" ไม่ใช่ token ที่ใช้จริง** — เคยตั้ง `max_tokens: 8192` แบบตายตัวแล้วชน "Request too large ... rate_limit_exceeded" ทันทีที่ prompt มีเนื้อหาเพิ่มเข้ามา (prompt 433 + max_tokens 8192 = 8625 > 8000) แก้แล้วโดยคำนวณ `max_tokens` จาก budget ที่เหลือหลังหัก prompt แบบไดนามิก (ดู `TPM_LIMIT`/`promptTokenEstimate` ใน `index.ts`) ถ้าจะแก้ตรงนี้อีกต้องคงหลักการนี้ไว้ ห้ามกลับไปใช้ค่าคงที่
+- เมื่อถึง limit (RPM/RPD/TPD ไม่ใช่กรณี TPM เกินจาก request เดียวข้างบน) แสดง "ถึง rate limit — รอประมาณ xx นาที"
 - Edge Function คืน `{ rate_limit: true, retry_minutes: N | null }` status 200 (ไม่ใช่ 500) — เดิมใช้ field ชื่อ `error` แต่ทำให้ Supabase SDK ตีความผิดว่าเป็น error จริง จึงเปลี่ยนมาใช้ `rate_limit`
-- ⚠️ error อื่นที่ไม่ใช่ rate limit (เช่น GROQ_API_KEY หาย, โมเดลถูก deprecate) จะมาเป็น status 500 — client (`druglabel/translate.ts`) จะ parse response body มาโชว์ข้อความจริง ไม่ใช่ข้อความ generic ของ Supabase SDK
+- ⚠️ error อื่นที่ไม่ใช่ rate limit (เช่น GROQ_API_KEY หาย, โมเดลถูก deprecate, request ใหญ่เกิน TPM ต่อ request) จะมาเป็น status 500 — client (`druglabel/translate.ts`) จะ parse response body มาโชว์ข้อความจริง ไม่ใช่ข้อความ generic ของ Supabase SDK
