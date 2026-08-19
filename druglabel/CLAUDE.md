@@ -74,6 +74,7 @@ Supabase permissions required:
 
 ## Drug Label — Translation Rate Limit
 
-- ใช้ Groq API (`llama-3.3-70b-versatile`) ผ่าน Edge Function `translate-medicine`
+- ใช้ Groq API (`openai/gpt-oss-120b`) ผ่าน Edge Function `translate-medicine` — เดิมใช้ `llama-3.3-70b-versatile` แต่ Groq เลิกรองรับ (deprecated) 2569-08 เปลี่ยนเป็นโมเดลนี้ตามคำแนะนำของ Groq
 - Free tier limit: 100,000 tokens/day — เมื่อถึง limit แสดง "ถึง rate limit — รอประมาณ xx นาที"
-- Edge Function คืน `{ error: { type: 'rate_limit', retry_minutes: N } }` status 200 (ไม่ใช่ 500)
+- Edge Function คืน `{ rate_limit: true, retry_minutes: N | null }` status 200 (ไม่ใช่ 500) — เดิมใช้ field ชื่อ `error` แต่ทำให้ Supabase SDK ตีความผิดว่าเป็น error จริง จึงเปลี่ยนมาใช้ `rate_limit`
+- ⚠️ error อื่นที่ไม่ใช่ rate limit (เช่น GROQ_API_KEY หาย, โมเดลถูก deprecate) จะมาเป็น status 500 — client (`druglabel/translate.ts`) จะ parse response body มาโชว์ข้อความจริง ไม่ใช่ข้อความ generic ของ Supabase SDK
