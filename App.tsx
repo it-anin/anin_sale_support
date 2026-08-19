@@ -396,6 +396,10 @@ const App: React.FC = () => {
   // แทนที่จะยัดเข้า notificationSource ตัวเดิม — กัน resubscribe/พังของ 2 โปรไฟล์เดิม (สาขา/จัดซื้อ)
   // ที่ผ่านการทดสอบมาแล้ว ไม่อยากแตะ discriminated union ที่มีคำเตือนไว้เยอะ
   const [warehouseUpdateUnreadCount, setWarehouseUpdateUnreadCount] = useState(0);
+  // จุดแดงหน้า Outbound (เบิกด่วน) — เฉพาะคลังสินค้า (2569-08-19)
+  // นับ "งานที่ยังรอคลังตัดสินใจ" ไม่ใช่ unread flag แบบ 2 ตัวข้างบน — ไม่ต้อง mark-as-read เลย
+  // เพราะเลขจะลดเองตามธรรมชาติเมื่อคลังกดอนุมัติ/ของหมด ต่างสาขาไหนกดก็ไม่กระทบ (ดูทุกสาขาพร้อมกัน)
+  const [outboundPendingCount, setOutboundPendingCount] = useState(0);
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
@@ -516,6 +520,45 @@ const App: React.FC = () => {
       void supabase.removeChannel(channel);
       window.clearInterval(timer);
       window.removeEventListener('focus', loadUnread);
+      document.removeEventListener('visibilitychange', refreshWhenVisible);
+    };
+  }, [authProfile?.id]);
+
+  // จุดแดงหน้า Outbound — คลังเห็นทุกสาขาพร้อมกัน จึงไม่กรอง branch เหมือน OutboundPage.tsx เอง
+  // (ตาราง `outbound_requests` เล็ก ไม่ต้อง filter realtime ให้ซับซ้อน — subscribe ทั้งตารางแล้ว refetch นับใหม่)
+  useEffect(() => {
+    if (authProfile?.id !== 'WAREHOUSE') {
+      setOutboundPendingCount(0);
+      return;
+    }
+    let cancelled = false;
+
+    const loadPending = async () => {
+      const { count, error } = await supabase
+        .from('outbound_requests')
+        .select('id', { count: 'exact', head: true })
+        .eq('requested', true)
+        .eq('approved', false)
+        .eq('out_of_stock', false);
+      if (cancelled || error) return;
+      setOutboundPendingCount(count ?? 0);
+    };
+
+    void loadPending();
+    const channel = supabase
+      .channel('outbound-requests-pending-dot')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'outbound_requests' }, () => { void loadPending(); })
+      .subscribe();
+    const refreshWhenVisible = () => { if (document.visibilityState === 'visible') void loadPending(); };
+    window.addEventListener('focus', loadPending);
+    document.addEventListener('visibilitychange', refreshWhenVisible);
+    const timer = window.setInterval(loadPending, 30_000);
+
+    return () => {
+      cancelled = true;
+      void supabase.removeChannel(channel);
+      window.clearInterval(timer);
+      window.removeEventListener('focus', loadPending);
       document.removeEventListener('visibilitychange', refreshWhenVisible);
     };
   }, [authProfile?.id]);
@@ -1430,7 +1473,7 @@ ${sheetsHtml}
 
   return (
     <PageVisibilityContext.Provider value={pageVisibility}>
-    <PageNotificationContext.Provider value={{ salesupport: saleSupportUnreadCount }}>
+    <PageNotificationContext.Provider value={{ salesupport: saleSupportUnreadCount, outbound: outboundPendingCount }}>
     <div className="app-container">
       {/* แถบผู้ใช้ปัจจุบัน + ออกจากระบบ (แสดงทุกหน้า) */}
       <div className="app-userbar">

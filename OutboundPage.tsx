@@ -552,7 +552,7 @@ export function OutboundPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGo
                 <th className="ob-col-document-no">เลขที่เอกสาร</th>
                 {/* คอลัมน์ Branch แสดงเฉพาะคลังสินค้า — ฝั่งสาขารู้สาขาตัวเองจากรหัสที่ล็อกอินอยู่แล้ว จัดซื้อสลับดูผ่านแท็บ ไม่ต้องมีคอลัมน์นี้ */}
                 {isWarehouse && <th className="ob-col-branch">Branch</th>}
-                <th className="ob-col-outbound">Outbound</th>
+                <th className="ob-col-outbound">สถานะ</th>
                 <th className="ob-col-del"></th>
               </tr>
             </thead>
