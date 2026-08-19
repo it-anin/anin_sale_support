@@ -3897,14 +3897,14 @@ body.pulse-b .cart-inline-btn.in-cart {
   min-width: 1500px;
   max-width: none;
   table-layout: fixed;
-  font-size: 10px;
+  font-size: 12px;
   font-family: 'Noto Sans Thai', sans-serif;
 }
 .ss-table th {
   padding: 6px 7px;
   color: #004287;
   font-weight: 600;
-  font-size: 10px;
+  font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.15px;
   text-align: left;
