@@ -37,8 +37,10 @@ export const PROFILES: Profile[] = [
  *  ⚠️ ค่าเหล่านี้ถูกเขียนลงคอลัมน์ `branch` ของ ss_orders / ss_request_items /
  *     ss_new_products / ss_tickets และเป็น actor_code ของตารางแจ้งเตือน
  *     ต้องตรงกับ CHECK constraint + filter ใน RPC ฝั่ง Supabase เป๊ะ ๆ
- *  ⚠️ ไม่รวม ss_backorders / outbound_requests — 2 ตารางนั้น CHECK ยังเป็น SRC/KKL/SSS
- *     (Sale Admin จึงถูกกันออกจากเมนู BackOrder และหน้าเบิกด่วน) */
+ *  ⚠️ `ss_backorders` รับ SALE_ADMIN แล้วตั้งแต่ migration 202608190002 (2569-08-19)
+ *     Sale Admin จึงใช้เมนู BackOrder ได้เต็มรูปแบบ ไม่มี role แยกซ่อนเมนูอีกแล้ว
+ *  ⚠️ ยังไม่รวม `outbound_requests` — CHECK ของตารางนั้นยังเป็น SRC/KKL/SSS
+ *     (Sale Admin จึงยังถูกกันออกจากหน้าเบิกด่วน — ดู branchNotSupported ใน OutboundPage.tsx) */
 export const BRANCH_PROFILE_CODES = ['SRC', 'KKL', 'SSS', 'SALE_ADMIN'] as const;
 
 /** แปลงรหัสในฐานข้อมูลเป็นชื่อที่แสดงให้ผู้ใช้เห็น (SALE_ADMIN → "Sale Admin")
