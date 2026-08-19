@@ -47,6 +47,17 @@ Required JSON format:
   "zh": { ... }
 }`;
 
+    // Groq free tier จำกัด TPM (tokens/min) รวม prompt+max_tokens ไว้ที่ 8000 สำหรับโมเดลกลุ่มนี้ทั้งหมด
+    // (openai/gpt-oss-120b, openai/gpt-oss-20b, qwen/qwen3.6-27b) — max_tokens คงที่ 8192 แบบเดิมชน limit
+    // ทันทีที่ prompt ยาวกว่าศูนย์ จึงคำนวณ max_tokens ให้เหลือพอดีกับ budget ที่เหลือแทน
+    const TPM_LIMIT = 8000;
+    const SAFETY_MARGIN = 200; // กันประเมิน token ผิด — ไทย/จีน/ญี่ปุ่น/พม่า/เขมรนับ token หนาแน่นกว่าอังกฤษมาก
+    const promptTokenEstimate = Math.ceil(prompt.length / 2);
+    const maxTokens = TPM_LIMIT - SAFETY_MARGIN - promptTokenEstimate;
+    if (maxTokens < 800) {
+      throw new Error('ข้อมูลฉลากยาวเกินกว่าจะแปลด้วย AI ได้ในครั้งเดียว (ชน rate limit ของ Groq free tier) กรุณาย่อข้อความหรือแปลทีละภาษา');
+    }
+
     const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${GROQ_API_KEY}`, 'Content-Type': 'application/json' },
@@ -54,7 +65,7 @@ Required JSON format:
         model: 'openai/gpt-oss-120b',
         messages: [{ role: 'user', content: prompt }],
         temperature: 0.2,
-        max_tokens: 8192,
+        max_tokens: maxTokens,
       }),
     });
 
