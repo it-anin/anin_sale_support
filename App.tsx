@@ -525,6 +525,44 @@ const App: React.FC = () => {
     };
   }, [authProfile?.id]);
 
+  // Browser tab notification (2569-08-19) — เลือกแบบ "Title Text Alternate (Blink)" จากแกลเลอรี
+  // public/browser-tab-notification-designs.html (แบบที่ 3) กระพริบทุก 2 วิ
+  // ใช้ saleSupportUnreadCount ตัวเดียวกับที่ขับจุดแดงบนไอคอน Support (PageNotificationContext) เพราะเป็น
+  // ตัวนับ "อัปเดตเฉพาะรหัสที่ล็อกอินอยู่" อยู่แล้ว — ไม่ต้องคำนวณใหม่/ไม่รวม outboundPendingCount
+  // (ตัวนั้นเป็นคิวงานของคลังไม่มี read state ไม่ใช่ unread flag ส่วนตัวแบบนี้)
+  // ⚠️ กระพริบเฉพาะตอนแท็บไม่ได้โฟกัส (document.hidden) — โฟกัสอยู่ต้องคืน title ปกติทันที ไม่งั้นกวนตอนใช้งานอยู่
+  const baseTitleRef = useRef(document.title);
+  useEffect(() => {
+    if (saleSupportUnreadCount <= 0) {
+      document.title = baseTitleRef.current;
+      return;
+    }
+    const alertTitle = `🔔 มีอัปเดตใหม่ ${saleSupportUnreadCount} รายการ`;
+    let blinkTimer: number | null = null;
+    const stopBlink = () => {
+      if (blinkTimer != null) { window.clearInterval(blinkTimer); blinkTimer = null; }
+    };
+    const startBlink = () => {
+      stopBlink();
+      let flip = false;
+      blinkTimer = window.setInterval(() => {
+        document.title = flip ? baseTitleRef.current : alertTitle;
+        flip = !flip;
+      }, 2000);
+    };
+    const handleVisibility = () => {
+      if (document.hidden) startBlink();
+      else { stopBlink(); document.title = baseTitleRef.current; }
+    };
+    if (document.hidden) startBlink();
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      stopBlink();
+      document.removeEventListener('visibilitychange', handleVisibility);
+      document.title = baseTitleRef.current;
+    };
+  }, [saleSupportUnreadCount]);
+
   // จุดแดงหน้า Outbound — คลังเห็นทุกสาขาพร้อมกัน จึงไม่กรอง branch เหมือน OutboundPage.tsx เอง
   // (ตาราง `outbound_requests` เล็ก ไม่ต้อง filter realtime ให้ซับซ้อน — subscribe ทั้งตารางแล้ว refetch นับใหม่)
   useEffect(() => {

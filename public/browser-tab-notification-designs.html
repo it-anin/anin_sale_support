@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Browser Tab Notification — 10 แบบ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   Browser Tab Notification — favicon + title ตอนมีอัปเดตใหม่
+   เฉพาะของรหัสที่ล็อกอินอยู่ (ยังไม่มีจุดไหนในแอปทำเรื่องนี้)
+
+   แกลเลอรีเลือกดีไซน์ 10 แบบ · ไม่ได้ import เข้าแอป
+   เปิดผ่าน dev server: /browser-tab-notification-designs.html
+   ============================================================ */
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: 26px 20px 80px;
+  background: #eef3f9; font-family: 'Noto Sans Thai', sans-serif; color: #2c3e50;
+}
+.pg-head { max-width: 1360px; margin: 0 auto 18px; }
+.pg-head h1 {
+  margin: 0 0 6px; font-family: 'Outfit', sans-serif; font-size: 27px;
+  font-weight: 800; color: #2d6cad; letter-spacing: -0.4px;
+}
+.pg-head p { margin: 0 0 4px; font-size: 13px; color: #5b7590; line-height: 1.75; font-weight: 300; }
+code {
+  background: #fff; border: 1px solid #cfe0f2; border-radius: 4px;
+  padding: 1px 5px; font-family: 'Outfit', monospace; font-size: 12px; color: #2d6cad;
+}
+
+.rule-box {
+  max-width: 1360px; margin: 0 auto 16px; padding: 13px 17px;
+  background: #eaf3fc; border: 1px solid #b8d3ee; border-left: 4px solid #4891db;
+  border-radius: 9px; font-size: 13px; line-height: 1.85; color: #2d5c8a;
+}
+.rule-box b { color: #1e4b7a; }
+.note-box {
+  max-width: 1360px; margin: 0 auto 18px; padding: 12px 16px;
+  background: #fff8e9; border: 1px solid #f0d9a8; border-left: 4px solid #e8a33d;
+  border-radius: 9px; font-size: 12.5px; line-height: 1.8; color: #6b5525;
+}
+.note-box b { color: #b57619; }
+
+/* ---------- Control panel ---------- */
+.ctrl {
+  position: sticky; top: 0; z-index: 40;
+  max-width: 1360px; margin: 0 auto 24px; padding: 12px 16px;
+  background: #fff; border: 1px solid #cfe0f2; border-radius: 11px;
+  box-shadow: 0 3px 14px rgba(45, 108, 173, 0.1);
+  display: flex; flex-wrap: wrap; align-items: center; gap: 14px;
+}
+.ctrl .grp { display: flex; align-items: center; gap: 8px; }
+.ctrl label { font-size: 12px; color: #5b7590; font-weight: 600; }
+.ctrl select {
+  font-family: 'Noto Sans Thai', sans-serif; font-size: 12.5px; padding: 6px 9px;
+  border-radius: 7px; border: 1px solid #cfe0f2; color: #2d3a48; background: #fff;
+}
+.ctrl .sep { width: 1px; height: 22px; background: #e3e8ee; }
+.ctrl button {
+  font-family: 'Noto Sans Thai', sans-serif; font-size: 12.5px; font-weight: 600;
+  padding: 7px 14px; border-radius: 8px; cursor: pointer; transition: all .18s ease;
+  border: 1px solid #b8d3ee; background: #fff; color: #2d6cad;
+}
+.ctrl button:hover { background: #eaf3fc; }
+.ctrl button.primary { background: linear-gradient(135deg, #2d6cad, #4891db); border-color: #a9d0f5; color: #fff; }
+.ctrl button.primary:hover { filter: brightness(1.07); }
+.ctrl button.danger { border-color: #f2c0be; color: #c0392b; }
+.ctrl button.danger:hover { background: #fdeaea; }
+.ctrl .count-pill {
+  display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700;
+  color: #2d5c8a; background: #eaf3fc; border: 1px solid #b8d3ee; border-radius: 999px; padding: 6px 13px;
+}
+.ctrl .count-pill b { font-family: 'Outfit', sans-serif; font-size: 14px; color: #c0392b; }
+.ctrl .active-pill {
+  font-size: 12.5px; font-weight: 600; color: #2e8b47; background: #e9f7ee;
+  border: 1px solid #bfe3c9; border-radius: 999px; padding: 6px 13px;
+}
+.ctrl .active-pill.idle { color: #8194a8; background: #f0f4f9; border-color: #e3e8ee; }
+
+/* ---------- Grid / card ---------- */
+.grid {
+  max-width: 1360px; margin: 0 auto; display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 18px;
+}
+.card {
+  background: #fff; border: 1px solid #e3e8ee; border-radius: 15px;
+  padding: 16px 18px 18px; box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+  display: flex; flex-direction: column; gap: 11px; transition: box-shadow .2s ease, border-color .2s ease;
+}
+.card.card--active { border-color: #bfe3c9; box-shadow: 0 2px 14px rgba(46, 139, 71, 0.16); }
+.card-head { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; }
+.card-no {
+  font-family: 'Outfit', sans-serif; font-size: 12px; font-weight: 800;
+  color: #fff; background: #4891db; border-radius: 6px; padding: 2px 8px; flex-shrink: 0;
+}
+.card-name { font-family: 'Outfit', sans-serif; font-size: 15.5px; font-weight: 700; }
+.card-tag {
+  font-size: 10.5px; font-weight: 600; color: #5b7590; background: #f0f4f9;
+  border: 1px solid #e3e8ee; border-radius: 999px; padding: 2px 9px; margin-left: auto;
+}
+.card-note { font-size: 11.5px; color: #8194a8; line-height: 1.75; margin: 0; font-weight: 300; }
+.card-note b { color: #5b7590; font-weight: 600; }
+.card-pros { font-size: 11px; line-height: 1.8; margin: 0; padding: 0; list-style: none; }
+.card-pros li { padding-left: 15px; position: relative; }
+.card-pros li.pro { color: #2e8b47; }
+.card-pros li.pro::before { content: '＋'; position: absolute; left: 0; font-weight: 800; }
+.card-pros li.con { color: #b8791c; }
+.card-pros li.con::before { content: '－'; position: absolute; left: 0; font-weight: 800; }
+
+/* mock browser tab bar */
+.stage {
+  border-radius: 10px; background: #c7d1dc; padding: 14px 12px 12px;
+  display: flex; align-items: flex-end;
+}
+.tabbar {
+  display: flex; align-items: center; gap: 7px; background: #eef1f5;
+  padding: 7px 12px; border-radius: 8px 8px 0 0; width: 100%;
+  box-shadow: 0 -1px 0 rgba(0,0,0,0.04) inset;
+}
+.fav-wrap { position: relative; width: 16px; height: 16px; flex-shrink: 0; }
+.fav-wrap img { width: 100%; height: 100%; border-radius: 3px; display: block; }
+.fav-wrap .dot {
+  position: absolute; right: -3px; bottom: -3px; width: 7px; height: 7px;
+  border-radius: 50%; background: #c0392b; border: 1.5px solid #eef1f5;
+}
+.fav-wrap .badge {
+  position: absolute; right: -6px; top: -6px; min-width: 13px; height: 13px; padding: 0 2px;
+  border-radius: 999px; background: #c0392b; color: #fff; font-size: 8.5px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center; border: 1.5px solid #eef1f5; line-height: 1;
+  font-family: 'Outfit', sans-serif;
+}
+.fav-wrap.swap img { filter: sepia(1) saturate(6.5) hue-rotate(-42deg) brightness(0.92); }
+.tabbar .ttl {
+  font-size: 11px; color: #3a4552; white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis; flex: 1;
+}
+.tabbar .x { font-size: 12px; color: #9aa7b4; flex-shrink: 0; }
+
+.card-apply {
+  margin-top: auto; display: flex; gap: 8px; padding-top: 4px;
+  border-top: 1px solid #f0f2f5;
+}
+.card-apply button {
+  flex: 1; font-family: 'Noto Sans Thai', sans-serif; font-size: 12px; font-weight: 700;
+  padding: 8px 10px; border-radius: 8px; cursor: pointer; border: 1px solid #b8d3ee;
+  background: #fff; color: #2d6cad; transition: all .16s ease;
+}
+.card-apply button:hover { background: #eaf3fc; }
+.card-apply button.is-active { background: linear-gradient(135deg, #2e8b47, #45b26b); border-color: #bfe3c9; color: #fff; }
+</style>
+</head>
+<body>
+
+<div class="pg-head">
+  <h1>🔔 Browser Tab Notification — 10 แบบ</h1>
+  <p>วิธีทำให้ <b>ตัวแท็บเบราว์เซอร์เอง</b> (favicon + title) แสดงว่ามีอัปเดตใหม่ <b>เฉพาะของรหัสที่ล็อกอินอยู่</b> — ไม่ต้องสลับกลับมาที่แอปก่อนถึงจะรู้</p>
+  <p>ปัจจุบันแอปมีแค่จุดแดงบนไอคอน Support <i>ในหน้าเว็บ</i> (<code>PageNotificationContext</code>) — ยังไม่มีอะไรสะท้อนไปที่ตัวแท็บเลย</p>
+</div>
+
+<div class="rule-box">
+  <b>ทดสอบของจริงได้ในหน้านี้:</b> เลือกแบบที่การ์ดแล้วกด "ใช้กับแท็บนี้" — ระบบจะเปลี่ยน <code>document.title</code> + favicon จริงของแท็บนี้ทันที
+  ลองสลับไปแท็บอื่นแล้วกลับมาดูผล โดยเฉพาะแบบ 3/8 ที่กระพริบเฉพาะตอนไม่ได้โฟกัส
+</div>
+<div class="note-box">
+  ภาพ mock ในการ์ดแต่ละใบเป็นภาพนิ่งประกอบคำอธิบายเท่านั้น (แบบ 3/8 จะไล่ข้อความให้ดูเป็นตัวอย่างในการ์ดเองด้วย ไม่ใช่ของจริงในแท็บ) —
+  ของจริงในแท็บต้องกดปุ่ม "ใช้กับแท็บนี้" เท่านั้น เพราะ 1 แท็บมี favicon/title ได้ทีละชุด
+</div>
+
+<div class="ctrl">
+  <div class="grp">
+    <button id="btnAdd" class="primary">+1 แจ้งเตือนใหม่</button>
+    <button id="btnClear">ล้างอ่านแล้ว</button>
+    <span class="count-pill">ค้างอ่าน: <b id="countVal">0</b></span>
+  </div>
+  <div class="sep"></div>
+  <div class="grp">
+    <label for="profileSel">จำลองโปรไฟล์ (ใช้กับแบบ #9):</label>
+    <select id="profileSel">
+      <option value="SRC">SRC</option>
+      <option value="KKL">KKL</option>
+      <option value="SSS">SSS</option>
+      <option value="PURCHASING">จัดซื้อ</option>
+      <option value="WAREHOUSE">คลังสินค้า</option>
+    </select>
+  </div>
+  <div class="sep"></div>
+  <div class="grp">
+    <span id="activeIndicator" class="active-pill idle">ยังไม่ได้ใช้กับแท็บนี้</span>
+    <button id="btnStop" class="danger">หยุด / คืนค่าเดิม</button>
+  </div>
+</div>
+
+<div class="grid" id="grid"></div>
+
+<script>
+const BASE_TITLE = 'ANIN - SALES SUPPORT';
+const RED = '#c0392b';
+const PROFILE_LABEL = { SRC: 'SRC', KKL: 'KKL', SSS: 'SSS', PURCHASING: 'จัดซื้อ', WAREHOUSE: 'คลังสินค้า' };
+
+let unreadCount = 0;
+let activeDesign = null;
+let blinkTimer = null;
+
+const baseImg = new Image();
+baseImg.src = '/anin.png';
+
+function faviconDataURL({ dot = false, badge = false, colorSwap = false } = {}) {
+  const size = 64;
+  const canvas = document.createElement('canvas');
+  canvas.width = size; canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(baseImg, 0, 0, size, size);
+  if (colorSwap) {
+    ctx.globalCompositeOperation = 'source-atop';
+    ctx.fillStyle = 'rgba(192, 57, 43, 0.82)';
+    ctx.fillRect(0, 0, size, size);
+    ctx.globalCompositeOperation = 'source-over';
+  }
+  if (dot || badge) {
+    const r = size * 0.30;
+    const cx = size - r * 0.9, cy = size - r * 0.9;
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fillStyle = RED; ctx.fill();
+    ctx.lineWidth = size * 0.06; ctx.strokeStyle = '#fff'; ctx.stroke();
+    if (badge) {
+      const label = unreadCount > 9 ? '9+' : String(unreadCount);
+      ctx.fillStyle = '#fff';
+      ctx.font = `800 ${r * 1.05}px Outfit, sans-serif`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(label, cx, cy + 1);
+    }
+  }
+  return canvas.toDataURL('image/png');
+}
+
+function setRealFavicon(href) {
+  const old = document.querySelector("link[rel~='icon']");
+  const link = document.createElement('link');
+  link.rel = 'icon';
+  link.href = href;
+  if (old) old.replaceWith(link); else document.head.appendChild(link);
+}
+
+function resetRealFavicon() { setRealFavicon('/anin.png'); }
+
+function stopBlink() { if (blinkTimer) { clearInterval(blinkTimer); blinkTimer = null; } }
+
+function startBlinkIfNeeded() {
+  stopBlink();
+  const isBlinkDesign = activeDesign === 3 || activeDesign === 8;
+  if (!isBlinkDesign || unreadCount <= 0 || !document.hidden) return;
+  let flip = false;
+  blinkTimer = setInterval(() => {
+    document.title = flip ? BASE_TITLE : `🔔 มีอัปเดตใหม่ ${unreadCount} รายการ`;
+    flip = !flip;
+  }, 2000);
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { startBlinkIfNeeded(); }
+  else { stopBlink(); applyDesign(activeDesign, { silent: true }); }
+});
+
+function applyDesign(id, opts = {}) {
+  if (id == null) return;
+  const profile = PROFILE_LABEL[document.getElementById('profileSel').value];
+  const has = unreadCount > 0;
+
+  switch (id) {
+    case 1:
+      document.title = has ? `(${unreadCount}) ${BASE_TITLE}` : BASE_TITLE;
+      resetRealFavicon();
+      break;
+    case 2:
+      document.title = has ? `🔴 ${BASE_TITLE}` : BASE_TITLE;
+      resetRealFavicon();
+      break;
+    case 3:
+      document.title = BASE_TITLE; // ตอนโฟกัสอยู่ไม่กระพริบ — startBlinkIfNeeded() จัดการตอนซ่อน
+      resetRealFavicon();
+      break;
+    case 4:
+      document.title = BASE_TITLE;
+      setRealFavicon(has ? faviconDataURL({ dot: true }) : '/anin.png');
+      break;
+    case 5:
+      document.title = BASE_TITLE;
+      setRealFavicon(has ? faviconDataURL({ badge: true }) : '/anin.png');
+      break;
+    case 6:
+      document.title = BASE_TITLE;
+      setRealFavicon(has ? faviconDataURL({ colorSwap: true }) : '/anin.png');
+      break;
+    case 7:
+      document.title = has ? `(${unreadCount}) ${BASE_TITLE}` : BASE_TITLE;
+      setRealFavicon(has ? faviconDataURL({ dot: true }) : '/anin.png');
+      break;
+    case 8:
+      document.title = BASE_TITLE; // กระพริบตอนซ่อนเหมือนแบบ 3
+      setRealFavicon(has ? faviconDataURL({ badge: true }) : '/anin.png');
+      break;
+    case 9:
+      document.title = has ? `(${unreadCount}) ${profile} · อัปเดต` : `${profile} · ${BASE_TITLE}`;
+      setRealFavicon(has ? faviconDataURL({ dot: true }) : '/anin.png');
+      break;
+    case 10:
+      document.title = BASE_TITLE; // ไม่แตะ title เลย
+      setRealFavicon(has ? faviconDataURL({ dot: true }) : '/anin.png');
+      break;
+  }
+  if (!opts.silent) startBlinkIfNeeded();
+}
+
+function resetAll() {
+  activeDesign = null;
+  stopBlink();
+  document.title = document.querySelector('title').dataset.orig || document.title;
+  resetRealFavicon();
+  document.title = 'Browser Tab Notification — 10 แบบ';
+  renderActiveIndicator();
+  document.querySelectorAll('.card').forEach(c => c.classList.remove('card--active'));
+  document.querySelectorAll('.card-apply button').forEach(b => { b.classList.remove('is-active'); b.textContent = 'ใช้กับแท็บนี้'; });
+}
+
+function renderActiveIndicator() {
+  const el = document.getElementById('activeIndicator');
+  if (activeDesign == null) { el.textContent = 'ยังไม่ได้ใช้กับแท็บนี้'; el.classList.add('idle'); }
+  else { el.textContent = `กำลังใช้กับแท็บนี้: แบบที่ ${activeDesign}`; el.classList.remove('idle'); }
+}
+
+const DESIGNS = [
+  { id: 1, name: 'Title Count Prefix', tag: 'Title', favicon: null, titleDemo: '(3) ANIN - SALES SUPPORT',
+    note: 'เติมจำนวนค้างอ่านไว้หน้า title เดิม เห็นตัวเลขชัดจากแถบแท็บโดยตรง',
+    pros: [['pro', 'เห็นจำนวนแม่นๆ ไม่ต้องเดา'], ['con', 'title ยาวขึ้น แท็บแคบๆ อาจโดนตัด']] },
+  { id: 2, name: 'Title Dot Prefix', tag: 'Title', favicon: null, titleDemo: '🔴 ANIN - SALES SUPPORT',
+    note: 'ใช้ emoji จุดแดงแทนตัวเลข — ไม่บอกจำนวน บอกแค่ "มี/ไม่มี"',
+    pros: [['pro', 'ข้อความสั้น ไม่เบียด title เดิม'], ['con', 'ไม่รู้ว่าค้างกี่รายการจนกว่าจะเปิดแอป']] },
+  { id: 3, name: 'Title Text Alternate (Blink)', tag: 'Title · Blink', favicon: null, titleDemo: '🔔 มีอัปเดตใหม่ 3 รายการ', blink: true,
+    note: 'สลับ title ไปมาทุก 2 วิ ระหว่างข้อความปกติกับข้อความแจ้งเตือน — ทำงาน "เฉพาะตอนแท็บไม่ได้โฟกัส" (Page Visibility API) หยุด/คืนค่าทันทีตอนกลับมาดู · ⭐ แบบที่เลือกใช้จริงแล้ว (ดู App.tsx)',
+    pros: [['pro', 'สะดุดตาที่สุดในกลุ่ม title-only'], ['con', 'บาง browser throttle การเปลี่ยน title ถี่ๆ เมื่อแท็บไม่ได้โฟกัสนานๆ']] },
+  { id: 4, name: 'Favicon Dot Badge', tag: 'Favicon', favicon: 'dot',
+    note: 'วาดจุดแดงเล็กมุมขวาล่างทับโลโก้ ANIN เดิมด้วย canvas ไม่แตะ title เลย',
+    pros: [['pro', 'ไม่รบกวน title แถวแท็บอื่นที่เปิดพร้อมกัน'], ['con', 'จุดเล็ก บนแท็บที่ไม่ได้โฟกัสอาจมองไม่ทัน']] },
+  { id: 5, name: 'Favicon Count Badge', tag: 'Favicon', favicon: 'badge',
+    note: 'วงกลมแดง + ตัวเลขขาวทับมุม favicon แบบ Gmail/Slack',
+    pros: [['pro', 'เห็นจำนวนได้จาก favicon อย่างเดียว'], ['con', 'ตัวเลขเล็กมาก อ่านยากถ้าเกิน 2 หลัก']] },
+  { id: 6, name: 'Favicon Full Color Swap', tag: 'Favicon', favicon: 'swap',
+    note: 'เปลี่ยนสีโลโก้ทั้งดวงเป็นโทนแดง/ส้มตอนมีของค้าง กลับฟ้าเดิมทันทีที่อ่านหมด',
+    pros: [['pro', 'สังเกตง่ายแม้ไอคอนแท็บจะเล็กมาก'], ['con', 'เปลี่ยนรูปทรง identity ของโลโก้ไปเลย ไม่ใช่แค่เติมสัญลักษณ์']] },
+  { id: 7, name: 'Favicon Dot + Title Count', tag: 'ผสม', favicon: 'dot', titleDemo: '(3) ANIN - SALES SUPPORT',
+    note: 'รวมแบบ 1 กับแบบ 4 — เห็นทั้งจุดที่ favicon และจำนวนที่ title',
+    pros: [['pro', 'ครบทั้งสองมุมมอง เผื่อมองไม่ทันจุดใดจุดหนึ่ง'], ['con', 'ข้อความยาวกว่าแบบเดี่ยว']] },
+  { id: 8, name: 'Favicon Count Badge + Title Blink', tag: 'ผสม · Blink', favicon: 'badge', titleDemo: '🔔 มีอัปเดตใหม่ 3 รายการ', blink: true,
+    note: 'จัดจ้านสุดในกลุ่ม — favicon ขึ้นตัวเลขตลอด และ title ยังกระพริบตอนไม่โฟกัสเหมือนแบบ 3',
+    pros: [['pro', 'มั่นใจได้ว่าจะสังเกตเห็นแน่นอน'], ['con', 'กวนสายตาที่สุดถ้าเปิดค้างไว้หลายแท็บพร้อมกัน']] },
+  { id: 9, name: 'Title บอกรหัสสาขา', tag: 'บอกสาขา', favicon: 'dot', titleDemo: '(3) SRC · อัปเดต',
+    note: 'ใส่รหัสโปรไฟล์ที่ล็อกอินไว้ใน title ด้วย — มีประโยชน์เวลาเปิดหลายแท็บ/หลายโปรไฟล์พร้อมกัน แยกไม่ออกว่าแท็บไหนของใคร',
+    pros: [['pro', 'แก้ปัญหา "แท็บนี้ของสาขาไหน" ไปในตัว'], ['con', 'title ยาวสุดในกลุ่ม — ตัดชื่อแอปเดิมทิ้งเมื่อมีของค้าง']] },
+  { id: 10, name: 'Minimal (Favicon เท่านั้น)', tag: 'เงียบ', favicon: 'dot',
+    note: 'จุดแดงที่ favicon อย่างเดียว ไม่แตะ title แม้แต่ตัวอักษรเดียว',
+    pros: [['pro', 'เหมาะกับคนที่รำคาญ title เปลี่ยน/กระพริบ'], ['con', 'สังเกตยากสุดถ้าไม่มองแถบแท็บใกล้ๆ']] },
+];
+
+function tabbarHTML(d) {
+  const favClass = d.favicon === 'swap' ? 'swap' : '';
+  const overlay = d.favicon === 'dot' ? '<span class="dot"></span>'
+    : d.favicon === 'badge' ? '<span class="badge">3</span>'
+    : '';
+  const title = d.titleDemo || BASE_TITLE;
+  return `
+    <div class="tabbar">
+      <div class="fav-wrap ${favClass}"><img src="/anin.png" alt="">${overlay}</div>
+      <span class="ttl" data-blink="${d.blink ? '1' : '0'}" data-alt="${title}" data-base="${BASE_TITLE}">${d.blink ? BASE_TITLE : title}</span>
+      <span class="x">✕</span>
+    </div>`;
+}
+
+function renderGrid() {
+  const grid = document.getElementById('grid');
+  grid.innerHTML = DESIGNS.map(d => `
+    <div class="card" data-id="${d.id}">
+      <div class="card-head">
+        <span class="card-no">#${d.id}</span>
+        <span class="card-name">${d.name}</span>
+        <span class="card-tag">${d.tag}</span>
+      </div>
+      <p class="card-note">${d.note}</p>
+      <div class="stage">${tabbarHTML(d)}</div>
+      <ul class="card-pros">${d.pros.map(([cls, txt]) => `<li class="${cls}">${txt}</li>`).join('')}</ul>
+      <div class="card-apply">
+        <button data-apply="${d.id}">ใช้กับแท็บนี้</button>
+      </div>
+    </div>
+  `).join('');
+
+  grid.querySelectorAll('[data-apply]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      activeDesign = Number(btn.dataset.apply);
+      applyDesign(activeDesign);
+      renderActiveIndicator();
+      document.querySelectorAll('.card').forEach(c => c.classList.toggle('card--active', c.dataset.id === String(activeDesign)));
+      document.querySelectorAll('.card-apply button').forEach(b => {
+        const isActive = Number(b.dataset.apply) === activeDesign;
+        b.classList.toggle('is-active', isActive);
+        b.textContent = isActive ? '✓ กำลังใช้อยู่' : 'ใช้กับแท็บนี้';
+      });
+    });
+  });
+
+  // mock blink เฉพาะในการ์ด (คนละอันกับของจริงในแท็บ) ให้เห็นตัวอย่างโดยไม่ต้องสลับแท็บ
+  setInterval(() => {
+    document.querySelectorAll('.ttl[data-blink="1"]').forEach(el => {
+      el.textContent = el.textContent === el.dataset.base ? el.dataset.alt : el.dataset.base;
+    });
+  }, 2000);
+}
+
+document.getElementById('btnAdd').addEventListener('click', () => {
+  unreadCount++;
+  document.getElementById('countVal').textContent = unreadCount;
+  document.querySelectorAll('.stage .badge').forEach(b => b.textContent = unreadCount > 9 ? '9+' : unreadCount);
+  if (activeDesign != null) applyDesign(activeDesign);
+});
+document.getElementById('btnClear').addEventListener('click', () => {
+  unreadCount = 0;
+  document.getElementById('countVal').textContent = unreadCount;
+  if (activeDesign != null) applyDesign(activeDesign);
+});
+document.getElementById('profileSel').addEventListener('change', () => {
+  if (activeDesign != null) applyDesign(activeDesign);
+});
+document.getElementById('btnStop').addEventListener('click', resetAll);
+
+renderGrid();
+renderActiveIndicator();
+</script>
+
+</body>
+</html>
