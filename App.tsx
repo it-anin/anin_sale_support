@@ -12,7 +12,7 @@ import { SaleSupportPage } from './SaleSupportPage';
 import { AnimatedLogoText } from './AnimatedLogo';
 import { SearchIcon } from './SearchIcon';
 import { LoginPage } from './LoginPage';
-import { loadAuthProfile, saveAuthProfile, clearAuthProfile, type Profile } from './auth';
+import { loadAuthProfile, saveAuthProfile, clearAuthProfile, BRANCH_PROFILE_CODES, type Profile } from './auth';
 import { PageVisibilityContext, PageNotificationContext, PageNavRow, PAGE_NAV, DEFAULT_VISIBILITY, type PageId, type PageVisibility, type NavHandlers } from './pageAccess';
 import './App.css';
 
@@ -412,7 +412,8 @@ const App: React.FC = () => {
   // ⚠️ ต้อง useMemo — ถ้าสร้าง object ใหม่ทุก render effect จะ resubscribe realtime ทุกครั้ง
   const notificationSource = useMemo(() => {
     const branch = authProfile?.branch ?? '';
-    if (branch === 'SRC' || branch === 'KKL' || branch === 'SSS') return { kind: 'events', key: branch } as const;
+    // สาขาหน้าร้าน + Sale Admin ใช้ตารางเหตุการณ์เหมือนกัน (ดู BRANCH_PROFILE_CODES ใน auth.ts)
+    if ((BRANCH_PROFILE_CODES as readonly string[]).includes(branch)) return { kind: 'events', key: branch } as const;
     if (authProfile?.id === 'PURCHASING') return { kind: 'events', key: 'PURCHASING' } as const;
     if (authProfile?.id === 'WAREHOUSE') return { kind: 'orders', key: 'WAREHOUSE' } as const;
     return null;
@@ -584,6 +585,10 @@ const App: React.FC = () => {
   const profileBranch = useMemo(() => {
     const b = authProfile?.branch ?? null;
     if (!b) return null;
+    // โปรไฟล์ที่ลงข้อมูลได้แต่ไม่ใช่สาขาหน้าร้าน (Sale Admin) — ซ่อนปุ่มเงียบ ๆ ไม่ใช่ความผิดพลาด
+    // ไม่มีชั้นวาง/ไม่มีไฟล์ Location จึงไม่มีอะไรให้ปริ้นตามหมวดตั้งแต่ต้น
+    if ((BRANCH_PROFILE_CODES as readonly string[]).includes(b)
+      && !(CATEGORY_BRANCHES as readonly string[]).includes(b)) return null;
     // ชื่อสาขาอยู่คนละไฟล์ (auth.ts) กับที่ใช้ query ถ้าสะกดไม่ตรง DB จะได้ 0 แถวเงียบ ๆ ตลอดไป
     if (!(CATEGORY_BRANCHES as readonly string[]).includes(b)) {
       console.error(

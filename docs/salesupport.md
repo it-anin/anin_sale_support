@@ -28,9 +28,12 @@
 - เมนูขับเคลื่อนด้วย config `MENUS: MenuDef[]` — แต่ละเมนูกำหนด table, columns (`kind: 'date' | 'datetime' | 'chip'`), orderBy, filter, **`roles`**
 - Chip สี: เขียว (`.ss-chip--green`) / แดง / ฟ้า / ส้ม ตามค่าสถานะ
 - คลิกแถว → popup รายละเอียด (แก้ไข inline ได้) — Order/BackOrder popup มีตราประทับอนุมัติ 3 ขั้น บันทึกลง Supabase ทันที
-- **หน้านี้แยกพฤติกรรมตามโปรไฟล์ 3 แบบ** ผ่าน props: `isPurchasing` (`authProfile.id === 'PURCHASING'`) · `isWarehouse` (`authProfile.group === 'คลังสินค้า'`) · `userBranch` (`authProfile.branch` → `isBranchUser` ในไฟล์)
-- 3 อย่างนั้นยุบเป็น `currentRole: MenuRole` (`'branch' | 'warehouse' | 'purchasing'`) → `visibleMenus` กรอง `MENU_DISPLAY_ORDER` ด้วย `MenuDef.roles` (ไม่ใส่ `roles` = ทุกโปรไฟล์เห็น)
+- **หน้านี้แยกพฤติกรรมตามโปรไฟล์** ผ่าน props: `isPurchasing` (`authProfile.id === 'PURCHASING'`) · `isWarehouse` (`authProfile.group === 'คลังสินค้า'`) · `userBranch` (`authProfile.branch` → `isBranchUser` ในไฟล์)
+- `isBranchUser` = `BRANCH_PROFILE_CODES.includes(userBranch)` (import จาก `auth.ts`) = **`SRC`/`KKL`/`SSS`/`SALE_ADMIN`** — ⚠️ **ห้าม hardcode 3 สาขากลับมา** เดิมรายชื่อนี้ซ้ำอยู่ 5 จุดคนละไฟล์ เพิ่มโปรไฟล์ทีต้องไล่แก้ครบทุกจุด ตกจุดไหนก็พังเงียบคนละแบบ
+- ยุบเป็น `currentRole: MenuRole` (`'branch' | 'warehouse' | 'purchasing' | 'saleadmin'`) → `visibleMenus` กรอง `MENU_DISPLAY_ORDER` ด้วย `MenuDef.roles` (ไม่ใส่ `roles` = ทุกโปรไฟล์เห็น)
   - ⚠️ `visibleMenus` ยังเป็น **whitelist ตอนเปิดจากลิงก์แจ้งเตือน** (`openNotificationEvent`) ด้วย — ไม่งั้นลิงก์จะพาไปเมนูที่ถูกซ่อน แล้วออกไม่ได้เพราะไม่มีปุ่มใน sidebar
+  - 🚨 **`'saleadmin'` มีอยู่เพื่อซ่อนเมนู BackOrder อย่างเดียว** — `ss_backorders.branch` มี CHECK แค่ `SRC/KKL/SSS` ถ้า Sale Admin เห็นเมนูแล้วกดบันทึกจะ error ที่ฐานข้อมูล · **พฤติกรรมอื่นทุกอย่างเดินตาม `isBranchUser` ซึ่ง Sale Admin เป็น `true`** (ล็อกช่องสาขาในฟอร์ม, `.eq('branch', userBranch)`, `notifyPurchasingUpdate`/`notifyWarehouseUpdate`) — อย่าเผลอเอา `currentRole === 'branch'` ไปใช้แทน `isBranchUser` ที่ไหน
+- **`branchCodeLabel(code)`** (จาก `auth.ts`) = จุดเดียวที่แปลงรหัส DB → ชื่อที่ผู้ใช้เห็น (`SALE_ADMIN` → `Sale Admin`) อ่านจาก `PROFILES.label` ตรงๆ ไม่มี map ซ้ำ · เรียกที่ **`formatCell`** (ครอบทุกตาราง **และ popup รายละเอียด** เพราะ popup เรนเดอร์ผ่าน `formatCell` เหมือนกัน), option ของ dropdown สาขาทุกฟอร์ม, ป้าย `.ss-branch-locked-value`, และ `notificationRecipientLabel`
 
 ## เมนู Order — สาขาเห็นเฉพาะของตัวเอง
 
@@ -118,8 +121,10 @@ helper กลางตัวเดียวใช้ทั้ง 2 ฟอร์�
 - คลิกแจ้งเตือนของคลังเปิดใบได้เสมอเพราะ `id: 'order'` ไม่มี `roles` (ทุกโปรไฟล์เห็น) และ `id: 'backorder'` มี `roles: ['branch','warehouse']` ซึ่งครอบคลุมคลังอยู่แล้ว — ไม่ชนกับ whitelist ใน `openNotificationEvent`
 
 **Schema (migration `202608170001_purchasing_notification_events.sql` เพิ่มจัดซื้อ, `202608180001_warehouse_notification_events.sql` เพิ่มคลังสินค้า):**
-- ⚠️ คอลัมน์ยังชื่อ **`branch` แต่ความหมายคือ "ผู้รับ"** แล้ว (`SRC/KKL/SSS` = สาขา, `PURCHASING` = จัดซื้อ, `WAREHOUSE` = คลังสินค้า) — ไม่ rename เพราะมี query/RPC/retention/realtime filter อ้างอยู่หลายจุด · มี `comment on column` กำกับไว้ใน DB
-- CHECK `branch` = **5 ค่า** (`SRC/KKL/SSS/PURCHASING/WAREHOUSE`) · CHECK `actor_code` = 5 ค่าเท่าเดิม (`WAREHOUSE` เป็นผู้กระทำได้อยู่แล้วตั้งแต่ก่อนหน้านี้ ไม่ต้องแก้)
+- ⚠️ คอลัมน์ยังชื่อ **`branch` แต่ความหมายคือ "ผู้รับ"** แล้ว (`SRC/KKL/SSS` = สาขา, `SALE_ADMIN` = Sale Admin, `PURCHASING` = จัดซื้อ, `WAREHOUSE` = คลังสินค้า) — ไม่ rename เพราะมี query/RPC/retention/realtime filter อ้างอยู่หลายจุด · มี `comment on column` กำกับไว้ใน DB
+- CHECK `branch` = **6 ค่า** (`SRC/KKL/SSS/SALE_ADMIN/PURCHASING/WAREHOUSE`) · CHECK `actor_code` = **6 ค่า** (`WAREHOUSE/PURCHASING/SRC/KKL/SSS/SALE_ADMIN`)
+- `SALE_ADMIN` เพิ่มโดย `202608190001_sale_admin_branch_code.sql` — **migration แรกที่ต้องขยาย `actor_code` ด้วย** (2 รอบก่อนหน้าเพิ่มแค่ฝั่งผู้รับ) เพราะ Sale Admin เป็นผู้กระทำที่ยิงหาจัดซื้อ/คลัง ถ้าลืมข้อนี้ insert โดน CHECK ปฏิเสธทั้งแถวทั้งที่ผู้รับถูกต้อง
+- ⚠️ **`NOTIFIED_BRANCHES` (ฝั่งเว็บ) = `BRANCH_PROFILE_CODES`** ต้องมี `SALE_ADMIN` ด้วยเสมอ — `notifyBranchUpdate` ใช้ลิสต์นี้ตัดสินว่ารู้จักรหัสผู้รับไหม **ถ้าไม่รู้จักจะ fan-out ไปทั้ง 3 สาขาแทน** (จัดซื้อแก้แถวของ Sale Admin แล้ว SRC/KKL/SSS ได้แจ้งเตือนไปด้วยทั้งที่ไม่เกี่ยว)
 - ⚠️ RPC `ss_create_branch_notifications` มี filter `in (...)` **2 จุด** (insert เหตุการณ์ + upsert ตารางสรุป) — **ลืมจุดที่สอง = เหตุการณ์ลงตารางแต่ realtime ไม่ยิง** badge ขึ้นช้า 30 วิแบบสุ่ม หาสาเหตุยากมาก
 - ⚠️ `salesupport-setup.sql` ใช้ `create table if not exists` → CHECK ที่เขียน inline **ไม่ถูกใช้กับตารางที่มีอยู่แล้ว** จึงต้องมีทั้งแบบ inline (ติดตั้งใหม่) และแบบ `drop/add constraint` (DB เดิม) คู่กันเสมอ — migration ของคลังอัปเดตทั้ง 2 แบบในไฟล์เดียวกันแล้ว
 - ⚠️ **ต้องรัน `202608180001_warehouse_notification_events.sql` ก่อน deploy frontend ที่เรียก `notifyWarehouseUpdate`** เหมือนกับ migration ของจัดซื้อ — ไม่งั้น RPC กรอง `'WAREHOUSE'` ทิ้งเงียบๆ ปุ่ม "🔔 อัพเดท" ของคลังขึ้นมาแต่ค้าง 0 ตลอด ไม่มี error ให้เห็น

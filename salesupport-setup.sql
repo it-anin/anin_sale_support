@@ -87,7 +87,7 @@ create or replace function ss_track_order_workflow_completion()
 returns trigger language plpgsql set search_path = public as $$
 declare
   all_steps_done boolean :=
-    upper(trim(coalesce(new.branch, ''))) in ('SRC', 'KKL', 'SSS')
+    upper(trim(coalesce(new.branch, ''))) in ('SRC', 'KKL', 'SSS', 'SALE_ADMIN')
     and coalesce(new.arrived_branch, '') like '%แล้ว%'
     and coalesce(new.arrived_branch, '') not like '%ยังไม่%'
     and coalesce(new.customer_notified, '') like '%แล้ว%'
@@ -98,7 +98,7 @@ declare
 begin
   if tg_op = 'UPDATE' then
     old_all_steps_done :=
-      upper(trim(coalesce(old.branch, ''))) in ('SRC', 'KKL', 'SSS')
+      upper(trim(coalesce(old.branch, ''))) in ('SRC', 'KKL', 'SSS', 'SALE_ADMIN')
       and coalesce(old.arrived_branch, '') like '%แล้ว%'
       and coalesce(old.arrived_branch, '') not like '%ยังไม่%'
       and coalesce(old.customer_notified, '') like '%แล้ว%'
@@ -130,7 +130,7 @@ on ss_orders for each row execute function ss_track_order_workflow_completion();
 -- รายการที่ครบอยู่ก่อนติดตั้ง เริ่มนับ 1 เดือนตั้งแต่วันที่รัน SQL นี้
 update ss_orders set workflow_completed_at = now()
 where workflow_completed_at is null
-  and upper(trim(coalesce(branch, ''))) in ('SRC', 'KKL', 'SSS')
+  and upper(trim(coalesce(branch, ''))) in ('SRC', 'KKL', 'SSS', 'SALE_ADMIN')
   and arrived_branch like '%แล้ว%' and arrived_branch not like '%ยังไม่%'
   and customer_notified like '%แล้ว%' and customer_notified not like '%ยังไม่%'
   and delivered like '%แล้ว%' and delivered not like '%ยังไม่%';
@@ -259,6 +259,9 @@ create table if not exists ss_backorders (
   product_name      text,                                  -- 5.2 ชื่อสินค้า
   unit              text,                                  -- 5.3 หน่วยตามบาร์โค้ดที่สแกน/เลือก
   pending_qty       numeric,                               -- 5.3.1 ค้างส่งลูกค้า (สาขากรอกในฟอร์ม)
+  -- ⚠️ ไม่มี 'SALE_ADMIN' โดยตั้งใจ — Sale Admin ไม่ใช้เมนู BackOrder (ฝั่งเว็บซ่อนเมนูด้วย
+  --    currentRole = 'saleadmin') ถ้าจะเปิดให้ ต้องขยาย CHECK นี้ก่อนเสมอ ทั้งแบบ inline ตรงนี้
+  --    และเขียนคู่ drop/add constraint เพิ่ม (ตารางนี้ยังไม่เคยมีคู่ alter มาก่อน)
   branch            text not null check (branch in ('SRC', 'KKL', 'SSS')),
   customer_name     text,                                  -- 5.4 ชื่อลูกค้า
   paid_date         date,                                  -- 5.5 วันที่ลูกค้าชำระ
@@ -307,13 +310,13 @@ create policy "anon all ss_tickets"       on ss_tickets       for all using (tru
 --    (2569-08-18 เพิ่มทิศ สาขา → คลังสินค้า — คู่ขนานกับปุ่ม "Order ใหม่" เดิม ไม่ได้แทนที่)
 --    ไม่ rename เพราะมี query/RPC/retention/realtime filter อ้างชื่อนี้อยู่หลายจุด
 create table if not exists ss_branch_notifications (
-  branch         text primary key check (branch in ('SRC', 'KKL', 'SSS', 'PURCHASING', 'WAREHOUSE')),
+  branch         text primary key check (branch in ('SRC', 'KKL', 'SSS', 'SALE_ADMIN', 'PURCHASING', 'WAREHOUSE')),
   last_update_at timestamptz,
   last_read_at   timestamptz
 );
 
 insert into ss_branch_notifications (branch)
-values ('SRC'), ('KKL'), ('SSS'), ('PURCHASING'), ('WAREHOUSE')
+values ('SRC'), ('KKL'), ('SSS'), ('SALE_ADMIN'), ('PURCHASING'), ('WAREHOUSE')
 on conflict (branch) do nothing;
 
 alter table ss_branch_notifications enable row level security;
@@ -325,8 +328,8 @@ create policy "anon all ss_branch_notifications" on ss_branch_notifications
 --    `actor_code` = ผู้กระทำ (WAREHOUSE/PURCHASING = ทิศแผนก→สาขา, SRC/KKL/SSS = ทิศสาขา→จัดซื้อ/คลังสินค้า)
 create table if not exists ss_branch_notification_events (
   id          uuid primary key default gen_random_uuid(),
-  branch      text not null check (branch in ('SRC', 'KKL', 'SSS', 'PURCHASING', 'WAREHOUSE')),
-  actor_code  text not null check (actor_code in ('WAREHOUSE', 'PURCHASING', 'SRC', 'KKL', 'SSS')),
+  branch      text not null check (branch in ('SRC', 'KKL', 'SSS', 'SALE_ADMIN', 'PURCHASING', 'WAREHOUSE')),
+  actor_code  text not null check (actor_code in ('WAREHOUSE', 'PURCHASING', 'SRC', 'KKL', 'SSS', 'SALE_ADMIN')),
   menu_id     text not null,
   table_name  text not null,
   record_id   text,
@@ -347,19 +350,19 @@ alter table ss_branch_notifications
   drop constraint if exists ss_branch_notifications_branch_check;
 alter table ss_branch_notifications
   add constraint ss_branch_notifications_branch_check
-  check (branch in ('SRC', 'KKL', 'SSS', 'PURCHASING', 'WAREHOUSE'));
+  check (branch in ('SRC', 'KKL', 'SSS', 'SALE_ADMIN', 'PURCHASING', 'WAREHOUSE'));
 
 alter table ss_branch_notification_events
   drop constraint if exists ss_branch_notification_events_branch_check;
 alter table ss_branch_notification_events
   add constraint ss_branch_notification_events_branch_check
-  check (branch in ('SRC', 'KKL', 'SSS', 'PURCHASING', 'WAREHOUSE'));
+  check (branch in ('SRC', 'KKL', 'SSS', 'SALE_ADMIN', 'PURCHASING', 'WAREHOUSE'));
 
 alter table ss_branch_notification_events
   drop constraint if exists ss_branch_notification_events_actor_code_check;
 alter table ss_branch_notification_events
   add constraint ss_branch_notification_events_actor_code_check
-  check (actor_code in ('WAREHOUSE', 'PURCHASING', 'SRC', 'KKL', 'SSS'));
+  check (actor_code in ('WAREHOUSE', 'PURCHASING', 'SRC', 'KKL', 'SSS', 'SALE_ADMIN'));
 
 comment on column ss_branch_notification_events.branch is
   'ผู้รับแจ้งเตือน ไม่ใช่ "สาขา" อย่างเดียวแล้ว — SRC/KKL/SSS = สาขา, PURCHASING = จัดซื้อ, WAREHOUSE = คลังสินค้า';
@@ -393,7 +396,7 @@ begin
     -- ส่งค่าจริงผ่านไปถ้าอยู่ในชุดที่รู้จัก · คง else 'PURCHASING' ไว้ตามเดิม
     -- → call site เดิมที่ส่ง 'WAREHOUSE'/'PURCHASING' ตรง ๆ พฤติกรรมไม่เปลี่ยน
     case
-      when upper(trim(coalesce(target_actor_code, ''))) in ('WAREHOUSE', 'PURCHASING', 'SRC', 'KKL', 'SSS')
+      when upper(trim(coalesce(target_actor_code, ''))) in ('WAREHOUSE', 'PURCHASING', 'SRC', 'KKL', 'SSS', 'SALE_ADMIN')
         then upper(trim(target_actor_code))
       else 'PURCHASING'
     end,
@@ -406,14 +409,14 @@ begin
     nullif(trim(event_item_name), ''),
     event_time
   from unnest(coalesce(target_branches, array[]::text[])) as branches(value)
-  where upper(trim(value)) in ('SRC', 'KKL', 'SSS', 'PURCHASING', 'WAREHOUSE');
+  where upper(trim(value)) in ('SRC', 'KKL', 'SSS', 'SALE_ADMIN', 'PURCHASING', 'WAREHOUSE');
 
   -- ⚠️ filter ตรงนี้ต้องตรงกับข้างบนเป๊ะ ๆ — ลืมขยายจุดนี้จุดเดียว เหตุการณ์จะลงตาราง
   --    แต่ last_update_at ไม่ขยับ → realtime ไม่ยิง badge ขึ้นช้า 30 วิ แบบสุ่ม
   insert into ss_branch_notifications (branch, last_update_at)
   select distinct upper(trim(value)), event_time
   from unnest(coalesce(target_branches, array[]::text[])) as branches(value)
-  where upper(trim(value)) in ('SRC', 'KKL', 'SSS', 'PURCHASING', 'WAREHOUSE')
+  where upper(trim(value)) in ('SRC', 'KKL', 'SSS', 'SALE_ADMIN', 'PURCHASING', 'WAREHOUSE')
   on conflict (branch) do update set last_update_at = excluded.last_update_at;
 end;
 $$;
@@ -438,7 +441,7 @@ declare
   read_time timestamptz := now();
   normalized_branch text := upper(trim(target_branch));
 begin
-  if normalized_branch not in ('SRC', 'KKL', 'SSS', 'PURCHASING', 'WAREHOUSE') then return; end if;
+  if normalized_branch not in ('SRC', 'KKL', 'SSS', 'SALE_ADMIN', 'PURCHASING', 'WAREHOUSE') then return; end if;
   update ss_branch_notification_events set read_at = read_time
   where branch = normalized_branch and read_at is null;
   insert into ss_branch_notifications (branch, last_read_at)
@@ -463,14 +466,14 @@ begin
   where event.table_name = 'ss_orders'
     and event.record_id = order_row.id::text
     and order_row.workflow_completed_at < now() - interval '1 month'
-    and upper(trim(coalesce(order_row.branch, ''))) in ('SRC', 'KKL', 'SSS')
+    and upper(trim(coalesce(order_row.branch, ''))) in ('SRC', 'KKL', 'SSS', 'SALE_ADMIN')
     and order_row.arrived_branch like '%แล้ว%' and order_row.arrived_branch not like '%ยังไม่%'
     and order_row.customer_notified like '%แล้ว%' and order_row.customer_notified not like '%ยังไม่%'
     and order_row.delivered like '%แล้ว%' and order_row.delivered not like '%ยังไม่%';
 
   delete from ss_orders
   where workflow_completed_at < now() - interval '1 month'
-    and upper(trim(coalesce(branch, ''))) in ('SRC', 'KKL', 'SSS')
+    and upper(trim(coalesce(branch, ''))) in ('SRC', 'KKL', 'SSS', 'SALE_ADMIN')
     and arrived_branch like '%แล้ว%' and arrived_branch not like '%ยังไม่%'
     and customer_notified like '%แล้ว%' and customer_notified not like '%ยังไม่%'
     and delivered like '%แล้ว%' and delivered not like '%ยังไม่%';

@@ -136,6 +136,12 @@ interface Props {
 
 export function OutboundPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGoCustomerHistory, onGoOutbound, onGoSaleSupport, isWarehouse, isPurchasing, userBranch }: Props) {
   const canSwitchBranches = isWarehouse || isPurchasing;
+  // โปรไฟล์ที่ลงข้อมูลได้แต่ไม่ใช่สาขาหน้าร้าน (Sale Admin) — หน้านี้ไม่รองรับ
+  // ⚠️ ห้ามปล่อยผ่าน: `activeBranch` ด้านล่างจะ fallback เป็น 'SRC' แล้ว effect เติมแถวร่าง
+  //    จะสร้างแถวติดสาขา SRC ให้ พอพิมพ์ปุ๊บ updateRow มาร์ค requested:true ทันที
+  //    = ส่งใบเบิกในนามสาขาอื่นโดยสาขานั้นไม่รู้ตัว (outbound_requests.branch มี CHECK แค่ SRC/KKL/SSS)
+  const branchNotSupported = !canSwitchBranches && Boolean(userBranch)
+    && !(BRANCHES as readonly string[]).includes(userBranch as string);
   const [rows, setRows] = useState<OutboundRow[]>([]);
   const [activeBranch, setActiveBranch] = useState<string>(canSwitchBranches ? BRANCHES[0] : (userBranch && BRANCHES.includes(userBranch as typeof BRANCHES[number]) ? userBranch : BRANCHES[0]));
   const [unlocked, setUnlocked] = useState(false);
@@ -254,9 +260,10 @@ export function OutboundPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGo
   // ติดสาขานั้นแบบ requested=false เงียบๆ โดยสาขาไม่รู้ตัว
   useEffect(() => {
     if (isWarehouse || isPurchasing) return; // ดูอย่างเดียว/รอสาขาส่งเอง ไม่ต้องมีแถวร่างให้พิมพ์
+    if (branchNotSupported) return;          // Sale Admin ฯลฯ — แถวร่างจะติดสาขา SRC ที่ fallback มา
     if (rows.some(r => r.branch === activeBranch)) return;
     setRows(prev => [...prev, makeRow('0001', activeBranch)]);
-  }, [activeBranch, rows, isWarehouse, isPurchasing]);
+  }, [activeBranch, rows, isWarehouse, isPurchasing, branchNotSupported]);
 
   // อัปเดตแค่ state ในเครื่อง (เร็ว ใช้ตอนพิมพ์สด ๆ) — ไม่ยิง Supabase ทุกตัวอักษร
   const updateRow = (id: string, patch: Partial<OutboundRow>) => {
@@ -481,17 +488,38 @@ export function OutboundPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGo
 
   const approvedCount = visibleRows.filter(r => r.approved).length;
 
-  return (
-    <div className="app-container">
-      <div className="hero-header">
-        <div className="hero-content">
-          <h1 className="logo-premium"><AnimatedLogoText text="QUICK OUTBOUND" /></h1>
-          <div className="tagline-row">
-            <span className="updated-badge">เบิกสินค้าด่วน {unlocked ? '🔓' : '🔐'}</span>
+  const heroHeader = (
+    <div className="hero-header">
+      <div className="hero-content">
+        <h1 className="logo-premium"><AnimatedLogoText text="QUICK OUTBOUND" /></h1>
+        <div className="tagline-row">
+          <span className="updated-badge">เบิกสินค้าด่วน {unlocked ? '🔓' : '🔐'}</span>
+        </div>
+        <PageNavRow current="outbound" handlers={{ pricetag: onGoPriceTag, druglabel: onGoDrugLabel, stockcheck: onGoStockCheck, customerhistory: onGoCustomerHistory, outbound: onGoOutbound, salesupport: onGoSaleSupport }} />
+      </div>
+    </div>
+  );
+
+  // ต้องอยู่หลัง hooks ทั้งหมด (early-return ก่อน hooks ผิดกฎ React) — ดูคำอธิบายที่ branchNotSupported
+  if (branchNotSupported) {
+    return (
+      <div className="app-container">
+        {heroHeader}
+        <div className="container">
+          <div className="product-table-wrap stock-table-wrap outbound-table-wrap">
+            <div className="outbound-empty-note">
+              <p><strong>หน้านี้ใช้ได้เฉพาะรหัสสาขา (SRC / KKL / SSS) และคลังสินค้า/จัดซื้อ</strong></p>
+              <p>โปรไฟล์ที่เข้าสู่ระบบอยู่ไม่ได้สังกัดสาขาหน้าร้าน จึงเบิกสินค้าจากคลังไม่ได้</p>
+            </div>
           </div>
-          <PageNavRow current="outbound" handlers={{ pricetag: onGoPriceTag, druglabel: onGoDrugLabel, stockcheck: onGoStockCheck, customerhistory: onGoCustomerHistory, outbound: onGoOutbound, salesupport: onGoSaleSupport }} />
         </div>
       </div>
+    );
+  }
+
+  return (
+    <div className="app-container">
+      {heroHeader}
 
       <div className="container">
         <div className="product-table-wrap stock-table-wrap outbound-table-wrap">

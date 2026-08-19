@@ -3,9 +3,12 @@ import * as XLSX from 'xlsx';
 import { supabase } from './supabase';
 import { AnimatedLogoText } from './AnimatedLogo';
 import { PageNavRow, usePageNotifications } from './pageAccess';
+import { BRANCH_PROFILE_CODES, branchCodeLabel } from './auth';
 
-const ORDER_BRANCHES = ['SRC', 'KKL', 'SSS', 'Warehouse'] as const;
-/** สาขาหน้าร้าน — ใช้กับ ss_backorders.branch ซึ่งมี CHECK ไว้ 3 ค่านี้เท่านั้น (ไม่มี Warehouse) */
+const ORDER_BRANCHES = ['SRC', 'KKL', 'SSS', 'SALE_ADMIN', 'Warehouse'] as const;
+/** สาขาหน้าร้าน — ใช้กับ ss_backorders.branch ซึ่งมี CHECK ไว้ 3 ค่านี้เท่านั้น
+ *  ⚠️ ไม่มี Warehouse และ **ไม่มี SALE_ADMIN** — Sale Admin ถูกกันออกจากเมนู BackOrder ทั้งเมนู
+ *     (ดู currentRole === 'saleadmin') ถ้าจะเปิดให้ ต้องขยาย CHECK ในฐานข้อมูลก่อนเสมอ */
 const BACKORDER_BRANCHES = ['SRC', 'KKL', 'SSS'] as const;
 /** รหัสยืนยันงานที่ย้อนกลับไม่ได้ (ลบแถว / ล้างประวัติอัพเดท)
  *  ⚠️ อยู่ฝั่ง client เหมือน VITE_ADMIN_PASSWORD — เป็น gate กันกดพลาด ไม่ใช่ security จริง */
@@ -130,7 +133,7 @@ function emptyRequestForm(): RequestForm {
   };
 }
 
-const NEW_PRODUCT_BRANCHES = ['SRC', 'KKL', 'SSS'] as const;
+const NEW_PRODUCT_BRANCHES = ['SRC', 'KKL', 'SSS', 'SALE_ADMIN'] as const;
 const TICKET_DEPARTMENTS = ['Purchase', 'Warehouse'] as const;
 
 interface TicketForm {
@@ -403,7 +406,7 @@ function DetailEditForm({ table, row, onSaved, onCancel, hideKeys }: {
             ) : f.input === 'select' && f.options ? (
               <select className="ss-input" value={form[f.key]} onChange={e => set(f.key, e.target.value)}>
                 <option value=""></option>
-                {f.options.map(o => <option key={o} value={o}>{o}</option>)}
+                {f.options.map(o => <option key={o} value={o}>{f.key === 'branch' ? branchCodeLabel(o) : o}</option>)}
               </select>
             ) : f.input === 'textarea' ? (
               <textarea className="ss-input ss-textarea" value={form[f.key]} onChange={e => set(f.key, e.target.value)} />
@@ -443,8 +446,10 @@ function emptyNewProductForm(): NewProductForm {
 
 type MenuId = 'order' | 'backorder' | 'request' | 'newproduct' | 'ticket' | 'products';
 
-/** กลุ่มผู้ใช้ที่ใช้ตัดสินว่าเมนูไหนโผล่ใน sidebar — map มาจาก props isBranchUser/isWarehouse/isPurchasing */
-type MenuRole = 'branch' | 'warehouse' | 'purchasing';
+/** กลุ่มผู้ใช้ที่ใช้ตัดสินว่าเมนูไหนโผล่ใน sidebar — map มาจาก props isBranchUser/isWarehouse/isPurchasing
+ *  ⚠️ `saleadmin` แยกจาก `branch` **เพื่อซ่อนเมนู BackOrder เท่านั้น** — พฤติกรรมอื่นทั้งหมด
+ *     (ล็อกช่องสาขา, filter ตาราง, แจ้งเตือน) ยังเดินตาม isBranchUser ซึ่งเป็น true ทั้งคู่ */
+type MenuRole = 'branch' | 'warehouse' | 'purchasing' | 'saleadmin';
 
 interface ColumnDef {
   key: string;
@@ -839,6 +844,9 @@ function formatCell(row: Record<string, unknown>, col: ColumnDef) {
     return [qty, unit].filter(Boolean).join(' ');
   }
   if (col.key === 'recipient_department') return orderRecipientLabel(row.recipient_department);
+  // รหัสในฐานข้อมูลเป็นตัวพิมพ์ใหญ่ (SALE_ADMIN) แต่ผู้ใช้ต้องเห็นชื่อจริง ("Sale Admin")
+  // — จุดเดียวที่แปลงให้ทุกตารางที่มีคอลัมน์ branch
+  if (col.key === 'branch') return branchCodeLabel(row.branch);
   const raw = row[col.key];
   if (raw === null || raw === undefined || raw === '') return '';
   if (col.kind === 'date') return new Date(String(raw)).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -865,7 +873,9 @@ const REQUEST_STATUS_OPTIONS = ['อนุมัติ', 'กำลังติ�
 const NEW_PRODUCT_STATUS_OPTIONS = ['อนุมัติ', 'รอพิจารณา', 'ไม่อนุมัติ'] as const;
 const REQUEST_AVAILABILITY_OPTIONS = ['ต้องสั่ง', 'มีของ', 'ไม่มีของ', 'ของขาด', 'ยกเลิกจำหน่าย'] as const;
 const TICKET_STATUS_OPTIONS = ['Done', 'Cancel'] as const;
-const NOTIFIED_BRANCHES = ['SRC', 'KKL', 'SSS'] as const;
+/** ผู้รับที่ทิศ "แผนก → สาขา" ยิงถึงได้ — ต้องรวม Sale Admin ด้วย ไม่งั้น notifyBranchUpdate
+ *  จะไม่รู้จักรหัสแล้วตก fallback ไป fan-out หา SRC/KKL/SSS ทั้ง 3 สาขาแทน */
+const NOTIFIED_BRANCHES = BRANCH_PROFILE_CODES;
 
 /** ป้ายผู้กระทำในแผงประวัติ — ต้องครอบคลุมทั้ง 2 ทิศทาง (แผนก→สาขา และ สาขา→จัดซื้อ)
  *  ⚠️ ของเดิมเขียนเป็น ternary `=== 'WAREHOUSE' ? 'คลังสินค้า' : 'จัดซื้อ'` ซึ่งทำให้ค่าอื่น
@@ -876,6 +886,7 @@ const NOTIFICATION_ACTOR_LABELS: Record<string, string> = {
   SRC: 'สาขา SRC',
   KKL: 'สาขา KKL',
   SSS: 'สาขา SSS',
+  SALE_ADMIN: 'Sale Admin',
 };
 const notificationActorTone = (code: string) =>
   code === 'WAREHOUSE' ? 'warehouse' : code === 'PURCHASING' ? 'purchasing' : 'branch';
@@ -1002,9 +1013,12 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
   const [notificationTarget, setNotificationTarget] = useState<{ menuId: MenuId; recordId: string } | null>(null);
 
   const menu = MENUS.find(m => m.id === activeMenu)!;
-  const isBranchUser = userBranch === 'SRC' || userBranch === 'KKL' || userBranch === 'SSS';
+  const isBranchUser = (BRANCH_PROFILE_CODES as readonly string[]).includes(userBranch ?? '');
   // เมนูที่โปรไฟล์นี้เห็น — ใช้ทั้งกับ sidebar และเป็น whitelist ตอนเปิดจากลิงก์แจ้งเตือน
-  const currentRole: MenuRole = isBranchUser ? 'branch' : isWarehouse ? 'warehouse' : 'purchasing';
+  // Sale Admin แยกเป็น role ของตัวเองเพื่อให้หลุดจาก roles: ['branch','warehouse'] ของเมนู BackOrder
+  // (ss_backorders.branch มี CHECK แค่ SRC/KKL/SSS — ถ้าปล่อยให้เห็นเมนู กดบันทึกจะ error ที่ฐานข้อมูล)
+  const currentRole: MenuRole = userBranch === 'SALE_ADMIN' ? 'saleadmin'
+    : isBranchUser ? 'branch' : isWarehouse ? 'warehouse' : 'purchasing';
   const visibleMenus = useMemo(
     () => MENU_DISPLAY_ORDER
       .map(id => MENUS.find(m => m.id === id)!)
@@ -1021,7 +1035,7 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
   const notificationRecipient = isBranchUser ? (userBranch ?? null) : isPurchasing ? 'PURCHASING' : isWarehouse ? 'WAREHOUSE' : null;
   // ⚠️ แยกจาก NOTIFICATION_ACTOR_LABELS โดยตั้งใจ — ถ้าเอา map นั้นมาใช้ หัว drawer ของสาขา
   //    จะเปลี่ยนจาก "SRC · รายการล่าสุด" เป็น "สาขา SRC · รายการล่าสุด" โดยไม่ได้ขอ
-  const notificationRecipientLabel = isWarehouse ? 'คลังสินค้า' : isPurchasing ? 'จัดซื้อ' : (userBranch ?? '');
+  const notificationRecipientLabel = isWarehouse ? 'คลังสินค้า' : isPurchasing ? 'จัดซื้อ' : branchCodeLabel(userBranch);
   // ตัวเลขบนปุ่ม "🔔 อัพเดท" เท่านั้น — แยกจาก notificationUnreadCount (ปุ่ม "Order ใหม่") โดยตั้งใจ
   // เพราะคลังสินค้าตอนนี้มี 2 ตัวนับพร้อมกันจากคนละแหล่ง (ss_orders vs ss_branch_notification_events)
   // โปรไฟล์อื่นไม่กระทบ — ยังเป็นค่าเดียวกับ notificationUnreadCount เป๊ะ
@@ -3306,11 +3320,11 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
                 {isBranchUser ? (
                   <div className="ss-branch-locked-value" title="สาขากำหนดตามรหัสที่เข้าสู่ระบบ">
                     
-                    <strong>{userBranch}</strong>
+                    <strong>{branchCodeLabel(userBranch)}</strong>
                   </div>
                 ) : (
                   <select className="ss-input" value={orderForm.branch} onChange={e => updateForm({ branch: e.target.value })}>
-                    {ORDER_BRANCHES.map(b => <option key={b} value={b}>{b}</option>)}
+                    {ORDER_BRANCHES.map(b => <option key={b} value={b}>{branchCodeLabel(b)}</option>)}
                   </select>
                 )}
               </div>
@@ -3439,12 +3453,12 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
                 {isBranchUser ? (
                   <div className="ss-branch-locked-value" title="สาขากำหนดตามรหัสที่เข้าสู่ระบบ">
                     <span aria-hidden="true"></span>
-                    <strong>{userBranch}</strong>
+                    <strong>{branchCodeLabel(userBranch)}</strong>
                   </div>
                 ) : (
                   <select className="ss-input" value={backOrderForm.branch}
                     onChange={e => updateBackOrderForm({ branch: e.target.value })}>
-                    {BACKORDER_BRANCHES.map(b => <option key={b} value={b}>{b}</option>)}
+                    {BACKORDER_BRANCHES.map(b => <option key={b} value={b}>{branchCodeLabel(b)}</option>)}
                   </select>
                 )}
               </div>
@@ -3550,11 +3564,11 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
                 <label>สาขา *</label>
                 {isBranchUser ? (
                   <div className="ss-branch-locked-value" title="สาขากำหนดตามรหัสที่เข้าสู่ระบบ">
-                    <strong>{userBranch}</strong>
+                    <strong>{branchCodeLabel(userBranch)}</strong>
                   </div>
                 ) : (
                   <select className="ss-input" value={requestForm.branch} onChange={e => updateRequestForm({ branch: e.target.value })}>
-                    {ORDER_BRANCHES.map(b => <option key={b} value={b}>{b}</option>)}
+                    {ORDER_BRANCHES.map(b => <option key={b} value={b}>{branchCodeLabel(b)}</option>)}
                   </select>
                 )}
               </div>
@@ -3654,7 +3668,7 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
               <div className="ss-form-row">
                 <label>สาขา *</label>
                 <select className="ss-input" value={productForm.branch} onChange={e => updateProductForm({ branch: e.target.value })}>
-                  {NEW_PRODUCT_BRANCHES.map(b => <option key={b} value={b}>{b}</option>)}
+                  {NEW_PRODUCT_BRANCHES.map(b => <option key={b} value={b}>{branchCodeLabel(b)}</option>)}
                 </select>
               </div>
               <div className="ss-form-row">
@@ -3726,7 +3740,7 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
               <div className="ss-form-row">
                 <label>สาขา *</label>
                 <select className="ss-input" value={ticketForm.branch} onChange={e => updateTicketForm({ branch: e.target.value })}>
-                  {NEW_PRODUCT_BRANCHES.map(b => <option key={b} value={b}>{b}</option>)}
+                  {NEW_PRODUCT_BRANCHES.map(b => <option key={b} value={b}>{branchCodeLabel(b)}</option>)}
                 </select>
               </div>
               <div className="ss-form-row">

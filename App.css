@@ -3178,6 +3178,11 @@ body.pulse-b .cart-inline-btn.in-cart {
 .outbound-document-no { display: inline-block; padding: .4rem .55rem; border-radius: 6px; background: #f5f1ea; color: #594931; font-weight: 700; letter-spacing: .06em; }
 .ob-col-request-date, .ob-col-document-no { display: none !important; }
 
+/* ข้อความแทนตาราง เมื่อโปรไฟล์ไม่ได้สังกัดสาขาหน้าร้าน (เช่น Sale Admin) */
+.outbound-empty-note { padding: 2.5rem 1.5rem; text-align: center; color: #2d6cad; line-height: 1.7; }
+.outbound-empty-note strong { display: block; margin-bottom: .35rem; font-size: 1.05rem; }
+.outbound-empty-note p:last-child { color: #5a7fa6; font-size: .95rem; margin: 0; }
+
 .outbound-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap; }
 .outbound-toolbar-btns { display: flex; gap: 0.5rem; align-items: center; }
 .outbound-branch-tabs { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
