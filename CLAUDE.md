@@ -212,6 +212,11 @@ Do NOT modify without explicit user instruction:
 - Bottom-left: print date (`toLocaleDateString('th-TH')`) + SKU
 - No decimal shown on price
 
+#### `.lbl-name` — ชื่อสินค้า (เปลี่ยน 2569-08-19)
+- **4 บรรทัด ฟอนต์ 7.5pt** (`line-height: 1.15`) — เดิม 2 บรรทัดที่ 9pt ชื่อยาวถูกตัดทิ้งกลางคัน เลือกจาก `public/label-name-designs.html` "แบบที่ 2" (แกลเลอรี 10 แบบ ทดสอบกับชื่อสินค้าจริงยาวสุด 83 ตัวอักษร) — แลกฟอนต์เล็กลง 17% กับพื้นที่ชื่อเกือบเท่าตัว
+- Preview modal (`.label-preview`, กล่อง 280px ไม่ scale ตาม cm จริง) ใช้ `font-size: 13.3px` แทน (ลดสัดส่วนเดียวกับ print คือ ×0.833 จาก 16px เดิม) ไม่ใช่ 7.5pt ตรงๆ เพราะคนละหน่วยกับ print
+- ⚠️ **`.live-preview-panel .lbl-name` ต้องระบุ `-webkit-line-clamp` ตรงๆ ไม่ปล่อย fallthrough จาก base rule** — กันบั๊กแบบเดียวกับที่เคยเกิดกับ `gap` (ดูคำเตือนด้านล่างเรื่อง 3 จุดซิงค์)
+
 #### `.lbl-loc` — ตำแหน่งชั้นวาง มุมซ้ายบน (เพิ่ม 2569-08-11)
 - แสดง `product.location` (เช่น `A14` / `1A12`) คู่กับโลโก้ · **มีเฉพาะสินค้าที่โหลดมาจากปุ่ม "เลือกตามหมวด"** เพราะข้อมูลอยู่ใน `product_category` ไม่ได้อยู่ใน `products` · ค้นหาปกติ/สแกนบาร์โค้ด → ไม่มี แสดงว่างไว้
 - ⚠️ **ใช้ `margin-right: auto` บน `.lbl-loc` ห้ามเปลี่ยน `.lbl-header` เป็น `space-between`** — ป้ายที่ไม่มี location จะมีลูกเดียว `space-between` จะดันโลโก้ไปซ้าย
