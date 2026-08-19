@@ -9,7 +9,7 @@
 | Table | ใช้กับเมนู | หมายเหตุ |
 |---|---|---|
 | `ss_orders` | Order | งานสั่งจอง/สั่งซื้อของลูกค้า ~23 คอลัมน์ (sku, branch, qty, paid_date, customer_name, contact_channel, สถานะ chip: arrived_branch / customer_notified / delivered ฯลฯ) |
-| `ss_backorders` | BackOrder | สินค้าค้างส่ง (ABC ≠ P) — `branch` มี CHECK `SRC/KKL/SSS` · เก็บ `unit` = **หน่วยของบาร์โค้ดที่สแกน** · `pending_qty` = **ค้างส่งลูกค้า** (สาขากรอกเอง) ส่วน **"คลังมีสินค้า" ไม่ได้เก็บ** ดึงสดจาก `stock` สาขาคลังสินค้า · 3 สถานะ chip default สะกดตรงกับ `ss_orders` เป๊ะ · migration `202608140001` → `202608140003` + `202608150001` |
+| `ss_backorders` | BackOrder | สินค้าค้างส่ง (ABC ≠ P) — `branch` มี CHECK `SRC/KKL/SSS/SALE_ADMIN` · เก็บ `unit` = **หน่วยของบาร์โค้ดที่สแกน** · `pending_qty` = **ค้างส่งลูกค้า** (สาขากรอกเอง) ส่วน **"คลังมีสินค้า" ไม่ได้เก็บ** ดึงสดจาก `stock` สาขาคลังสินค้า · 3 สถานะ chip default สะกดตรงกับ `ss_orders` เป๊ะ · migration `202608140001` → `202608140003` + `202608150001` + `202608190002` (เพิ่ม `SALE_ADMIN`) |
 | `ss_request_items` | Request Item | ขอสินค้าที่ไม่มีในสต๊อก + supplier, image_url, customer_name |
 | `ss_new_products` | New Product | เสนอสินค้าใหม่เข้าร้าน + image_url, quoted_price, status |
 | `ss_tickets` | Ticket | แจ้งปัญหา department: Purchase / Warehouse |
@@ -32,7 +32,7 @@
 - `isBranchUser` = `BRANCH_PROFILE_CODES.includes(userBranch)` (import จาก `auth.ts`) = **`SRC`/`KKL`/`SSS`/`SALE_ADMIN`** — ⚠️ **ห้าม hardcode 3 สาขากลับมา** เดิมรายชื่อนี้ซ้ำอยู่ 5 จุดคนละไฟล์ เพิ่มโปรไฟล์ทีต้องไล่แก้ครบทุกจุด ตกจุดไหนก็พังเงียบคนละแบบ
 - ยุบเป็น `currentRole: MenuRole` (`'branch' | 'warehouse' | 'purchasing' | 'saleadmin'`) → `visibleMenus` กรอง `MENU_DISPLAY_ORDER` ด้วย `MenuDef.roles` (ไม่ใส่ `roles` = ทุกโปรไฟล์เห็น)
   - ⚠️ `visibleMenus` ยังเป็น **whitelist ตอนเปิดจากลิงก์แจ้งเตือน** (`openNotificationEvent`) ด้วย — ไม่งั้นลิงก์จะพาไปเมนูที่ถูกซ่อน แล้วออกไม่ได้เพราะไม่มีปุ่มใน sidebar
-  - 🚨 **`'saleadmin'` มีอยู่เพื่อซ่อนเมนู BackOrder อย่างเดียว** — `ss_backorders.branch` มี CHECK แค่ `SRC/KKL/SSS` ถ้า Sale Admin เห็นเมนูแล้วกดบันทึกจะ error ที่ฐานข้อมูล · **พฤติกรรมอื่นทุกอย่างเดินตาม `isBranchUser` ซึ่ง Sale Admin เป็น `true`** (ล็อกช่องสาขาในฟอร์ม, `.eq('branch', userBranch)`, `notifyPurchasingUpdate`/`notifyWarehouseUpdate`) — อย่าเผลอเอา `currentRole === 'branch'` ไปใช้แทน `isBranchUser` ที่ไหน
+  - **Sale Admin นับเป็น role `branch` เต็มตัว** — เคยมี role `'saleadmin'` แยกไว้ซ่อนเมนู BackOrder ตอนเพิ่มโปรไฟล์ (2569-08-19 เช้า) แต่**ถอดออกแล้ว**ตอนบ่ายที่ผู้ใช้ขอเปิดเมนูนั้นให้ใช้ได้ · ทุกอย่างเดินตาม `isBranchUser` (ล็อกช่องสาขาในฟอร์ม, `.eq('branch', userBranch)`, `notifyPurchasingUpdate`/`notifyWarehouseUpdate`)
 - **`branchCodeLabel(code)`** (จาก `auth.ts`) = จุดเดียวที่แปลงรหัส DB → ชื่อที่ผู้ใช้เห็น (`SALE_ADMIN` → `Sale Admin`) อ่านจาก `PROFILES.label` ตรงๆ ไม่มี map ซ้ำ · เรียกที่ **`formatCell`** (ครอบทุกตาราง **และ popup รายละเอียด** เพราะ popup เรนเดอร์ผ่าน `formatCell` เหมือนกัน), option ของ dropdown สาขาทุกฟอร์ม, ป้าย `.ss-branch-locked-value`, และ `notificationRecipientLabel`
 
 ## เมนู Order — สาขาเห็นเฉพาะของตัวเอง
@@ -102,23 +102,24 @@ helper กลางตัวเดียวใช้ทั้ง 2 ฟอร์�
 - ⚠️ **ห้ามเอา `notifyBranchUpdate` มาใช้ 2 ทิศใหม่** — fallback fan-out ของมันจะสแปมทั้ง 3 สาขาแทนที่จะแจ้งจัดซื้อ/คลัง
 - **`notifyWarehouseUpdate` ไม่กรอง `recipient_department`/ตาราง** (ต่างจาก `notifyPurchasingUpdate` ที่กรองเฉพาะ `ss_orders`) — ยิงทั้ง Order ทุกใบและ BackOrder ทุกใบ เพราะคลังทำงานกับทั้งคู่อยู่แล้ว (กรอกฟอร์ม Inbound/Outbound/เลขโอนใน Order ทุกใบ ไม่ใช่แค่ใบที่ส่งถึงคลัง)
 
-**Trigger ที่แจ้งจัดซื้อ (4 จุด · 2 เมนู) และคลังสินค้า (3 จุด · 2 เมนู):**
+**Trigger ที่แจ้งจัดซื้อ (6 จุด · 3 เมนู) และคลังสินค้า (4 จุด · 2 เมนู):**
 
 | เมนู | จุด | แจ้งจัดซื้อ | แจ้งคลัง |
 |---|---|---|---|
 | Order | `saveOrder` — สาขาสร้าง Order ใหม่ | ✓ `สาขาเพิ่ม Order ใหม่` | ✓ `สาขาเพิ่ม Order ใหม่` |
 | Order | `applyStepChange` (`selectedOrderTable === 'ss_orders'`) — สาขากดตรา 3 ขั้น | ✓ `สาขาอัปเดตสถานะ Order` | ✓ `สาขาอัปเดตสถานะ Order` |
-| BackOrder | `saveBackOrder` — สาขาสร้าง BackOrder ใหม่ | ✕ (นอกขอบเขต) | ✓ `สาขาเพิ่ม BackOrder ใหม่` |
-| BackOrder | `applyStepChange` (`selectedOrderTable === 'ss_backorders'`) — สาขากดตรา 3 ขั้น | ✕ (นอกขอบเขต) | ✓ `สาขาอัปเดตสถานะ BackOrder` |
+| BackOrder | `saveBackOrder` — สาขาสร้าง BackOrder ใหม่ | ✓ `สาขาเพิ่ม BackOrder ใหม่` | ✓ `สาขาเพิ่ม BackOrder ใหม่` |
+| BackOrder | `applyStepChange` (`selectedOrderTable === 'ss_backorders'`) — สาขากดตรา 3 ขั้น | ✓ `สาขาอัปเดตสถานะ BackOrder` | ✓ `สาขาอัปเดตสถานะ BackOrder` |
 | Request Item | `saveRequest` — สาขาขอสินค้าใหม่ | ✓ `สาขาขอสินค้าใหม่ (Request Item)` | ✕ (นอกขอบเขต — SKU/MOQ เป็นงานจัดซื้อ) |
 | Request Item | `applyEditPatch` — สาขาแก้ไขคำขอ | ✓ `สาขาแก้ไข Request Item` | ✕ (นอกขอบเขต) |
 
-- ⚠️ `applyStepChange` **ใช้ร่วมกับ BackOrder** — ฝั่งจัดซื้อครอบ `if (selectedOrderTable === 'ss_orders')` (BackOrder นอกขอบเขต จัดซื้อไม่เห็นเมนูนั้นด้วยซ้ำ ถ้าแจ้งไปจะคลิกแล้วตันที่ whitelist ใน `openNotificationEvent`) ส่วนฝั่งคลัง**ไม่กรองตาราง** เพราะคลังเห็นทั้ง 2 เมนู
+- **จัดซื้อเข้าร่วมทิศ BackOrder แล้ว 2569-08-19** — เดิม 2 แถว BackOrder เป็น `✕ (นอกขอบเขต)` เพราะจัดซื้อดูแลเฉพาะ `ABC = P` · ผู้ใช้ขอเปิดให้จัดซื้อ "รับทราบ" ตอนเพิ่มโปรไฟล์ Sale Admin เข้าเมนูนี้ · **มีผลกับทุกสาขา ไม่ใช่แค่ Sale Admin**
+- ⚠️ `applyStepChange` **ใช้ร่วมกับ BackOrder** (`selectedOrderTable` เป็นได้ทั้ง 2 ตาราง) — ทั้งฝั่งจัดซื้อและฝั่งคลัง**ไม่กรองตารางแล้ว** แต่ **meta ต้องใช้ `orderDetailMenuId` / `selectedOrderTable` ห้าม hardcode `'order'`/`'ss_orders'`** ไม่งั้นแจ้งเตือนของ BackOrder จะพาไปเปิดเมนู Order ด้วย id ของ BackOrder แล้วหาแถวไม่เจอ (ของเดิม hardcode ไว้ได้เพราะ guard การันตีว่าเป็น Order เสมอ — พอถอด guard ต้องแก้คู่กัน)
 - ⚠️ `applyEditPatch` **ใช้ร่วมกับ products/newproduct/ticket และ popup Order** จึงต้องครอบ `if (meta.menuId === 'request')` ก่อนแจ้งจัดซื้อ — ไม่งั้นทุกเมนูจะแจ้งจัดซื้อหมด (ทิศนี้ไม่มีสมการเทียบเท่าฝั่งคลัง — Request Item อยู่นอกขอบเขตของคลังทั้งหมด)
   - เงื่อนไข `meta.detail !== ''` ที่ครอบอยู่แล้วกันกรณีกดบันทึกทั้งที่ไม่ได้แก้อะไร (`describeChangedFields` คืน `''`) — ทั้ง 3 ทิศจึงเงียบเหมือนกัน
 - ⚠️ **ห้าม gate `saveOrder` ด้วย `recipientDepartment === 'PURCHASING'`** — ค่า `'BOTH'` (SKU ไม่มีใน Product Master) จัดซื้อก็ต้องเห็น (คลังไม่ต้องกังวลข้อนี้เพราะไม่กรอง `recipient_department` อยู่แล้ว)
 - จัดซื้อเห็น Request Item **ทุกสาขา** (query ไม่กรอง branch สำหรับเมนูนี้) คลิกแจ้งเตือนจึงเปิดใบนั้นได้เสมอ ต่างจาก Order ที่จัดซื้อกรอง `recipient_department`
-- คลิกแจ้งเตือนของคลังเปิดใบได้เสมอเพราะ `id: 'order'` ไม่มี `roles` (ทุกโปรไฟล์เห็น) และ `id: 'backorder'` มี `roles: ['branch','warehouse']` ซึ่งครอบคลุมคลังอยู่แล้ว — ไม่ชนกับ whitelist ใน `openNotificationEvent`
+- คลิกแจ้งเตือนเปิดใบได้เสมอทุกโปรไฟล์ เพราะทั้ง `id: 'order'` และ `id: 'backorder'` **ไม่มี `roles` แล้ว** (ทุกโปรไฟล์เห็น) — ไม่ชนกับ whitelist ใน `openNotificationEvent` · 🚨 **เปิดทิศแจ้งเตือนใหม่ไปเมนูไหน ต้องเช็คก่อนเสมอว่าผู้รับเห็นเมนูนั้นไหม** ไม่งั้น badge ขึ้นแต่คลิกแล้วตันโดยไม่มี feedback (นี่คือเหตุผลที่ BackOrder เคยกันจัดซื้อไว้ — พอเปิดทิศต้องถอด `roles` คู่กัน)
 
 **Schema (migration `202608170001_purchasing_notification_events.sql` เพิ่มจัดซื้อ, `202608180001_warehouse_notification_events.sql` เพิ่มคลังสินค้า):**
 - ⚠️ คอลัมน์ยังชื่อ **`branch` แต่ความหมายคือ "ผู้รับ"** แล้ว (`SRC/KKL/SSS` = สาขา, `SALE_ADMIN` = Sale Admin, `PURCHASING` = จัดซื้อ, `WAREHOUSE` = คลังสินค้า) — ไม่ rename เพราะมี query/RPC/retention/realtime filter อ้างอยู่หลายจุด · มี `comment on column` กำกับไว้ใน DB
@@ -187,9 +188,14 @@ helper กลางตัวเดียวใช้ทั้ง 2 ฟอร์�
 
 ## เมนู BackOrder — สินค้าค้างส่ง (ABC ≠ P)
 
-ตาราง `ss_backorders` แยกจาก `ss_orders` · **เห็นเฉพาะสาขา + คลังสินค้า** ผ่าน `roles: ['branch', 'warehouse']` ใน `MENUS` — จัดซื้อไม่เห็นเพราะดูแลเฉพาะ `ABC = P`
+ตาราง `ss_backorders` แยกจาก `ss_orders` · **ทุกโปรไฟล์เห็นเมนูนี้** (ไม่มี `roles` ใน `MENUS` แล้ว)
 
-- สาขาเห็นเฉพาะของตัวเอง (`.eq('branch', userBranch)` ใน query) · คลังเห็นทุกสาขา จึงมีคอลัมน์ `Branch` ในตารางไว้แยกว่าแถวไหนของใคร
+- **จัดซื้อเพิ่งเข้ามาเห็นเมนูนี้ได้ 2569-08-19** — เดิม `roles: ['branch','warehouse']` กันไว้เพราะ BackOrder คือของ `ABC ≠ P` ส่วนจัดซื้อดูแลเฉพาะ `ABC = P` · ถอดออกตามคำขอผู้ใช้ให้จัดซื้อ "รับทราบ" ข้อมูลด้วย
+  - **จัดซื้อแก้แถวที่มีอยู่ไม่ได้** — popup ตัดทั้งปุ่มตราประทับและฟอร์มจัดซื้อออก (`isPurchasing && isBackOrderDetail` → ข้อความบอกว่าดูอย่างเดียว)
+  - แต่ยัง**เพิ่มแถวแทนสาขาได้เหมือนคลัง** เพราะปุ่ม ➕ Add BackOrder ไม่มี role gate (แบบเดียวกับ ➕ New Order) · เคสนี้ `notifyPurchasingUpdate`/`notifyWarehouseUpdate` เงียบทั้งคู่ (guard `isBranchUser`) เหลือแต่ `notifyBranchUpdate` แจ้งสาขาเจ้าของแถว — สมเหตุสมผลและตรงกับพฤติกรรมของคลังที่มีมาก่อน
+  - 🚨 **ห้ามปล่อยให้จัดซื้อตกไป `else` ของ popup** — จะได้ปุ่มตรา 3 ขั้นซึ่งเป็นงานสาขา และ `applyStepChange` **ไม่มี role guard ข้างในเลย** (ทั้งไฟล์คุมสิทธิ์ตราประทับด้วยการซ่อนปุ่มล้วน ๆ) จัดซื้อจึงกดเปลี่ยนสถานะได้จริงถ้าปุ่มโผล่
+- `BACKORDER_BRANCHES` = `SRC/KKL/SSS/SALE_ADMIN` (ไม่มี `Warehouse` — คลังเป็นผู้รับงานไม่ใช่ผู้ขอ) ต้องตรงกับ CHECK ของ `ss_backorders.branch` เป๊ะ ๆ
+- สาขา/Sale Admin เห็นเฉพาะของตัวเอง (`.eq('branch', userBranch)` ใน query) · คลัง+จัดซื้อเห็นทุกสาขา จึงมีคอลัมน์ `Branch` ในตารางไว้แยกว่าแถวไหนของใคร
 
 **⚠️ มี 2 คอลัมน์ตัวเลขคนละที่มา อย่าสลับกัน** (ตั้งชื่อตามคำสั่งผู้ใช้ 2569-08-15):
 
@@ -215,7 +221,7 @@ helper กลางตัวเดียวใช้ทั้ง 2 ฟอร์�
 - **popup ใช้ตัวเดียวกับ Order** — `selectedOrderTable` state จำว่าแถวที่เปิดมาจากตารางไหน แล้ว `toggleOrderStep` / `saveWarehouseFields` ยิงไปตารางนั้น
   - ⚠️ อ่านจาก `activeMenu` แทนไม่ได้ — ฟังก์ชันบันทึกต้องผูกกับ**แถวที่เปิดอยู่** ไม่ใช่เมนูที่กำลังดู
   - คลังกรอกช่องเดียว (`BACKORDER_WAREHOUSE_FIELDS` = `outbound_date`) ต่างจาก Order ที่มี 3 ช่อง — เลือกด้วย `warehouseFieldsFor(table)`
-  - ไม่มีฟอร์มจัดซื้อ (คอลัมน์ `order_type` ฯลฯ ไม่มีใน `ss_backorders`) — มี `!isBackOrderDetail` กันไว้ซ้ำแม้จัดซื้อจะเข้าเมนูนี้ไม่ได้
+  - ไม่มีฟอร์มจัดซื้อ (คอลัมน์ `order_type` ฯลฯ ไม่มีใน `ss_backorders`) — สาขา `isPurchasing && isBackOrderDetail` ตัดจัดซื้อออกก่อนถึงทั้งฟอร์มจัดซื้อและปุ่มตรา เหลือข้อความ "ดูข้อมูลได้อย่างเดียว" · **จำเป็นตั้งแต่จัดซื้อเข้าเมนูนี้ได้ 2569-08-19** ก่อนหน้านั้นเป็นแค่การกันเหนียว
 - ⚠️ **ค่า default ของ 3 สถานะใน SQL ต้องสะกดตรงกับ `ss_orders` เป๊ะ ๆ** เพราะ `stepDone()` ตัดสินด้วยการหาคำว่า `"แล้ว"` ในสตริง
 - **ป้าย `.ss-out-badge` (Days Badge) ใช้ร่วมกับ Order** — `showOutboundAlert` / `stampStatusBadge` เช็คผ่านตัวแปร `isStampMenu` (`activeMenu === 'order' || 'backorder'`) · ใช้ได้เพราะ `ss_backorders` มี `outbound_date` + 3 คอลัมน์สถานะ ชื่อเดียวกับ `ss_orders`
 - **ไม่มีเมนูย่อย 3 ขั้น** ใต้ปุ่ม BackOrder — `stepCounts` ยังนับจาก `ss_orders` อย่างเดียว (ยังไม่ได้ขอมา)

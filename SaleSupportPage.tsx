@@ -6,10 +6,9 @@ import { PageNavRow, usePageNotifications } from './pageAccess';
 import { BRANCH_PROFILE_CODES, branchCodeLabel } from './auth';
 
 const ORDER_BRANCHES = ['SRC', 'KKL', 'SSS', 'SALE_ADMIN', 'Warehouse'] as const;
-/** สาขาหน้าร้าน — ใช้กับ ss_backorders.branch ซึ่งมี CHECK ไว้ 3 ค่านี้เท่านั้น
- *  ⚠️ ไม่มี Warehouse และ **ไม่มี SALE_ADMIN** — Sale Admin ถูกกันออกจากเมนู BackOrder ทั้งเมนู
- *     (ดู currentRole === 'saleadmin') ถ้าจะเปิดให้ ต้องขยาย CHECK ในฐานข้อมูลก่อนเสมอ */
-const BACKORDER_BRANCHES = ['SRC', 'KKL', 'SSS'] as const;
+/** ผู้ลงรายการ BackOrder — ต้องตรงกับ CHECK ของ ss_backorders.branch เป๊ะ ๆ
+ *  ⚠️ ไม่มี Warehouse (คลังเป็นผู้รับงาน ไม่ใช่ผู้ขอ) — ต่างจาก ORDER_BRANCHES ที่มี */
+const BACKORDER_BRANCHES = ['SRC', 'KKL', 'SSS', 'SALE_ADMIN'] as const;
 /** รหัสยืนยันงานที่ย้อนกลับไม่ได้ (ลบแถว / ล้างประวัติอัพเดท)
  *  ⚠️ อยู่ฝั่ง client เหมือน VITE_ADMIN_PASSWORD — เป็น gate กันกดพลาด ไม่ใช่ security จริง */
 const ADMIN_PASSWORD = '221900';
@@ -447,9 +446,9 @@ function emptyNewProductForm(): NewProductForm {
 type MenuId = 'order' | 'backorder' | 'request' | 'newproduct' | 'ticket' | 'products';
 
 /** กลุ่มผู้ใช้ที่ใช้ตัดสินว่าเมนูไหนโผล่ใน sidebar — map มาจาก props isBranchUser/isWarehouse/isPurchasing
- *  ⚠️ `saleadmin` แยกจาก `branch` **เพื่อซ่อนเมนู BackOrder เท่านั้น** — พฤติกรรมอื่นทั้งหมด
- *     (ล็อกช่องสาขา, filter ตาราง, แจ้งเตือน) ยังเดินตาม isBranchUser ซึ่งเป็น true ทั้งคู่ */
-type MenuRole = 'branch' | 'warehouse' | 'purchasing' | 'saleadmin';
+ *  Sale Admin นับเป็น `branch` (isBranchUser เป็น true) — เคยมี role `saleadmin` แยกไว้ซ่อนเมนู
+ *  BackOrder แต่ถอดออกแล้วตอนเปิดเมนูนั้นให้ใช้ได้ 2569-08-19 */
+type MenuRole = 'branch' | 'warehouse' | 'purchasing';
 
 interface ColumnDef {
   key: string;
@@ -567,7 +566,12 @@ const MENUS: MenuDef[] = [
     ],
   },
   {
-    // สินค้าค้างส่ง (ABC ≠ P) — จัดซื้อไม่เห็นเมนูนี้เพราะดูแลเฉพาะ ABC = P
+    // สินค้าค้างส่ง (ABC ≠ P)
+    // ⚠️ **ทุกโปรไฟล์เห็นเมนูนี้แล้ว** (ถอด `roles` ออก 2569-08-19) — เดิมเป็น ['branch','warehouse']
+    //    เพราะจัดซื้อดูแลเฉพาะ ABC = P · ผู้ใช้ขอเปิดให้จัดซื้อ "รับทราบ" ด้วย จัดซื้อจึงเห็นและ
+    //    ได้รับแจ้งเตือน BackOrder ของทุกสาขา แต่**แก้แถวที่มีอยู่ไม่ได้** (popup ตัดทั้งปุ่มตรา
+    //    และฟอร์มจัดซื้อออกที่ isBackOrderDetail) · เพิ่มแถวแทนสาขายังทำได้เหมือนคลัง
+    //    เพราะปุ่ม ➕ Add BackOrder ไม่มี role gate แบบเดียวกับ ➕ New Order
     // ⚠️ 2 คอลัมน์ตัวเลขคนละที่มา อย่าสลับกัน:
     //    `stock_qty`   "คลังมีสินค้า"  = ยอดสดจาก `stock` สาขาคลังสินค้า ไม่ได้เก็บในตาราง (เติมหลัง fetch)
     //                   ทุกโปรไฟล์เห็นยอดของคลังเหมือนกัน — สาขาต้องรู้ว่าคลังมีของพอส่งไหม
@@ -576,7 +580,6 @@ const MENUS: MenuDef[] = [
     //    ตัวเลขคลังนับด้วยหน่วยของ stock ซึ่งเป็นหน่วยเล็กสุดเสมอ จึงอาจคนละหน่วยกับคอลัมน์ "หน่วย"
     //    (เช่น 530 แผง / หน่วย = กล่อง) — หน่วยที่คลังนับไปอยู่ใน tooltip ของช่องตัวเลขแทน
     id: 'backorder', label: 'BackOrder', icon: IconBackOrder, table: 'ss_backorders',
-    roles: ['branch', 'warehouse'],
     columns: [
       { key: 'sku_name',          label: 'SKU / ชื่อสินค้า', min: 200 },
       { key: 'branch',            label: 'Branch', min: 70 },
@@ -1015,10 +1018,7 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
   const menu = MENUS.find(m => m.id === activeMenu)!;
   const isBranchUser = (BRANCH_PROFILE_CODES as readonly string[]).includes(userBranch ?? '');
   // เมนูที่โปรไฟล์นี้เห็น — ใช้ทั้งกับ sidebar และเป็น whitelist ตอนเปิดจากลิงก์แจ้งเตือน
-  // Sale Admin แยกเป็น role ของตัวเองเพื่อให้หลุดจาก roles: ['branch','warehouse'] ของเมนู BackOrder
-  // (ss_backorders.branch มี CHECK แค่ SRC/KKL/SSS — ถ้าปล่อยให้เห็นเมนู กดบันทึกจะ error ที่ฐานข้อมูล)
-  const currentRole: MenuRole = userBranch === 'SALE_ADMIN' ? 'saleadmin'
-    : isBranchUser ? 'branch' : isWarehouse ? 'warehouse' : 'purchasing';
+  const currentRole: MenuRole = isBranchUser ? 'branch' : isWarehouse ? 'warehouse' : 'purchasing';
   const visibleMenus = useMemo(
     () => MENU_DISPLAY_ORDER
       .map(id => MENUS.find(m => m.id === id)!)
@@ -1387,7 +1387,8 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
       //    เลขโอนสินค้า ให้ทุกใบไม่ว่าจะเป็นของจัดซื้อ (ABC = P) หรือของคลังเอง
       //    จัดซื้อยังกรองอยู่เพราะดูแลเฉพาะ ABC = P · BOTH คือข้อมูลเก่าก่อนมีการแยกผู้รับ
       else if (menu.id === 'order' && isPurchasing) query = query.in('recipient_department', ['PURCHASING', 'BOTH']);
-      // BackOrder: สาขาเห็นเฉพาะของตัวเอง คลังเห็นทุกสาขา (จัดซื้อเข้าเมนูนี้ไม่ได้)
+      // BackOrder: สาขา/Sale Admin เห็นเฉพาะของตัวเอง · คลัง+จัดซื้อไม่กรอง เห็นทุกสาขา
+      // (จัดซื้อเข้าเมนูนี้ได้แล้ว 2569-08-19 แต่ดูอย่างเดียว แก้แถวไม่ได้ — ดู isBackOrderDetail ใน popup)
       if (menu.id === 'backorder' && isBranchUser) query = query.eq('branch', userBranch);
       if (menu.id === 'products' && abcFilter.size > 0) {
         query = query.in('abc', [...abcFilter]);
@@ -1679,6 +1680,14 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
     });
     // สาขาสร้าง BackOrder → แจ้งคลังสินค้า (BackOrder ไม่เคยมีทิศนี้มาก่อนเลย — เพิ่มใหม่ทั้งหมด)
     void notifyWarehouseUpdate({
+      menuId: 'backorder', tableName: 'ss_backorders', title: 'สาขาเพิ่ม BackOrder ใหม่',
+      detail: `จำนวนค้างส่ง ${backOrderForm.pending_qty}${backOrderForm.unit ? ` ${backOrderForm.unit}` : ''}`,
+      itemSku: backOrderForm.sku,
+      itemName: backOrderForm.product_name,
+    });
+    // → แจ้งจัดซื้อด้วย (เพิ่ม 2569-08-19 พร้อมกับเปิดเมนูนี้ให้จัดซื้อเห็น)
+    // ⚠️ ต้องเปิดเมนูให้จัดซื้อคู่กันเสมอ ไม่งั้นคลิกแจ้งเตือนแล้วตันที่ whitelist ใน openNotificationEvent
+    void notifyPurchasingUpdate({
       menuId: 'backorder', tableName: 'ss_backorders', title: 'สาขาเพิ่ม BackOrder ใหม่',
       detail: `จำนวนค้างส่ง ${backOrderForm.pending_qty}${backOrderForm.unit ? ` ${backOrderForm.unit}` : ''}`,
       itemSku: backOrderForm.sku,
@@ -2144,20 +2153,17 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
       itemSku: selectedOrder.sku,
       itemName: selectedOrder.product_name,
     });
-    // สาขากดตรา → แจ้งจัดซื้อ
+    // สาขากดตรา → แจ้งจัดซื้อ — ไม่กรองตารางแล้ว (2569-08-19 จัดซื้อเห็นเมนู BackOrder ได้แล้ว)
     // ⚠️ ฟังก์ชันนี้ใช้ร่วมกับ BackOrder (selectedOrderTable เป็นได้ทั้ง ss_orders / ss_backorders)
-    //    BackOrder อยู่นอกขอบเขตโดยตั้งใจ — จัดซื้อไม่เห็นเมนูนั้นด้วยซ้ำ (MENUS roles) ถ้าไม่กัน
-    //    จะแจ้งเตือนแล้วคลิกไปตันที่ whitelist ใน openNotificationEvent โดยไม่มี feedback
-    if (selectedOrderTable === 'ss_orders') {
-      void notifyPurchasingUpdate({
-        menuId: 'order', tableName: 'ss_orders', recordId: selectedOrder.id,
-        title: 'สาขาอัปเดตสถานะ Order', detail: `${step.label} → ${next}`,
-        itemSku: selectedOrder.sku,
-        itemName: selectedOrder.product_name,
-      });
-    }
-    // สาขากดตรา → แจ้งคลังด้วยเสมอ ไม่กรองตาราง (ต่างจากจัดซื้อด้านบนที่กรองเฉพาะ ss_orders)
-    // เพราะคลังดูแลทั้ง Order และ BackOrder ตามที่ตกลงไว้
+    //    meta จึงต้องใช้ orderDetailMenuId / selectedOrderTable **ห้าม hardcode 'order'/'ss_orders'**
+    //    ไม่งั้นแจ้งเตือนของ BackOrder จะพาไปเปิดเมนู Order ด้วย id ของ BackOrder แล้วหาแถวไม่เจอ
+    void notifyPurchasingUpdate({
+      menuId: orderDetailMenuId, tableName: selectedOrderTable, recordId: selectedOrder.id,
+      title: `สาขาอัปเดตสถานะ ${orderDetailLabel}`, detail: `${step.label} → ${next}`,
+      itemSku: selectedOrder.sku,
+      itemName: selectedOrder.product_name,
+    });
+    // สาขากดตรา → แจ้งคลังด้วยเสมอ เพราะคลังดูแลทั้ง Order และ BackOrder ตามที่ตกลงไว้
     void notifyWarehouseUpdate({
       menuId: orderDetailMenuId, tableName: selectedOrderTable, recordId: selectedOrder.id,
       title: `สาขาอัปเดตสถานะ ${orderDetailLabel}`, detail: `${step.label} → ${next}`,
@@ -3073,9 +3079,16 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
                       )}
                     </div>
                   </>
-                ) : isPurchasing && !isBackOrderDetail ? (
-                  /* ฟอร์มจัดซื้อมีเฉพาะ Order — คอลัมน์ 5 ตัวนี้ไม่มีใน ss_backorders
-                     (จัดซื้อเข้าเมนู BackOrder ไม่ได้อยู่แล้ว เช็คซ้ำไว้กันบันทึกลงคอลัมน์ที่ไม่มีจริง) */
+                ) : isPurchasing && isBackOrderDetail ? (
+                  /* จัดซื้อ + BackOrder = ดูอย่างเดียว (เปิดเมนูนี้ให้จัดซื้อ 2569-08-19 เพื่อ "รับทราบ")
+                     🚨 ห้ามปล่อยให้ตกไป else ด้านล่าง — จะได้ปุ่มตราประทับ 3 ขั้นซึ่งเป็นงานของสาขา
+                        และ applyStepChange ไม่มี role guard ข้างในเลย (คุมสิทธิ์ด้วยการซ่อนปุ่มล้วน ๆ)
+                        จัดซื้อจึงกดเปลี่ยนสถานะได้จริงถ้าปุ่มโผล่
+                     ฟอร์มจัดซื้อก็ใช้ไม่ได้เช่นกัน — PURCHASING_ORDER_FIELDS เป็นคอลัมน์ของ ss_orders
+                     ล้วน ไม่มีอยู่ใน ss_backorders */
+                  <div className="ss-detail-steps-title">จัดซื้อดูข้อมูล BackOrder ได้อย่างเดียว</div>
+                ) : isPurchasing ? (
+                  /* ฟอร์มจัดซื้อมีเฉพาะ Order — คอลัมน์ 5 ตัวนี้ไม่มีใน ss_backorders */
                   <>
                     <div className="ss-detail-steps-title">ข้อมูลจัดซื้อ · แก้ไขแล้วกดบันทึก</div>
                     <div className="ss-purchasing-grid">

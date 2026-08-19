@@ -259,10 +259,10 @@ create table if not exists ss_backorders (
   product_name      text,                                  -- 5.2 ชื่อสินค้า
   unit              text,                                  -- 5.3 หน่วยตามบาร์โค้ดที่สแกน/เลือก
   pending_qty       numeric,                               -- 5.3.1 ค้างส่งลูกค้า (สาขากรอกในฟอร์ม)
-  -- ⚠️ ไม่มี 'SALE_ADMIN' โดยตั้งใจ — Sale Admin ไม่ใช้เมนู BackOrder (ฝั่งเว็บซ่อนเมนูด้วย
-  --    currentRole = 'saleadmin') ถ้าจะเปิดให้ ต้องขยาย CHECK นี้ก่อนเสมอ ทั้งแบบ inline ตรงนี้
-  --    และเขียนคู่ drop/add constraint เพิ่ม (ตารางนี้ยังไม่เคยมีคู่ alter มาก่อน)
-  branch            text not null check (branch in ('SRC', 'KKL', 'SSS')),
+  -- ผู้ลงรายการ — ไม่มี 'Warehouse' เพราะคลังเป็นผู้รับงาน ไม่ใช่ผู้ขอ
+  -- ⚠️ CHECK นี้เป็น inline ในบล็อก `create table if not exists` จึงไม่มีผลกับ DB ที่สร้างไปแล้ว
+  --    ทุกครั้งที่เพิ่มค่าใหม่ต้องแก้ **ทั้งตรงนี้ (ติดตั้งใหม่) และคู่ alter ด้านล่าง (DB เดิม)**
+  branch            text not null check (branch in ('SRC', 'KKL', 'SSS', 'SALE_ADMIN')),
   customer_name     text,                                  -- 5.4 ชื่อลูกค้า
   paid_date         date,                                  -- 5.5 วันที่ลูกค้าชำระ
   sale_bill_no      text,                                  -- 5.6 เลขที่บิล
@@ -279,6 +279,13 @@ create table if not exists ss_backorders (
 alter table ss_backorders add column if not exists unit text;
 alter table ss_backorders add column if not exists transfer_no text;
 alter table ss_backorders add column if not exists pending_qty numeric;
+
+-- ⚠️ คู่ alter ของ CHECK ด้านบน — จำเป็นสำหรับ DB ที่สร้างไว้ก่อนหน้า เพราะ
+--    `create table if not exists` ข้าม inline CHECK ทั้งหมดถ้าตารางมีอยู่แล้ว
+--    (ตารางนี้เพิ่งมีคู่ alter ครั้งแรกตอน migration 202608190002 ตอนเพิ่ม SALE_ADMIN)
+alter table ss_backorders drop constraint if exists ss_backorders_branch_check;
+alter table ss_backorders add constraint ss_backorders_branch_check
+  check (branch in ('SRC', 'KKL', 'SSS', 'SALE_ADMIN'));
 
 create index if not exists ss_backorders_branch_created_idx
   on ss_backorders (branch, created_at desc);

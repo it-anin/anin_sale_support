@@ -91,8 +91,9 @@ Six-page React app sharing the same `App.css` and Supabase project.
 - โปรไฟล์ + รหัส (แก้ที่ `auth.ts`): **สาขา** SRC `1234` / KKL `4567` / SSS `9999` · **Sale Admin** `5555` · **คลังสินค้า** `0000` · **จัดซื้อ** `1111`
 - **Sale Admin** (เพิ่ม 2569-08-19) — ทำงานเหมือนรหัสสาขาแต่ไม่ใช่สาขาหน้าร้าน: `group: 'สาขา'` **โดยตั้งใจ** (ทุกจุดที่เช็ค `group === 'สาขา'` อยู่แล้วรับเข้าเป็นสาขาอัตโนมัติ ไม่ต้องขยาย union type แล้วไล่แก้ derivation ทีละจุด) · เก็บใน DB เป็น `SALE_ADMIN` แต่แสดงผลเป็น `Sale Admin` ทุกที่ผ่าน `branchCodeLabel`
   - ⚠️ **เก็บเป็น `SALE_ADMIN` ห้ามเป็น `Sale Admin`** — RPC `ss_create_branch_notifications` บังคับ `upper(trim(value))` ทั้ง actor และ recipient ค่าที่มีเว้นวรรคจะกลายเป็น `SALE ADMIN` แล้ว `.eq('branch', userBranch)` ฝั่งเว็บหาไม่เจอ → badge ค้าง 0 แบบไม่มี error
-  - **ใช้ได้:** เมนู Order / Request Item / New Product / Ticket / Products (แจ้งเตือนจัดซื้อ+คลังครบ 2 ทางเหมือนสาขา)
-  - **ใช้ไม่ได้ (ตั้งใจ):** เมนู **BackOrder** (`currentRole = 'saleadmin'` หลุดจาก `roles: ['branch','warehouse']`) · หน้า **เบิกด่วน** (`branchNotSupported` ใน `OutboundPage.tsx` แสดงข้อความแทนตาราง) · ปุ่ม **เลือกตามหมวด** หน้าป้ายราคา — ทั้ง 3 อย่างเพราะ `ss_backorders.branch` / `outbound_requests.branch` / `product_category.branch` ยังไม่รับค่า `SALE_ADMIN`
+  - **ใช้ได้:** เมนูซัพพอร์ตทุกเมนู — Order / **BackOrder** / Request Item / New Product / Ticket / Products (แจ้งเตือนจัดซื้อ+คลังครบ 2 ทางเหมือนสาขา)
+  - **ใช้ไม่ได้ (ตั้งใจ):** หน้า **เบิกด่วน** (`branchNotSupported` ใน `OutboundPage.tsx` แสดงข้อความแทนตาราง) · ปุ่ม **เลือกตามหมวด** หน้าป้ายราคา — เพราะ `outbound_requests.branch` / `product_category.branch` ยังไม่รับค่า `SALE_ADMIN`
+  - **BackOrder เปิดให้ทีหลัง** (2569-08-19 บ่าย — migration `202608190002`) พร้อมกับ**เปิดเมนูนั้นให้จัดซื้อเห็นด้วย** ซึ่งกระทบทุกสาขา ไม่ใช่แค่ Sale Admin: จัดซื้อเริ่มได้รับแจ้งเตือน BackOrder ของ SRC/KKL/SSS และเห็นแถวทุกสาขา (แก้แถวที่มีอยู่ไม่ได้ — ไม่มีปุ่มตรา/ฟอร์ม) — เดิมกันไว้เพราะ BackOrder คือของ `ABC ≠ P` ส่วนจัดซื้อดูแล `ABC = P` · รายละเอียดที่ [`docs/salesupport.md`](docs/salesupport.md)
   - 🚨 **`branchNotSupported` ห้ามเอาออก** — ถ้าไม่กัน `activeBranch` จะ fallback เป็น `'SRC'` → effect เติมแถวร่างสร้างแถวติดสาขา SRC → พิมพ์ปุ๊บ `updateRow` มาร์ค `requested: true` ทันที = **ส่งใบเบิกในนามสาขาอื่นโดยสาขานั้นไม่รู้ตัว**
 - แถบผู้ใช้ + ปุ่มออกจากระบบ: `.app-userbar` fixed มุมขวาบน แสดงทุกหน้า (render ใน `App.tsx`)
 - ⚠️ รหัสอยู่ฝั่ง client (เหมือน `VITE_ADMIN_PASSWORD`) — เป็น gate ใช้งานภายใน ไม่ใช่ security จริง
@@ -382,7 +383,7 @@ Each panel has a close (✕) button and includes product name in subheader.
 
 ศูนย์รวมงานซัพพอร์ตการขาย — sidebar 6 เมนู (Order / BackOrder / Request Item / New Product / Ticket / Products) + panel ขวา (toolbar + ตาราง) ขับเคลื่อนด้วย config `MENUS` แต่ละเมนูกำหนด table/columns/roles ของตัวเอง
 
-**พฤติกรรมแยกตาม 3 โปรไฟล์** (`isPurchasing` / `isWarehouse` / `userBranch` → ยุบเป็น `currentRole`): สาขาเห็นเฉพาะ Order/BackOrder ของตัวเอง · คลังสินค้าเห็นทุกสาขาและ popup Order เป็นฟอร์มกรอกแทนตราประทับ 3 ขั้น · จัดซื้อดูแลเฉพาะ SKU ที่ ABC=P และไม่เห็นเมนู BackOrder
+**พฤติกรรมแยกตามโปรไฟล์** (`isPurchasing` / `isWarehouse` / `userBranch` → ยุบเป็น `currentRole`): สาขา (รวม Sale Admin) เห็นเฉพาะ Order/BackOrder ของตัวเอง · คลังสินค้าเห็นทุกสาขาและ popup Order เป็นฟอร์มกรอกแทนตราประทับ 3 ขั้น · จัดซื้อดูแลเฉพาะ SKU ที่ ABC=P แต่**เห็นเมนู BackOrder แล้ว** (2569-08-19 — ทุกเมนูไม่มี `roles` เหลือแล้ว) โดยแก้แถวที่มีอยู่ไม่ได้ (ไม่มีปุ่มตรา/ฟอร์ม)
 
 มีระบบแจ้งเตือนสองทิศทาง (แผนก↔สาขา) ผ่านตารางเหตุการณ์ `ss_branch_notification_events`, ระบบตราประทับ 3 ขั้นพร้อม toast/confirm dialog, และดีไซน์ตาราง Order แบบ Two-line Row
 
