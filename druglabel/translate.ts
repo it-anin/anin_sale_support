@@ -1,3 +1,4 @@
+import { FunctionsHttpError } from '@supabase/supabase-js';
 import { supabase } from '../supabase';
 import type { Lang } from './types';
 
@@ -20,7 +21,18 @@ export async function translateMedicineLabel(
   const { data, error } = await supabase.functions.invoke('translate-medicine', {
     body: { source_lang: sourceLang, fields, target_langs: targetLangs },
   });
-  if (error) throw new Error(`แปลภาษาไม่สำเร็จ: ${error.message}`);
+  if (error) {
+    let detail = error.message;
+    if (error instanceof FunctionsHttpError) {
+      try {
+        const body = await error.context.json();
+        if (body?.error) detail = body.error;
+      } catch {
+        // body ไม่ใช่ JSON — ใช้ error.message เดิม
+      }
+    }
+    throw new Error(`แปลภาษาไม่สำเร็จ: ${detail}`);
+  }
   if (data?.rate_limit) {
     const min = data.retry_minutes as number | null;
     throw new Error(min ? `ถึง rate limit — รอประมาณ ${min} นาที แล้วลองใหม่` : 'ถึง rate limit — รอสักครู่แล้วลองใหม่');
