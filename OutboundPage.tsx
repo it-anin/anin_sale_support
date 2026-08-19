@@ -199,6 +199,12 @@ export function OutboundPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGo
       if (!canSwitchBranches && userBranch) {
         query = query.eq('branch', userBranch);
       }
+      // ⚠️ คลังสินค้าเห็นเฉพาะแถวที่สาขากด "บันทึกรายการ" แล้วเท่านั้น (2569-08-19)
+      // กันพนักงานคลังเห็นข้อมูลที่สาขายังพิมพ์/แก้ไขอยู่ (requested=false) แล้วเดินไปหยิบของล่วงหน้า
+      // ก่อนสาขาจะตัดสินใจส่งจริง — จัดซื้อไม่กรอง (ดูอย่างเดียว ไม่มีการกระทำทางกายภาพกับของ)
+      if (isWarehouse) {
+        query = query.eq('requested', true);
+      }
       const { data, error } = await query;
       if (cancelled || error) return;
       const fetched = (data ?? []).map(rowFromDb);
@@ -242,11 +248,15 @@ export function OutboundPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGo
   }, [isWarehouse, isPurchasing, userBranch]);
 
   // เติมแถวร่างว่างให้แท็บที่กำลังดูอยู่เสมอ ถ้าแท็บนั้นไม่มีแถวเลย (เหมือนพฤติกรรมเดิมตอนตารางว่าง)
+  // ⚠️ ต้องกัน isWarehouse ด้วย ไม่ใช่แค่ isPurchasing — หลังกรอง query เป็น requested=true เท่านั้น
+  // (ดูจุด fetchRows ด้านบน) แท็บที่ยังไม่มีใครส่งจะ "ไม่มีแถวเลย" ในสายตาคลังบ่อยขึ้นมาก ถ้าไม่กันไว้
+  // จะเติมแถวร่างที่คลังพิมพ์ได้จริง (ช่อง SKU/Barcode/Qty ของคลังเป็น input ไม่ใช่ text) แล้วสร้างแถวใหม่
+  // ติดสาขานั้นแบบ requested=false เงียบๆ โดยสาขาไม่รู้ตัว
   useEffect(() => {
-    if (isPurchasing) return; // ดูอย่างเดียว ไม่ต้องมีแถวร่างให้พิมพ์
+    if (isWarehouse || isPurchasing) return; // ดูอย่างเดียว/รอสาขาส่งเอง ไม่ต้องมีแถวร่างให้พิมพ์
     if (rows.some(r => r.branch === activeBranch)) return;
     setRows(prev => [...prev, makeRow('0001', activeBranch)]);
-  }, [activeBranch, rows, isPurchasing]);
+  }, [activeBranch, rows, isWarehouse, isPurchasing]);
 
   // อัปเดตแค่ state ในเครื่อง (เร็ว ใช้ตอนพิมพ์สด ๆ) — ไม่ยิง Supabase ทุกตัวอักษร
   const updateRow = (id: string, patch: Partial<OutboundRow>) => {
@@ -357,7 +367,8 @@ export function OutboundPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGo
 
   const dropRowLocally = (id: string) => setRows(prev => {
     const next = prev.filter(r => r.id !== id);
-    return next.length > 0 ? next : [makeRow('0001', activeBranch)];
+    if (next.length > 0 || isWarehouse) return next; // คลังไม่ควรมีแถวร่างในเครื่องเลยสักแถว (เหตุผลเดียวกับจุดอื่นด้านบน)
+    return [makeRow('0001', activeBranch)];
   });
 
   // ⚠️ ต้องรอผลลบจาก Supabase ให้สำเร็จก่อนค่อยเอาแถวออกจากหน้าจอ — ห้าม optimistic
@@ -393,7 +404,9 @@ export function OutboundPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGo
       const { error } = await supabase.from('outbound_requests').delete().in('id', idsToDelete);
       if (error) { window.alert(`ลบไม่สำเร็จ: ${error.message}\nรายการยังอยู่ในระบบ`); return; }
     }
-    setRows(prev => [...prev.filter(r => r.branch !== activeBranch), makeRow('0001', activeBranch)]);
+    // ⚠️ ห้ามเติมแถวร่างว่างให้ activeBranch เหมือนโค้ดเดิม — ปุ่มนี้เห็นเฉพาะคลัง (isWarehouse) และคลังไม่ควร
+    // มีแถวร่างในเครื่องเลยสักแถว (เหตุผลเดียวกับจุด fetchRows/เพิ่มแถว ด้านบน) ล้างแล้วปล่อยว่างจริง ๆ
+    setRows(prev => prev.filter(r => r.branch !== activeBranch));
   };
 
   const exportXlsx = () => {
@@ -514,7 +527,10 @@ export function OutboundPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGo
                   <span className="outbound-3d-btn-txt">Export</span>
                 </button>
               )}
-              {!isPurchasing && (
+              {/* ⚠️ เฉพาะสาขาเท่านั้น — คลังไม่ควรมีแถวร่างในเครื่องเลยสักแถว (ดูจุด fetchRows/auto-draft-row ด้านบน)
+                  เดิมกันแค่ isPurchasing ทำให้คลังกดปุ่มนี้ได้ สร้างแถวว่างในเครื่องที่ยังไม่ persisted แล้วไปโผล่ในตัวเลขบนแท็บ
+                  (นับจาก rows ตรงๆ ไม่แยกว่า persisted/requested จริงหรือยัง) ดูเหมือนสาขาส่งมาทั้งที่ยังไม่ได้กดเลย */}
+              {!isWarehouse && !isPurchasing && (
                 <button className="outbound-3d-btn" onClick={addRow} title="เพิ่มแถว">
                   <svg viewBox="0 0 24 24" aria-hidden="true">
                     <line x1="12" y1="5" x2="12" y2="19" />
@@ -723,11 +739,12 @@ export function OutboundPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGo
                     )}
                   </td>
                   <td className="ob-col-del">
-                    {/* ช่องนี้ทำหน้าที่เดียวคือ "ลบแถว" และ ⚠️ ให้เฉพาะคลังสินค้าเท่านั้น
-                        เหตุผล: กันเบิกซ้ำ — ถ้าสาขาลบแถวที่คลังจ่ายของไปแล้วได้ แล้วลงรายการใหม่ ของจะถูกเบิกออกสองรอบ
-                        สาขาที่ลงผิดต้องแก้ค่าในแถวเดิม (ช่องยังแก้ได้ตราบใดที่ยังไม่อนุมัติ) หรือแจ้งคลังให้ลบให้
-                        ⚠️ ห้ามเอา ✕ กลับมาใช้สื่อความหมายอื่นที่นี่อีก (เดิมสาขา ✕ = ลบ แต่คลัง ✕ = ของหมด คนละเรื่องกันจนพนักงานสับสน) */}
-                    {isWarehouse && (
+                    {/* ช่องนี้ทำหน้าที่เดียวคือ "ลบแถว" — ⚠️ ห้ามเอา ✕ กลับมาใช้สื่อความหมายอื่นที่นี่อีก
+                        (เดิมสาขา ✕ = ลบ แต่คลัง ✕ = ของหมด คนละเรื่องกันจนพนักงานสับสน)
+                        กันเบิกซ้ำ: ลบได้เฉพาะแถวที่ "คลังยังไม่เห็น" เท่านั้น — คลังสินค้าลบได้ทุกแถว (มีรหัสกันไว้ชั้นนึงแล้ว)
+                        ส่วนสาขาลบได้เฉพาะแถวที่ตัวเองยังไม่กด "บันทึกรายการ" (`!row.requested`) เพราะแถวนั้นยังไม่เคยส่งให้คลัง
+                        เห็น จึงไม่มีทางที่คลังจะจ่ายของไปแล้ว — พอกดส่งแล้ว ปุ่มนี้หายไป ต้องแก้ค่าในแถวเดิมหรือแจ้งคลังให้ลบแทน */}
+                    {isWarehouse ? (
                       <button
                         className="outbound-del-btn"
                         title="ลบรายการนี้ทิ้งถาวร (ต้องใส่รหัสผ่าน)"
@@ -741,7 +758,21 @@ export function OutboundPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGo
                           <line x1="14" y1="11" x2="14" y2="17" />
                         </svg>
                       </button>
-                    )}
+                    ) : !isPurchasing && !row.requested ? (
+                      <button
+                        className="outbound-del-btn"
+                        title="ลบรายการนี้ (ยังไม่ได้ส่งให้คลังสินค้า)"
+                        onClick={() => void removeRow(row.id)}
+                      >
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                          <path d="M3 6h18" />
+                          <path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" />
+                          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                          <line x1="10" y1="11" x2="10" y2="17" />
+                          <line x1="14" y1="11" x2="14" y2="17" />
+                        </svg>
+                      </button>
+                    ) : null}
                   </td>
                 </tr>
               ))}
