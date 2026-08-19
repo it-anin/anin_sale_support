@@ -83,7 +83,16 @@ Required JSON format:
     }
 
     const groqData = await groqRes.json();
-    let content: string = groqData.choices[0].message.content;
+    const choice = groqData.choices?.[0];
+    let content: string = choice?.message?.content ?? '';
+
+    // gpt-oss เป็น reasoning model — ถ้าโดนตัดกลางคัน content จะว่างหรือ JSON ไม่ครบ
+    if (choice?.finish_reason === 'length') {
+      throw new Error('AI ตอบยาวเกิน token ที่จองไว้ คำแปลไม่ครบ — ลองย่อข้อความต้นทางหรือแปลทีละภาษา');
+    }
+    if (!content.trim()) {
+      throw new Error('AI ไม่ได้ส่งคำแปลกลับมา (คำตอบว่างเปล่า) — ลองใหม่อีกครั้ง');
+    }
 
     // Strip markdown code fence if present
     content = content.replace(/^```(?:json)?\n?/m, '').replace(/\n?```$/m, '').trim();
@@ -101,6 +110,17 @@ Required JSON format:
         warning:      raw[lang]?.warning      ?? '',
         storage:      raw[lang]?.storage      ?? '',
       };
+    }
+
+    // 🚨 กันเคสที่เคยเกิดจริง: ถ้า raw ไม่ได้ใช้ key เป็นรหัสภาษาตามที่สั่ง (โมเดลห่อ object หรือ
+    // ใช้ชื่อภาษาเต็มเป็น key) normalize ข้างบนจะได้ค่าว่างทุกช่องแต่ยังคืน 200 → ฝั่งเว็บเอาค่าว่าง
+    // ไปทับฟอร์มแล้วผู้ใช้กดบันทึกโดยไม่รู้ว่าคำแปลหาย ต้องโยน error แทนการคืนคำแปลเปล่า
+    const emptyLangs = (target_langs as string[]).filter(l => {
+      const t = normalized[l] as Record<string, string>;
+      return !Object.values(t).some(v => typeof v === 'string' && v.trim() !== '');
+    });
+    if (emptyLangs.length) {
+      throw new Error(`AI ตอบกลับมาในรูปแบบที่อ่านไม่ได้ ไม่มีคำแปลของภาษา: ${emptyLangs.join(', ')} — ลองใหม่อีกครั้ง`);
     }
 
     return new Response(JSON.stringify(normalized), {

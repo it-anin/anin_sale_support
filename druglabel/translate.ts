@@ -37,7 +37,20 @@ export async function translateMedicineLabel(
     const min = data.retry_minutes as number | null;
     throw new Error(min ? `ถึง rate limit — รอประมาณ ${min} นาที แล้วลองใหม่` : 'ถึง rate limit — รอสักครู่แล้วลองใหม่');
   }
-  return data as TranslationResult;
+
+  // 🚨 ด่านสุดท้ายกันคำแปลว่างไปทับฟอร์มแล้วผู้ใช้กดบันทึกโดยไม่รู้ตัว (เคยเกิดจริง — SKU 101248
+  // ได้แถว null ครบทุกภาษาลง DB) edge function ก็เช็คให้อีกชั้นแล้ว แต่ deploy คนละทางกับเว็บ
+  // (Vercel auto-deploy ↔ supabase functions deploy ที่ต้องรันมือ) เวอร์ชันเก่าจึงยังค้างอยู่ได้
+  const result = (data ?? {}) as TranslationResult;
+  const emptyLangs = targetLangs.filter(l => {
+    const t = result[l];
+    return !t || !Object.values(t).some(v => typeof v === 'string' && v.trim() !== '');
+  });
+  if (emptyLangs.length) {
+    throw new Error(`ไม่ได้รับคำแปลของภาษา: ${emptyLangs.join(', ')} — ไม่ได้แก้ไขข้อมูลในฟอร์ม ลองใหม่อีกครั้ง`);
+  }
+
+  return result;
 }
 
 export function getTargetLangs(sourceLang: Lang): Lang[] {
