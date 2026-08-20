@@ -9,7 +9,7 @@
 | Table | ใช้กับเมนู | หมายเหตุ |
 |---|---|---|
 | `ss_orders` | Order | งานสั่งจอง/สั่งซื้อของลูกค้า ~23 คอลัมน์ (sku, branch, qty, paid_date, customer_name, contact_channel, สถานะ chip: arrived_branch / customer_notified / delivered ฯลฯ) |
-| `ss_backorders` | BackOrder | สินค้าค้างส่ง (ABC ≠ P) — `branch` มี CHECK `SRC/KKL/SSS/SALE_ADMIN` · เก็บ `unit` = **หน่วยของบาร์โค้ดที่สแกน** · `pending_qty` = **ค้างส่งลูกค้า** (สาขากรอกเอง) ส่วน **"คลังมีสินค้า" ไม่ได้เก็บ** ดึงสดจาก `stock` สาขาคลังสินค้า · 3 สถานะ chip default สะกดตรงกับ `ss_orders` เป๊ะ · migration `202608140001` → `202608140003` + `202608150001` + `202608190002` (เพิ่ม `SALE_ADMIN`) |
+| `ss_backorders` | BackOrder | สินค้าค้างส่ง (ABC ≠ P) — `branch` มี CHECK `SRC/KKL/SSS/SALE_ADMIN` · เก็บ `unit` = **หน่วยของบาร์โค้ดที่สแกน** · `pending_qty` = **ค้างส่งลูกค้า** (สาขากรอกเอง) ส่วน **"คลังมีสินค้า" ไม่ได้เก็บ** ดึงสดจาก `stock` สาขาคลังสินค้า · 3 สถานะ chip default สะกดตรงกับ `ss_orders` เป๊ะ · migration `202608140001` → `202608140003` + `202608150001` + `202608190002` (เพิ่ม `SALE_ADMIN`) + `202608190003` (phone) + `202608200001` (ยกเลิกรายการ) |
 | `ss_request_items` | Request Item | ขอสินค้าที่ไม่มีในสต๊อก + supplier, image_url, customer_name |
 | `ss_new_products` | New Product | เสนอสินค้าใหม่เข้าร้าน + image_url, quoted_price, status |
 | `ss_tickets` | Ticket | แจ้งปัญหา department: Purchase / Warehouse |
@@ -251,6 +251,27 @@ helper กลางตัวเดียวใช้ทั้ง 2 ฟอร์�
 - ⚠️ **ค่า default ของ 3 สถานะใน SQL ต้องสะกดตรงกับ `ss_orders` เป๊ะ ๆ** เพราะ `stepDone()` ตัดสินด้วยการหาคำว่า `"แล้ว"` ในสตริง
 - **ป้าย `.ss-out-badge` (Days Badge) ใช้ร่วมกับ Order** — `showOutboundAlert` / `stampStatusBadge` เช็คผ่านตัวแปร `isStampMenu` (`activeMenu === 'order' || 'backorder'`) · ใช้ได้เพราะ `ss_backorders` มี `outbound_date` + 3 คอลัมน์สถานะ ชื่อเดียวกับ `ss_orders`
 - **ไม่มีเมนูย่อย 3 ขั้น** ใต้ปุ่ม BackOrder — `stepCounts` ยังนับจาก `ss_orders` อย่างเดียว (ยังไม่ได้ขอมา)
+  - ⚠️ ถ้าวันหลังขยายเมนูย่อยมาที่ BackOrder **ต้อง `select` `cancelled_at` มาด้วยแล้วข้ามแถวที่ยกเลิกแล้ว** ไม่งั้นเลขบน badge จะนับใบที่ไม่มีใครกดตราได้แล้ว · `visibleRows` (filter ของตาราง) ก็มี guard `activeMenu !== 'order'` กันไว้ด้วยเหตุผลเดียวกัน
+
+### ยกเลิกรายการ (สั่งสินค้าไม่ได้) — เฉพาะสาขา 2569-08-20
+
+ปุ่ม **"ยกเลิก"** ต่อท้ายตรา 3 ขั้นใน popup BackOrder + ช่องกรอกสาเหตุ (**บังคับกรอก**) · migration `202608200001_backorder_cancel.sql` เพิ่ม `cancelled_at timestamptz` + `cancel_reason text`
+
+เติมช่องว่างที่มีข้อความสั่งไว้อยู่แล้วแต่ทำไม่ได้จริง — หน้าจอฝั่งจัดซื้อเขียนว่า *"สินค้าสั่งไม่ได้/เลิกผลิต/อื่นๆ แจ้งสาขาให้กดยกเลิกพร้อมลงรายละเอียดเพื่อยืนยันข้อมูล"* มาตลอด ทั้งที่ไม่เคยมีทั้งปุ่มและคอลัมน์
+
+- **สาขากดได้คนเดียว** (`isBranchUser && isBackOrderDetail`) — คลัง/จัดซื้อไม่มีปุ่ม · โปรไฟล์แอดมิน (ไม่ใช่สาขา/คลัง/จัดซื้อ) กดตรา 3 ขั้นได้แต่กดยกเลิกไม่ได้ **โดยตั้งใจ** เพราะการยกเลิกคือคำยืนยันของสาขาว่าสั่งของไม่ได้จริง
+- **ยกเลิกแล้ว:** ตรา 3 ขั้น `disabled` · ฟอร์ม Outbound ของคลังถูกตัดทั้งบล็อก · คอลัมน์ "สถานะ" ในตารางเหลือชิปแดง `ยกเลิก` อันเดียวแทน 3 ชิป · แบนเนอร์ `.ss-cancel-note` โผล่ใน popup ให้**ทุกโปรไฟล์**เห็นสาเหตุ
+- **กดตรา "ยกเลิก" ซ้ำ = คืนสถานะ** (เหมือนตรา 3 ขั้นที่กดซ้ำแล้วถอนตรา) — **ไม่มีลิงก์ "คืนสถานะ" แยกอีกอัน** จงใจไม่ให้มี 2 ทางทำสิ่งเดียวกัน
+- แจ้งเตือน `notifyPurchasingUpdate` + `notifyWarehouseUpdate` — **ไม่เรียก `notifyBranchUpdate`** ต่างจาก `applyStepChange` เพราะ guard ของมันคือ `!isPurchasing && !isWarehouse` แต่ปุ่มนี้มีเฉพาะสาขา จึงเป็น no-op ที่การันตีอยู่แล้ว
+
+**🚨 hazard ที่ต้องรู้:**
+- **ห้ามเขียนคำว่า "ยกเลิก" ทับลง `arrived_branch`/`customer_notified`/`delivered`** — (1) ตราที่เคยประทับหายถาวร กดคืนสถานะแล้วกู้ไม่ได้ (2) `stepDone()` ตัดสินด้วยการหาคำว่า `"แล้ว"` ค่าที่มีคำนั้นปนจะถูกนับว่าทำเสร็จทั้งระบบ (3) trigger `ss_track_order_workflow_completion` ใช้ pattern `like '%แล้ว%'` — ตอนนี้ผูกกับ `ss_orders` เท่านั้น แต่ถ้าวันหลังขยายมาที่ BackOrder จะนับผิดทันที
+- 🚨 **ชิป "ยกเลิก" ในตาราง hardcode `ss-chip--red` ห้ามเรียก `chipClass()`** — ฟังก์ชันนั้นทดสอบสีเขียว**ก่อน**สีแดง และคำว่า `'ไม่มีของ'` มี `'มีของ'` (คำเขียว) อยู่ข้างใน · **ทดสอบแล้ว: `chipClass('ยกเลิก: ไม่มีของ')` คืน `ss-chip--green`** เหตุผลจึงอยู่ใน `title` เท่านั้น ห้ามเอาไปต่อในค่าที่ส่งเข้า `chipClass`
+- **`.ss-stamp-mark` ฮาร์ดโค้ดสีเขียว** — ตรายกเลิกต้อง override ทั้ง `color` และ `border-color` ไม่งั้นคำว่า "ยกเลิกแล้ว" ขึ้นเป็นตราเขียวที่อ่านแล้วเข้าใจว่าอนุมัติ · ใช้ state class `--cancelled` แยก **ไม่ reuse `--done`** ที่บังคับสีเขียวไว้
+- **`.ss-confirm-box` กว้าง 270px + `text-align: center` + `overflow: hidden`** — กล่องยืนยันของโหมดนี้จึงต้องมี `--wide` (330px) และ textarea ต้องสั่ง `text-align: left` + `max-height` เอง · **ห้ามแก้คลาสเดิม** เพราะกล่องถอนตราใช้ร่วมกัน
+- **id ของหัวข้อกล่องต้องไม่ซ้ำ** (`ss-cancel-confirm-title` ไม่ใช่ `ss-confirm-title`) — 2 กล่องไม่มีทางเปิดพร้อมกัน แต่ id ซ้ำใน DOM ทำให้ `aria-labelledby` ชี้ผิดกล่อง
+- **ไม่เรียก `setStampTick`** ในเส้นทางนี้ — ตัวนับเมนูย่อยอ่านจาก `ss_orders` อย่างเดียว สั่งนับใหม่จากฝั่ง BackOrder = สแกนตารางทิ้งเปล่า
+- **race 2 คน:** `ss_backorders` ไม่มี realtime — สาขาอีกคนกดยกเลิกระหว่าง popup เปิดค้างได้ · `toggleOrderStep` จึงมี guard `if (isCancelled) return;` เป็นกันชนชั้นที่สองนอกเหนือจาก `disabled`
 
 ### ตาราง BackOrder — ดีไซน์ Two-line Row (2569-08-19)
 

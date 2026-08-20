@@ -4066,6 +4066,9 @@ body.ss-col-resizing { cursor: col-resize; user-select: none; }
   stroke-linecap: round;
   stroke-linejoin: round;
 }
+/* ป้ายฝั่งคลังเมื่อสาขายกเลิกใบนั้นแล้ว — ต้องคนละสีกับป้ายเขียวปกติอย่างชัดเจน
+   ตราที่สาขาเคยประทับไว้ไม่ได้ถูกล้างตอนยกเลิก ถ้าใช้สีเดิมคลังจะอ่านว่างานเดินอยู่ */
+.ss-out-badge--cancel { background: #c0392b; }
 
 .ss-img-link { color: #2d6cad; text-decoration: none; font-weight: 500; }
 .ss-img-link:hover { text-decoration: underline; }
@@ -4541,6 +4544,17 @@ body.ss-col-resizing { cursor: col-resize; user-select: none; }
 .ss-wh-actions .ss-add-btn:disabled { opacity: 0.45; cursor: default; }
 .ss-wh-msg { font-size: 12.5px; font-weight: 600; color: #3f8a4d; }
 .ss-wh-msg--error { color: #b04a3a; }
+/* ข้อความแทนฟอร์มคลัง เมื่อใบ BackOrder ถูกสาขายกเลิกแล้ว
+   ⚠️ ตัดทั้งฟอร์มทิ้งไปเลย ไม่ใช่แค่ disable ช่องกรอก — ปุ่มบันทึกอ่าน whDirty ที่ยังคำนวณอยู่ */
+.ss-wh-locked {
+  padding: 12px 14px;
+  background: #fdf3f2;
+  border: 1px solid #f2c0be;
+  border-radius: 9px;
+  color: #b04a3a;
+  font-size: 12.5px;
+  line-height: 1.7;
+}
 
 /* ฟอร์มจัดซื้อใน popup Order */
 .ss-purchasing-grid {
@@ -4594,6 +4608,41 @@ body.ss-col-resizing { cursor: col-resize; user-select: none; }
 }
 .ss-stamp--done { border-style: solid; border-color: #bfe3c9; color: #b9c6b9; }
 .ss-stamp--done .ss-stamp-mark { opacity: 1; transform: rotate(-8deg) scale(1); }
+
+/* ── ปุ่ม/ตรา "ยกเลิก" ของ BackOrder (เฉพาะสาขา) — สั่งสินค้าไม่ได้ ──
+   ⚠️ ใช้ state class `--cancelled` แยก ไม่ reuse `--done` เพราะ .ss-stamp--done บังคับ
+      border-color เขียว + color เทาเขียวไว้ ถ้า reuse จะต้องมาสู้ specificity กันเอง */
+.ss-stamp--cancel { border-color: #e3b0aa; background: #fdf3f2; color: #b04a3a; }
+.ss-stamp--cancel:hover { background: #fbe9e7; }
+/* .ss-stamp-mark ฮาร์ดโค้ดสีเขียวไว้ (ใช้กับตราอนุมัติ) — ตรายกเลิกต้อง override ทั้งตัวอักษรและขอบ
+   ไม่งั้นคำว่า "ยกเลิกแล้ว" จะขึ้นเป็นตราเขียวซึ่งอ่านแล้วเข้าใจว่าอนุมัติ */
+.ss-stamp--cancel .ss-stamp-mark { color: #c0392b; border-color: #c0392b; }
+.ss-stamp--cancelled { border-style: solid; }
+.ss-stamp--cancelled .ss-stamp-mark { opacity: 1; transform: rotate(-8deg) scale(1); }
+/* ตราที่กดไม่ได้เพราะใบถูกยกเลิก — ใช้ :disabled ตรง ๆ ไม่ต้องมีคลาสใหม่
+   .ss-stamp ใช้ที่เดียวคือป็อปอัพนี้ สถานะจึงไม่มีทางหลุดจาก attribute จริง */
+.ss-stamp:disabled { opacity: 0.45; cursor: not-allowed; }
+.ss-stamp:disabled:hover { background: #fdf8ee; }   /* กัน :hover ของ .ss-stamp เดิมทำงานต่อ */
+
+/* กล่องบอกว่าใบนี้ถูกยกเลิก — โผล่ให้ทุกโปรไฟล์เห็น (สาขา/คลัง/จัดซื้อ)
+   คือทางเดียวที่จัดซื้อกับคลังได้อ่านสาเหตุ เพราะทั้งคู่ไม่เห็นแถวตราประทับ */
+.ss-cancel-note {
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: #fdf3f2;
+  border: 1px solid #f2c0be;
+  border-left: 3px solid #c0392b;
+  border-radius: 8px;
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+.ss-cancel-note-title { font-weight: 700; color: #b04a3a; margin-bottom: 3px; }
+/* ผู้ใช้พิมพ์สาเหตุมาหลายบรรทัดได้ ต้องคงบรรทัดไว้ ไม่ยุบเป็นบรรทัดเดียว */
+.ss-cancel-note-reason { color: #2d3a48; white-space: pre-wrap; }
+.ss-cancel-note-time { color: #8194a8; font-size: 11.5px; margin-top: 3px; }
+
+/* ไม่มีคลาสลิงก์ "คืนสถานะ" แยก — ตรา .ss-stamp--cancelled กดซ้ำเพื่อคืนสถานะได้เอง
+   เหมือนตรา 3 ขั้นข้าง ๆ ที่กดซ้ำแล้วถอนตรา */
 
 /* ── Toast แจ้งผลกดตราประทับ — pill กลางบนจอ ──
    ดีไซน์ "Top Center Drop" (แบบที่ 2 จาก public/stamp-toast-designs.html)
@@ -4678,6 +4727,36 @@ body.ss-col-resizing { cursor: col-resize; user-select: none; }
 }
 .ss-confirm-title { font-size: 14px; font-weight: 700; color: #1e3a54; margin-bottom: 6px; }
 .ss-confirm-msg { font-size: 12px; color: #7a8a9b; line-height: 1.6; }
+
+/* ── กล่องยืนยัน "ยกเลิกทั้งใบ" ของ BackOrder — ใช้โครงเดียวกับกล่องถอนตราแต่คนละ modifier ──
+   ⚠️ กล่องเดิมกว้าง 270px ตายตัว แคบเกินจะใส่ช่องกรอกสาเหตุ · ห้ามไปขยายคลาสเดิม
+      เพราะกล่องถอนตราไม่ได้ต้องการความกว้างนี้ */
+.ss-confirm-box--wide { width: 330px; }
+/* .ss-confirm-ico ฮาร์ดโค้ดโทนเหลืองอำพันไว้ — โหมดยกเลิกต้องเป็นแดงให้ต่างจากการถอนตรา */
+.ss-confirm-ico--cancel { background: #fdeaea; color: #c0392b; }
+/* ⚠️ .ss-confirm-box เป็น text-align: center — ช่องกรอกต้องสั่งชิดซ้ายเอง ไม่งั้นข้อความที่พิมพ์
+      จะจัดกึ่งกลางทีละบรรทัด อ่านยากมากเมื่อสาเหตุยาวหลายบรรทัด */
+.ss-confirm-reason {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 10px;
+  padding: 8px 10px;
+  border: 1px solid #dfe6ee;
+  border-radius: 8px;
+  font-family: 'Noto Sans Thai', sans-serif;
+  font-size: 12.5px;
+  line-height: 1.55;
+  text-align: left;
+  resize: vertical;
+  /* .ss-confirm-box เป็น overflow: hidden — ปล่อยให้ยืดไม่จำกัดแล้วจะโดนตัดหายไปเฉย ๆ */
+  max-height: 140px;
+}
+.ss-confirm-reason:focus { outline: none; border-color: #4891db; box-shadow: 0 0 0 2px rgba(72, 145, 219, 0.18); }
+.ss-confirm-reason--error { border-color: #e3b0aa; }
+.ss-confirm-error { margin-top: 6px; font-size: 11.5px; color: #c0392b; text-align: left; }
+.ss-confirm-btns button:disabled { opacity: 0.5; cursor: default; }
+
 .ss-confirm-btns { display: flex; border-top: 1px solid #eef2f6; }
 .ss-confirm-btns button {
   flex: 1;

@@ -2205,6 +2205,10 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
   const orderDetailMenuId: MenuId = isBackOrderDetail ? 'backorder' : 'order';
   const orderDetailLabel = isBackOrderDetail ? 'BackOrder' : 'Order';
   const orderWarehouseFields = warehouseFieldsFor(selectedOrderTable);
+  /** ใบที่เปิดอยู่ถูกสาขากดยกเลิกแล้วหรือยัง (สั่งสินค้าไม่ได้)
+   *  ⚠️ ต้องมี `isBackOrderDetail` คู่เสมอ — `ss_orders` ไม่มีคอลัมน์นี้ ปล่อยไว้เฉย ๆ จะได้ undefined
+   *     ซึ่งบังเอิญถูกวันนี้ แต่จะพังเงียบทันทีที่ Order มีคอลัมน์ชื่อเดียวกันในอนาคต */
+  const isCancelled = isBackOrderDetail && !!selectedOrder?.cancelled_at;
 
   // ── Toast แจ้งผลกดตราประทับ ──
   // เก็บ timer ไว้เคลียร์ตอน unmount — ปิดป๊อปอัปหรือออกจากหน้าระหว่าง toast ยังค้าง
@@ -2227,6 +2231,14 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
   // กล่องยืนยัน "ยกเลิกสถานะ" — แทนที่ window.confirm() ด้วยดีไซน์ "Centered Icon Alert"
   // (เลือกจาก public/confirm-dialog-designs.html แบบที่ 6) · step ที่รอยืนยันอยู่ = เปิดกล่อง, null = ปิด
   const [confirmCancelStep, setConfirmCancelStep] = useState<typeof ORDER_STEPS[number] | null>(null);
+
+  // ── ยกเลิกทั้งใบ (BackOrder เท่านั้น) — คนละเรื่องกับ confirmCancelStep ที่เป็นการ "ถอนตรา" ทีละขั้น ──
+  // ⚠️ จงใจแยก state ไม่ยุบรวมกับ confirmCancelStep เป็น union — เส้นทางถอนตราทำงานถูกอยู่แล้ว
+  //    และ ORDER_STEPS[number] ไม่มีฟิลด์ discriminant ให้ narrow ยุบรวมแล้วต้องไล่แก้ทุกจุดที่อ่าน .label/.pending
+  const [cancelDialog, setCancelDialog] = useState<'cancel' | 'uncancel' | null>(null);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelError, setCancelError] = useState('');
+  const [cancelSaving, setCancelSaving] = useState(false);
 
   // บันทึกค่าสถานะจริงลง Supabase — แยกออกจาก toggleOrderStep เพื่อให้เรียกได้ทั้งจากคลิกตรงๆ (อนุมัติ)
   // และจากปุ่ม "ยืนยัน" ในกล่อง Centered Icon Alert (ยกเลิก)
@@ -2278,6 +2290,9 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
   // กดตราประทับใน Popup Order/BackOrder: อนุมัติทันที / ยกเลิกต้องยืนยันก่อน (เปิดกล่อง Centered Icon Alert)
   const toggleOrderStep = (step: typeof ORDER_STEPS[number]) => {
     if (!selectedOrder) return;
+    // ใบที่ถูกยกเลิกแล้วกดตราไม่ได้ — ปุ่มถูก disabled อยู่แล้ว นี่คือกันชนชั้นที่สอง
+    // เผื่อสาขาอื่นกดยกเลิกระหว่างที่ป็อปอัพใบนี้เปิดค้างอยู่ (ตาราง ss_backorders ไม่มี realtime)
+    if (isCancelled) return;
     const current = String(selectedOrder[step.key] ?? '');
     if (stepDone(current)) { setConfirmCancelStep(step); return; }
     void applyStepChange(step, false);
@@ -2289,6 +2304,73 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
     const step = confirmCancelStep;
     setConfirmCancelStep(null);
     void applyStepChange(step, true);
+  };
+
+  // ── ยกเลิก/คืนสถานะ BackOrder ทั้งใบ ──
+  // เขียนลง 2 คอลัมน์แยก (cancelled_at / cancel_reason) ไม่แตะ 3 คอลัมน์สถานะเดิม
+  // 🚨 เหตุผลที่ห้ามเขียนคำว่า "ยกเลิก" ทับลง arrived_branch/customer_notified/delivered:
+  //    (1) ตราที่เคยประทับไว้จะหายถาวร กดคืนสถานะแล้วกู้ไม่ได้
+  //    (2) `stepDone()` ตัดสินด้วยการหาคำว่า "แล้ว" — ค่าที่มีคำนั้นปนจะถูกนับว่าทำเสร็จทั้งระบบ
+  const closeCancelDialog = () => {
+    setCancelDialog(null);
+    setCancelReason('');
+    setCancelError('');
+  };
+
+  const applyBackOrderCancel = async (reason: string | null) => {
+    if (!selectedOrder) return;
+    const id = String(selectedOrder.id);
+    const cancelling = reason !== null;
+    const patch = cancelling
+      ? { cancelled_at: new Date().toISOString(), cancel_reason: reason.trim() }
+      : { cancelled_at: null, cancel_reason: null };
+    setCancelSaving(true);
+    const { error } = await supabase.from('ss_backorders').update(patch).eq('id', id);
+    setCancelSaving(false);
+    if (error) {
+      // ค้างกล่องไว้ให้เห็นว่าพัง — ต่างจากเส้นทางสำเร็จที่ปิดกล่องทิ้ง
+      setCancelError(`บันทึกไม่สำเร็จ: ${error.message}`);
+      pushStampToast('error', 'อัปเดตไม่สำเร็จ', cancelling ? 'ยกเลิกรายการ' : 'คืนสถานะ');
+      return;
+    }
+    closeCancelDialog();
+    setStampError('');
+    pushStampToast(
+      cancelling ? 'cancel' : 'ok',
+      cancelling ? 'ยกเลิกรายการแล้ว' : 'คืนสถานะแล้ว',
+      cancelling ? (reason.trim() || '—') : 'กดตราต่อได้ตามปกติ',
+    );
+    setSelectedOrder(o => (o ? { ...o, ...patch } : o));
+    setRows(prev => prev.map(r => (String(r.id) === id ? { ...r, ...patch } : r)));
+    // ⚠️ ไม่เรียก setStampTick — ตัวนับเมนูย่อย 3 ขั้นอ่านจาก ss_orders อย่างเดียว (ดู effect ที่ query
+    //    'ss_orders') สั่งให้นับใหม่จากฝั่ง BackOrder = สแกนทั้งตารางทิ้งเปล่า ๆ
+    const detail = cancelling
+      ? `ยกเลิกรายการ · เหตุผล: ${reason.trim()}`
+      : 'คืนสถานะรายการที่เคยยกเลิก';
+    // ⚠️ ไม่เรียก notifyBranchUpdate เหมือน applyStepChange — guard ของมันคือ `!isPurchasing && !isWarehouse`
+    //    แต่ปุ่มนี้มีเฉพาะสาขา จึงเป็น no-op ที่การันตีอยู่แล้ว · อีก 2 ตัว guard เป็น isBranchUser พอดี
+    // การแจ้งจัดซื้อคือหัวใจของฟีเจอร์นี้ — จัดซื้อเป็นคนขอให้สาขากดยืนยันว่าสั่งของไม่ได้
+    void notifyPurchasingUpdate({
+      menuId: 'backorder', tableName: 'ss_backorders', recordId: selectedOrder.id,
+      title: `สาขา${cancelling ? 'ยกเลิก' : 'คืนสถานะ'} BackOrder`, detail,
+      itemSku: selectedOrder.sku,
+      itemName: selectedOrder.product_name,
+    });
+    void notifyWarehouseUpdate({
+      menuId: 'backorder', tableName: 'ss_backorders', recordId: selectedOrder.id,
+      title: `สาขา${cancelling ? 'ยกเลิก' : 'คืนสถานะ'} BackOrder`, detail,
+      itemSku: selectedOrder.sku,
+      itemName: selectedOrder.product_name,
+    });
+  };
+
+  const confirmCancelDialogYes = () => {
+    if (cancelSaving) return;
+    if (cancelDialog === 'uncancel') { void applyBackOrderCancel(null); return; }
+    // บังคับกรอกสาเหตุ — เช็คตอนกดยืนยัน ไม่ใช่ disable ปุ่มทิ้งไว้เฉย ๆ
+    // ปุ่มที่กดไม่ได้โดยไม่บอกเหตุผล ผู้ใช้จะไม่รู้ว่าต้องทำอะไรถึงจะกดได้
+    if (!cancelReason.trim()) { setCancelError('กรุณาระบุสาเหตุที่ยกเลิก'); return; }
+    void applyBackOrderCancel(cancelReason);
   };
 
   // ── ฟอร์มคลังสินค้าใน popup Order / BackOrder ──
@@ -2310,6 +2392,10 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
     setPurchasingOrderForm(purchasingFormFrom(selectedOrder));
     setPurchasingOrderMsg('');
     setConfirmCancelStep(null);   // เปลี่ยนใบที่เปิดอยู่ (หรือปิดป๊อปอัป) → กล่องยืนยันที่ค้างอยู่ต้องปิดตาม
+    // เหตุผลที่พิมพ์ค้างไว้ต้องล้างด้วย ไม่งั้นข้อความของใบก่อนหน้าจะติดไปโผล่ในใบถัดไป
+    setCancelDialog(null);
+    setCancelReason('');
+    setCancelError('');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedOrder?.id]);
 
@@ -2377,10 +2463,13 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
   // แจ้งเตือนฝั่งสาขา: คลังกรอก "Outbound วันที่ส่งของ" แล้ว แต่สาขายังไม่กดตรา "ของถึงสาขา"
   // ⚠️ ต้องมีเงื่อนไข arrived_branch ด้วย — ถ้าดูแค่ outbound_date ป้ายจะติดค้างตลอดไปไม่มีวันดับ
   // เช็ค branch ซ้ำกับที่กรองใน query แล้ว — ตั้งใจเก็บไว้เป็นกันชน เผื่อวันหลังเลิกกรองที่ query
+  // ⚠️ ต้องเช็ค cancelled_at ด้วย — แถวที่คลังลง outbound ไว้แล้วสาขามายกเลิกทีหลัง ป้ายจะยังชวนให้
+  //    ไปกดตรา "ของถึงสาขา" ทั้งที่ตรานั้นถูกล็อกไปแล้ว = ทางตัน กดยังไงก็ไม่ได้
   const showOutboundAlert = (row: Record<string, unknown>) =>
     isBranchUser
     && isStampMenu
     && String(row.branch ?? '') === userBranch
+    && !row.cancelled_at
     && !!String(row.outbound_date ?? '').trim()
     && !stepDone(String(row.arrived_branch ?? ''));
 
@@ -2388,6 +2477,16 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
   // มีคอลัมน์ชิป 3 ตัวบอกอยู่แล้ว แต่อยู่ขวาสุดต้องเลื่อนตารางไปดู — ป้ายนี้เห็นได้เลยโดยไม่ต้องเลื่อน
   const stampStatusBadge = (row: Record<string, unknown>) => {
     if (!isWarehouse || !isStampMenu) return null;
+    // ยกเลิกแล้วต้องขึ้นก่อนขั้นที่ประทับไว้ — ไม่งั้นคลังเห็นป้ายเขียว "ถึงแล้ว" บนแถวที่สาขายกเลิกไปแล้ว
+    // (ตราเดิมไม่ได้ถูกล้างตอนยกเลิก จงใจเก็บไว้ให้กดคืนสถานะแล้วได้ของเดิมกลับมาครบ)
+    if (row.cancelled_at) {
+      return (
+        <span className="ss-out-badge ss-out-badge--cancel" title={`สาขายกเลิกรายการ: ${String(row.cancel_reason ?? '—')}`}>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+          ยกเลิกแล้ว
+        </span>
+      );
+    }
     const step = latestStampedStep(row);
     if (!step) return null;   // สาขายังไม่กดอะไรเลย
     return (
@@ -2935,6 +3034,23 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
                         }
                         // หลายสถานะยุบเป็นชิปเรียงลงมาในช่องเดียว (ตาราง Order)
                         if (col.kind === 'chips' && col.chipKeys) {
+                          // BackOrder ที่สาขากดยกเลิก → ชิปแดงอันเดียวแทนทั้ง 3 ขั้น
+                          // (3 ขั้นถูกล็อกไปแล้ว โชว์ต่อไปก็อ่านแล้วเข้าใจผิดว่ายังต้องทำ)
+                          // ⚠️ gate ด้วย menu.id ด้วย ไม่ใช่แค่ค่าใน row — ss_orders ไม่มีคอลัมน์นี้ก็จริง
+                          //    แต่ query เป็น select('*') วันหลังถ้า Order มีคอลัมน์ชื่อเดียวกันจะพังเงียบ
+                          // 🚨 hardcode ss-chip--red ห้ามเรียก chipClass() — มันทดสอบสีเขียวก่อนสีแดง และ
+                          //    คำว่า 'ไม่มีของ' มี 'มีของ' อยู่ข้างใน ทำให้ค่าที่มีเหตุผลปนกลายเป็นเขียวได้
+                          //    (ทดสอบแล้ว: chipClass('ยกเลิก: ไม่มีของ') คืน ss-chip--green) เหตุผลจึงอยู่ใน title เท่านั้น
+                          if (menu.id === 'backorder' && row.cancelled_at) {
+                            return (
+                              <td key={col.key} className={`ss-col-${col.key}`} style={columnStyle(col)}>
+                                <span className="ss-chip ss-chip--red"
+                                  title={`สาขายกเลิกรายการ · เหตุผล: ${String(row.cancel_reason ?? '—')}`}>
+                                  ยกเลิก
+                                </span>
+                              </td>
+                            );
+                          }
                           return (
                             <td key={col.key} className={`ss-col-${col.key}`} style={columnStyle(col)}>
                               <div className="ss-chip-stack">
@@ -3155,9 +3271,33 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
                   ))}
                 </div>
 
+                {/* แบนเนอร์ "ยกเลิกแล้ว" — วางนอกเงื่อนไขโปรไฟล์ จึงเห็นครบทั้งสาขา/คลัง/จัดซื้อ
+                    นี่คือทางที่จัดซื้อกับคลังได้อ่านสาเหตุ ซึ่งเป็นเป้าหมายหลักของฟีเจอร์นี้
+                    ⚠️ จงใจไม่ยัด cancel_reason เข้า orderDetailFields — memo ตัวนั้นมี dep แค่โปรไฟล์
+                       ไม่มี selectedOrder กดยกเลิกทั้งที่ป็อปอัพเปิดอยู่แล้วช่องจะไม่โผล่จนกว่าจะปิดเปิดใหม่ */}
+                {isCancelled && (
+                  <div className="ss-cancel-note">
+                    <div className="ss-cancel-note-title">🚫 สาขายกเลิกรายการนี้แล้ว</div>
+                    <div className="ss-cancel-note-reason">
+                      เหตุผล: {String(selectedOrder.cancel_reason ?? '') || '—'}
+                    </div>
+                    <div className="ss-cancel-note-time">
+                      เมื่อ {formatCell(selectedOrder, { key: 'cancelled_at', label: '', kind: 'datetime' })}
+                    </div>
+                  </div>
+                )}
+
                 {isWarehouse ? (
                   /* คลังสินค้า: กรอกช่องของตัวเองแทนตราประทับ (ตราเป็นงานฝั่งสาขา)
                      Order = 3 ช่อง · BackOrder = ช่องเดียว (ดู warehouseFieldsFor) */
+                  isCancelled ? (
+                    /* ⚠️ ตัดทั้งบล็อกฟอร์มทิ้ง ไม่ใช่แค่ใส่ disabled ให้ช่อง — ปุ่มบันทึกอ่าน whDirty
+                       ซึ่งยังคำนวณอยู่ ถ้าวันหลังมีใครถอด disabled ออกจากปุ่มก็กลับมากรอกได้ทันที */
+                    <div className="ss-wh-locked">
+                      รายการนี้ถูกสาขายกเลิกแล้ว — กรอกข้อมูลคลังสินค้าไม่ได้<br />
+                      ถ้าต้องส่งของจริง ให้สาขากด "คืนสถานะ" ในหน้ารายละเอียดก่อน
+                    </div>
+                  ) : (
                   <>
                     <div className="ss-detail-steps-title">ข้อมูลคลังสินค้า · กรอกแล้วกดบันทึก</div>
                     <div className="ss-wh-grid">
@@ -3183,6 +3323,7 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
                       )}
                     </div>
                   </>
+                  )
                 ) : isPurchasing && isBackOrderDetail ? (
                   /* จัดซื้อ + BackOrder = ดูอย่างเดียว (เปิดเมนูนี้ให้จัดซื้อ 2569-08-19 เพื่อ "รับทราบ")
                      🚨 ห้ามปล่อยให้ตกไป else ด้านล่าง — จะได้ปุ่มตราประทับ 3 ขั้นซึ่งเป็นงานของสาขา
@@ -3190,7 +3331,13 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
                         จัดซื้อจึงกดเปลี่ยนสถานะได้จริงถ้าปุ่มโผล่
                      ฟอร์มจัดซื้อก็ใช้ไม่ได้เช่นกัน — PURCHASING_ORDER_FIELDS เป็นคอลัมน์ของ ss_orders
                      ล้วน ไม่มีอยู่ใน ss_backorders */
-                  <div className="ss-detail-steps-title">สินค้าสั่งไม่ได้/เลิกผลิต/อื่นๆ แจ้งสาขาให้กดยกเลิกพร้อมลงรายละเอียดเพื่อยืนยันข้อมูล</div>
+                  /* ข้อความสลับตามสถานะ — ถ้าสาขากดยกเลิกไปแล้วยังบอกให้ "แจ้งสาขาให้กดยกเลิก"
+                     จัดซื้อจะไปตามสาขาซ้ำทั้งที่งานจบไปแล้ว (สาเหตุอยู่ในแบนเนอร์ด้านบน) */
+                  <div className="ss-detail-steps-title">
+                    {isCancelled
+                      ? 'สาขายืนยันแล้วว่าสั่งสินค้าไม่ได้ — ดูสาเหตุที่กล่องด้านบน'
+                      : 'สินค้าสั่งไม่ได้/เลิกผลิต/อื่นๆ แจ้งสาขาให้กดยกเลิกพร้อมลงรายละเอียดเพื่อยืนยันข้อมูล'}
+                  </div>
                 ) : isPurchasing ? (
                   /* ฟอร์มจัดซื้อมีเฉพาะ Order — คอลัมน์ 5 ตัวนี้ไม่มีใน ss_backorders */
                   <>
@@ -3243,20 +3390,48 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
                   </>
                 ) : (
                   <>
-                    <div className="ss-detail-steps-title">สถานะการดำเนินการ · กดปุ่มอัปเดทตามสถานะ</div>
+                    <div className="ss-detail-steps-title">
+                      สถานะการดำเนินการ · กดปุ่มอัปเดทตามสถานะ
+                      {isCancelled && ' — ถูกยกเลิกแล้ว กดตราไม่ได้จนกว่าจะคืนสถานะ'}
+                    </div>
                     <div className="ss-stamp-row">
                       {ORDER_STEPS.map(step => {
                         const done = stepDone(String(selectedOrder[step.key] ?? ''));
                         return (
                           <button key={step.key} type="button"
                             className={`ss-stamp${done ? ' ss-stamp--done' : ''}`}
+                            /* `isCancelled` มี isBackOrderDetail รวมอยู่แล้ว ตราของเมนู Order จึงไม่มีทางโดนล็อก
+                               ⚠️ ถ้าวันหลังเปลี่ยนไปเช็ค row.cancelled_at ตรง ๆ ต้องใส่ isBackOrderDetail กลับมาเอง */
+                            disabled={isCancelled}
                             onClick={() => toggleOrderStep(step)}>
                             {step.label}
                             <span className="ss-stamp-mark">{step.label} ✔</span>
                           </button>
                         );
                       })}
+                      {/* ปุ่มยกเลิก — เฉพาะสาขา และเฉพาะ BackOrder
+                          บล็อก else นี้ยังรับโปรไฟล์ที่ไม่ใช่สาขา/คลัง/จัดซื้อ (เช่นแอดมิน) ด้วย
+                          จงใจให้คนกลุ่มนั้นกดตรา 3 ขั้นได้แต่กดยกเลิกไม่ได้ — การยกเลิกเป็นคำยืนยัน
+                          ของสาขาว่าสั่งของไม่ได้จริง ต้องมาจากสาขาเท่านั้น */}
+                      {isBranchUser && isBackOrderDetail && (
+                        isCancelled ? (
+                          <button type="button" className="ss-stamp ss-stamp--cancel ss-stamp--cancelled"
+                            title={`เหตุผล: ${String(selectedOrder.cancel_reason ?? '—')}\nกดอีกครั้งเพื่อคืนสถานะ`}
+                            onClick={() => { setConfirmCancelStep(null); setCancelDialog('uncancel'); }}>
+                            ยกเลิก
+                            <span className="ss-stamp-mark">ยกเลิกแล้ว</span>
+                          </button>
+                        ) : (
+                          <button type="button" className="ss-stamp ss-stamp--cancel"
+                            title="สั่งสินค้าไม่ได้ (เลิกผลิต/ของขาด/อื่นๆ) — ต้องระบุสาเหตุ"
+                            onClick={() => { setConfirmCancelStep(null); setCancelDialog('cancel'); }}>
+                            ยกเลิก
+                          </button>
+                        )
+                      )}
                     </div>
+                    {/* ไม่มีลิงก์ "คืนสถานะ" แยกอีกอัน — ตรา "ยกเลิก" ด้านบนกดซ้ำเพื่อคืนสถานะได้เอง
+                        เหมือนตรา 3 ขั้นข้าง ๆ ที่กดซ้ำแล้วถอนตรา · มี 2 ทางทำสิ่งเดียวกันแล้วสับสนเปล่า ๆ */}
                     {stampError && <div className="ss-form-error">{stampError}</div>}
                   </>
                 )}
@@ -4032,6 +4207,53 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
             <div className="ss-confirm-btns">
               <button type="button" onClick={confirmCancelStepNo}>ไม่ยกเลิก</button>
               <button type="button" className="ss-confirm-btn--yes" onClick={confirmCancelStepYes}>ยืนยัน</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* กล่องยืนยัน "ยกเลิกทั้งใบ" (BackOrder) — กล่องแยกจากกล่องถอนตราด้านบน ไม่ใช่กล่องเดียวกัน
+          ⚠️ id ของหัวข้อต้องไม่ซ้ำกับ "ss-confirm-title" ของกล่องนั้น — 2 กล่องนี้ไม่มีทางเปิดพร้อมกัน
+             (ปุ่มที่เปิดกล่องนี้ setConfirmCancelStep(null) ทุกครั้ง) แต่ id ซ้ำใน DOM ทำให้
+             aria-labelledby ของทั้งคู่ชี้ไปที่ element เดียวกัน screen reader จะอ่านผิดกล่อง */}
+      {cancelDialog && (
+        <div className="ss-confirm-overlay" onClick={() => { if (!cancelSaving) closeCancelDialog(); }}>
+          <div className="ss-confirm-box ss-confirm-box--wide" role="alertdialog" aria-modal="true"
+            aria-labelledby="ss-cancel-confirm-title" onClick={e => e.stopPropagation()}>
+            <div className="ss-confirm-top">
+              <div className="ss-confirm-ico ss-confirm-ico--cancel" aria-hidden="true">
+                {cancelDialog === 'cancel' ? '🚫' : '↩️'}
+              </div>
+              <div className="ss-confirm-title" id="ss-cancel-confirm-title">
+                {cancelDialog === 'cancel' ? 'ยกเลิกรายการนี้?' : 'คืนสถานะรายการนี้?'}
+              </div>
+              <div className="ss-confirm-msg">
+                {cancelDialog === 'cancel' ? (
+                  <>ใช้เมื่อสั่งสินค้าไม่ได้ (เลิกผลิต/ของขาด/อื่นๆ)<br />
+                    ตรา 3 ขั้นจะถูกล็อก และคลังจะกรอก Outbound ไม่ได้</>
+                ) : (
+                  <>รายการจะกลับมาทำงานต่อได้ตามปกติ<br />
+                    ตราที่เคยประทับไว้ยังอยู่ครบ · สาเหตุที่บันทึกไว้จะถูกลบ</>
+                )}
+              </div>
+              {cancelDialog === 'cancel' && (
+                <textarea
+                  className={`ss-confirm-reason${cancelError ? ' ss-confirm-reason--error' : ''}`}
+                  rows={3}
+                  autoFocus
+                  placeholder="สาเหตุที่ยกเลิก เช่น เลิกผลิต / ผู้ผลิตแจ้งของขาด"
+                  value={cancelReason}
+                  onChange={e => { setCancelReason(e.target.value); setCancelError(''); }}
+                />
+              )}
+              {cancelError && <div className="ss-confirm-error">{cancelError}</div>}
+            </div>
+            <div className="ss-confirm-btns">
+              <button type="button" disabled={cancelSaving} onClick={closeCancelDialog}>ไม่ทำ</button>
+              <button type="button" className="ss-confirm-btn--yes" disabled={cancelSaving}
+                onClick={confirmCancelDialogYes}>
+                {cancelSaving ? 'กำลังบันทึก...' : 'ยืนยัน'}
+              </button>
             </div>
           </div>
         </div>
