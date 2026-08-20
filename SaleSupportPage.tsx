@@ -2338,7 +2338,7 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
     pushStampToast(
       cancelling ? 'cancel' : 'ok',
       cancelling ? 'ยกเลิกรายการแล้ว' : 'คืนสถานะแล้ว',
-      cancelling ? (reason.trim() || '—') : 'กดตราต่อได้ตามปกติ',
+      cancelling ? (reason.trim() || '—') : 'กดสถานะต่อได้ตามปกติ',
     );
     setSelectedOrder(o => (o ? { ...o, ...patch } : o));
     setRows(prev => prev.map(r => (String(r.id) === id ? { ...r, ...patch } : r)));
@@ -2490,7 +2490,7 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
     const step = latestStampedStep(row);
     if (!step) return null;   // สาขายังไม่กดอะไรเลย
     return (
-      <span className="ss-out-badge" title={`สาขากดตราล่าสุด: ${step.label} → ${step.done}`}>
+      <span className="ss-out-badge" title={`สาขากดสถานะล่าสุด: ${step.label} → ${step.done}`}>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 12 5.5 5.5L20 6" /></svg>
         {step.done}
       </span>
@@ -3076,7 +3076,7 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
                           <>
                             {text}
                             {col.key === 'sku_name' && showOutboundAlert(row) && (
-                              <span className="ss-out-badge" title="คลังสินค้าส่งของออกแล้ว — รับของแล้วกดตรา “ของถึงสาขา” ในหน้ารายละเอียด">
+                              <span className="ss-out-badge" title="คลังสินค้าส่งของออกแล้ว — รับของแล้วกดสถานะ “ของถึงสาขา” ในหน้ารายละเอียด">
                                 <svg viewBox="0 0 24 24" aria-hidden="true">
                                   <path d="M1 3h13v13H1z" /><path d="M14 8h4l3 3v5h-7V8Z" />
                                   <circle cx="5.5" cy="18.5" r="2" /><circle cx="17.5" cy="18.5" r="2" />
@@ -3392,7 +3392,7 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
                   <>
                     <div className="ss-detail-steps-title">
                       สถานะการดำเนินการ · กดปุ่มอัปเดทตามสถานะ
-                      {isCancelled && ' — ถูกยกเลิกแล้ว กดตราไม่ได้จนกว่าจะคืนสถานะ'}
+                      {isCancelled && ' — ถูกยกเลิกแล้ว กดสถานะไม่ได้จนกว่าจะคืนสถานะ'}
                     </div>
                     <div className="ss-stamp-row">
                       {ORDER_STEPS.map(step => {
@@ -4230,10 +4230,10 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
               <div className="ss-confirm-msg">
                 {cancelDialog === 'cancel' ? (
                   <>ใช้เมื่อสั่งสินค้าไม่ได้ (เลิกผลิต/ของขาด/อื่นๆ)<br />
-                    ตรา 3 ขั้นจะถูกล็อก และคลังจะกรอก Outbound ไม่ได้</>
+                    สถานะ 3 ขั้นจะถูกล็อก และคลังจะกรอก Outbound ไม่ได้</>
                 ) : (
                   <>รายการจะกลับมาทำงานต่อได้ตามปกติ<br />
-                    ตราที่เคยประทับไว้ยังอยู่ครบ · สาเหตุที่บันทึกไว้จะถูกลบ</>
+                    สถานะที่เคยประทับไว้ยังอยู่ครบ · สาเหตุที่บันทึกไว้จะถูกลบ</>
                 )}
               </div>
               {cancelDialog === 'cancel' && (
