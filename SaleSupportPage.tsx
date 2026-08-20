@@ -605,7 +605,7 @@ const MENUS: MenuDef[] = [
       // notify_target (แจ้งจัดซื้อ/แจ้งคลังสินค้า, เพิ่ม 2569-08-20) จับคู่กับ branch แทนที่จะเปิดคอลัมน์ใหม่
       // — ทั้งคู่เป็นข้อเท็จจริงสั้น ๆ เกี่ยวกับแถวที่ไม่เปลี่ยนหลังสร้าง ไม่ใช่สถานะที่ไล่ตามความคืบหน้า
       { key: 'branch',        label: 'Branch', min: 90,
-        sub: { key: 'notify_target', label: 'แจ้งใคร' } },
+        sub: { key: 'notify_target', label: 'แจ้งแผนก' } },
       { key: 'stock_qty',     label: 'คลังมีสินค้า', min: 90 },
       { key: 'pending_qty',   label: 'ค้างส่งลูกค้า', min: 100,
         sub: { key: 'unit', label: 'หน่วย' } },
@@ -3828,7 +3828,7 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
                   🚨 ห้ามใส่ default ให้การ์ดไหนติดไว้ก่อน — ต่างจาก select อื่นในฟอร์มนี้ที่ default
                      ตัวเลือกแรกเสมอ เพราะเลือกผิดที่นี่มีผลจริง (ดูคอมเมนต์ที่ BackOrderForm.notify_target) */}
               <div className="ss-form-row ss-form-row--full">
-                <label>แจ้งใคร *</label>
+                <label>แจ้งแผนก *</label>
                 <div className="ss-notify-row">
                   <button type="button"
                     className={`ss-notify-card${backOrderForm.notify_target === 'PURCHASING' ? ' is-selected' : ''}`}
@@ -3839,7 +3839,7 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
                       <span className="ss-notify-title">แจ้งจัดซื้อ</span>
                     </span>
                     <span className="ss-notify-desc">• ต้องการให้จัดซื้อสั่งสินค้าให้</span>
-                    <span className="ss-notify-example">เช่น สินค้า A,B,C,D ไม่มีในสต็อก สาขาต้องการสั่งซื้อ</span>
+                    <span className="ss-notify-example">เช่น สินค้า A,B,C,D ไม่มีของในสต็อก สาขาต้องการสั่งซื้อ</span>
                   </button>
                   <button type="button"
                     className={`ss-notify-card${backOrderForm.notify_target === 'WAREHOUSE' ? ' is-selected' : ''}`}
@@ -3850,7 +3850,7 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
                       <span className="ss-notify-title">แจ้งคลังสินค้า</span>
                     </span>
                     <span className="ss-notify-desc">• รอของจากคลัง</span>
-                    <span className="ss-notify-example">เช่น รอรอบส่งสินค้า / รอสินค้าเข้า</span>
+                    <span className="ss-notify-example">เช่น ค้างส่งลูกค้า / รอรอบส่งสินค้า / รอสินค้าเข้า</span>
                   </button>
                 </div>
               </div>
