@@ -3760,7 +3760,7 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
         <div className="dl-modal-overlay">
           <div className="dl-modal dl-modal--new-order" onClick={e => e.stopPropagation()}>
             <div className="dl-modal-header">
-              <span>➕ Add BackOrder</span>
+              <span>➕ Add BackOrder (ลงสินค้า CAT อื่นที่ไม่ใช่ P)</span>
               <button className="dl-modal-close" onClick={() => setShowAddBackOrder(false)}>✕</button>
             </div>
             <div className="dl-modal-body ss-form">
@@ -3838,8 +3838,8 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
                       <span className="ss-notify-dot" aria-hidden="true" />
                       <span className="ss-notify-title">แจ้งจัดซื้อ</span>
                     </span>
-                    <span className="ss-notify-desc">ต้องการให้จัดซื้อสั่งสินค้าให้</span>
-                    <span className="ss-notify-example">เช่น สินค้าเลิกผลิต / ของหมดสต็อกถาวร</span>
+                    <span className="ss-notify-desc">• ต้องการให้จัดซื้อสั่งสินค้าให้</span>
+                    <span className="ss-notify-example">เช่น สินค้า A,B,C,D ไม่มีในสต็อก สาขาต้องการสั่งซื้อ</span>
                   </button>
                   <button type="button"
                     className={`ss-notify-card${backOrderForm.notify_target === 'WAREHOUSE' ? ' is-selected' : ''}`}
