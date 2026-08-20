@@ -3838,8 +3838,8 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
                       <span className="ss-notify-dot" aria-hidden="true" />
                       <span className="ss-notify-title">แจ้งจัดซื้อ</span>
                     </span>
-                    <span className="ss-notify-desc">• ต้องการให้จัดซื้อสั่งสินค้าให้</span>
-                    <span className="ss-notify-example">เช่น สินค้า A,B,C,D ไม่มีของในสต็อก สาขาต้องการสั่งซื้อ</span>
+                    <span className="ss-notify-desc">ให้จัดซื้อสั่งสินค้าให้</span>
+                    <span className="ss-notify-example">เช่น ลูกค้าชำระเงินแล้วแต่ของในคลังไม่พอ</span>
                   </button>
                   <button type="button"
                     className={`ss-notify-card${backOrderForm.notify_target === 'WAREHOUSE' ? ' is-selected' : ''}`}
@@ -3849,8 +3849,8 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
                       <span className="ss-notify-dot" aria-hidden="true" />
                       <span className="ss-notify-title">แจ้งคลังสินค้า</span>
                     </span>
-                    <span className="ss-notify-desc">• รอของจากคลัง</span>
-                    <span className="ss-notify-example">เช่น ค้างส่งลูกค้า / รอรอบส่งสินค้า / รอสินค้าเข้า</span>
+                    <span className="ss-notify-desc">รอของจากคลัง</span>
+                    <span className="ss-notify-example">เช่น ค้างส่งลูกค้า (มีสินค้าในคลัง) / รอรอบส่งสินค้า / รอสินค้าเข้า</span>
                   </button>
                 </div>
               </div>
