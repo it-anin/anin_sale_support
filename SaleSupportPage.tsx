@@ -94,6 +94,8 @@ interface BackOrderForm {
   /** ค้างส่งลูกค้า — สาขาพิมพ์เอง คนละตัวกับ "คลังมีสินค้า" ที่ดึงสดจาก stock */
   pending_qty: string;
   customer_name: string;
+  /** เบอร์โทรลูกค้า — ไม่มี contact_channel คู่กันเหมือน ss_orders (ฟอร์มนี้ถามแค่เบอร์) */
+  phone: string;
   paid_date: string;
   sale_bill_no: string;
   pickup_date: string;
@@ -103,7 +105,7 @@ interface BackOrderForm {
 function emptyBackOrderForm(): BackOrderForm {
   return {
     branch: 'SRC', sku: '', product_name: '', unit: '', pending_qty: '', customer_name: '',
-    paid_date: '', sale_bill_no: '', pickup_date: '', note: '',
+    phone: '', paid_date: '', sale_bill_no: '', pickup_date: '', note: '',
   };
 }
 
@@ -579,23 +581,31 @@ const MENUS: MenuDef[] = [
     // ⚠️ ทั้งคู่แสดงแค่ตัวเลข ไม่ต่อท้ายหน่วย ส่วน "หน่วย" = หน่วยของ barcode ที่สแกน/เลือก
     //    ตัวเลขคลังนับด้วยหน่วยของ stock ซึ่งเป็นหน่วยเล็กสุดเสมอ จึงอาจคนละหน่วยกับคอลัมน์ "หน่วย"
     //    (เช่น 530 แผง / หน่วย = กล่อง) — หน่วยที่คลังนับไปอยู่ใน tooltip ของช่องตัวเลขแทน
+    // ── ตาราง BackOrder เป็นดีไซน์ "Two-line Row" เหมือน Order (เลือกจาก
+    //    public/backorder-table-layout-designs.html แบบที่ 2) 2569-08-19
+    //    15 คอลัมน์เดิม (รวม min 1,760px) ล้นตั้งแต่จอ 1920 → ยุบเหลือ 10 ช่อง โดยข้อมูลยังครบ
+    // 🚨 `stock_qty` กับ `pending_qty` ตั้งใจให้อยู่คนละช่อง ไม่จับคู่กันเป็น 2 บรรทัด
+    //    ทั้งคู่เป็นตัวเลขที่มาจากคนละแหล่ง (ดูคำเตือนด้านบน) วางซ้อนกันในช่องเดียวจะอ่านสลับกันง่าย
+    //    และ `stock_qty` มี tooltip เฉพาะตัว ("คลังนับเป็น …") ที่ทับกับ tooltip ของช่องคู่พอดี
+    //    → `pending_qty` จับคู่กับ `unit` แทน ซึ่งตรงกับคู่ "จำนวน / หน่วย" ของตาราง Order
     id: 'backorder', label: 'BackOrder', icon: IconBackOrder, table: 'ss_backorders',
     columns: [
-      { key: 'sku_name',          label: 'SKU / ชื่อสินค้า', min: 200 },
-      { key: 'branch',            label: 'Branch', min: 70 },
-      { key: 'stock_qty',         label: 'คลังมีสินค้า', min: 90 },
-      { key: 'pending_qty',       label: 'ค้างส่งลูกค้า', min: 100 },
-      { key: 'unit',              label: 'หน่วย', min: 70 },
-      { key: 'customer_name',     label: 'ชื่อลูกค้า', min: 120 },
-      { key: 'paid_date',         label: 'วันที่ลูกค้าชำระ', kind: 'date', min: 110 },
-      { key: 'sale_bill_no',      label: 'เลขที่บิล', min: 160 },
-      { key: 'pickup_date',       label: 'วันที่นัดรับ', kind: 'date', min: 100 },
-      { key: 'note',              label: 'หมายเหตุ', min: 140 },
-      { key: 'outbound_date',     label: 'Outbound วันที่ส่งของ', kind: 'date', min: 140 },
-      { key: 'transfer_no',       label: 'เลขโอนสินค้า/เลขจัดส่ง', min: 150 },
-      { key: 'arrived_branch',    label: 'ของถึงสาขา', kind: 'chip', min: 100 },
-      { key: 'customer_notified', label: 'แจ้งลูกค้า', kind: 'chip', min: 100 },
-      { key: 'delivered',         label: 'ส่งมอบสินค้า', kind: 'chip', min: 110 },
+      { key: 'sku_name',      label: 'SKU / ชื่อสินค้า', min: 200 },
+      { key: 'branch',        label: 'Branch', min: 90 },
+      { key: 'stock_qty',     label: 'คลังมีสินค้า', min: 90 },
+      { key: 'pending_qty',   label: 'ค้างส่งลูกค้า', min: 100,
+        sub: { key: 'unit', label: 'หน่วย' } },
+      { key: 'customer_name', label: 'ชื่อลูกค้า', min: 120,
+        sub: { key: 'phone', label: 'เบอร์โทรติดต่อ' } },
+      { key: 'sale_bill_no',  label: 'เลขที่บิล', min: 160 },
+      { key: 'paid_date',     label: 'วันที่ลูกค้าชำระ', kind: 'date', min: 110,
+        sub: { key: 'pickup_date', label: 'วันที่นัดรับ', kind: 'date' } },
+      { key: 'outbound_date', label: 'Outbound วันที่ส่งของ', kind: 'date', min: 140,
+        sub: { key: 'transfer_no', label: 'เลขโอนสินค้า/เลขจัดส่ง' } },
+      { key: 'note',          label: 'หมายเหตุ', min: 140,
+        sub: { key: 'created_at', label: 'TimeStamp', kind: 'datetime' } },
+      // 3 ชิปสถานะยุบเป็นช่องเดียว เรียงลงมาตามลำดับงาน (ถึงสาขา → แจ้งลูกค้า → ส่งมอบ)
+      { key: 'order_steps',   label: 'สถานะ', kind: 'chips', chipKeys: ORDER_STEP_KEYS, min: 100 },
     ],
   },
   {
@@ -698,6 +708,7 @@ const BACKORDER_DETAIL_FIELDS: ColumnDef[] = [
   { key: 'unit',          label: 'หน่วย' },
   { key: 'branch',        label: 'สาขา' },
   { key: 'customer_name', label: 'ชื่อลูกค้า' },
+  { key: 'phone',         label: 'เบอร์โทรติดต่อ' },
   { key: 'paid_date',     label: 'วันที่ลูกค้าชำระ', kind: 'date' },
   { key: 'sale_bill_no',  label: 'เลขที่บิล' },
   { key: 'pickup_date',   label: 'วันที่นัดรับ', kind: 'date' },
@@ -1660,6 +1671,7 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
       unit: backOrderForm.unit.trim() || null,
       pending_qty: Number(backOrderForm.pending_qty),
       customer_name: backOrderForm.customer_name.trim() || null,
+      phone: backOrderForm.phone.trim() || null,
       paid_date: backOrderForm.paid_date || null,
       sale_bill_no: backOrderForm.sale_bill_no.trim(),
       pickup_date: backOrderForm.pickup_date || null,
@@ -3526,6 +3538,12 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
                 <input className="ss-input" type="text" placeholder="ชื่อลูกค้า"
                   value={backOrderForm.customer_name}
                   onChange={e => updateBackOrderForm({ customer_name: e.target.value })} />
+              </div>
+              <div className="ss-form-row">
+                <label>เบอร์โทรติดต่อ</label>
+                <input className="ss-input" type="tel" placeholder="เบอร์โทรลูกค้า"
+                  value={backOrderForm.phone}
+                  onChange={e => updateBackOrderForm({ phone: e.target.value })} />
               </div>
               <div className="ss-form-row">
                 <label>วันที่ลูกค้าชำระ</label>

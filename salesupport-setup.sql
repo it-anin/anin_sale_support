@@ -264,6 +264,7 @@ create table if not exists ss_backorders (
   --    ทุกครั้งที่เพิ่มค่าใหม่ต้องแก้ **ทั้งตรงนี้ (ติดตั้งใหม่) และคู่ alter ด้านล่าง (DB เดิม)**
   branch            text not null check (branch in ('SRC', 'KKL', 'SSS', 'SALE_ADMIN')),
   customer_name     text,                                  -- 5.4 ชื่อลูกค้า
+  phone             text,                                  -- 5.4.1 เบอร์โทรติดต่อ (ไม่มี contact_channel เหมือน ss_orders)
   paid_date         date,                                  -- 5.5 วันที่ลูกค้าชำระ
   sale_bill_no      text,                                  -- 5.6 เลขที่บิล
   pickup_date       date,                                  -- 5.7 วันที่นัดรับ
@@ -279,6 +280,7 @@ create table if not exists ss_backorders (
 alter table ss_backorders add column if not exists unit text;
 alter table ss_backorders add column if not exists transfer_no text;
 alter table ss_backorders add column if not exists pending_qty numeric;
+alter table ss_backorders add column if not exists phone text;
 
 -- ⚠️ คู่ alter ของ CHECK ด้านบน — จำเป็นสำหรับ DB ที่สร้างไว้ก่อนหน้า เพราะ
 --    `create table if not exists` ข้าม inline CHECK ทั้งหมดถ้าตารางมีอยู่แล้ว

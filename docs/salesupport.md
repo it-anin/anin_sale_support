@@ -157,7 +157,7 @@ helper กลางตัวเดียวใช้ทั้ง 2 ฟอร์�
 - ⚠️ `ORDER_STEP_KEYS` ประกาศ**ก่อน** `MENUS` แล้ว `ORDER_STEPS` อ้างค่าจากตัวนี้ (`key: ORDER_STEP_KEYS[0]`) — แหล่งเดียว ห้ามพิมพ์ key ซ้ำอีกที่
 - `ORDER_DETAIL_FIELDS` (popup) / `EDIT_FIELDS` (ฟอร์มแก้ไข) เป็นคนละลิสต์กับ `MENUS[order].columns` — เปลี่ยนคอลัมน์ตารางไม่กระทบ popup
 - ป้าย `.ss-out-badge` / `stampStatusBadge` ยังผูกกับ `sku_name` ซึ่งยังเป็นคอลัมน์แรกเหมือนเดิม
-- **BackOrder ไม่ได้เปลี่ยน** — ยังเป็นตารางคอลัมน์ละค่า (ยังไม่ได้ขอมา)
+- **BackOrder ใช้ดีไซน์เดียวกันแล้ว 2569-08-19** — ดูหัวข้อ "ตาราง BackOrder" ด้านล่าง (แกลเลอรีของมันเองอยู่ที่ `public/backorder-table-layout-designs.html`)
 
 ## เมนู Request Item — SKU/MOQ เป็นงานฝั่งจัดซื้อ แต่ทุกโปรไฟล์ดูได้ (2569-08-17)
 
@@ -225,6 +225,22 @@ helper กลางตัวเดียวใช้ทั้ง 2 ฟอร์�
 - ⚠️ **ค่า default ของ 3 สถานะใน SQL ต้องสะกดตรงกับ `ss_orders` เป๊ะ ๆ** เพราะ `stepDone()` ตัดสินด้วยการหาคำว่า `"แล้ว"` ในสตริง
 - **ป้าย `.ss-out-badge` (Days Badge) ใช้ร่วมกับ Order** — `showOutboundAlert` / `stampStatusBadge` เช็คผ่านตัวแปร `isStampMenu` (`activeMenu === 'order' || 'backorder'`) · ใช้ได้เพราะ `ss_backorders` มี `outbound_date` + 3 คอลัมน์สถานะ ชื่อเดียวกับ `ss_orders`
 - **ไม่มีเมนูย่อย 3 ขั้น** ใต้ปุ่ม BackOrder — `stepCounts` ยังนับจาก `ss_orders` อย่างเดียว (ยังไม่ได้ขอมา)
+
+### ตาราง BackOrder — ดีไซน์ Two-line Row (2569-08-19)
+
+15 คอลัมน์เดิมรวม `min` = **1,760px** ล้นตั้งแต่จอ 1920 (มีที่ ~1,738px) → ยุบเหลือ **10 ช่อง** ด้วยดีไซน์เดียวกับตาราง Order (แบบที่ 2 จาก `public/backorder-table-layout-designs.html`) ตามคำสั่งผู้ใช้
+
+- ใช้กลไกเดิมทั้งหมด (`ColumnDef.sub`, `kind: 'chips'`, CSS `.ss-cell-main`/`.ss-cell-sub`/`.ss-col-sub-label`/`.ss-chip-stack`) — **ไม่ได้เพิ่มโค้ด render ใหม่เลย** แค่เปลี่ยน config `MENUS[backorder].columns`
+- คู่ที่จับ: `ค้างส่งลูกค้า / หน่วย` · `ชื่อลูกค้า / เบอร์โทรติดต่อ` · `วันชำระ / วันนัดรับ` · `Outbound / เลขโอน` · `หมายเหตุ / TimeStamp` · 3 ชิปสถานะยุบเป็นช่องเดียว
+- 🚨 **`stock_qty` กับ `pending_qty` ตั้งใจแยกช่องกัน ห้ามจับคู่เป็น 2 บรรทัด** — เป็นตัวเลข 2 ตัวคนละแหล่ง (ดูตารางด้านบน) วางซ้อนกันในช่องเดียวจะอ่านสลับกันง่ายมาก และ `stock_qty` มี tooltip เฉพาะตัว (`คลังนับเป็น …`) ที่ชนกับ tooltip ของช่องคู่พอดี (ในโค้ด `col.key === 'stock_qty'` ถูกเช็คก่อน `col.sub` → บรรทัดล่างจะหายจาก tooltip เงียบ ๆ)
+- **`created_at` โผล่ในตารางเป็นบรรทัดล่างของ "หมายเหตุ"** — ค่านี้มีในตารางอยู่แล้ว (เห็นใน popup) แต่เดิมไม่ได้แสดงในตาราง ตรงกับที่ Order ทำ
+
+**คอลัมน์ `phone` เพิ่มใหม่พร้อมกัน** (migration `202608190003_backorder_phone.sql`) — เดิม `ss_backorders` ไม่มีเบอร์โทรเลย
+
+- ช่อง "เบอร์โทรติดต่อ" ในฟอร์ม ➕ Add BackOrder (ใต้ "ชื่อลูกค้า") · ไม่บังคับกรอก
+- ⚠️ **ไม่มี `contact_channel` คู่กันเหมือน `ss_orders`** — แต่ `formatCell` มี branch พิเศษที่เอา `contact_channel` มาต่อหน้า `phone` เสมอ · ปลอดภัยเพราะ `ss_backorders` ไม่มีคอลัมน์นั้น ค่าจึงเป็น `undefined` แล้วถูก `filter(Boolean)` ทิ้ง เหลือแค่เบอร์ · **ถ้าวันหลังเพิ่ม `contact_channel` เข้า `ss_backorders` มันจะโผล่หน้าเบอร์เองอัตโนมัติ** (ตั้งใจได้ แต่ต้องรู้ไว้)
+- ⚠️ **ต้องรัน migration ก่อน deploy** — อ่านตารางยังปกติเพราะ query เป็น `select('*')` แต่ `saveBackOrder` จะ insert ไม่ผ่าน (`column ss_backorders.phone does not exist`)
+- `ss_backorders` **ไม่มีใน `EDIT_FIELDS`** (ไม่มีฟอร์มแก้ไขทั้งใบ) จึงไม่ต้องเพิ่ม `phone` ที่นั่น — เพิ่มใน `BACKORDER_DETAIL_FIELDS` (popup) อย่างเดียว
 
 ## Popup Order — โหมดคลังสินค้า
 
