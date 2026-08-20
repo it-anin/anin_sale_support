@@ -4387,6 +4387,40 @@ body.ss-col-resizing { cursor: col-resize; user-select: none; }
 .ss-contact-row { display: flex; gap: 8px; }
 .ss-contact-select { width: 120px; flex-shrink: 0; }
 
+/* ── "แจ้งจัดซื้อ/คลังสินค้า" ในฟอร์ม Add BackOrder — ดีไซน์ "Radio การ์ดพร้อมตัวอย่าง" ──
+   เลือกจาก public/backorder-notify-target-designs.html แบบที่ 3 (2569-08-20)
+   🚨 ห้ามเผลอใส่ .is-selected ให้การ์ดไหนไว้ก่อนใน JSX — ทั้งคู่ต้องเป็นกลางจนกว่าจะกดจริง
+      ต่างจาก .ss-status-select ทั่วไปที่ default ตัวเลือกแรกได้ */
+.ss-notify-row { display: flex; gap: 10px; }
+.ss-notify-card {
+  flex: 1; position: relative; text-align: left; cursor: pointer;
+  border: 2px solid #e3e8ee; border-radius: 11px; background: #fff;
+  padding: 12px 13px; font: inherit; display: flex; flex-direction: column; gap: 3px;
+  transition: all .15s ease;
+}
+.ss-notify-card:hover { border-color: #b8d3ee; background: #f7fafd; }
+.ss-notify-card.is-selected { border-color: #4891db; background: #eaf3fc; }
+.ss-notify-check {
+  position: absolute; top: 8px; right: 8px; width: 17px; height: 17px; border-radius: 50%;
+  background: #2d6cad; color: #fff; font-size: 10px; display: flex; align-items: center;
+  justify-content: center; opacity: 0; transform: scale(.6); transition: all .15s ease;
+}
+.ss-notify-card.is-selected .ss-notify-check { opacity: 1; transform: scale(1); }
+.ss-notify-radio-row { display: flex; align-items: center; gap: 6px; }
+.ss-notify-dot {
+  width: 14px; height: 14px; border-radius: 50%; border: 2px solid #cbd8e6; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.ss-notify-dot::after {
+  content: ''; width: 6px; height: 6px; border-radius: 50%; background: #4891db;
+  opacity: 0; transform: scale(.5); transition: all .12s ease;
+}
+.ss-notify-card.is-selected .ss-notify-dot { border-color: #4891db; }
+.ss-notify-card.is-selected .ss-notify-dot::after { opacity: 1; transform: scale(1); }
+.ss-notify-title { font-size: 13px; font-weight: 700; color: #2d3a48; }
+.ss-notify-desc { font-size: 11px; color: #8194a8; line-height: 1.5; }
+.ss-notify-example { font-size: 10px; color: #a9b7c6; font-style: italic; margin-top: 2px; }
+
 /* ช่องชื่อสินค้า + หน่วย ในแถวเดียว */
 .ss-name-unit-row { display: flex; gap: 8px; }
 .ss-name-col { flex: 1; min-width: 0; }

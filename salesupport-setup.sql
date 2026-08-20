@@ -278,6 +278,8 @@ create table if not exists ss_backorders (
   -- 🚨 ต้องเป็นคอลัมน์แยก ห้ามเขียน "ยกเลิก" ทับลง 3 คอลัมน์สถานะข้างบน — ดู migration 202608200001
   cancelled_at      timestamptz,                           -- 5.14 เวลาที่ยกเลิก
   cancel_reason     text,                                  -- 5.15 สาเหตุที่ยกเลิก (บังคับกรอกที่ฟอร์ม)
+  -- 5.16 แจ้งจัดซื้อ/คลังสินค้า — สาขาบังคับเลือกตอนสร้าง (ไม่มี default) ดู migration 202608200002
+  notify_target     text check (notify_target in ('PURCHASING', 'WAREHOUSE')),
   created_at        timestamptz not null default now()
 );
 
@@ -287,6 +289,8 @@ alter table ss_backorders add column if not exists pending_qty numeric;
 alter table ss_backorders add column if not exists phone text;
 alter table ss_backorders add column if not exists cancelled_at timestamptz;
 alter table ss_backorders add column if not exists cancel_reason text;
+alter table ss_backorders add column if not exists notify_target text
+  check (notify_target in ('PURCHASING', 'WAREHOUSE'));
 
 -- ⚠️ คู่ alter ของ CHECK ด้านบน — จำเป็นสำหรับ DB ที่สร้างไว้ก่อนหน้า เพราะ
 --    `create table if not exists` ข้าม inline CHECK ทั้งหมดถ้าตารางมีอยู่แล้ว

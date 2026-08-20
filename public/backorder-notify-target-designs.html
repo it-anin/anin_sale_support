@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>แจ้งจัดซื้อ/คลังสินค้า — 10 แบบ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   ฟอร์ม ➕ Add BackOrder — ตัวเลือกใหม่ "แจ้งจัดซื้อ / แจ้งคลังสินค้า"
+   โจทย์: ต้องบังคับให้สาขากดเลือกเอง ห้ามมีค่าเริ่มต้นค้างไว้
+   แกลเลอรีเลือกดีไซน์ 10 แบบ · ไม่ได้ import เข้าแอป
+   เปิดผ่าน dev server: /backorder-notify-target-designs.html
+   ✅ แบบที่ 3 "Radio การ์ดพร้อมตัวอย่าง" ถูกเลือกและใส่เข้าแอปแล้ว 2569-08-20
+      (คลาสจริงในแอปคือ .ss-notify-* ไม่ใช่ .d3-* ที่ใช้ในไฟล์นี้)
+   ============================================================ */
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: 26px 20px 90px;
+  background: #eef3f9; font-family: 'Noto Sans Thai', sans-serif; color: #2c3e50;
+}
+.pg-head { max-width: 1180px; margin: 0 auto 18px; }
+.pg-head h1 {
+  margin: 0 0 6px; font-family: 'Outfit', sans-serif; font-size: 27px;
+  font-weight: 800; color: #2d6cad; letter-spacing: -0.4px;
+}
+.pg-head p { margin: 0 0 4px; font-size: 13px; color: #5b7590; line-height: 1.75; font-weight: 300; }
+code {
+  background: #fff; border: 1px solid #cfe0f2; border-radius: 4px;
+  padding: 1px 5px; font-family: 'Outfit', monospace; font-size: 12px; color: #2d6cad;
+}
+.rule-box {
+  max-width: 1180px; margin: 0 auto 16px; padding: 13px 17px;
+  background: #eaf3fc; border: 1px solid #b8d3ee; border-left: 4px solid #4891db;
+  border-radius: 9px; font-size: 13px; line-height: 1.9; color: #2d5c8a;
+}
+.rule-box b { color: #1e4b7a; }
+.note-box {
+  max-width: 1180px; margin: 0 auto 22px; padding: 12px 16px;
+  background: #fff8e9; border: 1px solid #f0d9a8; border-left: 4px solid #e8a33d;
+  border-radius: 9px; font-size: 12.5px; line-height: 1.85; color: #6b5525;
+}
+.note-box b { color: #b57619; }
+
+.grid {
+  max-width: 1180px; margin: 0 auto; display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 20px;
+}
+.card {
+  background: #fff; border: 1px solid #e3e8ee; border-radius: 15px;
+  padding: 16px 18px 18px; box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+  display: flex; flex-direction: column;
+}
+.card-head { display: flex; align-items: flex-start; gap: 9px; margin-bottom: 4px; flex-wrap: wrap; }
+.card-no {
+  font-family: 'Outfit', sans-serif; font-size: 12px; font-weight: 800;
+  color: #fff; background: #4891db; border-radius: 6px; padding: 2px 8px; flex-shrink: 0; margin-top: 2px;
+}
+.card-name { font-family: 'Outfit', sans-serif; font-size: 15.5px; font-weight: 700; }
+.card-tag {
+  font-size: 10px; font-weight: 600; border-radius: 999px; padding: 2px 8px;
+  border: 1px solid #e3e8ee; background: #f0f4f9; color: #5b7590; white-space: nowrap;
+}
+.card-tag--css { background: #e9f7ee; border-color: #bfe3c9; color: #2e8b47; }
+.card-tag--jsx { background: #fdf4e6; border-color: #f0d9a8; color: #b8791c; }
+.forced-badge {
+  margin-left: auto; font-size: 10.5px; font-weight: 700; border-radius: 999px;
+  padding: 3px 10px; font-family: 'Outfit', sans-serif; white-space: nowrap;
+  background: #e9f7ee; color: #2e8b47; border: 1px solid #bfe3c9;
+}
+.card-note { font-size: 11.5px; color: #8194a8; line-height: 1.75; margin: 2px 0 13px; font-weight: 300; }
+.card-note b { color: #5b7590; font-weight: 600; }
+
+.demo-wrap {
+  border: 1px solid #e3e8ee; border-radius: 11px; background: #fbfcfd;
+  padding: 14px 14px 12px; margin-top: auto;
+}
+.demo-control { margin-bottom: 12px; }
+.demo-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.demo-status {
+  font-size: 11.5px; font-weight: 600; color: #a9b7c6; flex: 1; min-width: 120px;
+}
+.demo-status.is-set { color: #2d3a48; }
+.demo-status.is-purchasing::before { content: '🛒 '; }
+.demo-status.is-warehouse::before { content: '📦 '; }
+.demo-save, .demo-reset {
+  font-family: 'Noto Sans Thai', sans-serif; font-size: 11.5px; font-weight: 700;
+  border-radius: 8px; padding: 7px 13px; cursor: pointer; border: none;
+}
+.demo-save { background: linear-gradient(135deg, #2d6cad, #4891db); color: #fff; }
+.demo-save:hover { filter: brightness(1.06); }
+.demo-reset { background: #fff; border: 1px solid #cfe0f2; color: #5b7590; }
+.demo-reset:hover { background: #f0f4f9; }
+.demo-error {
+  font-size: 11.5px; color: #c0392b; font-weight: 600; margin-top: 8px;
+  max-height: 0; overflow: hidden; transition: max-height .18s ease;
+}
+.demo-error.show { max-height: 40px; }
+.demo-toast {
+  font-size: 11.5px; color: #2e8b47; font-weight: 600; margin-top: 8px;
+}
+@keyframes shake {
+  10%, 90% { transform: translateX(-1px); }
+  20%, 80% { transform: translateX(2px); }
+  30%, 50%, 70% { transform: translateX(-4px); }
+  40%, 60% { transform: translateX(4px); }
+}
+.shake { animation: shake .4s; }
+
+/* ---------- แบบ 1 / 3 / 6 — Card / Radio-card / Stacked ---------- */
+.d1-row, .d6-col { display: flex; gap: 10px; }
+.d6-col { flex-direction: column; }
+.d1-card, .d3-card, .d6-card {
+  flex: 1; position: relative; text-align: left; cursor: pointer;
+  border: 2px solid #e3e8ee; border-radius: 11px; background: #fff;
+  padding: 12px 13px; font-family: inherit; display: flex; flex-direction: column; gap: 3px;
+  transition: all .15s ease;
+}
+.d1-card:hover, .d3-card:hover, .d6-card:hover { border-color: #b8d3ee; background: #f7fafd; }
+.d1-card.is-selected, .d3-card.is-selected, .d6-card.is-selected {
+  border-color: #4891db; background: #eaf3fc;
+}
+.d1-icon { font-size: 20px; }
+.d1-title, .d3-title, .d6-title { font-size: 13px; font-weight: 700; color: #2d3a48; }
+.d1-desc, .d3-desc, .d6-desc { font-size: 11px; color: #8194a8; line-height: 1.5; }
+.d1-check, .d3-check, .d6-check {
+  position: absolute; top: 8px; right: 8px; width: 17px; height: 17px; border-radius: 50%;
+  background: #2d6cad; color: #fff; font-size: 10px; display: flex; align-items: center;
+  justify-content: center; opacity: 0; transform: scale(.6); transition: all .15s ease;
+}
+.is-selected .d1-check, .is-selected .d3-check, .is-selected .d6-check { opacity: 1; transform: scale(1); }
+.d3-example { font-size: 10px; color: #a9b7c6; font-style: italic; margin-top: 2px; }
+.d3-radio-row { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
+.d3-radio-dot {
+  width: 14px; height: 14px; border-radius: 50%; border: 2px solid #cbd8e6; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.d3-radio-dot::after {
+  content: ''; width: 6px; height: 6px; border-radius: 50%; background: #4891db;
+  opacity: 0; transform: scale(.5); transition: all .12s ease;
+}
+.is-selected .d3-radio-dot { border-color: #4891db; }
+.is-selected .d3-radio-dot::after { opacity: 1; transform: scale(1); }
+
+/* ---------- แบบ 2 — Segmented (ว่าง) ---------- */
+.d2-seg {
+  display: flex; border: 1.5px solid #cfe0f2; border-radius: 10px; overflow: hidden; background: #fff;
+}
+.d2-btn {
+  flex: 1; border: none; background: none; font-family: inherit; font-size: 12.5px; font-weight: 600;
+  color: #5b7590; padding: 11px 8px; cursor: pointer; transition: all .15s ease;
+}
+.d2-btn:first-child { border-right: 1.5px solid #cfe0f2; }
+.d2-btn:hover { background: #f7fafd; }
+.d2-btn.is-active { background: linear-gradient(135deg, #2d6cad, #4891db); color: #fff; }
+.d2-desc-line { font-size: 10.5px; color: #a9b7c6; margin: 7px 2px 0; }
+
+/* ---------- แบบ 4 — Dropdown placeholder บังคับ ---------- */
+.d4-select {
+  width: 100%; font-family: inherit; font-size: 12.5px; padding: 9px 10px; border-radius: 8px;
+  border: 1.5px solid #cbd8e6; background: #fff; color: #2d3a48; cursor: pointer;
+}
+.d4-select:invalid { color: #a9b7c6; }
+
+/* ---------- แบบ 5 — สวิตช์ 3 ตำแหน่ง ---------- */
+.d5-track {
+  position: relative; display: flex; height: 40px; border-radius: 20px;
+  background: #eef2f6; border: 1px solid #e3e8ee; overflow: hidden;
+}
+.d5-zone {
+  flex: 1; border: none; background: none; font-family: inherit; font-size: 11.5px; font-weight: 600;
+  color: #8194a8; cursor: pointer; position: relative; z-index: 2;
+}
+.d5-knob {
+  position: absolute; top: 3px; left: calc(50% - 17px); width: 34px; height: 34px; border-radius: 50%;
+  background: #b3c1cf; box-shadow: 0 2px 6px rgba(0,0,0,.12); transition: all .2s cubic-bezier(.34,1.56,.64,1);
+  z-index: 1;
+}
+.d5-knob.is-p { left: 3px; background: #4891db; }
+.d5-knob.is-w { left: calc(100% - 37px); background: #2e8b47; }
+
+/* ---------- แบบ 7 — Checkbox คู่ exclusive ---------- */
+.d7-row { display: flex; flex-direction: column; gap: 8px; }
+.d7-opt { display: flex; align-items: center; gap: 9px; padding: 9px 11px; border: 1.5px solid #e3e8ee; border-radius: 9px; cursor: pointer; transition: all .15s ease; }
+.d7-opt:hover { background: #f7fafd; }
+.d7-opt.is-checked { border-color: #4891db; background: #eaf3fc; }
+.d7-box {
+  width: 17px; height: 17px; border-radius: 5px; border: 2px solid #cbd8e6; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; font-size: 11px; color: #fff;
+}
+.is-checked .d7-box { background: #4891db; border-color: #4891db; }
+.d7-label { font-size: 12px; color: #2d3a48; }
+
+/* ---------- แบบ 8 — Icon Picker ---------- */
+.d8-row { display: flex; gap: 14px; justify-content: center; }
+.d8-item { border: none; background: none; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.d8-circle {
+  width: 58px; height: 58px; border-radius: 50%; border: 2px solid #e3e8ee; background: #fff;
+  display: flex; align-items: center; justify-content: center; font-size: 24px; transition: all .15s ease;
+}
+.d8-item:hover .d8-circle { border-color: #b8d3ee; }
+.d8-item.is-selected .d8-circle { border-color: #4891db; background: #eaf3fc; }
+.d8-item span.d8-label { font-size: 11px; font-weight: 600; color: #5b7590; }
+
+/* ---------- แบบ 9 — Dropdown + banner ---------- */
+.d9-banner {
+  display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; color: #b8791c;
+  background: #fdf4e6; border: 1px solid #f0d9a8; border-radius: 8px; padding: 7px 10px; margin-bottom: 8px;
+}
+.d9-select { width: 100%; font-family: inherit; font-size: 12.5px; padding: 9px 10px; border-radius: 8px; border: 1.5px solid #cbd8e6; background: #fff; }
+
+/* ---------- แบบ 10 — Step Gate ---------- */
+.d10-fields { display: flex; flex-direction: column; gap: 7px; margin-top: 12px; transition: opacity .18s ease; }
+.d10-fields.is-locked { opacity: .4; pointer-events: none; }
+.d10-fields input {
+  width: 100%; font-family: inherit; font-size: 11.5px; padding: 7px 9px; border-radius: 7px;
+  border: 1px solid #dfe6ee; background: #fff; box-sizing: border-box;
+}
+.d10-lock-hint { font-size: 10.5px; color: #c0392b; font-weight: 600; margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<div class="pg-head">
+  <h1>แจ้งจัดซื้อ / แจ้งคลังสินค้า — ต้องบังคับเลือก</h1>
+  <p>ฟอร์ม ➕ Add BackOrder หน้า SaleSupport — ตัวเลือกใหม่ที่ตัดสินว่าจะแจ้งเตือนรหัสจัดซื้อด้วยหรือไม่ (คลังสินค้าได้รับแจ้งเตือนเสมอไม่ว่าจะเลือกอะไร)</p>
+  <p>ป้าย "บังคับจริงไหม" มุมขวาการ์ด <b>วัดจากโค้ดจริงในหน้านี้</b> — เช็คว่าค่าเริ่มต้นตอนโหลดหน้าเป็นค่าว่างไหม</p>
+</div>
+
+<div class="rule-box">
+  <b>ทำไมต้องบังคับ ไม่ใช่แค่ dropdown ปกติ</b><br>
+  ฟิลด์อื่นในฟอร์มนี้ทุกตัวที่เป็น select จะ default เป็นตัวเลือกแรกเสมอ (เช่น ช่องทางติดต่อของ Order เป็น <code>Tel.</code> ตั้งแต่เปิดฟอร์ม)
+  แต่ตัวเลือกนี้ <b>เลือกผิดแล้วมีผลจริง</b> — เลือก "คลังสินค้า" ทั้งที่ต้องสั่งของใหม่ = จัดซื้อไม่รู้ตัวว่าต้องสั่ง (ของขาดต่อ) ·
+  เลือก "จัดซื้อ" ทั้งที่ของมีอยู่แล้ว = จัดซื้อโดนแจ้งเตือนทั้งที่ไม่เกี่ยว (สแปม)<br>
+  ทุกแบบด้านล่างจึงเริ่มต้นด้วย<b>ค่าว่าง</b> และมีปุ่ม "บันทึก" จำลองที่บล็อกจริงถ้ายังไม่เลือก — ลองกดดูได้ทุกการ์ด
+</div>
+
+<div class="note-box">
+  <b>ป้ายบอกชนิดข้างชื่อแบบ</b> —
+  <span class="card-tag card-tag--css">CSS เป็นหลัก</span> ใช้ element เดิม (select/checkbox) แก้แค่ validation + สไตล์ ·
+  <span class="card-tag card-tag--jsx">โครงใหม่</span> ต้องสร้างองค์ประกอบ interactive ใหม่ทั้งชุด (ปุ่มกำหนดเอง, สวิตช์ ฯลฯ)<br>
+  <b>วิธีทดสอบแต่ละการ์ด:</b> กด "บันทึก" ทันทีโดยยังไม่เลือก → ต้องเห็น error สีแดง · เลือกอันใดอันหนึ่งแล้วกด "บันทึก" → ต้องเห็นข้อความสำเร็จสีเขียว · กด "รีเซ็ต" เพื่อกลับไปสถานะว่างแล้วลองใหม่<br>
+  <b>ไฟล์นี้เป็นแกลเลอรีเทียบดีไซน์เท่านั้น ยังไม่ได้ใส่เข้าแอป</b> — ฟีเจอร์นี้ยังไม่มีอยู่จริงในฟอร์ม Add BackOrder ยังไม่มีแบบไหนถูกเลือกใช้จริง
+</div>
+
+<div class="grid" id="grid"></div>
+
+<script>
+const esc = (s) => String(s ?? '').replace(/[<>&"]/g, m => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[m]));
+const el = (html) => {
+  const t = document.createElement('template');
+  t.innerHTML = html.trim();
+  return t.content.firstElementChild;
+};
+
+/* ── harness กลาง: ห่อ control ของแต่ละแบบด้วยแถบบันทึก/รีเซ็ต/สถานะเดียวกัน ──
+   mod.init(container, onChange) ต้อง return { getValue, reset } */
+function mountDemo(card, mod) {
+  const wrap = el(`<div class="demo-wrap">
+    <div class="demo-control"></div>
+    <div class="demo-bar">
+      <span class="demo-status">— ยังไม่ได้เลือก —</span>
+      <button type="button" class="demo-reset">รีเซ็ต</button>
+      <button type="button" class="demo-save">💾 บันทึก</button>
+    </div>
+    <div class="demo-error"></div>
+  </div>`);
+  const controlEl = wrap.querySelector('.demo-control');
+  const statusEl = wrap.querySelector('.demo-status');
+  const saveBtn = wrap.querySelector('.demo-save');
+  const resetBtn = wrap.querySelector('.demo-reset');
+  const errorEl = wrap.querySelector('.demo-error');
+
+  const updateStatus = (val) => {
+    if (val === 'PURCHASING') { statusEl.textContent = 'เลือก: แจ้งจัดซื้อ'; statusEl.className = 'demo-status is-set is-purchasing'; }
+    else if (val === 'WAREHOUSE') { statusEl.textContent = 'เลือก: แจ้งคลังสินค้า'; statusEl.className = 'demo-status is-set is-warehouse'; }
+    else { statusEl.textContent = '— ยังไม่ได้เลือก —'; statusEl.className = 'demo-status'; }
+  };
+
+  let api;
+  try {
+    api = mod.init(controlEl, (val) => { updateStatus(val); errorEl.classList.remove('show'); errorEl.textContent = ''; });
+  } catch (err) {
+    controlEl.innerHTML = `<div style="color:#c0392b;font-size:11.5px">⚠️ render ไม่ผ่าน: ${esc(err && err.message || err)}</div>`;
+    console.error(`[design ${mod.no}]`, err);
+    card.appendChild(wrap);
+    return;
+  }
+
+  saveBtn.addEventListener('click', () => {
+    const val = api.getValue();
+    if (!val) {
+      errorEl.textContent = '⚠️ กรุณาเลือกก่อนบันทึก: แจ้งจัดซื้อ หรือ แจ้งคลังสินค้า';
+      errorEl.classList.add('show');
+      wrap.classList.remove('shake'); void wrap.offsetWidth; wrap.classList.add('shake');
+      return;
+    }
+    errorEl.classList.remove('show');
+    errorEl.innerHTML = `<span class="demo-toast">✓ บันทึกแล้ว — ${val === 'PURCHASING' ? 'แจ้งจัดซื้อ 🛒' : 'แจ้งคลังสินค้า 📦'}</span>`;
+  });
+  resetBtn.addEventListener('click', () => {
+    api.reset();
+    updateStatus(null);
+    errorEl.classList.remove('show');
+    errorEl.textContent = '';
+  });
+
+  // วัดจริงว่าเริ่มต้นเป็นค่าว่างไหม — นี่คือหัวใจของโจทย์
+  const badge = card.querySelector('.forced-badge');
+  const startedEmpty = api.getValue() == null || api.getValue() === '';
+  badge.textContent = startedEmpty ? '✅ เริ่มต้นว่าง' : '⚠️ มีค่าเริ่มต้น';
+  badge.style.background = startedEmpty ? '#e9f7ee' : '#fdeaea';
+  badge.style.color = startedEmpty ? '#2e8b47' : '#c0392b';
+  badge.style.borderColor = startedEmpty ? '#bfe3c9' : '#f2c0be';
+
+  updateStatus(api.getValue());
+  card.appendChild(wrap);
+}
+
+/* ============================================================
+   10 ดีไซน์ — แต่ละแบบ init(container, onChange) → { getValue, reset }
+   ============================================================ */
+const DESIGNS = [
+  {
+    no: 1, name: 'Toggle Card คู่', tag: 'jsx',
+    note: '<b>การ์ดใหญ่ 2 ใบวางเคียงกัน</b> ไอคอน+ชื่อ+คำอธิบายสั้นในตัวเอง กดใบไหนก็ติดกรอบฟ้า+เครื่องหมายถูกมุมขวาบนทันที · ก่อนเลือกทั้งคู่หน้าตาเป็นกลางเหมือนกัน แยกไม่ออกว่า "ยังไม่เลือก" หรือ "เลือกแล้วแต่บังเอิญเหมือนกัน" ไม่มีทางเกิด เพราะไม่มีการ pre-select เลย',
+    init(c, onChange) {
+      const wrap = el(`<div class="d1-row">
+        <button type="button" class="d1-card" data-val="PURCHASING">
+          <span class="d1-icon">🛒</span>
+          <span class="d1-title">แจ้งจัดซื้อ</span>
+          <span class="d1-desc">ต้องการให้จัดซื้อสั่งสินค้าให้</span>
+          <span class="d1-check">✓</span>
+        </button>
+        <button type="button" class="d1-card" data-val="WAREHOUSE">
+          <span class="d1-icon">📦</span>
+          <span class="d1-title">แจ้งคลังสินค้า</span>
+          <span class="d1-desc">รอของจากคลังอย่างเดียว ไม่ต้องแจ้งจัดซื้อ</span>
+          <span class="d1-check">✓</span>
+        </button>
+      </div>`);
+      let value = null;
+      wrap.querySelectorAll('.d1-card').forEach(btn => btn.addEventListener('click', () => {
+        value = btn.dataset.val;
+        wrap.querySelectorAll('.d1-card').forEach(b => b.classList.toggle('is-selected', b === btn));
+        onChange(value);
+      }));
+      c.appendChild(wrap);
+      return {
+        getValue: () => value,
+        reset: () => { value = null; wrap.querySelectorAll('.d1-card').forEach(b => b.classList.remove('is-selected')); },
+      };
+    },
+  },
+  {
+    no: 2, name: 'Segmented Control ว่าง', tag: 'css',
+    note: '<b>แถบปุ่มติดกันแบบ iOS</b> แต่<b>ไม่มี indicator ค้างที่ช่องไหนเลยตอนเริ่ม</b> — segmented control ทั่วไปมักไฮไลต์ตัวเลือกแรกให้อัตโนมัติ ซึ่งเป็นพฤติกรรมที่ต้องหลีกเลี่ยงในเคสนี้โดยเฉพาะ ทั้ง 2 ช่องจึงเริ่มเป็นพื้นขาวเหมือนกัน กดแล้วค่อยได้พื้นน้ำเงินไล่สี · กะทัดรัดที่สุดในบรรดาทุกแบบ',
+    init(c, onChange) {
+      const wrap = el(`<div>
+        <div class="d2-seg">
+          <button type="button" class="d2-btn" data-val="PURCHASING">แจ้งจัดซื้อ</button>
+          <button type="button" class="d2-btn" data-val="WAREHOUSE">แจ้งคลังสินค้า</button>
+        </div>
+        <div class="d2-desc-line">จัดซื้อ = ต้องการให้สั่งสินค้าให้ · คลังสินค้า = รอของอย่างเดียว</div>
+      </div>`);
+      let value = null;
+      wrap.querySelectorAll('.d2-btn').forEach(btn => btn.addEventListener('click', () => {
+        value = btn.dataset.val;
+        wrap.querySelectorAll('.d2-btn').forEach(b => b.classList.toggle('is-active', b === btn));
+        onChange(value);
+      }));
+      c.appendChild(wrap);
+      return {
+        getValue: () => value,
+        reset: () => { value = null; wrap.querySelectorAll('.d2-btn').forEach(b => b.classList.remove('is-active')); },
+      };
+    },
+  },
+  {
+    no: 3, name: 'Radio การ์ดพร้อมตัวอย่าง', tag: 'jsx', used: true,
+    note: '<b style="color:#2e8b47">✅ แบบนี้ถูกเลือกและใส่เข้าฟอร์ม Add BackOrder จริงแล้ว</b> (คลาส <code>.ss-notify-*</code> ใน App.css) — เก็บค่าเป็นคอลัมน์ <code>ss_backorders.notify_target</code> (<code>PURCHASING</code>/<code>WAREHOUSE</code>, ไม่มี default) เห็นได้ในตาราง (จับคู่เป็นบรรทัดรองของ Branch) และ popup รายละเอียด<br><b>เหมือนแบบ 1 แต่เพิ่มตัวอย่างสถานการณ์ใต้คำอธิบาย</b> ("เช่น สินค้าเลิกผลิต..." / "เช่น รอรอบเติมสต็อกปกติ") ช่วยให้สาขาตัดสินใจถูกโดยไม่ต้องเดา · มีจุด radio วงกลมด้วยเพื่อให้คุ้นตากับ input แบบเลือกได้ทางเดียว (mutually exclusive) แม้เป็นปุ่มกำหนดเองไม่ใช่ <code>&lt;input type=radio&gt;</code> จริง',
+    init(c, onChange) {
+      const wrap = el(`<div class="d1-row">
+        <button type="button" class="d3-card" data-val="PURCHASING">
+          <span class="d3-check">✓</span>
+          <span class="d3-radio-row"><span class="d3-radio-dot"></span><span class="d3-title">แจ้งจัดซื้อ</span></span>
+          <span class="d3-desc">ต้องการให้จัดซื้อสั่งสินค้าให้</span>
+          <span class="d3-example">เช่น สินค้าเลิกผลิต ของหมดสต็อกถาวร</span>
+        </button>
+        <button type="button" class="d3-card" data-val="WAREHOUSE">
+          <span class="d3-check">✓</span>
+          <span class="d3-radio-row"><span class="d3-radio-dot"></span><span class="d3-title">แจ้งคลังสินค้า</span></span>
+          <span class="d3-desc">รอของจากคลังอย่างเดียว</span>
+          <span class="d3-example">เช่น รอรอบเติมสต็อกปกติ</span>
+        </button>
+      </div>`);
+      let value = null;
+      wrap.querySelectorAll('.d3-card').forEach(btn => btn.addEventListener('click', () => {
+        value = btn.dataset.val;
+        wrap.querySelectorAll('.d3-card').forEach(b => b.classList.toggle('is-selected', b === btn));
+        onChange(value);
+      }));
+      c.appendChild(wrap);
+      return {
+        getValue: () => value,
+        reset: () => { value = null; wrap.querySelectorAll('.d3-card').forEach(b => b.classList.remove('is-selected')); },
+      };
+    },
+  },
+  {
+    no: 4, name: 'Dropdown placeholder บังคับ', tag: 'css',
+    note: '<b>ยังเป็น <code>&lt;select&gt;</code> ธรรมดา แก้น้อยที่สุด</b> — ตัวเลือกแรกเป็น <code>"— เลือกก่อนบันทึก —"</code> แบบ <code>value="" disabled selected</code> บังคับให้ browser ไม่เลือกตัวเลือกที่ 2 ให้อัตโนมัติเหมือน native select ปกติ ผู้ใช้ต้องกดเปลี่ยนเอง · โค้ดฝั่งแอปแทบไม่ต้องเปลี่ยนจากฟิลด์ select อื่นที่มีอยู่แล้วในฟอร์มนี้ (เช่น dropdown สาขา) แค่เพิ่ม option ว่างไว้บนสุด',
+    init(c, onChange) {
+      const wrap = el(`<select class="d4-select">
+        <option value="" disabled selected>— เลือกก่อนบันทึก —</option>
+        <option value="PURCHASING">แจ้งจัดซื้อ — ต้องการให้จัดซื้อสั่งสินค้าให้</option>
+        <option value="WAREHOUSE">แจ้งคลังสินค้า — รอของจากคลังอย่างเดียว</option>
+      </select>`);
+      wrap.addEventListener('change', () => onChange(wrap.value || null));
+      c.appendChild(wrap);
+      return {
+        getValue: () => wrap.value || null,
+        reset: () => { wrap.value = ''; },
+      };
+    },
+  },
+  {
+    no: 5, name: 'สวิตช์ 3 ตำแหน่ง', tag: 'jsx',
+    note: '<b>แท่งเลื่อนที่ตำแหน่งกลางคือ "ยังไม่เลือก"</b> (ลูกกลมสีเทากลางแท่ง) — กดฝั่งซ้ายลูกกลมเลื่อนไปฟ้า (จัดซื้อ) กดฝั่งขวาเลื่อนไปเขียว (คลังสินค้า) · ภาพเคลื่อนไหวช่วยให้รู้สึกว่า "กำลังตัดสินใจ" มากกว่าการคลิกนิ่งๆ แบบปุ่มทั่วไป แต่ตำแหน่งกลางอาจถูกเข้าใจผิดว่าเป็น "ตัวเลือกที่ 3" ได้ถ้าไม่มีคำอธิบายกำกับ',
+    init(c, onChange) {
+      const wrap = el(`<div>
+        <div class="d5-track">
+          <div class="d5-knob"></div>
+          <button type="button" class="d5-zone" data-val="PURCHASING">🛒 แจ้งจัดซื้อ</button>
+          <button type="button" class="d5-zone" data-val="WAREHOUSE">แจ้งคลังสินค้า 📦</button>
+        </div>
+        <div class="d2-desc-line">ลูกกลมอยู่กลาง = ยังไม่ได้เลือก</div>
+      </div>`);
+      const knob = wrap.querySelector('.d5-knob');
+      let value = null;
+      wrap.querySelectorAll('.d5-zone').forEach(btn => btn.addEventListener('click', () => {
+        value = btn.dataset.val;
+        knob.className = 'd5-knob ' + (value === 'PURCHASING' ? 'is-p' : 'is-w');
+        onChange(value);
+      }));
+      c.appendChild(wrap);
+      return {
+        getValue: () => value,
+        reset: () => { value = null; knob.className = 'd5-knob'; },
+      };
+    },
+  },
+  {
+    no: 6, name: 'ปุ่มใหญ่วางซ้อนแนวตั้ง', tag: 'jsx',
+    note: '<b>เหมือนแบบ 1 แต่เรียงแนวตั้งแทนแนวนอน</b> — เหมาะกับฟอร์มแคบหรือจอมือถือที่การ์ดคู่แนวนอนอาจถูกบีบจนอ่านยาก ผู้ใช้กวาดสายตาจากบนลงล่างตามธรรมชาติของฟอร์มแทนที่จะมองซ้าย-ขวา · ตำแหน่งของปุ่ม (บน/ล่าง) อาจสื่อความสำคัญไม่เท่ากันโดยไม่ตั้งใจ ต่างจากแนวนอนที่ดูเท่าเทียมกว่า',
+    init(c, onChange) {
+      const wrap = el(`<div class="d6-col">
+        <button type="button" class="d6-card" data-val="PURCHASING">
+          <span class="d6-check">✓</span>
+          <span class="d6-title">🛒 แจ้งจัดซื้อ</span>
+          <span class="d6-desc">ต้องการให้จัดซื้อสั่งสินค้าให้</span>
+        </button>
+        <button type="button" class="d6-card" data-val="WAREHOUSE">
+          <span class="d6-check">✓</span>
+          <span class="d6-title">📦 แจ้งคลังสินค้า</span>
+          <span class="d6-desc">รอของจากคลังอย่างเดียว ไม่ต้องแจ้งจัดซื้อ</span>
+        </button>
+      </div>`);
+      let value = null;
+      wrap.querySelectorAll('.d6-card').forEach(btn => btn.addEventListener('click', () => {
+        value = btn.dataset.val;
+        wrap.querySelectorAll('.d6-card').forEach(b => b.classList.toggle('is-selected', b === btn));
+        onChange(value);
+      }));
+      c.appendChild(wrap);
+      return {
+        getValue: () => value,
+        reset: () => { value = null; wrap.querySelectorAll('.d6-card').forEach(b => b.classList.remove('is-selected')); },
+      };
+    },
+  },
+  {
+    no: 7, name: 'Checkbox คู่แบบ exclusive', tag: 'css',
+    note: '<b>2 checkbox ที่ล็อกกันเอง</b> ติ๊กอันหนึ่งแล้วอีกอันจะถูกเคลียร์ให้อัตโนมัติทางโค้ด (ไม่ใช่ radio group จริง แต่พฤติกรรมเหมือนกัน) · ให้ความรู้สึกเป็น "งานที่ต้องทำ 2 อย่างเลือก 1" มากกว่าการ์ดใหญ่ที่ดูเป็นทางเลือกคู่ขนาน เหมาะกับฟอร์มที่มี checkbox อื่นอยู่แล้วให้หน้าตาเข้าชุดกัน',
+    init(c, onChange) {
+      const wrap = el(`<div class="d7-row">
+        <label class="d7-opt" data-val="PURCHASING">
+          <span class="d7-box">✓</span>
+          <span class="d7-label"><b>แจ้งจัดซื้อ</b> — ต้องการให้จัดซื้อสั่งสินค้าให้</span>
+        </label>
+        <label class="d7-opt" data-val="WAREHOUSE">
+          <span class="d7-box">✓</span>
+          <span class="d7-label"><b>แจ้งคลังสินค้า</b> — รอของจากคลังอย่างเดียว</span>
+        </label>
+      </div>`);
+      let value = null;
+      wrap.querySelectorAll('.d7-opt').forEach(opt => opt.addEventListener('click', (e) => {
+        e.preventDefault();
+        value = opt.dataset.val;
+        wrap.querySelectorAll('.d7-opt').forEach(o => o.classList.toggle('is-checked', o === opt));
+        onChange(value);
+      }));
+      c.appendChild(wrap);
+      return {
+        getValue: () => value,
+        reset: () => { value = null; wrap.querySelectorAll('.d7-opt').forEach(o => o.classList.remove('is-checked')); },
+      };
+    },
+  },
+  {
+    no: 8, name: 'Icon Picker', tag: 'jsx',
+    note: '<b>ไอคอนวงกลมใหญ่ 2 อัน</b> ไม่มีกรอบเด่นตอนเริ่ม กดแล้วขอบวงกลมติดฟ้า+พื้นหลังไล่สี · เน้นภาพมากกว่าตัวหนังสือ กวาดตาเจอเร็วในฟอร์มที่มีหลายช่อง แต่ความหมายของไอคอนเพียงอย่างเดียวอาจไม่ชัดพอ (🛒 กับ 📦 อาจตีความสลับกันได้) จึงยังต้องมี label ข้อความกำกับใต้ไอคอนเสมอ ไม่ใช้ไอคอนเปล่าล้วน',
+    init(c, onChange) {
+      const wrap = el(`<div class="d8-row">
+        <button type="button" class="d8-item" data-val="PURCHASING">
+          <span class="d8-circle">🛒</span>
+          <span class="d8-label">แจ้งจัดซื้อ</span>
+        </button>
+        <button type="button" class="d8-item" data-val="WAREHOUSE">
+          <span class="d8-circle">📦</span>
+          <span class="d8-label">แจ้งคลังสินค้า</span>
+        </button>
+      </div>`);
+      let value = null;
+      wrap.querySelectorAll('.d8-item').forEach(btn => btn.addEventListener('click', () => {
+        value = btn.dataset.val;
+        wrap.querySelectorAll('.d8-item').forEach(b => b.classList.toggle('is-selected', b === btn));
+        onChange(value);
+      }));
+      c.appendChild(wrap);
+      return {
+        getValue: () => value,
+        reset: () => { value = null; wrap.querySelectorAll('.d8-item').forEach(b => b.classList.remove('is-selected')); },
+      };
+    },
+  },
+  {
+    no: 9, name: 'Dropdown + Banner เตือน', tag: 'css',
+    note: '<b>dropdown ปกติ (<code>value=""</code> ไม่มี option ว่างให้เลือกซ้ำ) คู่กับ banner สีเหลืองอำพัน</b> ที่โผล่ค้างไว้ด้านบนตราบใดที่ยังไม่เลือก แล้วหายไปทันทีที่เลือก · ต่างจากแบบ 4 ตรงที่มีข้อความเตือนแบบ persistent ไม่ต้องรอกดบันทึกก่อนถึงจะรู้ว่ายังไม่ได้เลือก — เห็นชัดเจนกว่าตั้งแต่แรกโดยไม่ต้องพึ่ง placeholder สีจางในตัว select',
+    init(c, onChange) {
+      const wrap = el(`<div>
+        <div class="d9-banner">⚠️ กรุณาเลือกก่อนบันทึก</div>
+        <select class="d9-select">
+          <option value="">— ยังไม่ได้เลือก —</option>
+          <option value="PURCHASING">แจ้งจัดซื้อ — ต้องการให้จัดซื้อสั่งสินค้าให้</option>
+          <option value="WAREHOUSE">แจ้งคลังสินค้า — รอของจากคลังอย่างเดียว</option>
+        </select>
+      </div>`);
+      const banner = wrap.querySelector('.d9-banner');
+      const sel = wrap.querySelector('.d9-select');
+      sel.addEventListener('change', () => {
+        banner.style.display = sel.value ? 'none' : 'flex';
+        onChange(sel.value || null);
+      });
+      c.appendChild(wrap);
+      return {
+        getValue: () => sel.value || null,
+        reset: () => { sel.value = ''; banner.style.display = 'flex'; },
+      };
+    },
+  },
+  {
+    no: 10, name: 'Step Gate — บล็อกฟอร์มทั้งชุด', tag: 'jsx',
+    note: '<b>เข้มที่สุดในบรรดาทุกแบบ</b> — ช่องอื่นในฟอร์ม (จำลองด้วย "ชื่อลูกค้า" / "เบอร์โทรติดต่อ") ถูก <code>disabled</code> จางลงจนกว่าจะเลือกตัวเลือกนี้ก่อน บังคับให้เป็นขั้นตอนแรกสุดของฟอร์มจริงๆ ไม่ใช่แค่ช่องหนึ่งในหลายช่องที่พลาดข้ามได้ · ตัดปัญหาลืมเลือกได้เด็ดขาดที่สุด แต่เปลี่ยนลำดับการกรอกฟอร์มทั้งชุด ผู้ใช้ที่คุ้นกับกรอกจากบนลงล่างอาจงงว่าทำไมกรอกช่องอื่นไม่ได้ในตอนแรก',
+    init(c, onChange) {
+      const wrap = el(`<div>
+        <div class="d1-row">
+          <button type="button" class="d1-card" data-val="PURCHASING">
+            <span class="d1-icon">🛒</span><span class="d1-title">แจ้งจัดซื้อ</span>
+            <span class="d1-desc">ต้องการให้จัดซื้อสั่งสินค้าให้</span><span class="d1-check">✓</span>
+          </button>
+          <button type="button" class="d1-card" data-val="WAREHOUSE">
+            <span class="d1-icon">📦</span><span class="d1-title">แจ้งคลังสินค้า</span>
+            <span class="d1-desc">รอของจากคลังอย่างเดียว</span><span class="d1-check">✓</span>
+          </button>
+        </div>
+        <div class="d10-fields is-locked">
+          <input type="text" placeholder="ชื่อลูกค้า" disabled>
+          <input type="text" placeholder="เบอร์โทรติดต่อ" disabled>
+          <div class="d10-lock-hint">🔒 กรอกช่องอื่นได้หลังเลือกด้านบนก่อน</div>
+        </div>
+      </div>`);
+      const fields = wrap.querySelector('.d10-fields');
+      const inputs = wrap.querySelectorAll('.d10-fields input');
+      const hint = wrap.querySelector('.d10-lock-hint');
+      let value = null;
+      wrap.querySelectorAll('.d1-card').forEach(btn => btn.addEventListener('click', () => {
+        value = btn.dataset.val;
+        wrap.querySelectorAll('.d1-card').forEach(b => b.classList.toggle('is-selected', b === btn));
+        fields.classList.remove('is-locked');
+        inputs.forEach(i => i.disabled = false);
+        hint.style.display = 'none';
+        onChange(value);
+      }));
+      c.appendChild(wrap);
+      return {
+        getValue: () => value,
+        reset: () => {
+          value = null;
+          wrap.querySelectorAll('.d1-card').forEach(b => b.classList.remove('is-selected'));
+          fields.classList.add('is-locked');
+          inputs.forEach(i => { i.disabled = true; i.value = ''; });
+          hint.style.display = 'block';
+        },
+      };
+    },
+  },
+];
+
+const grid = document.getElementById('grid');
+DESIGNS.forEach(d => {
+  const card = el(`<div class="card">
+    <div class="card-head">
+      <span class="card-no">${String(d.no).padStart(2, '0')}</span>
+      <span class="card-name">${d.name}</span>
+      <span class="card-tag card-tag--${d.tag}">${d.tag === 'css' ? 'CSS เป็นหลัก' : 'โครงใหม่'}</span>
+      ${d.used ? '<span class="card-tag card-tag--css">✅ ใช้จริงในแอปแล้ว</span>' : ''}
+      <span class="forced-badge"></span>
+    </div>
+    <p class="card-note">${d.note}</p>
+  </div>`);
+  grid.appendChild(card);
+  mountDemo(card, d);
+});
+</script>
+</body>
+</html>

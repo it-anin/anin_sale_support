@@ -93,6 +93,11 @@ interface BackOrderForm {
   unit: string;
   /** ค้างส่งลูกค้า — สาขาพิมพ์เอง คนละตัวกับ "คลังมีสินค้า" ที่ดึงสดจาก stock */
   pending_qty: string;
+  /** แจ้งจัดซื้อ/คลังสินค้า — **บังคับเลือก ไม่มีค่าเริ่มต้น** (ต่างจากฟิลด์ select อื่นในฟอร์มนี้
+   *  ที่ default เป็นตัวเลือกแรกเสมอ) เพราะเลือกผิดมีผลจริง: 'PURCHASING' ยิงแจ้งเตือนจัดซื้อ
+   *  ('WAREHOUSE' ไม่ยิง) — ค่าว่าง `''` คือ "ยังไม่ได้เลือก" ต้อง valid เป็น PURCHASING/WAREHOUSE
+   *  เท่านั้นก่อนบันทึกได้ (เช็คใน saveBackOrder) */
+  notify_target: '' | 'PURCHASING' | 'WAREHOUSE';
   /** **บังคับกรอก** คู่กับ phone — แถวค้างส่งต้องรู้ว่าติดต่อใครกลับได้ */
   customer_name: string;
   /** เบอร์โทรลูกค้า — **บังคับกรอก** เหมือน sale_bill_no (บังคับที่ฟอร์มเท่านั้น
@@ -108,8 +113,8 @@ interface BackOrderForm {
 
 function emptyBackOrderForm(): BackOrderForm {
   return {
-    branch: 'SRC', sku: '', product_name: '', unit: '', pending_qty: '', customer_name: '',
-    phone: '', paid_date: '', sale_bill_no: '', pickup_date: '', note: '',
+    branch: 'SRC', sku: '', product_name: '', unit: '', pending_qty: '', notify_target: '',
+    customer_name: '', phone: '', paid_date: '', sale_bill_no: '', pickup_date: '', note: '',
   };
 }
 
@@ -597,7 +602,10 @@ const MENUS: MenuDef[] = [
     columns: [
       // 320 = ความกว้างที่คอลัมน์นี้ใช้จริงมาตลอด (เดิมมาจาก CSS --sku-name-width ที่ถอดออกแล้ว)
       { key: 'sku_name',      label: 'SKU / ชื่อสินค้า', min: 320 },
-      { key: 'branch',        label: 'Branch', min: 90 },
+      // notify_target (แจ้งจัดซื้อ/แจ้งคลังสินค้า, เพิ่ม 2569-08-20) จับคู่กับ branch แทนที่จะเปิดคอลัมน์ใหม่
+      // — ทั้งคู่เป็นข้อเท็จจริงสั้น ๆ เกี่ยวกับแถวที่ไม่เปลี่ยนหลังสร้าง ไม่ใช่สถานะที่ไล่ตามความคืบหน้า
+      { key: 'branch',        label: 'Branch', min: 90,
+        sub: { key: 'notify_target', label: 'แจ้งใคร' } },
       { key: 'stock_qty',     label: 'คลังมีสินค้า', min: 90 },
       { key: 'pending_qty',   label: 'ค้างส่งลูกค้า', min: 100,
         sub: { key: 'unit', label: 'หน่วย' } },
@@ -720,6 +728,7 @@ const BACKORDER_DETAIL_FIELDS: ColumnDef[] = [
   { key: 'pending_qty',   label: 'ค้างส่งลูกค้า' },
   { key: 'unit',          label: 'หน่วย' },
   { key: 'branch',        label: 'สาขา' },
+  { key: 'notify_target', label: 'แจ้งจัดซื้อ/คลังสินค้า' },
   { key: 'customer_name', label: 'ชื่อลูกค้า' },
   { key: 'phone',         label: 'เบอร์โทรติดต่อ' },
   { key: 'paid_date',     label: 'วันที่ลูกค้าชำระ', kind: 'date' },
@@ -882,6 +891,9 @@ function formatCell(row: Record<string, unknown>, col: ColumnDef) {
     return [qty, unit].filter(Boolean).join(' ');
   }
   if (col.key === 'recipient_department') return orderRecipientLabel(row.recipient_department);
+  // ss_backorders.notify_target ใช้ค่าเดียวกับ recipient_department ('PURCHASING'/'WAREHOUSE')
+  // จึงแปลผลด้วยฟังก์ชันเดียวกันได้เลย ไม่ต้องมี label map ซ้ำ (ไม่มีทาง 'BOTH' ในคอลัมน์นี้)
+  if (col.key === 'notify_target') return orderRecipientLabel(row.notify_target);
   // รหัสในฐานข้อมูลเป็นตัวพิมพ์ใหญ่ (SALE_ADMIN) แต่ผู้ใช้ต้องเห็นชื่อจริง ("Sale Admin")
   // — จุดเดียวที่แปลงให้ทุกตารางที่มีคอลัมน์ branch
   if (col.key === 'branch') return branchCodeLabel(row.branch);
@@ -1749,6 +1761,11 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
       setSaveError('กรุณาใส่จำนวนที่ค้างส่งลูกค้าให้ถูกต้อง'); return;
     }
     // เรียงตามลำดับช่องในฟอร์ม — ผู้ใช้จะได้เจอ error ของช่องบนก่อนช่องล่างเสมอ
+    // ⚠️ เช็คแบบ !== ทั้ง 2 ค่า ไม่ใช่ !backOrderForm.notify_target เฉยๆ — กันไว้เผื่อวันหลังมีคน
+    //    ใส่ค่าอื่นที่ไม่ใช่ string ว่างเข้ามาโดยไม่ผ่านฟอร์ม (เช่น query param) จะได้ยังโดนเช็ค
+    if (backOrderForm.notify_target !== 'PURCHASING' && backOrderForm.notify_target !== 'WAREHOUSE') {
+      setSaveError('กรุณาเลือกว่าจะแจ้งจัดซื้อหรือคลังสินค้า'); return;
+    }
     if (!backOrderForm.customer_name.trim()) { setSaveError('กรุณาใส่ชื่อลูกค้า'); return; }
     if (!backOrderForm.phone.trim()) { setSaveError('กรุณาใส่เบอร์โทรติดต่อ'); return; }
     if (!backOrderForm.sale_bill_no.trim()) { setSaveError('กรุณาใส่เลขที่บิล'); return; }
@@ -1761,6 +1778,7 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
       product_name: backOrderForm.product_name.trim() || null,
       unit: backOrderForm.unit.trim() || null,
       pending_qty: Number(backOrderForm.pending_qty),
+      notify_target: backOrderForm.notify_target,
       customer_name: backOrderForm.customer_name.trim(),
       phone: backOrderForm.phone.trim(),
       paid_date: backOrderForm.paid_date || null,
@@ -1782,6 +1800,8 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
       itemName: backOrderForm.product_name,
     });
     // สาขาสร้าง BackOrder → แจ้งคลังสินค้า (BackOrder ไม่เคยมีทิศนี้มาก่อนเลย — เพิ่มใหม่ทั้งหมด)
+    // ⚠️ ยิงเสมอไม่มีเงื่อนไข ไม่เกี่ยวกับ notify_target — คลังต้องรู้ทุก BackOrder ไม่ว่าจะรอของจากคลัง
+    //    เองหรือรอจัดซื้อสั่งเข้ามา (ยืนยันกับผู้ใช้แล้วตอนออกแบบฟีเจอร์นี้)
     void notifyWarehouseUpdate({
       menuId: 'backorder', tableName: 'ss_backorders', title: 'สาขาเพิ่ม BackOrder ใหม่',
       detail: `จำนวนค้างส่ง ${backOrderForm.pending_qty}${backOrderForm.unit ? ` ${backOrderForm.unit}` : ''}`,
@@ -1789,13 +1809,17 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
       itemName: backOrderForm.product_name,
     });
     // → แจ้งจัดซื้อด้วย (เพิ่ม 2569-08-19 พร้อมกับเปิดเมนูนี้ให้จัดซื้อเห็น)
-    // ⚠️ ต้องเปิดเมนูให้จัดซื้อคู่กันเสมอ ไม่งั้นคลิกแจ้งเตือนแล้วตันที่ whitelist ใน openNotificationEvent
-    void notifyPurchasingUpdate({
-      menuId: 'backorder', tableName: 'ss_backorders', title: 'สาขาเพิ่ม BackOrder ใหม่',
-      detail: `จำนวนค้างส่ง ${backOrderForm.pending_qty}${backOrderForm.unit ? ` ${backOrderForm.unit}` : ''}`,
-      itemSku: backOrderForm.sku,
-      itemName: backOrderForm.product_name,
-    });
+    // ⚠️ 2569-08-20 — ตอนนี้ยิงเฉพาะตอนสาขาเลือก "แจ้งจัดซื้อ" เท่านั้น เพื่อไม่ให้จัดซื้อโดนแจ้งเตือน
+    //    ทั้งที่เลือกไว้ว่า "รอของจากคลังอย่างเดียว" (notify_target === 'WAREHOUSE')
+    //    ⚠️ ต้องเปิดเมนูให้จัดซื้อคู่กันเสมอ ไม่งั้นคลิกแจ้งเตือนแล้วตันที่ whitelist ใน openNotificationEvent
+    if (backOrderForm.notify_target === 'PURCHASING') {
+      void notifyPurchasingUpdate({
+        menuId: 'backorder', tableName: 'ss_backorders', title: 'สาขาเพิ่ม BackOrder ใหม่',
+        detail: `จำนวนค้างส่ง ${backOrderForm.pending_qty}${backOrderForm.unit ? ` ${backOrderForm.unit}` : ''}`,
+        itemSku: backOrderForm.sku,
+        itemName: backOrderForm.product_name,
+      });
+    }
     setShowAddBackOrder(false);
     setActiveMenu('backorder');
     setRefreshKey(k => k + 1);
@@ -3799,6 +3823,36 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
                   title="จำนวนที่ยังค้างส่งให้ลูกค้า — คนละตัวกับคอลัมน์ 'คลังมีสินค้า' ที่ดึงยอดคลังมาแสดงอัตโนมัติ"
                   value={backOrderForm.pending_qty}
                   onChange={e => updateBackOrderForm({ pending_qty: e.target.value })} />
+              </div>
+              {/* ดีไซน์ "Radio การ์ดพร้อมตัวอย่าง" — เลือกจาก public/backorder-notify-target-designs.html แบบที่ 3
+                  🚨 ห้ามใส่ default ให้การ์ดไหนติดไว้ก่อน — ต่างจาก select อื่นในฟอร์มนี้ที่ default
+                     ตัวเลือกแรกเสมอ เพราะเลือกผิดที่นี่มีผลจริง (ดูคอมเมนต์ที่ BackOrderForm.notify_target) */}
+              <div className="ss-form-row ss-form-row--full">
+                <label>แจ้งใคร *</label>
+                <div className="ss-notify-row">
+                  <button type="button"
+                    className={`ss-notify-card${backOrderForm.notify_target === 'PURCHASING' ? ' is-selected' : ''}`}
+                    onClick={() => updateBackOrderForm({ notify_target: 'PURCHASING' })}>
+                    <span className="ss-notify-check" aria-hidden="true">✓</span>
+                    <span className="ss-notify-radio-row">
+                      <span className="ss-notify-dot" aria-hidden="true" />
+                      <span className="ss-notify-title">แจ้งจัดซื้อ</span>
+                    </span>
+                    <span className="ss-notify-desc">ต้องการให้จัดซื้อสั่งสินค้าให้</span>
+                    <span className="ss-notify-example">เช่น สินค้าเลิกผลิต / ของหมดสต็อกถาวร</span>
+                  </button>
+                  <button type="button"
+                    className={`ss-notify-card${backOrderForm.notify_target === 'WAREHOUSE' ? ' is-selected' : ''}`}
+                    onClick={() => updateBackOrderForm({ notify_target: 'WAREHOUSE' })}>
+                    <span className="ss-notify-check" aria-hidden="true">✓</span>
+                    <span className="ss-notify-radio-row">
+                      <span className="ss-notify-dot" aria-hidden="true" />
+                      <span className="ss-notify-title">แจ้งคลังสินค้า</span>
+                    </span>
+                    <span className="ss-notify-desc">• รอของจากคลัง</span>
+                    <span className="ss-notify-example">เช่น รอรอบส่งสินค้า / รอสินค้าเข้า</span>
+                  </button>
+                </div>
               </div>
               <div className="ss-form-row">
                 <label>ชื่อลูกค้า *</label>

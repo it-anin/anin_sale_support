@@ -9,7 +9,7 @@
 | Table | ใช้กับเมนู | หมายเหตุ |
 |---|---|---|
 | `ss_orders` | Order | งานสั่งจอง/สั่งซื้อของลูกค้า ~23 คอลัมน์ (sku, branch, qty, paid_date, customer_name, contact_channel, สถานะ chip: arrived_branch / customer_notified / delivered ฯลฯ) |
-| `ss_backorders` | BackOrder | สินค้าค้างส่ง (ABC ≠ P) — `branch` มี CHECK `SRC/KKL/SSS/SALE_ADMIN` · เก็บ `unit` = **หน่วยของบาร์โค้ดที่สแกน** · `pending_qty` = **ค้างส่งลูกค้า** (สาขากรอกเอง) ส่วน **"คลังมีสินค้า" ไม่ได้เก็บ** ดึงสดจาก `stock` สาขาคลังสินค้า · 3 สถานะ chip default สะกดตรงกับ `ss_orders` เป๊ะ · migration `202608140001` → `202608140003` + `202608150001` + `202608190002` (เพิ่ม `SALE_ADMIN`) + `202608190003` (phone) + `202608200001` (ยกเลิกรายการ) |
+| `ss_backorders` | BackOrder | สินค้าค้างส่ง (ABC ≠ P) — `branch` มี CHECK `SRC/KKL/SSS/SALE_ADMIN` · เก็บ `unit` = **หน่วยของบาร์โค้ดที่สแกน** · `pending_qty` = **ค้างส่งลูกค้า** (สาขากรอกเอง) ส่วน **"คลังมีสินค้า" ไม่ได้เก็บ** ดึงสดจาก `stock` สาขาคลังสินค้า · 3 สถานะ chip default สะกดตรงกับ `ss_orders` เป๊ะ · migration `202608140001` → `202608140003` + `202608150001` + `202608190002` (เพิ่ม `SALE_ADMIN`) + `202608190003` (phone) + `202608200001` (ยกเลิกรายการ) + `202608200002` (แจ้งจัดซื้อ/คลัง) |
 | `ss_request_items` | Request Item | ขอสินค้าที่ไม่มีในสต๊อก + supplier, image_url, customer_name |
 | `ss_new_products` | New Product | เสนอสินค้าใหม่เข้าร้าน + image_url, quoted_price, status |
 | `ss_tickets` | Ticket | แจ้งปัญหา department: Purchase / Warehouse |
@@ -272,6 +272,19 @@ helper กลางตัวเดียวใช้ทั้ง 2 ฟอร์�
 - **id ของหัวข้อกล่องต้องไม่ซ้ำ** (`ss-cancel-confirm-title` ไม่ใช่ `ss-confirm-title`) — 2 กล่องไม่มีทางเปิดพร้อมกัน แต่ id ซ้ำใน DOM ทำให้ `aria-labelledby` ชี้ผิดกล่อง
 - **ไม่เรียก `setStampTick`** ในเส้นทางนี้ — ตัวนับเมนูย่อยอ่านจาก `ss_orders` อย่างเดียว สั่งนับใหม่จากฝั่ง BackOrder = สแกนตารางทิ้งเปล่า
 - **race 2 คน:** `ss_backorders` ไม่มี realtime — สาขาอีกคนกดยกเลิกระหว่าง popup เปิดค้างได้ · `toggleOrderStep` จึงมี guard `if (isCancelled) return;` เป็นกันชนชั้นที่สองนอกเหนือจาก `disabled`
+
+### แจ้งจัดซื้อ/คลังสินค้า — บังคับเลือกตอนสร้าง BackOrder 2569-08-20
+
+ฟอร์ม ➕ Add BackOrder เพิ่มตัวเลือก **"แจ้งใคร \*"** — 2 การ์ดคู่กัน "แจ้งจัดซื้อ" (ต้องการให้จัดซื้อสั่งสินค้าให้) / "แจ้งคลังสินค้า" (รอของจากคลังอย่างเดียว) ดีไซน์ **"Radio การ์ดพร้อมตัวอย่าง"** (แบบที่ 3 จาก `public/backorder-notify-target-designs.html`) migration `202608200002_backorder_notify_target.sql` เพิ่ม `notify_target text check (notify_target in ('PURCHASING', 'WAREHOUSE'))`
+
+- 🚨 **ไม่มี default โดยตั้งใจ ต่างจากฟิลด์ select อื่นในฟอร์มเดียวกันทุกตัว** (`contact_channel`/`delivery_method`/`order_type` ของ Order ล้วน default ตัวเลือกแรกเสมอ) — ที่นี่เลือกผิดมีผลจริง: เลือก "คลัง" ทั้งที่ต้องสั่งของใหม่ = จัดซื้อไม่รู้ตัว (ของขาดต่อ) · เลือก "จัดซื้อ" ทั้งที่ของมีอยู่แล้ว = จัดซื้อโดนแจ้งเตือนทั้งที่ไม่เกี่ยว (สแปม) · `emptyBackOrderForm()` ตั้ง `notify_target: ''` และ JSX ไม่ใส่ `.is-selected` ให้การ์ดไหนไว้ก่อนเด็ดขาด
+- **บังคับกรอกที่ `saveBackOrder()`** เช็คด้วย `!== 'PURCHASING' && !== 'WAREHOUSE'` (ไม่ใช่แค่ `!value`) เรียงอยู่ระหว่างเช็ค `pending_qty` กับ `customer_name` ให้ตรงกับตำแหน่งจริงในฟอร์ม (การ์ดวางอยู่ระหว่าง 2 ช่องนั้น)
+- **`notifyWarehouseUpdate` ยิงเสมอไม่มีเงื่อนไข ไม่เกี่ยวกับ dropdown นี้** (ยืนยันกับผู้ใช้แล้วตอนออกแบบ) — คลังต้องรู้ทุก BackOrder ไม่ว่าจะรอของจากคลังเองหรือรอจัดซื้อสั่งเข้ามา
+- **`notifyPurchasingUpdate` ยิงเฉพาะ `notify_target === 'PURCHASING'`** — เดิมยิงทุกครั้งไม่มีเงื่อนไข (เพิ่มมาตั้งแต่ 2569-08-19) ตอนนี้ครอบด้วย `if` แล้ว
+- **เห็นทั้งในตารางและ popup:** `MENUS[backorder].columns` จับคู่ `notify_target` เป็น `sub` ของ `branch` (บรรทัดรองในคอลัมน์ Branch ของ Two-line Row) · `BACKORDER_DETAIL_FIELDS` มีแถว "แจ้งจัดซื้อ/คลังสินค้า" แยกต่างหาก — ทั้งคู่แสดงผลผ่าน `formatCell` เคส `col.key === 'notify_target'` ที่**ใช้ `orderRecipientLabel()` ตัวเดียวกับ `recipient_department` ของ Order** เพราะค่าเป็นรหัสชุดเดียวกันเป๊ะ (`PURCHASING`/`WAREHOUSE`) ไม่ต้องมี label map ซ้ำ
+  - ⚠️ `orderRecipientLabel` รองรับ `'BOTH'` ด้วยแต่คอลัมน์นี้ไม่มีทางเป็นค่านั้น (CHECK อนุญาตแค่ 2 ค่า) — ปล่อยไว้แบบนั้นได้ ไม่ต้องเขียนฟังก์ชันแยก
+  - แถวเก่าก่อน migration นี้ `notify_target` เป็น `null` → `orderRecipientLabel(null)` คืน `''` → บรรทัดรองในตารางแสดง `—` ตามปกติ (ไม่ต้อง backfill เพราะไม่รู้ว่าตอนนั้นตั้งใจแจ้งใคร)
+- CSS `.ss-notify-*` ใน App.css (วางถัดจาก `.ss-contact-select`) — การ์ด 2 ใบพร้อมจุด radio + ตัวอย่างสถานการณ์ใต้คำอธิบาย ลอกจากแกลเลอรีแบบที่ 3 ตรงๆ
 
 ### ตาราง BackOrder — ดีไซน์ Two-line Row (2569-08-19)
 
