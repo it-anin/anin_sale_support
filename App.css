@@ -3910,7 +3910,12 @@ body.pulse-b .cart-inline-btn.in-cart {
   text-align: left;
   border-bottom: 2px solid #e3e8ee;
   white-space: normal;
-  min-width: 60px !important;
+  /* ⚠️ ห้ามใส่ `!important` กลับมา — ความกว้างคอลัมน์มาจาก inline style (`min`/`width` ที่ JSX ใส่ให้)
+     กฎ !important ในสไตล์ชีตชนะ inline style ธรรมดา ค่าจาก MENUS จึงถูกทิ้งทั้งตาราง
+     เคยเป็นแบบนั้นจริงจนถึง 2569-08-20: ทุกคอลัมน์ยุบเหลือ 60px เท่ากันหมด และ
+     คอลัมน์ไหนอยากกว้างจริงต้องเขียนกฎ CSS แยกพร้อม !important ทีละคอลัมน์
+     ตอนนี้ค่าเดียวที่คุมความกว้างคือ `min` ใน MENUS + ค่าที่ผู้ใช้ลากเอง (ss-column-resizer) */
+  min-width: 60px;
   line-height: 1.25;
   background: #fff;
   height: 40px;
@@ -3925,7 +3930,7 @@ body.pulse-b .cart-inline-btn.in-cart {
   border-bottom: 1px solid #eef2f6;
   color: #2d3a48;
   white-space: normal;
-  min-width: 60px !important;
+  min-width: 60px;
   max-width: 170px;
   line-height: 1.3;
   overflow-wrap: anywhere;
@@ -3946,11 +3951,12 @@ body.pulse-b .cart-inline-btn.in-cart {
 }
 .ss-table--order th.ss-col-sku_name,
 .ss-table--backorder th.ss-col-sku_name { overflow: visible; }
+/* SKU / ชื่อสินค้า ไม่ตัดขึ้นบรรทัดใหม่ — ความกว้างมาจาก `min` ใน MENUS เหมือนคอลัมน์อื่นแล้ว
+   (เดิมคอลัมน์นี้มีระบบลากปรับความกว้างของตัวเองแยกต่างหาก ผ่านตัวแปร --sku-name-width
+    ตอนนี้ทุกคอลัมน์ลากได้ จึงใช้ระบบเดียวกันหมด ไม่มีตัวแปรนั้นแล้ว) */
 .ss-table .ss-col-sku_name {
-  width: var(--sku-name-width, 320px) !important;
-  min-width: var(--sku-name-width, 320px) !important;
-  max-width: none !important;
-  white-space: nowrap !important;
+  max-width: none;
+  white-space: nowrap;
 }
 .ss-table th.ss-col-sku_name { position: sticky; }
 .ss-table--order td.ss-col-sale_bill_no,
@@ -3983,9 +3989,19 @@ body.pulse-b .cart-inline-btn.in-cart {
 }
 /* 3 ชิปสถานะในช่องเดียว เรียงลงมาตามลำดับงาน (ถึงสาขา → แจ้งลูกค้า → ส่งมอบ) */
 .ss-chip-stack { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; }
+/* ที่จับลากปรับความกว้าง — มีอยู่บน `th` ทุกคอลัมน์ (2569-08-20 เดิมมีเฉพาะคอลัมน์ SKU)
+   ⚠️ แถบสีโผล่เฉพาะตอน hover หัวคอลัมน์หรือกำลังลากอยู่ — 20 คอลัมน์ที่มีขีดเทาค้างตลอดเวลา
+      อ่านตารางยากขึ้นมาก ตัวที่จับ (พื้นที่กด 9px) ยังอยู่ตลอดเวลาเหมือนเดิม แค่ไม่วาดสี */
 .ss-column-resizer { position: absolute; top: 0; right: -4px; width: 9px; height: 100%; cursor: col-resize; z-index: 4; user-select: none; }
-.ss-column-resizer::after { content: ''; position: absolute; top: 7px; bottom: 7px; left: 4px; width: 2px; border-radius: 2px; background: #9fb5ca; }
-.ss-column-resizer:hover::after { background: #2d6cad; }
+.ss-column-resizer::after {
+  content: ''; position: absolute; top: 7px; bottom: 7px; left: 4px; width: 2px; border-radius: 2px;
+  background: #9fb5ca; opacity: 0; transition: opacity .12s ease;
+}
+.ss-table th:hover .ss-column-resizer::after { opacity: 1; }
+.ss-column-resizer:hover::after,
+.ss-column-resizer.is-dragging::after { background: #2d6cad; opacity: 1; }
+/* ขณะลาก: กันเคอร์เซอร์กระพริบและกันลากไปเลือกข้อความทั้งหน้า */
+body.ss-col-resizing { cursor: col-resize; user-select: none; }
 .ss-table tbody tr:nth-child(even) td { background: #fbfcfd; }
 .ss-table tr:hover td { background: #f6fafd; }
 .ss-empty { text-align: center; padding: 2rem !important; color: #9aa7b5; }
@@ -4321,14 +4337,10 @@ body.pulse-b .cart-inline-btn.in-cart {
 .ss-branch-locked-value small { margin-left: auto; color: #8194a8; font-size: 10.5px; font-weight: 500; }
 .ss-status-select { min-width: 104px; max-width: 130px; padding: 4px 6px; border: 1px solid #cbd8e6; border-radius: 7px; background: #fff; color: #25415f; font: inherit; font-size: 10.5px; cursor: pointer; }
 /* Request Item: keep the purchasing selects inside their own table columns. */
-.ss-table--request th.ss-col-status {
-  width: 118px;
-  min-width: 118px !important;
-}
-.ss-table--request th.ss-col-availability {
-  width: 132px;
-  min-width: 132px !important;
-}
+/* ⚠️ ความกว้างของ status / availability / moq / sku ย้ายไปอยู่ใน `min` ของ MENUS แล้ว (2569-08-20)
+   เดิมต้องเขียนที่นี่พร้อม !important เพราะ `.ss-table th` มี min-width: 60px !important ทับ inline style
+   พอถอด !important ตัวนั้นออก ค่าจาก MENUS ก็ทำงานเอง และคอลัมน์พวกนี้ถูกลากปรับขนาดได้เหมือนคอลัมน์อื่น
+   (ถ้าเขียนกลับมาที่นี่พร้อม !important ผู้ใช้จะลากย่อคอลัมน์นั้นไม่ได้อีก) */
 .ss-table--request .ss-status-select {
   display: block;
   width: 100%;
@@ -4340,11 +4352,6 @@ body.pulse-b .cart-inline-btn.in-cart {
 
 /* ช่องกรอก MOQ / SKU ตรงในตาราง (จัดซื้อเท่านั้น) — ช่องข้อความอิสระ ต่างจาก .ss-status-select ที่เป็น select
    สไตล์เดียวกันทุก property เพื่อให้แถวเดียวกันดูเป็นชุดเดียวกัน */
-.ss-table--request th.ss-col-moq,
-.ss-table--request th.ss-col-sku {
-  width: 100px;
-  min-width: 100px !important;
-}
 .ss-status-input {
   padding: 4px 6px; border: 1px solid #cbd8e6; border-radius: 7px; background: #fff;
   color: #25415f; font: inherit; font-size: 10.5px;

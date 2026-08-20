@@ -547,7 +547,8 @@ const MENUS: MenuDef[] = [
     // ⚠️ `min` ที่นี่คือความกว้างของ**ทั้งช่อง** = ค่าที่กว้างกว่าใน 2 บรรทัด ไม่ใช่ผลรวม
     id: 'order', label: 'Order', icon: IconOrder, table: 'ss_orders',
     columns: [
-      { key: 'sku_name',      label: 'SKU / ชื่อสินค้า', min: 200 },
+      // 320 = ความกว้างที่คอลัมน์นี้ใช้จริงมาตลอด (เดิมมาจาก CSS --sku-name-width ที่ถอดออกแล้ว)
+      { key: 'sku_name',      label: 'SKU / ชื่อสินค้า', min: 320 },
       { key: 'branch',        label: 'Branch', min: 90 },
       { key: 'qty',           label: 'จำนวน', min: 70,
         sub: { key: 'unit', label: 'หน่วย' } },
@@ -594,7 +595,8 @@ const MENUS: MenuDef[] = [
     //    → `pending_qty` จับคู่กับ `unit` แทน ซึ่งตรงกับคู่ "จำนวน / หน่วย" ของตาราง Order
     id: 'backorder', label: 'BackOrder', icon: IconBackOrder, table: 'ss_backorders',
     columns: [
-      { key: 'sku_name',      label: 'SKU / ชื่อสินค้า', min: 200 },
+      // 320 = ความกว้างที่คอลัมน์นี้ใช้จริงมาตลอด (เดิมมาจาก CSS --sku-name-width ที่ถอดออกแล้ว)
+      { key: 'sku_name',      label: 'SKU / ชื่อสินค้า', min: 320 },
       { key: 'branch',        label: 'Branch', min: 90 },
       { key: 'stock_qty',     label: 'คลังมีสินค้า', min: 90 },
       { key: 'pending_qty',   label: 'ค้างส่งลูกค้า', min: 100,
@@ -613,26 +615,33 @@ const MENUS: MenuDef[] = [
     ],
   },
   {
+    // ⚠️ `min` ที่นี่คือ **ความกว้างจริงของคอลัมน์** ไม่ใช่ค่าแนะนำ — ตารางนี้เป็น table-layout: fixed
+    //    จนถึง 2569-08-20 ค่าพวกนี้ไม่เคยมีผลเลย เพราะ `.ss-table th` มี min-width: 60px !important ทับ
+    //    inline style อยู่ (กฎ !important ในสไตล์ชีตชนะ inline style ธรรมดา) ทุกคอลัมน์จึงกว้างเท่ากันหมด
+    //    ที่ 60px และคอลัมน์ไหนอยากกว้างจริงต้องไปเขียน CSS แยกพร้อม !important — ถอด !important นั้น
+    //    ออกแล้ว ค่าที่นี่จึงเป็นแหล่งเดียวที่คุมความกว้างเริ่มต้น (ผู้ใช้ลากปรับทับได้ทีหลัง)
+    // ค่าของ status/availability/sku/moq ย้ายมาจาก CSS ที่เคยเขียน !important ทับไว้ — อย่าลดลง
     id: 'request', label: 'Request Item', icon: IconRequest, table: 'ss_request_items',
     columns: [
-      { key: 'product_name', label: 'ชื่อสินค้า', min: 180 },
+      // 4 คอลัมน์นี้กว้างขึ้นตามคำสั่งผู้ใช้ 2569-08-20 ให้ข้อความยาวแสดงครบไม่ถูกบีบ
+      { key: 'product_name', label: 'ชื่อสินค้า', min: 240 },
       { key: 'branch',       label: 'สาขา', min: 70 },
-      { key: 'generic_name', label: 'Generic Name', min: 130 },
+      { key: 'generic_name', label: 'Generic Name', min: 190 },
       { key: 'strength',     label: 'ความแรง', min: 80 },
       { key: 'pack_size',    label: 'ขนาดบรรจุ', min: 100 },
       { key: 'qty',          label: 'จำนวนที่ต้องการ', min: 110 },
-      { key: 'need_date',    label: 'วันที่ต้องการสินค้า', kind: 'date', min: 130 },
-      { key: 'status',       label: 'Status', kind: 'chip', min: 110 },
+      { key: 'need_date',    label: 'วันที่ต้องการสินค้า', kind: 'date', min: 150 },
+      { key: 'status',       label: 'Status', kind: 'chip', min: 118 },
       { key: 'created_at',   label: 'DateTime', kind: 'datetime', min: 130 },
-      { key: 'sku',          label: 'SKU', min: 80 },
-      { key: 'availability', label: 'Availability', kind: 'chip', min: 100 },
-      { key: 'note',          label: 'Note', min: 140 },
+      { key: 'sku',          label: 'SKU', min: 100 },
+      { key: 'availability', label: 'Availability', kind: 'chip', min: 132 },
+      { key: 'note',          label: 'Note', min: 220 },
       { key: 'leadtime',      label: 'Leadtime', min: 80 },
       { key: 'exp',           label: 'EXP', min: 90 },
-      { key: 'moq',           label: 'MOQ', min: 80 },
-      { key: 'supplier',      label: 'Supplier', min: 140 },
+      { key: 'moq',           label: 'MOQ', min: 100 },
+      { key: 'supplier',      label: 'Supplier', min: 220 },
       { key: 'image_url',     label: 'รูปสินค้า', min: 90 },
-      { key: 'customer_name', label: 'ชื่อลูกค้า', min: 120 },
+      { key: 'customer_name', label: 'ชื่อลูกค้า', min: 170 },
       { key: 'phone',         label: 'ติดต่อลูกค้า', min: 130 },
     ],
   },
@@ -951,9 +960,35 @@ async function insertWithContactChannelFallback(table: string, payload: Record<s
   return { error, id: data?.[0]?.id ? String(data[0].id) : null };
 }
 
+/** ความกว้างคอลัมน์ที่ผู้ใช้ลากปรับเอง เก็บข้ามการปิดเบราว์เซอร์ (แบบเดียวกับ cartItems หน้าป้ายราคา)
+ *  ⚠️ ค่าที่พังหรือไม่ใช่ตัวเลขต้องถูกทิ้ง ไม่ใช่ปล่อยผ่าน — ความกว้างที่เป็น NaN ทำให้คอลัมน์หายทั้งคอลัมน์ */
+const COLUMN_WIDTH_STORAGE_KEY = 'ssColumnWidths';
+/** ย่อได้ต่ำสุด/กว้างได้สูงสุด — 60px ตรงกับ min-width ฐานของ `.ss-table th` ใน App.css */
+const COL_MIN_WIDTH = 60;
+const COL_MAX_WIDTH = 700;
+
+function loadColumnWidths(): Record<string, number> {
+  try {
+    const raw = localStorage.getItem(COLUMN_WIDTH_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+    const out: Record<string, number> = {};
+    for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
+      const width = Number(value);
+      if (Number.isFinite(width) && width >= COL_MIN_WIDTH && width <= COL_MAX_WIDTH) out[key] = width;
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
 export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGoCustomerHistory, onGoOutbound, onGoSaleSupport, isPurchasing, isWarehouse, userBranch, warehouseUpdateUnreadCount = 0 }: Props) {
   const [activeMenu, setActiveMenu] = useState<MenuId>('products');
-  const [skuNameWidth, setSkuNameWidth] = useState(320);
+  /** ความกว้างคอลัมน์ที่ผู้ใช้ลากปรับเอง — key = `${menuId}:${colKey}` ค่าเป็น px
+   *  ไม่มี key = ใช้ `min` จาก MENUS ตามเดิม · โหลดครั้งเดียวตอน mount เหมือน cart ของหน้าป้ายราคา */
+  const [colWidths, setColWidths] = useState<Record<string, number>>(loadColumnWidths);
   const [rows, setRows] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -1230,21 +1265,59 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
   // `isPurchasing` ตรงๆ ที่จุดของมันเองอยู่แล้ว ไม่เกี่ยวกับตัวแปรนี้
   const visibleColumns = menu.columns;
 
-  const startSkuNameResize = (event: ReactMouseEvent<HTMLSpanElement>) => {
+  /** ลากปรับความกว้างคอลัมน์ไหนก็ได้ — เดิมมีเฉพาะคอลัมน์ SKU (2569-08-20)
+   *  ⚠️ ความกว้างเริ่มต้นอ่านจาก `getBoundingClientRect()` ของ `th` จริง ไม่ใช่จาก state
+   *     เพราะคอลัมน์ที่ยังไม่เคยถูกลากจะไม่มีค่าใน `colWidths` เลย ถ้า fallback เป็นค่าคงที่
+   *     คอลัมน์จะกระโดดไปความกว้างนั้นทันทีที่แตะที่จับ ทั้งที่ยังไม่ได้ลากไปไหน */
+  const startColumnResize = (event: ReactMouseEvent<HTMLSpanElement>, colKey: string) => {
     event.preventDefault();
     event.stopPropagation();
+    const handle = event.currentTarget;
+    const th = handle.closest('th');
+    if (!th) return;
     const startX = event.clientX;
-    const startWidth = skuNameWidth;
+    const startWidth = th.getBoundingClientRect().width;
+    const storageKey = `${activeMenu}:${colKey}`;
+    handle.classList.add('is-dragging');
+    document.body.classList.add('ss-col-resizing');
     const handleMouseMove = (moveEvent: MouseEvent) => {
-      setSkuNameWidth(Math.min(700, Math.max(180, startWidth + moveEvent.clientX - startX)));
+      const next = Math.round(startWidth + moveEvent.clientX - startX);
+      setColWidths(prev => ({
+        ...prev,
+        [storageKey]: Math.min(COL_MAX_WIDTH, Math.max(COL_MIN_WIDTH, next)),
+      }));
     };
     const handleMouseUp = () => {
+      handle.classList.remove('is-dragging');
+      document.body.classList.remove('ss-col-resizing');
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
   };
+
+  /** สไตล์ความกว้างของคอลัมน์หนึ่ง ๆ — ค่าที่ผู้ใช้ลากไว้ชนะ `min` จาก MENUS
+   *  ⚠️ ต้องใส่ทั้งบน `th` และ `td` ไม่ใช่แค่ `th` — ตาราง Order/BackOrder เป็น table-layout: auto
+   *     ซึ่งกางคอลัมน์ตามเนื้อหาของทุกเซลล์ ใส่แต่ `th` แล้วช่องข้อมูลยาว ๆ จะดันคอลัมน์กว้างกลับมาเอง
+   *  ⚠️ ตอนถูกลากแล้วต้องตรึงครบทั้ง width/minWidth/maxWidth ด้วยเหตุผลเดียวกัน */
+  const columnStyle = (col: ColumnDef): CSSProperties | undefined => {
+    const width = colWidths[`${activeMenu}:${col.key}`];
+    if (width) return { width, minWidth: width, maxWidth: width };
+    // ⚠️ ต้องใส่ `width` ด้วย ไม่ใช่ `minWidth` อย่างเดียว — ตารางส่วนใหญ่เป็น table-layout: fixed
+    //    ซึ่งคิดความกว้างคอลัมน์จาก `width` ของแถวแรกเท่านั้น (สเปคบอกว่า min-width/max-width
+    //    ไม่มีผลกับ table-cell ในโหมดนี้) ใส่แต่ minWidth แล้วทุกคอลัมน์จะยังหารเท่ากันเหมือนเดิม
+    //    — กฎ CSS เดิมที่เคยใช้ได้ (.ss-col-status ฯลฯ) ก็เขียน width คู่กับ min-width เสมอ
+    return col.min ? { width: col.min, minWidth: col.min } : undefined;
+  };
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(COLUMN_WIDTH_STORAGE_KEY, JSON.stringify(colWidths));
+    } catch {
+      /* โควตาเต็ม/โหมดส่วนตัว — ความกว้างคอลัมน์ไม่สำคัญพอจะให้แอปพัง ปล่อยผ่าน */
+    }
+  }, [colWidths]);
 
   // หน่วงคำค้นหาเมนู Products 250ms กันยิง query ถี่
   useEffect(() => {
@@ -2715,16 +2788,17 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
             {error && <div className="ss-error">{error}</div>}
 
             <div className="ss-table-wrap">
-              <table className={`ss-table ss-table--${activeMenu}`} style={{ '--sku-name-width': `${skuNameWidth}px` } as CSSProperties}>
+              <table className={`ss-table ss-table--${activeMenu}`}>
                 <thead>
                   <tr>
                     {visibleColumns.map(col => (
-                      <th key={col.key} className={`ss-col-${col.key}`} style={col.min ? { minWidth: col.min } : undefined}
+                      <th key={col.key} className={`ss-col-${col.key}`} style={columnStyle(col)}
                         title={col.sub ? `${col.label} / ${col.sub.label}` : col.label}>
                         {col.label}
                         {/* บรรทัดที่ 2 ของหัวคอลัมน์ — คู่กับ .ss-cell-sub ในช่องข้อมูล */}
                         {col.sub && <span className="ss-col-sub-label">{col.sub.label}</span>}
-                        {col.key === 'sku_name' && <span className="ss-column-resizer" onMouseDown={startSkuNameResize} title="ลากเพื่อปรับความกว้างคอลัมน์" />}
+                        <span className="ss-column-resizer" title="ลากเพื่อปรับความกว้างคอลัมน์"
+                          onMouseDown={e => startColumnResize(e, col.key)} />
                       </th>
                     ))}
                     <th className="ss-delete-col">ลบ</th>
@@ -2766,7 +2840,7 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
                             ? 'ss_request_items'
                             : activeMenu === 'newproduct' ? 'ss_new_products' : 'ss_tickets';
                           return (
-                            <td key={col.key} onClick={e => e.stopPropagation()}>
+                            <td key={col.key} className={`ss-col-${col.key}`} style={columnStyle(col)} onClick={e => e.stopPropagation()}>
                               <select
                                 className="ss-status-select"
                                 value={statusOptions.includes(currentStatus as never) ? currentStatus : ''}
@@ -2788,7 +2862,7 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
                         if (activeMenu === 'request' && col.key === 'availability' && isPurchasing) {
                           const currentAvailability = String(row.availability ?? '');
                           return (
-                            <td key={col.key} onClick={e => e.stopPropagation()}>
+                            <td key={col.key} className={`ss-col-${col.key}`} style={columnStyle(col)} onClick={e => e.stopPropagation()}>
                               <select
                                 className="ss-status-select"
                                 value={REQUEST_AVAILABILITY_OPTIONS.includes(currentAvailability as typeof REQUEST_AVAILABILITY_OPTIONS[number]) ? currentAvailability : ''}
@@ -2807,7 +2881,7 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
                         if (activeMenu === 'request' && col.key === 'moq' && isPurchasing) {
                           const currentMoq = String(row.moq ?? '');
                           return (
-                            <td key={col.key} onClick={e => e.stopPropagation()}>
+                            <td key={col.key} className={`ss-col-${col.key}`} style={columnStyle(col)} onClick={e => e.stopPropagation()}>
                               <input
                                 key={`${String(row.id)}-${currentMoq}`}
                                 className="ss-status-input"
@@ -2830,7 +2904,7 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
                         if (activeMenu === 'request' && col.key === 'sku' && isPurchasing) {
                           const currentSku = String(row.sku ?? '');
                           return (
-                            <td key={col.key} onClick={e => e.stopPropagation()}>
+                            <td key={col.key} className={`ss-col-${col.key}`} style={columnStyle(col)} onClick={e => e.stopPropagation()}>
                               <input
                                 key={`${String(row.id)}-${currentSku}`}
                                 className="ss-status-input"
@@ -2851,7 +2925,7 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
                         // หลายสถานะยุบเป็นชิปเรียงลงมาในช่องเดียว (ตาราง Order)
                         if (col.kind === 'chips' && col.chipKeys) {
                           return (
-                            <td key={col.key} className={`ss-col-${col.key}`}>
+                            <td key={col.key} className={`ss-col-${col.key}`} style={columnStyle(col)}>
                               <div className="ss-chip-stack">
                                 {col.chipKeys.map(k => {
                                   // Order เก่าที่สร้างก่อนมีค่าเริ่มต้น → เติมสถานะรอแทนช่องว่าง (เหมือน kind: 'chip')
@@ -2866,10 +2940,10 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
                           );
                         }
                         if (col.kind === 'chip' && text) {
-                          return <td key={col.key}><span className={`ss-chip ${chipClass(text)}`}>{text}</span></td>;
+                          return <td key={col.key} className={`ss-col-${col.key}`} style={columnStyle(col)}><span className={`ss-chip ${chipClass(text)}`}>{text}</span></td>;
                         }
                         if (col.key === 'image_url' && text) {
-                          return <td key={col.key}><a className="ss-img-link" href={text} target="_blank" rel="noreferrer">🖼️ ดูรูป</a></td>;
+                          return <td key={col.key} className={`ss-col-${col.key}`} style={columnStyle(col)}><a className="ss-img-link" href={text} target="_blank" rel="noreferrer">🖼️ ดูรูป</a></td>;
                         }
                         const main = (
                           <>
@@ -2888,7 +2962,7 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
                         );
                         const subText = col.sub ? formatCell(row, col.sub) : '';
                         return (
-                          <td key={col.key} className={`ss-col-${col.key}`}
+                          <td key={col.key} className={`ss-col-${col.key}`} style={columnStyle(col)}
                             title={
                               col.key === 'sku_name' ? text
                               // ตัวเลขนับด้วยหน่วยของ stock ซึ่งอาจไม่ใช่หน่วยในคอลัมน์ "หน่วย" — บอกไว้ตอน hover
@@ -3105,7 +3179,7 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
                         จัดซื้อจึงกดเปลี่ยนสถานะได้จริงถ้าปุ่มโผล่
                      ฟอร์มจัดซื้อก็ใช้ไม่ได้เช่นกัน — PURCHASING_ORDER_FIELDS เป็นคอลัมน์ของ ss_orders
                      ล้วน ไม่มีอยู่ใน ss_backorders */
-                  <div className="ss-detail-steps-title">จัดซื้อดูข้อมูล BackOrder ได้อย่างเดียว</div>
+                  <div className="ss-detail-steps-title">สินค้าสั่งไม่ได้/เลิกผลิต/อื่นๆ แจ้งสาขาให้กดยกเลิกพร้อมลงรายละเอียดเพื่อยืนยันข้อมูล</div>
                 ) : isPurchasing ? (
                   /* ฟอร์มจัดซื้อมีเฉพาะ Order — คอลัมน์ 5 ตัวนี้ไม่มีใน ss_backorders */
                   <>

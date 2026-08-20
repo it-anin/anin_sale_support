@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ชื่อสินค้า / Generic Name — 10 แบบ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   เมนู Request Item หน้า SaleSupport — คอลัมน์ "ชื่อสินค้า" + "Generic Name"
+   โจทย์: บังคับให้เห็นข้อความครบ ไม่ถูกตัด
+   แกลเลอรีเลือกดีไซน์ 10 แบบ · ไม่ได้ import เข้าแอป
+   เปิดผ่าน dev server: /request-name-column-designs.html
+   ✅ แบบที่ 1 "Widen" ถูกเลือกและใส่เข้าแอปแล้ว 2569-08-20
+      (ของจริงกว้างกว่าที่วาดไว้ — เพิ่มอีก 4 คอลัมน์ตามที่ผู้ใช้สั่ง + ลากปรับได้ทุกคอลัมน์)
+   ============================================================ */
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: 26px 20px 90px;
+  background: #eef3f9; font-family: 'Noto Sans Thai', sans-serif; color: #2c3e50;
+}
+.pg-head { max-width: 1500px; margin: 0 auto 18px; }
+.pg-head h1 {
+  margin: 0 0 6px; font-family: 'Outfit', sans-serif; font-size: 27px;
+  font-weight: 800; color: #2d6cad; letter-spacing: -0.4px;
+}
+.pg-head p { margin: 0 0 4px; font-size: 13px; color: #5b7590; line-height: 1.75; font-weight: 300; }
+code {
+  background: #fff; border: 1px solid #cfe0f2; border-radius: 4px;
+  padding: 1px 5px; font-family: 'Outfit', monospace; font-size: 12px; color: #2d6cad;
+}
+.rule-box {
+  max-width: 1500px; margin: 0 auto 16px; padding: 13px 17px;
+  background: #eaf3fc; border: 1px solid #b8d3ee; border-left: 4px solid #4891db;
+  border-radius: 9px; font-size: 13px; line-height: 1.9; color: #2d5c8a;
+}
+.rule-box b { color: #1e4b7a; }
+.rule-box .bad { color: #c0392b; font-weight: 600; }
+.note-box {
+  max-width: 1500px; margin: 0 auto 18px; padding: 12px 16px;
+  background: #fff8e9; border: 1px solid #f0d9a8; border-left: 4px solid #e8a33d;
+  border-radius: 9px; font-size: 12.5px; line-height: 1.85; color: #6b5525;
+}
+.note-box b { color: #b57619; }
+
+.ctrl {
+  position: sticky; top: 0; z-index: 40;
+  max-width: 1500px; margin: 0 auto 24px; padding: 12px 16px;
+  background: #fff; border: 1px solid #cfe0f2; border-radius: 11px;
+  box-shadow: 0 3px 14px rgba(45, 108, 173, 0.1);
+  display: flex; flex-wrap: wrap; align-items: center; gap: 12px;
+}
+.ctrl .lab { font-size: 12.5px; color: #2d5c8a; font-weight: 600; }
+.ctrl .hint { font-size: 11.5px; color: #8194a8; font-weight: 300; }
+.ctrl .sep { width: 1px; height: 22px; background: #e3e8ee; }
+.ctrl button {
+  font-family: 'Noto Sans Thai', sans-serif; font-size: 12.5px; font-weight: 600;
+  padding: 7px 13px; border-radius: 8px; cursor: pointer; transition: all .18s ease;
+  border: 1px solid #b8d3ee; background: #fff; color: #2d6cad;
+}
+.ctrl button:hover { background: #eaf3fc; }
+.ctrl button.on { background: linear-gradient(135deg, #2d6cad, #4891db); border-color: #a9d0f5; color: #fff; }
+.ctrl label { display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: #2d5c8a; cursor: pointer; }
+.ctrl input[type=checkbox] { width: 15px; height: 15px; accent-color: #4891db; cursor: pointer; }
+
+.grid { max-width: var(--gridw, 1778px); margin: 0 auto; display: flex; flex-direction: column; gap: 22px; }
+.card {
+  background: #fff; border: 1px solid #e3e8ee; border-radius: 15px;
+  padding: 16px 18px 18px; box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+}
+.card--now { border-color: #f2c0be; background: #fffafa; }
+.card-head { display: flex; align-items: center; gap: 9px; margin-bottom: 4px; flex-wrap: wrap; }
+.card-no {
+  font-family: 'Outfit', sans-serif; font-size: 12px; font-weight: 800;
+  color: #fff; background: #4891db; border-radius: 6px; padding: 2px 8px; flex-shrink: 0;
+}
+.card-no--now { background: #c0392b; }
+.card-name { font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 700; }
+.card-tag {
+  font-size: 10.5px; font-weight: 600; border-radius: 999px; padding: 2px 9px;
+  border: 1px solid #e3e8ee; background: #f0f4f9; color: #5b7590;
+}
+/* ชนิดของทางแก้ — บอกว่าต้องแตะอะไรถึงจะได้ผลนี้ */
+.card-tag--css  { background: #e9f7ee; border-color: #bfe3c9; color: #2e8b47; }
+.card-tag--cfg  { background: #eaf3fc; border-color: #b8d3ee; color: #2d6cad; }
+.card-tag--jsx  { background: #fdf4e6; border-color: #f0d9a8; color: #b8791c; }
+.card-tag--now  { background: #fdeaea; border-color: #f2c0be; color: #c0392b; }
+.full-badge {
+  margin-left: auto; font-size: 11px; font-weight: 700; border-radius: 999px;
+  padding: 3px 11px; font-family: 'Outfit', sans-serif; white-space: nowrap;
+}
+.full-badge.is-full { background: #e9f7ee; color: #2e8b47; border: 1px solid #bfe3c9; }
+.full-badge.is-cut  { background: #fdeaea; color: #c0392b; border: 1px solid #f2c0be; }
+.card-note { font-size: 11.5px; color: #8194a8; line-height: 1.8; margin: 0 0 12px; font-weight: 300; }
+.card-note b { color: #5b7590; font-weight: 600; }
+.card-note .bad { color: #c0392b; font-weight: 600; }
+.card-note .good { color: #2e8b47; font-weight: 600; }
+
+.demo {
+  width: min(var(--tablew, 1738px), 100%);
+  overflow-x: auto; overflow-y: hidden;
+  border: 1px solid #e3e8ee; border-radius: 10px; background: #fff;
+}
+.demo::-webkit-scrollbar { height: 9px; }
+.demo::-webkit-scrollbar-thumb { background: #d9534f; border-radius: 5px; }
+
+/* ============================================================
+   ตารางฐาน — ลอกจาก .ss-table ใน App.css แบบตรงตัว (รวมกับดัก !important)
+   ⚠️ อย่า "แก้ให้ดีขึ้น" ตรงนี้ ไม่งั้นการ์ด "ตอนนี้" จะไม่ตรงกับของจริง
+   ============================================================ */
+table.ss {
+  border-collapse: collapse; width: 100%; min-width: 1500px; max-width: none;
+  table-layout: fixed; font-size: 12px; font-family: 'Noto Sans Thai', sans-serif;
+}
+table.ss th {
+  padding: 6px 7px; color: #004287; font-weight: 600; font-size: 12px;
+  text-transform: uppercase; letter-spacing: .15px; text-align: left;
+  border-bottom: 2px solid #e3e8ee; white-space: normal;
+  min-width: 60px !important;           /* ← กับดัก: ทับ style="min-width" ที่มาจาก MENUS */
+  line-height: 1.25; background: #fff; height: 40px; vertical-align: middle;
+  border-right: 1px solid #e7ecf1; position: sticky; top: 0; z-index: 2;
+}
+table.ss td {
+  padding: 6px 7px; border-bottom: 1px solid #eef2f6; color: #2d3a48;
+  white-space: normal; min-width: 60px !important; max-width: 170px;
+  line-height: 1.3; overflow-wrap: anywhere; height: 38px; vertical-align: middle;
+  border-right: 1px solid #eef2f6;
+}
+table.ss th:last-child, table.ss td:last-child { border-right: 0; }
+table.ss tbody tr:nth-child(even) td { background: #fbfcfd; }
+table.ss tbody tr:hover td { background: #f6fafd; }
+table.ss th.c-status      { width: 118px; min-width: 118px !important; }
+table.ss th.c-availability { width: 132px; min-width: 132px !important; }
+table.ss th.c-moq, table.ss th.c-sku { width: 100px; min-width: 100px !important; }
+table.ss th.c-del, table.ss td.c-del { width: 54px; min-width: 54px !important; text-align: center; }
+.showgrid th, .showgrid td { border-right: 1px solid #dce6f0 !important; }
+
+/* เน้นให้เห็นว่า 2 คอลัมน์ที่เป็นโจทย์อยู่ตรงไหน */
+.hl th.c-product_name, .hl th.c-generic_name { background: #eaf3fc; color: #1e4b7a; }
+.hl td.c-product_name, .hl td.c-generic_name { background: #f5faff !important; }
+
+.chip { display: inline-block; padding: 2px 7px; border-radius: 999px; font-size: 10px; font-weight: 600; white-space: nowrap; }
+.chip--green { background: #e5f5e9; color: #2e8b47; }
+.chip--orange { background: #fdf0e2; color: #c07a1f; }
+.muted { color: #a9b7c6; }
+.del-btn { border: 1px solid #e5a8a1; border-radius: 7px; background: #fff5f4; color: #b33b31; padding: 3px 6px; font: inherit; font-size: 10px; font-weight: 700; }
+
+/* ---------- 1. Widen (แก้ที่ต้นเหตุ) ---------- */
+.d1 th.c-product_name { width: 240px; min-width: 240px !important; }
+.d1 th.c-generic_name { width: 190px; min-width: 190px !important; }
+.d1 td.c-product_name, .d1 td.c-generic_name { max-width: none; vertical-align: top; }
+
+/* ---------- 2. Two-line Row (ยุบ 2 คอลัมน์เป็นช่องเดียว) ---------- */
+.d2 th.c-product_name { width: 300px; min-width: 300px !important; }
+.d2 td.c-product_name { max-width: none; vertical-align: top; }
+.d2 .l1 { font-weight: 600; }
+.d2 .l2 { font-size: 10.5px; color: #6695c5; margin-top: 1px; }
+.d2 th .h2 { display: block; font-size: 10px; color: #6695c5; text-transform: none; font-weight: 400; letter-spacing: 0; }
+
+/* ---------- 3. Sticky + ลากปรับความกว้าง ---------- */
+.d3 th.c-product_name, .d3 td.c-product_name {
+  width: var(--pnw, 260px); min-width: var(--pnw, 260px) !important; max-width: none;
+  position: sticky; left: 0; z-index: 3; background: #fff; vertical-align: top;
+}
+.d3 th.c-product_name { z-index: 5; box-shadow: 1px 0 0 #e3e8ee; }
+.d3 td.c-product_name { box-shadow: 1px 0 0 #eef2f6; }
+.d3 tbody tr:nth-child(even) td.c-product_name { background: #fbfcfd; }
+.d3 th.c-generic_name { width: 190px; min-width: 190px !important; }
+.d3 td.c-generic_name { max-width: none; vertical-align: top; }
+.d3-grip { position: absolute; top: 0; right: -4px; width: 9px; height: 100%; cursor: col-resize; z-index: 6; }
+.d3-grip::after { content: ''; position: absolute; top: 7px; bottom: 7px; left: 4px; width: 2px; border-radius: 2px; background: #9fb5ca; }
+.d3-grip:hover::after { background: #2d6cad; }
+.d3 th.c-product_name { position: sticky; }
+
+/* ---------- 4. Auto layout (คอลัมน์กว้างตามเนื้อหา) ---------- */
+.d4 { table-layout: auto; min-width: 0; width: max-content; }
+.d4 th, .d4 td { min-width: 0 !important; max-width: none; }
+.d4 td.c-product_name, .d4 td.c-generic_name { white-space: nowrap; }
+
+/* ---------- 5. Tooltip + ตัดบรรทัดเดียว ---------- */
+.d5 td.c-product_name, .d5 td.c-generic_name {
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 0;
+}
+.d5 th.c-product_name { width: 200px; min-width: 200px !important; }
+.d5 th.c-generic_name { width: 150px; min-width: 150px !important; }
+
+/* ---------- 6. Hover ขยายแถว ---------- */
+.d6 td.c-product_name, .d6 td.c-generic_name {
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 0;
+  transition: none;
+}
+.d6 th.c-product_name { width: 200px; min-width: 200px !important; }
+.d6 th.c-generic_name { width: 150px; min-width: 150px !important; }
+.d6 tbody tr:hover td.c-product_name, .d6 tbody tr:hover td.c-generic_name {
+  white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere;
+}
+.d6 tbody tr:hover td { background: #eaf3fc !important; }
+
+/* ---------- 7. Wrap เต็มที่ + แถวสูงตามเนื้อหา ---------- */
+.d7 th.c-product_name { width: 200px; min-width: 200px !important; }
+.d7 th.c-generic_name { width: 160px; min-width: 160px !important; }
+.d7 td { height: auto; vertical-align: top; padding-top: 8px; padding-bottom: 8px; max-width: none; }
+.d7 td.c-product_name, .d7 td.c-generic_name { overflow-wrap: anywhere; }
+
+/* ---------- 8. Grouped "สินค้า" (ยุบ 4 คอลัมน์) ---------- */
+.d8 th.c-product_name { width: 340px; min-width: 340px !important; }
+.d8 td.c-product_name { max-width: none; vertical-align: top; }
+.d8 .g-name { font-weight: 600; }
+.d8 .g-gen { font-size: 10.5px; color: #6695c5; margin-top: 1px; }
+.d8 .g-meta { font-size: 10px; color: #93a3b4; margin-top: 2px; }
+
+/* ---------- 9. Wrap + ฟอนต์เล็กลงเฉพาะ 2 คอลัมน์ ---------- */
+.d9 th.c-product_name { width: 190px; min-width: 190px !important; }
+.d9 th.c-generic_name { width: 150px; min-width: 150px !important; }
+.d9 td.c-product_name, .d9 td.c-generic_name {
+  font-size: 10.5px; line-height: 1.35; max-width: none; vertical-align: top;
+  overflow-wrap: anywhere;
+}
+
+/* ---------- 10. คลิกเพื่อกางข้อความเต็ม ---------- */
+.d10 td.c-product_name, .d10 td.c-generic_name {
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 0; cursor: pointer;
+}
+.d10 th.c-product_name { width: 200px; min-width: 200px !important; }
+.d10 th.c-generic_name { width: 150px; min-width: 150px !important; }
+.d10 tr.open td.c-product_name, .d10 tr.open td.c-generic_name {
+  white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere;
+}
+.d10 tr.open td { background: #eaf3fc !important; vertical-align: top; }
+.d10-hint { padding: 7px 11px; font-size: 11px; color: #8194a8; background: #fbfcfd; border-bottom: 1px solid #eef2f6; }
+</style>
+</head>
+<body>
+
+<div class="pg-head">
+  <h1>ชื่อสินค้า / Generic Name — ให้เห็นข้อความครบ</h1>
+  <p>เมนู Request Item หน้า SaleSupport · ตาราง <code>.ss-table--request</code> · 19 คอลัมน์</p>
+  <p>ป้ายมุมขวาของแต่ละการ์ด <b>วัดจริงจากหน้าจอนี้</b> ว่า 2 คอลัมน์นั้นยังมีข้อความถูกตัดอยู่ไหม</p>
+</div>
+
+<div class="rule-box">
+  <b>ทำไมตอนนี้ถึงแคบ — เจอต้นเหตุแล้ว ไม่ใช่แค่ "ตั้งความกว้างน้อยไป"</b><br>
+  <code>MENUS['request'].columns</code> กำหนด <code>product_name: min 180</code> · <code>generic_name: min 130</code> ไว้แล้ว
+  และ JSX ก็ส่งลงไปเป็น <code>style={{ minWidth: col.min }}</code> จริง ๆ<br>
+  แต่ <code>App.css</code> มี <code class="bad">.ss-table th { min-width: 60px !important }</code> —
+  <b class="bad">กฎที่มี <code>!important</code> ในสไตล์ชีตชนะ inline style ธรรมดา</b>
+  ค่า 180/130 จึงถูกทิ้งทั้งคู่ เหลือ <b>60px</b><br>
+  ตารางเป็น <code>table-layout: fixed</code> คอลัมน์ที่ไม่ได้ประกาศ <code>width</code> จึงถูกหารพื้นที่เท่า ๆ กัน
+  → ชื่อสินค้ากับ Generic Name ได้ความกว้างเท่าคอลัมน์ <code>EXP</code> หรือ <code>Leadtime</code><br>
+  <b>หลักฐานว่าเป็นแบบนี้จริง:</b> ทุกคอลัมน์ในตารางนี้ที่ "กว้างได้จริง" ต้องเขียน CSS แยกพร้อม <code>!important</code> เสมอ —
+  <code>c-status</code> 118px · <code>c-availability</code> 132px · <code>c-moq</code>/<code>c-sku</code> 100px · <code>ss-delete-col</code> 54px
+  (ถ้า inline <code>min</code> ใช้ได้ ก็ไม่ต้องมีกฎพวกนี้เลย)
+</div>
+
+<div class="note-box">
+  <b>ป้ายบอกชนิดข้างชื่อแบบ — แตะอะไรบ้าง</b><br>
+  <span class="card-tag card-tag--css">CSS อย่างเดียว</span> แก้ <code>App.css</code> ไฟล์เดียว ไม่ต้องแตะ TSX ·
+  <span class="card-tag card-tag--cfg">CSS + config</span> ต้องแก้ <code>MENUS</code> ด้วย ·
+  <span class="card-tag card-tag--jsx">ต้องแก้ JSX</span> ต้องแตะโครง render ในตาราง<br>
+  <b>ป้ายวัด "ถูกตัดไหม" วัดจากของจริงในหน้านี้</b> — เทียบ <code>scrollWidth</code> กับ <code>clientWidth</code> ของทุกช่องใน 2 คอลัมน์นั้น
+  ✅ แปลว่าไม่มีช่องไหนถูกตัด · ⚠️ แปลว่ายังมีช่องที่ถูกตัดอยู่ (แบบที่ตั้งใจให้ตัดแล้วไปโชว์เต็มตอน hover/คลิก ก็จะขึ้น ⚠️ เพราะตอนนิ่ง ๆ ยังตัดอยู่จริง)<br>
+  <b>ไฟล์นี้เป็นแกลเลอรีเทียบดีไซน์ ไม่ได้ import เข้าแอป</b> — <b style="color:#2e8b47">แบบที่ 1 "Widen" ถูกเลือกและใส่เข้าแอปแล้ว</b> ที่เหลือเก็บไว้เทียบ<br>
+  ⚠️ <b>ข้อมูลจริงในตารางตอนนี้มีแค่ 2 แถว</b> (ชื่อยาวสุด 26 ตัวอักษร) — 2 แถวแรกด้านล่างคือของจริง
+  อีก 3 แถวเป็น<b>ข้อมูลสมมติที่จงใจทำให้ยาว</b> เพื่อทดสอบว่าพอชื่อยาวขึ้นแล้วแต่ละแบบยังไหวไหม
+</div>
+
+<div class="ctrl">
+  <span class="lab">ความกว้างจอจำลอง</span>
+  <button data-w="1366">1366</button>
+  <button data-w="1600">1600</button>
+  <button data-w="1920" class="on">1920</button>
+  <button data-w="2560">2560</button>
+  <button data-w="0">เต็มหน้าต่างนี้</button>
+  <span class="hint" id="wnote"></span>
+  <span class="sep"></span>
+  <label><input type="checkbox" id="hl" checked> เน้น 2 คอลัมน์ที่เป็นโจทย์</label>
+  <label><input type="checkbox" id="gridlines"> เน้นเส้นแบ่งคอลัมน์</label>
+</div>
+
+<div class="grid" id="grid"></div>
+
+<script>
+/* ── 19 คอลัมน์จริงจาก MENUS['request'].columns ── */
+const COLS = [
+  { key: 'product_name', label: 'ชื่อสินค้า',          min: 180 },
+  { key: 'branch',       label: 'สาขา',                min: 70 },
+  { key: 'generic_name', label: 'Generic Name',        min: 130 },
+  { key: 'strength',     label: 'ความแรง',             min: 80 },
+  { key: 'pack_size',    label: 'ขนาดบรรจุ',           min: 100 },
+  { key: 'qty',          label: 'จำนวนที่ต้องการ',      min: 110 },
+  { key: 'need_date',    label: 'วันที่ต้องการสินค้า',   min: 130, kind: 'date' },
+  { key: 'status',       label: 'Status',              min: 110, kind: 'chip' },
+  { key: 'created_at',   label: 'DateTime',            min: 130, kind: 'datetime' },
+  { key: 'sku',          label: 'SKU',                 min: 80 },
+  { key: 'availability', label: 'Availability',        min: 100, kind: 'chip' },
+  { key: 'note',         label: 'Note',                min: 140 },
+  { key: 'leadtime',     label: 'Leadtime',            min: 80 },
+  { key: 'exp',          label: 'EXP',                 min: 90 },
+  { key: 'moq',          label: 'MOQ',                 min: 80 },
+  { key: 'supplier',     label: 'Supplier',            min: 140 },
+  { key: 'image_url',    label: 'รูปสินค้า',            min: 90 },
+  { key: 'customer_name',label: 'ชื่อลูกค้า',           min: 120 },
+  { key: 'phone',        label: 'ติดต่อลูกค้า',         min: 130 },
+];
+const COL = Object.fromEntries(COLS.map(c => [c.key, c]));
+/** คอลัมน์ที่เป็นโจทย์ — ใช้ทั้งตอนไฮไลต์และตอนวัดว่าถูกตัดไหม */
+const TARGET = ['product_name', 'generic_name'];
+
+/* ── 2 แถวแรก = ข้อมูลจริงจาก ss_request_items · 3 แถวหลัง = สมมติ (จงใจยาว) ── */
+const ROWS = [
+  {
+    real: true,
+    product_name: 'TRESIBA FLEXTOUCH 200 U/ML', branch: 'SRC', generic_name: 'INSULIN DEGLUDEC',
+    strength: '200 U/ML', pack_size: '3 ml x 1', qty: 5, need_date: '2026-08-22',
+    status: 'รอดำเนินการ', created_at: '2026-08-11T10:12', sku: '', availability: 'ยังไม่ทราบ',
+    note: '', leadtime: '', exp: '', moq: '', supplier: 'Novo Nordisk',
+    image_url: '', customer_name: 'คุณวิภา ตั้งใจ', phone: '081-220-4417',
+  },
+  {
+    real: true,
+    product_name: 'CYTISINE GPO (1.5 MG)', branch: 'SSS', generic_name: 'cytisinicline (cytisine)',
+    strength: '1.5 mg', pack_size: '100 เม็ด', qty: 2, need_date: '2026-08-25',
+    status: 'รอดำเนินการ', created_at: '2026-08-12T14:40', sku: '', availability: 'ยังไม่ทราบ',
+    note: 'ลูกค้าถามบ่อย', leadtime: '', exp: '', moq: '', supplier: 'GPO',
+    image_url: '', customer_name: 'คุณธนา ศรีวงศ์', phone: '089-114-2280',
+  },
+  {
+    product_name: 'SYMBICORT TURBUHALER 160/4.5 MCG 120 DOSE', branch: 'KKL',
+    generic_name: 'BUDESONIDE + FORMOTEROL FUMARATE DIHYDRATE',
+    strength: '160/4.5 mcg', pack_size: '120 dose x 1', qty: 12, need_date: '2026-09-02',
+    status: 'กำลังดำเนินการ', created_at: '2026-08-14T09:05', sku: '301882', availability: 'สั่งได้',
+    note: 'ลูกค้าขอใบเสนอราคาก่อน', leadtime: '7 วัน', exp: '2027-11', moq: '6',
+    supplier: 'AstraZeneca (Thailand) Ltd.', image_url: '', customer_name: 'ร้านยาสุขภาพดี', phone: '02-455-7781',
+  },
+  {
+    product_name: 'ยาน้ำแก้ไอผสมสมุนไพรตรีผลา ขนาด 120 มิลลิลิตร (สูตรไม่มีน้ำตาล)', branch: 'SRC',
+    generic_name: 'TRIPHALA HERBAL COUGH SYRUP (SUGAR FREE FORMULA)',
+    strength: '120 ml', pack_size: '120 ml x 1 ขวด', qty: 24, need_date: '2026-09-10',
+    status: 'รอดำเนินการ', created_at: '2026-08-15T16:22', sku: '', availability: 'ยังไม่ทราบ',
+    note: 'ขายดีช่วงหน้าฝน สั่งเผื่อ', leadtime: '', exp: '', moq: '',
+    supplier: 'บริษัท สมุนไพรไทยพัฒนา จำกัด', image_url: '', customer_name: 'คุณนภา ใจงาม', phone: '086-773-9902',
+  },
+  {
+    product_name: 'INSULIN GLARGINE + LIXISENATIDE SOLOSTAR 100U/33MCG', branch: 'SSS',
+    generic_name: 'INSULIN GLARGINE / LIXISENATIDE FIXED RATIO COMBINATION',
+    strength: '100 U/ml + 33 mcg/ml', pack_size: '3 ml x 3 ปากกา', qty: 3, need_date: '2026-09-15',
+    status: 'สั่งซื้อแล้ว', created_at: '2026-08-16T11:48', sku: '302410', availability: 'สั่งได้',
+    note: '', leadtime: '14 วัน', exp: '2027-06', moq: '3',
+    supplier: 'Sanofi-Aventis (Thailand) Ltd.', image_url: '', customer_name: 'โรงพยาบาลสัตว์พร้อมมิตร', phone: '02-712-3390',
+  },
+];
+
+const esc = (s) => String(s ?? '').replace(/[<>&"]/g, m => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[m]));
+const beDate = (s) => s ? new Date(s).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
+const beDT = (s) => s ? new Date(s).toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' }) : '';
+const chipCls = (v) => /แล้ว|สั่งได้/.test(v) ? 'chip--green' : 'chip--orange';
+
+function val(r, key) {
+  const c = COL[key];
+  const raw = r[key];
+  if (raw === '' || raw == null) return '';
+  if (c?.kind === 'date') return beDate(raw);
+  if (c?.kind === 'datetime') return beDT(raw);
+  return String(raw);
+}
+function cell(r, key) {
+  const v = val(r, key);
+  if (!v) return '<span class="muted">—</span>';
+  if (COL[key]?.kind === 'chip') return `<span class="chip ${chipCls(v)}">${esc(v)}</span>`;
+  return esc(v);
+}
+const el = (html) => {
+  const t = document.createElement('template');
+  t.innerHTML = html.trim();
+  return t.content.firstElementChild;
+};
+
+/** ตารางเต็ม 19 คอลัมน์ + คอลัมน์ลบ — opts.skip = key ที่ไม่ต้อง render (ใช้ตอนยุบคอลัมน์)
+ *  opts.render[key] = ฟังก์ชันแทนเนื้อในช่องนั้น · opts.head[key] = HTML แทนหัวคอลัมน์ */
+function ssTable(cls, opts = {}) {
+  const skip = new Set(opts.skip ?? []);
+  const keys = COLS.map(c => c.key).filter(k => !skip.has(k));
+  const head = keys.map(k =>
+    `<th class="c-${k}" style="min-width:${COL[k].min}px">${opts.head?.[k] ?? esc(COL[k].label)}</th>`).join('')
+    + '<th class="c-del">ลบ</th>';
+  const body = ROWS.map(r => `<tr>${keys.map(k =>
+    `<td class="c-${k}"${opts.title && TARGET.includes(k) ? ` title="${esc(val(r, k))}"` : ''}>${
+      opts.render?.[k] ? opts.render[k](r) : cell(r, k)}</td>`).join('')
+    }<td class="c-del"><button class="del-btn">ลบ</button></td></tr>`).join('');
+  return `<table class="ss ${cls}"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
+}
+
+/* ============================================================
+   การ์ด "ตอนนี้" + 10 ดีไซน์
+   ============================================================ */
+const NOW = {
+  no: 0, name: 'ตอนนี้ (ยังไม่แก้)', kind: 'now', tag: 'ของจริงวันนี้', isNow: true,
+  note: 'ลอก CSS จาก <code>App.css</code> มาตรงตัวรวมกับดัก <code>min-width: 60px !important</code> — <b class="bad">นี่คือสิ่งที่เห็นในแอปตอนนี้จริง ๆ</b> ชื่อสินค้ากับ Generic Name ได้ความกว้างพอ ๆ กับคอลัมน์ EXP ทั้งที่ config สั่งไว้ 180/130 · ข้อความไม่ได้หายไปไหน แต่ถูกบีบจนขึ้นบรรทัดใหม่ทีละไม่กี่ตัวอักษร อ่านยากมากเมื่อชื่อยาว',
+  render: () => ssTable(''),
+};
+
+const DESIGNS = [
+  {
+    no: 1, name: 'Widen — แก้ที่ต้นเหตุ', kind: 'css', tag: 'CSS อย่างเดียว', used: true,
+    note: '<b class="good">ทางที่ตรงกับต้นเหตุที่สุดและแก้น้อยที่สุด</b> — เขียนกฎ CSS ให้ 2 คอลัมน์นี้เหมือนที่ <code>c-status</code>/<code>c-availability</code> ทำอยู่แล้ว: <code>width: 240px; min-width: 240px !important</code> (ชื่อสินค้า) และ 190px (Generic Name) · ข้อความ wrap ครบทุกบรรทัด ไม่ตัด · <b>ไม่ต้องแตะ TSX เลย</b> และไม่กระทบเมนูอื่นเพราะ scope อยู่ใต้ <code>.ss-table--request</code> · ข้อเสีย: ตารางกว้างขึ้น ~220px ต้องเลื่อนแนวนอนมากขึ้นอีกนิด และ <code>min</code> ใน <code>MENUS</code> ยังเป็นค่าหลอกอยู่เหมือนเดิม',
+    render: () => ssTable('d1'),
+  },
+  {
+    no: 2, name: 'Two-line Row — ยุบเป็นช่องเดียว', kind: 'jsx', tag: 'ต้องแก้ JSX',
+    note: '<b>ยัดชื่อสินค้ากับ Generic Name ลงช่องเดียวคนละบรรทัด</b> — บรรทัดบนชื่อสินค้า บรรทัดล่างตัวเล็กสีฟ้าคือ Generic Name · <b>ใช้กลไก <code>ColumnDef.sub</code> ที่ Order/BackOrder มีอยู่แล้ว</b> ไม่ต้องเขียน render ใหม่ แค่ย้าย <code>generic_name</code> ไปเป็น <code>sub</code> ของ <code>product_name</code> แล้วเพิ่มกฎความกว้าง · ได้ความกว้าง 300px ให้ข้อความเต็ม ๆ โดย<b>เสียคอลัมน์ไปเลย 1 ช่อง</b> ตารางแคบลงด้วยซ้ำ · ข้อเสีย: เรียง/กรองตาม Generic Name แยกไม่ได้แล้ว และแถวสูงขึ้น',
+    render: () => ssTable('d2', {
+      skip: ['generic_name'],
+      head: { product_name: 'ชื่อสินค้า<span class="h2">Generic Name</span>' },
+      render: {
+        product_name: r => `<div class="l1">${esc(r.product_name)}</div><div class="l2">${esc(r.generic_name) || '—'}</div>`,
+      },
+    }),
+  },
+  {
+    no: 3, name: 'Sticky + ลากปรับความกว้างเอง', kind: 'css', tag: 'CSS + JSX นิดเดียว',
+    note: '<b>ตรึงคอลัมน์ชื่อสินค้าไว้ซ้ายสุด + มีที่จับให้ลากปรับความกว้างเอง</b> เหมือนที่คอลัมน์ SKU ของตาราง Order/BackOrder ทำอยู่แล้ว (<code>--sku-name-width</code> + <code>.ss-column-resizer</code>) · <b>เลื่อนดูคอลัมน์ขวาสุดโดยยังเห็นว่าเป็นแถวของสินค้าอะไร</b> ซึ่งตอนนี้ทำไม่ได้เลย · ผู้ใช้กว้างเท่าไหร่ก็ได้ตามใจ ไม่ต้องมาเถียงกันว่า 240px พอไหม · <b>ลองลากเส้นขวาของหัวคอลัมน์ "ชื่อสินค้า" ดูได้</b> · ข้อเสีย: โค้ดเยอะกว่าแบบ 1 พอสมควร',
+    render: (stage) => {
+      const wrap = el(`<div>${ssTable('d3')}</div>`);
+      const th = wrap.querySelector('th.c-product_name');
+      th.style.position = 'sticky';
+      const grip = el('<span class="d3-grip" title="ลากเพื่อปรับความกว้าง"></span>');
+      th.appendChild(grip);
+      const table = wrap.querySelector('table');
+      grip.addEventListener('mousedown', e => {
+        e.preventDefault();
+        const x0 = e.clientX;
+        const w0 = parseInt(getComputedStyle(table).getPropertyValue('--pnw')) || 260;
+        const move = ev => {
+          const w = Math.max(120, Math.min(600, w0 + ev.clientX - x0));
+          table.style.setProperty('--pnw', w + 'px');
+        };
+        const up = () => {
+          document.removeEventListener('mousemove', move);
+          document.removeEventListener('mouseup', up);
+          checkFull();
+        };
+        document.addEventListener('mousemove', move);
+        document.addEventListener('mouseup', up);
+      });
+      return wrap;
+    },
+  },
+  {
+    no: 4, name: 'Auto layout — กว้างตามเนื้อหา', kind: 'css', tag: 'CSS อย่างเดียว',
+    note: '<b>เลิกใช้ <code>table-layout: fixed</code> กับตารางนี้</b> ให้เบราว์เซอร์กางคอลัมน์ตามเนื้อหาเอง (<code>table-layout: auto</code> + <code>width: max-content</code>) แล้วสั่ง <code>white-space: nowrap</code> กับ 2 คอลัมน์นั้น · <b>ไม่มีวันตัดและไม่มีวันขึ้นบรรทัดใหม่ ไม่ว่าชื่อจะยาวแค่ไหน</b> ไม่ต้องมาเดาตัวเลขความกว้างเลยสักคอลัมน์ · ตาราง Order/BackOrder ก็ใช้ <code>auto</code> อยู่แล้ว จึงเป็นทางที่เข้ากับของเดิม · <b class="bad">ข้อเสียใหญ่:</b> ชื่อยาว 60 ตัวอักษรจะดันตารางกว้างมาก ต้องเลื่อนแนวนอนไกลขึ้นเยอะ และความกว้างคอลัมน์จะขยับไปมาทุกครั้งที่ข้อมูลเปลี่ยน',
+    render: () => ssTable('d4'),
+  },
+  {
+    no: 5, name: 'ตัดบรรทัดเดียว + hover ดูเต็ม', kind: 'css', tag: 'CSS อย่างเดียว',
+    note: '<b class="bad">แบบนี้ยัง "ตัดข้อความ" อยู่ — ใส่ไว้ให้เห็นว่าต่างจากที่ขอยังไง</b> · บีบเหลือบรรทัดเดียวจบด้วย <code>…</code> แล้วเอาข้อความเต็มไปไว้ใน <code>title</code> (hover ค้างไว้จะเห็น) · <b>ข้อดีเดียวคือแถวเตี้ยเท่ากันหมด ตารางดูสะอาดที่สุด</b> และเลื่อนแนวนอนน้อยสุด · แต่ต้องเอาเมาส์ไปจ่อทีละช่องถึงจะอ่านได้ กวาดตาหาของไม่ได้ · <b>ลอง hover ที่ชื่อยาว ๆ ดูได้</b>',
+    render: () => ssTable('d5', { title: true }),
+  },
+  {
+    no: 6, name: 'Hover แล้วแถวคลี่ออก', kind: 'css', tag: 'CSS อย่างเดียว',
+    note: '<b>ตอนนิ่งตัดบรรทัดเดียว แต่พอเอาเมาส์ชี้แถวไหน แถวนั้นคลี่ข้อความเต็มทันที</b> (ไม่ต้องคลิก ไม่ต้องรอ tooltip) · ได้ทั้งตารางเตี้ยสะอาดและอ่านเต็มได้ · <b>ลองเอาเมาส์กวาดบนแถวดูได้</b> · <b class="bad">ข้อเสีย:</b> แถวสูงเปลี่ยนตอน hover ทำให้แถวอื่นขยับลงทั้งตาราง (สะดุดตามาก) และบนจอสัมผัส/PDA ไม่มี hover จึงใช้ไม่ได้เลย',
+    render: () => ssTable('d6', { title: true }),
+  },
+  {
+    no: 7, name: 'Wrap เต็มที่ + แถวสูงตามเนื้อหา', kind: 'css', tag: 'CSS อย่างเดียว',
+    note: '<b>ปล่อยให้ขึ้นบรรทัดใหม่ได้ไม่จำกัด และให้แถวสูงตามเนื้อหาจริง</b> — ถอด <code>height: 38px</code> ออก เปลี่ยนเป็น <code>vertical-align: top</code> + เพิ่ม padding บนล่าง · กว้าง 200/160px ซึ่งพอดีกับ <code>min</code> ที่ config ตั้งใจไว้แต่แรก · <b>เห็นครบโดยตารางไม่กว้างขึ้นมาก</b> ไม่ต้องเลื่อนแนวนอนเพิ่มเท่าแบบ 1 หรือ 4 · ข้อเสีย: ชื่อยาว ๆ กินไป 3-4 บรรทัด แถวสูงไม่เท่ากันเลย หน้าจอหนึ่งเห็นได้น้อยแถวลง',
+    render: () => ssTable('d7'),
+  },
+  {
+    no: 8, name: 'Grouped — ยุบ 4 คอลัมน์เป็นบล็อกเดียว', kind: 'jsx', tag: 'ต้องแก้ JSX',
+    note: '<b>ยุบ ชื่อสินค้า + Generic Name + ความแรง + ขนาดบรรจุ เป็นช่อง "สินค้า" ช่องเดียวกว้าง 340px</b> — 4 ค่านี้เป็นเรื่องเดียวกันหมด (ตัวสินค้า) อ่านติดกันได้ความมากกว่าแยกคอลัมน์ · <b>ได้ที่ว่างเยอะที่สุดในบรรดาทุกแบบ</b> เพราะคืนพื้นที่มา 3 คอลัมน์ ตารางแคบลงจริง · ข้อเสีย: เรียงตามความแรง/ขนาดบรรจุแยกไม่ได้แล้ว และเป็นการเปลี่ยนหน้าตาตารางเยอะที่สุด ต้องให้คนใช้ทำความคุ้นใหม่',
+    render: () => ssTable('d8', {
+      skip: ['generic_name', 'strength', 'pack_size'],
+      head: { product_name: 'สินค้า' },
+      render: {
+        product_name: r => `<div class="g-name">${esc(r.product_name)}</div>`
+          + `<div class="g-gen">${esc(r.generic_name) || '—'}</div>`
+          + `<div class="g-meta">${esc(r.strength) || '—'} · ${esc(r.pack_size) || '—'}</div>`,
+      },
+    }),
+  },
+  {
+    no: 9, name: 'Wrap + ฟอนต์เล็กลงเฉพาะ 2 คอลัมน์', kind: 'css', tag: 'CSS อย่างเดียว',
+    note: '<b>เหมือนแบบ 7 แต่ลดฟอนต์เฉพาะ 2 คอลัมน์นี้เหลือ 10.5px</b> (คอลัมน์อื่นยัง 12px เท่าเดิม) — ตัวอักษรเล็กลง 12.5% จึงใส่ได้มากขึ้นต่อบรรทัด แถวเลยเตี้ยกว่าแบบ 7 ที่ความกว้างเท่ากัน · <b>ประหยัดพื้นที่ที่สุดในกลุ่มที่ไม่ตัดข้อความ</b> — กว้างแค่ 190/150px ก็เอาอยู่ · ข้อเสีย: ฟอนต์ 2 ขนาดในแถวเดียวกันดูไม่เป็นระเบียบ และ 10.5px เล็กพอควรสำหรับอ่านนาน ๆ',
+    render: () => ssTable('d9'),
+  },
+  {
+    no: 10, name: 'คลิกเพื่อกางข้อความเต็ม', kind: 'css', tag: 'CSS + JSX นิดเดียว',
+    note: '<b>ตอนนิ่งตัดบรรทัดเดียว คลิกที่ช่องแล้วแถวนั้นกางค้างไว้</b> (คลิกซ้ำเพื่อพับ) — ต่างจากแบบ 6 ตรงที่<b>ค้างไว้ให้อ่านได้ ไม่หายตอนเลื่อนเมาส์ออก</b> และใช้ได้บนจอสัมผัส · เปิดค้างพร้อมกันหลายแถวก็ได้ · <b>ลองคลิกที่ชื่อสินค้าดูได้</b> · <b class="bad">ข้อเสียที่ต้องระวัง:</b> แถวในตารางนี้<b>คลิกแล้วเปิด popup รายละเอียดอยู่แล้ว</b> ต้อง <code>stopPropagation</code> ให้ดี ไม่งั้นคลิกกางแล้ว popup เด้งขึ้นมาด้วย — และคนใช้จะงงว่าคลิกตรงไหนได้อะไร',
+    render: () => {
+      const wrap = el(`<div><div class="d10-hint">👆 คลิกที่ชื่อสินค้าหรือ Generic Name เพื่อกาง/พับข้อความเต็ม</div>${ssTable('d10', { title: true })}</div>`);
+      wrap.querySelectorAll('td.c-product_name, td.c-generic_name').forEach(td => {
+        td.addEventListener('click', e => {
+          e.stopPropagation();   // ← ของจริงต้องมีบรรทัดนี้ ไม่งั้น popup รายละเอียดเด้ง
+          td.closest('tr').classList.toggle('open');
+          checkFull();
+        });
+      });
+      return wrap;
+    },
+  },
+];
+
+/* ── สร้างการ์ด ── */
+const grid = document.getElementById('grid');
+[NOW, ...DESIGNS].forEach(d => {
+  const card = el(`<div class="card${d.isNow ? ' card--now' : ''}">
+    <div class="card-head">
+      <span class="card-no${d.isNow ? ' card-no--now' : ''}">${d.isNow ? '—' : String(d.no).padStart(2, '0')}</span>
+      <span class="card-name">${d.name}</span>
+      <span class="card-tag card-tag--${d.kind}">${d.tag}</span>
+      ${d.used ? '<span class="card-tag card-tag--css">✅ ใช้จริงในแอปแล้ว</span>' : ''}
+      <span class="full-badge"></span>
+    </div>
+    <p class="card-note">${d.note}</p>
+    <div class="demo"></div>
+  </div>`);
+  const demo = card.querySelector('.demo');
+  // กันแบบใดแบบหนึ่งพังแล้วลูปหยุด ทำให้การ์ดที่เหลือหายไปทั้งหมด
+  try {
+    const out = d.render(demo);
+    if (typeof out === 'string') demo.innerHTML = out; else demo.appendChild(out);
+  } catch (err) {
+    demo.innerHTML = `<div style="padding:18px;color:#c0392b;font-size:12px">
+      ⚠️ แบบนี้ render ไม่ผ่าน: ${esc(err && err.message || err)}</div>`;
+    console.error(`[design ${d.no} ${d.name}]`, err);
+  }
+  grid.appendChild(card);
+});
+
+/* ── วัดจริงว่ายังมีช่องไหนถูกตัดอยู่ไหม ──
+   เทียบ scrollWidth/scrollHeight กับ clientWidth/clientHeight ของทุกช่องใน 2 คอลัมน์เป้าหมาย */
+function checkFull() {
+  document.querySelectorAll('.card').forEach(card => {
+    const badge = card.querySelector('.full-badge');
+    const cells = card.querySelectorAll('td.c-product_name, td.c-generic_name');
+    let cut = 0;
+    cells.forEach(td => {
+      if (td.scrollWidth > td.clientWidth + 1 || td.scrollHeight > td.clientHeight + 1) cut++;
+    });
+    badge.className = 'full-badge ' + (cut ? 'is-cut' : 'is-full');
+    badge.textContent = cut
+      ? `⚠️ ยังตัดอยู่ ${cut} ช่อง จาก ${cells.length}`
+      : `✅ เห็นครบทุกช่อง (${cells.length})`;
+  });
+}
+
+/* ── แถบควบคุม ── */
+const wnote = document.getElementById('wnote');
+function setWidth(screen) {
+  const root = document.documentElement.style;
+  if (screen) {
+    // พื้นที่ตาราง = กว้างจอ − sidebar 150px − padding ซ้ายขวา ~32px
+    const tablew = screen - 182;
+    root.setProperty('--tablew', tablew + 'px');
+    root.setProperty('--gridw', (tablew + 40) + 'px');
+    wnote.textContent = `พื้นที่ตาราง = ${screen} − sidebar 150 − padding 32 = ${tablew}px`;
+  } else {
+    root.setProperty('--tablew', '100%');
+    root.setProperty('--gridw', '1500px');
+    wnote.textContent = 'ใช้ความกว้างหน้าต่างเบราว์เซอร์นี้';
+  }
+  requestAnimationFrame(checkFull);
+}
+document.querySelectorAll('.ctrl button[data-w]').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('.ctrl button[data-w]').forEach(x => x.classList.remove('on'));
+    b.classList.add('on');
+    setWidth(Number(b.dataset.w));
+  });
+});
+const applyHl = (on) => document.querySelectorAll('.demo table').forEach(t => t.classList.toggle('hl', on));
+document.getElementById('hl').addEventListener('change', e => applyHl(e.target.checked));
+document.getElementById('gridlines').addEventListener('change', e => {
+  document.querySelectorAll('.demo table').forEach(t => t.classList.toggle('showgrid', e.target.checked));
+});
+applyHl(true);
+window.addEventListener('resize', checkFull);
+setWidth(1920);
+// ฟอนต์ Google โหลดเสร็จทีหลัง ความกว้างข้อความเปลี่ยน → วัดใหม่ ไม่งั้นป้ายบอกผิด
+if (document.fonts?.ready) document.fonts.ready.then(checkFull);
+</script>
+</body>
+</html>
