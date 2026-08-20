@@ -846,10 +846,21 @@ type StepCounts = Record<string, { pending: number; overdue: number }>;
 const emptyStepCounts = (): StepCounts =>
   Object.fromEntries(ORDER_STEPS.map(s => [s.key, { pending: 0, overdue: 0 }]));
 
-// เลือกสีชิปตามคำในสถานะ: เขียว = เสร็จ, แดง = ยกเลิก, ฟ้า = กำลังไป, ส้ม = รอ
+// เลือกสีชิปตามคำในสถานะ: เขียว = เสร็จ, แดง = ยกเลิก/ปฏิเสธ, ฟ้า = กำลังไป, ส้ม = รอ
+//
+// 🚨 บรรทัด "ปฏิเสธ" ต้องมาก่อนบรรทัดสีเขียวเสมอ ห้ามสลับลำดับ
+//    คำปฏิเสธในภาษาไทยสร้างจากการเติม "ไม่" หน้าคำเดิม คำบวกจึงยังฝังอยู่ในสตริงเต็ม ๆ:
+//      "ไม่อนุมัติ" มี "อนุมัติ"  ·  "ไม่มีของ" มี "มีของ"
+//    เดิมเช็คสีเขียวก่อน ค่าพวกนี้จึงถูกจับเป็นเขียวแล้ว return ออกไปตั้งแต่บรรทัดแรก
+//    ผลคือชิปสื่อความหมาย "ตรงข้าม" กับข้อความที่เขียนอยู่บนตัวมันเอง และคำว่า "ไม่มีของ"
+//    ที่เขียนดักไว้ในบรรทัดสีแดงก็กลายเป็นโค้ดที่ไม่มีวันทำงาน (แก้ 2569-08-20)
+//
+//    กระทบตัวเลือกจริงใน dropdown 3 ตัว 3 เมนู — Request Item Status "ไม่อนุมัติ",
+//    New Product Status "ไม่อนุมัติ", Request Item Availability "ไม่มีของ"
 function chipClass(value: string): string {
+  // `^ไม่` ครอบคำปฏิเสธที่จะเพิ่มมาในอนาคตด้วย ไม่ต้องไล่เติมทีละคำ
+  if (/^ไม่|ปฏิเสธ|ยกเลิก|cancel|reject/i.test(value.trim())) return 'ss-chip--red';
   if (/เสร็จ|ส่งมอบแล้ว|แจ้งแล้ว|ถึงแล้ว|อนุมัติ|มีของ|done|complete|closed|resolved/i.test(value)) return 'ss-chip--green';
-  if (/ยกเลิก|ปฏิเสธ|ไม่มีของ|cancel|reject/i.test(value)) return 'ss-chip--red';
   if (/สั่งแล้ว|กำลัง|จัดส่ง|ระหว่าง|ต้องสั่ง|progress|shipping/i.test(value)) return 'ss-chip--blue';
   return 'ss-chip--orange';
 }
