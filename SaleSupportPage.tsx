@@ -93,8 +93,12 @@ interface BackOrderForm {
   unit: string;
   /** ค้างส่งลูกค้า — สาขาพิมพ์เอง คนละตัวกับ "คลังมีสินค้า" ที่ดึงสดจาก stock */
   pending_qty: string;
+  /** **บังคับกรอก** คู่กับ phone — แถวค้างส่งต้องรู้ว่าติดต่อใครกลับได้ */
   customer_name: string;
-  /** เบอร์โทรลูกค้า — ไม่มี contact_channel คู่กันเหมือน ss_orders (ฟอร์มนี้ถามแค่เบอร์) */
+  /** เบอร์โทรลูกค้า — **บังคับกรอก** เหมือน sale_bill_no (บังคับที่ฟอร์มเท่านั้น
+   *  คอลัมน์ใน DB ยังเป็น nullable เพราะแถวเก่าก่อน migration 202608190003 ไม่มีเบอร์
+   *  customer_name ก็เป็น nullable ด้วยเหตุผลเดียวกัน)
+   *  ไม่มี contact_channel คู่กันเหมือน ss_orders (ฟอร์มนี้ถามแค่เบอร์) */
   phone: string;
   paid_date: string;
   sale_bill_no: string;
@@ -1660,6 +1664,9 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
     if (!backOrderForm.pending_qty || Number(backOrderForm.pending_qty) <= 0) {
       setSaveError('กรุณาใส่จำนวนที่ค้างส่งลูกค้าให้ถูกต้อง'); return;
     }
+    // เรียงตามลำดับช่องในฟอร์ม — ผู้ใช้จะได้เจอ error ของช่องบนก่อนช่องล่างเสมอ
+    if (!backOrderForm.customer_name.trim()) { setSaveError('กรุณาใส่ชื่อลูกค้า'); return; }
+    if (!backOrderForm.phone.trim()) { setSaveError('กรุณาใส่เบอร์โทรติดต่อ'); return; }
     if (!backOrderForm.sale_bill_no.trim()) { setSaveError('กรุณาใส่เลขที่บิล'); return; }
     setSaving(true);
     setSaveError('');
@@ -1670,8 +1677,8 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
       product_name: backOrderForm.product_name.trim() || null,
       unit: backOrderForm.unit.trim() || null,
       pending_qty: Number(backOrderForm.pending_qty),
-      customer_name: backOrderForm.customer_name.trim() || null,
-      phone: backOrderForm.phone.trim() || null,
+      customer_name: backOrderForm.customer_name.trim(),
+      phone: backOrderForm.phone.trim(),
       paid_date: backOrderForm.paid_date || null,
       sale_bill_no: backOrderForm.sale_bill_no.trim(),
       pickup_date: backOrderForm.pickup_date || null,
@@ -3534,13 +3541,13 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
                   onChange={e => updateBackOrderForm({ pending_qty: e.target.value })} />
               </div>
               <div className="ss-form-row">
-                <label>ชื่อลูกค้า</label>
+                <label>ชื่อลูกค้า *</label>
                 <input className="ss-input" type="text" placeholder="ชื่อลูกค้า"
                   value={backOrderForm.customer_name}
                   onChange={e => updateBackOrderForm({ customer_name: e.target.value })} />
               </div>
               <div className="ss-form-row">
-                <label>เบอร์โทรติดต่อ</label>
+                <label>เบอร์โทรติดต่อ *</label>
                 <input className="ss-input" type="tel" placeholder="เบอร์โทรลูกค้า"
                   value={backOrderForm.phone}
                   onChange={e => updateBackOrderForm({ phone: e.target.value })} />
