@@ -3937,6 +3937,14 @@ body.pulse-b .cart-inline-btn.in-cart {
   height: 38px;
   vertical-align: middle;
   border-right: 1px solid #eef2f6;
+  /* ⚠️ 2569-08-20 — คอลัมน์ตอนนี้ลากย่อได้ทุกช่อง (ดูหัวข้อ "ความกว้างคอลัมน์" ด้านบน)
+     ก่อนหน้านี้ td ไม่มี overflow: hidden เลย ข้อความที่เป็น white-space: nowrap
+     (ชื่อสินค้า sku_name, บรรทัดรอง .ss-cell-sub, เลขบิลขาย) พอคอลัมน์ถูกลากแคบกว่าความยาวข้อความ
+     จะทะลุกรอบ td ล้นไปทับคอลัมน์ข้างๆ ให้เห็น (แถวไม่ได้พัง แค่ overflow: visible เป็นค่าเริ่มต้น)
+     ตัดด้วย overflow: hidden ที่นี่ — ไม่กระทบข้อความที่ wrap ปกติ (white-space: normal) เพราะ
+     แถวตารางขยายสูงตามเนื้อหาอยู่แล้วไม่ว่า overflow จะเป็นอะไร (พฤติกรรมของ table-cell ไม่ใช่ block ทั่วไป)
+     กระทบเฉพาะเคส nowrap ที่กว้างเกินกรอบจริงๆ ซึ่งคือเคสที่ต้องการตัดพอดี */
+  overflow: hidden;
 }
 .ss-table th:last-child, .ss-table td:last-child { border-right: 0; }
 /* BackOrder ใช้ layout เดียวกับ Order (คอลัมน์เยอะ เลื่อนแนวนอน + ปรับความกว้าง SKU ได้) */
@@ -3957,12 +3965,16 @@ body.pulse-b .cart-inline-btn.in-cart {
 .ss-table .ss-col-sku_name {
   max-width: none;
   white-space: nowrap;
+  /* th มี overflow: visible แยกไว้ข้างบนอยู่แล้ว (บรรทัดกันหัวคอลัมน์ + ที่จับลากโดนตัด)
+     ellipsis จึงมีผลจริงแค่กับ td (overflow: hidden มาจาก .ss-table td ฐาน) */
+  text-overflow: ellipsis;
 }
 .ss-table th.ss-col-sku_name { position: sticky; }
 .ss-table--order td.ss-col-sale_bill_no,
 .ss-table--backorder td.ss-col-sale_bill_no {
   max-width: none;
   white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 /* ── Two-line Row — ตาราง Order ยัด 2 ค่าลงช่องเดียวคนละบรรทัด ──
@@ -3979,13 +3991,18 @@ body.pulse-b .cart-inline-btn.in-cart {
   text-transform: none;
   color: #6695c5;
 }
-.ss-cell-main { font-size: inherit; }
+/* ⚠️ ต้อง overflow: hidden ที่นี่เองด้วย ไม่ใช่พึ่ง overflow: hidden ของ td ฐานอย่างเดียว
+   — text-overflow: ellipsis (จุดไข่ปลา) ใช้ได้เฉพาะกับ element ที่มี overflow: hidden ตรงตัว
+   ไม่ใช่แค่บรรพบุรุษ ถ้าอาศัยแค่ td คลุม จะได้แค่ตัดตรงขอบดื้อๆ ไม่มี "…" */
+.ss-cell-main { font-size: inherit; overflow: hidden; text-overflow: ellipsis; }
 .ss-cell-sub {
   margin-top: 1px;
   font-size: 10px;
   font-weight: 300;
   color: #8194a8;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 /* 3 ชิปสถานะในช่องเดียว เรียงลงมาตามลำดับงาน (ถึงสาขา → แจ้งลูกค้า → ส่งมอบ) */
 .ss-chip-stack { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; }
