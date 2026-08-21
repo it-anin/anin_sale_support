@@ -102,20 +102,25 @@ helper กลางตัวเดียวใช้ทั้ง 2 ฟอร์�
 - ⚠️ **ห้ามเอา `notifyBranchUpdate` มาใช้ 2 ทิศใหม่** — fallback fan-out ของมันจะสแปมทั้ง 3 สาขาแทนที่จะแจ้งจัดซื้อ/คลัง
 - **`notifyWarehouseUpdate` ไม่กรอง `recipient_department`/ตาราง** (ต่างจาก `notifyPurchasingUpdate` ที่กรองเฉพาะ `ss_orders`) — ยิงทั้ง Order ทุกใบและ BackOrder ทุกใบ เพราะคลังทำงานกับทั้งคู่อยู่แล้ว (กรอกฟอร์ม Inbound/Outbound/เลขโอนใน Order ทุกใบ ไม่ใช่แค่ใบที่ส่งถึงคลัง)
 
-**Trigger ที่แจ้งจัดซื้อ (6 จุด · 3 เมนู) และคลังสินค้า (4 จุด · 2 เมนู):**
+**Trigger ที่แจ้งจัดซื้อ (10 จุด · 5 เมนู) และคลังสินค้า (6 จุด · 3 เมนู):**
 
 | เมนู | จุด | แจ้งจัดซื้อ | แจ้งคลัง |
 |---|---|---|---|
 | Order | `saveOrder` — สาขาสร้าง Order ใหม่ | ✓ `สาขาเพิ่ม Order ใหม่` | ✓ `สาขาเพิ่ม Order ใหม่` |
 | Order | `applyStepChange` (`selectedOrderTable === 'ss_orders'`) — สาขากดตรา 3 ขั้น | ✓ `สาขาอัปเดตสถานะ Order` | ✓ `สาขาอัปเดตสถานะ Order` |
-| BackOrder | `saveBackOrder` — สาขาสร้าง BackOrder ใหม่ | ✓ `สาขาเพิ่ม BackOrder ใหม่` | ✓ `สาขาเพิ่ม BackOrder ใหม่` |
+| BackOrder | `saveBackOrder` — สาขาสร้าง BackOrder ใหม่ | ✓ `สาขาเพิ่ม BackOrder ใหม่` (เฉพาะ `notify_target = PURCHASING`) | ✓ `สาขาเพิ่ม BackOrder ใหม่` (เสมอ) |
 | BackOrder | `applyStepChange` (`selectedOrderTable === 'ss_backorders'`) — สาขากดตรา 3 ขั้น | ✓ `สาขาอัปเดตสถานะ BackOrder` | ✓ `สาขาอัปเดตสถานะ BackOrder` |
 | Request Item | `saveRequest` — สาขาขอสินค้าใหม่ | ✓ `สาขาขอสินค้าใหม่ (Request Item)` | ✕ (นอกขอบเขต — SKU/MOQ เป็นงานจัดซื้อ) |
 | Request Item | `applyEditPatch` — สาขาแก้ไขคำขอ | ✓ `สาขาแก้ไข Request Item` | ✕ (นอกขอบเขต) |
+| **New Product** | `saveProduct` — สาขาเสนอสินค้าใหม่ | ✓ `สาขาเสนอสินค้าใหม่ (New Product)` | ✕ (เป็นแค่ข้อเสนอ ยังไม่มีของจริงให้คลังจัดการ) |
+| **New Product** | `applyEditPatch` — สาขาแก้ไขข้อเสนอ | ✓ `สาขาแก้ไข New Product` | ✕ |
+| **Ticket** | `saveTicket` — สาขาแจ้งปัญหา | ✓ `สาขาแจ้ง Ticket ใหม่` (เฉพาะ `department = 'Purchase'`) | ✓ `สาขาแจ้ง Ticket ใหม่` (เฉพาะ `department = 'Warehouse'`) |
+| **Ticket** | `applyEditPatch` — สาขาแก้ไข Ticket | ✓ `สาขาแก้ไข Ticket` (เฉพาะ `Purchase`) | ✓ `สาขาแก้ไข Ticket` (เฉพาะ `Warehouse`) |
 
 - **จัดซื้อเข้าร่วมทิศ BackOrder แล้ว 2569-08-19** — เดิม 2 แถว BackOrder เป็น `✕ (นอกขอบเขต)` เพราะจัดซื้อดูแลเฉพาะ `ABC = P` · ผู้ใช้ขอเปิดให้จัดซื้อ "รับทราบ" ตอนเพิ่มโปรไฟล์ Sale Admin เข้าเมนูนี้ · **มีผลกับทุกสาขา ไม่ใช่แค่ Sale Admin**
 - ⚠️ `applyStepChange` **ใช้ร่วมกับ BackOrder** (`selectedOrderTable` เป็นได้ทั้ง 2 ตาราง) — ทั้งฝั่งจัดซื้อและฝั่งคลัง**ไม่กรองตารางแล้ว** แต่ **meta ต้องใช้ `orderDetailMenuId` / `selectedOrderTable` ห้าม hardcode `'order'`/`'ss_orders'`** ไม่งั้นแจ้งเตือนของ BackOrder จะพาไปเปิดเมนู Order ด้วย id ของ BackOrder แล้วหาแถวไม่เจอ (ของเดิม hardcode ไว้ได้เพราะ guard การันตีว่าเป็น Order เสมอ — พอถอด guard ต้องแก้คู่กัน)
-- ⚠️ `applyEditPatch` **ใช้ร่วมกับ products/newproduct/ticket และ popup Order** จึงต้องครอบ `if (meta.menuId === 'request')` ก่อนแจ้งจัดซื้อ — ไม่งั้นทุกเมนูจะแจ้งจัดซื้อหมด (ทิศนี้ไม่มีสมการเทียบเท่าฝั่งคลัง — Request Item อยู่นอกขอบเขตของคลังทั้งหมด)
+- 🚨 `applyEditPatch` **ใช้ร่วมกับ `products` (Product Master) และ popup Order ด้วย** จึงต้องเป็น **whitelist ทีละเมนู** (`request` / `newproduct` / `ticket`) เสมอ — **ห้ามกลับด้านเป็น "ทุกเมนูยกเว้น order"** หรือใช้ `else` ลอย ไม่งั้นจัดซื้อจะโดนแจ้งเตือนทุกครั้งที่มีคนแก้ Product Master (Order แจ้งผ่าน `applyStepChange` อยู่แล้ว)
+  - ✅ **ไม่ต้องเช็คเองว่าใครเป็นคนกดแก้** — guard ของ `notifyPurchasingUpdate`/`notifyWarehouseUpdate` คือ `!isBranchUser || !userBranch` อยู่แล้ว จัดซื้อ/คลังแก้แถวเองจะเป็น no-op อัตโนมัติ ไม่มีแจ้งเตือนเด้งกลับหาตัวเอง · **สำคัญเพราะปุ่ม ✏️ แก้ไข ของ newproduct/ticket ไม่มี role gate เลย ทุกโปรไฟล์กดได้**
   - เงื่อนไข `meta.detail !== ''` ที่ครอบอยู่แล้วกันกรณีกดบันทึกทั้งที่ไม่ได้แก้อะไร (`describeChangedFields` คืน `''`) — ทั้ง 3 ทิศจึงเงียบเหมือนกัน
 - ⚠️ **ห้าม gate `saveOrder` ด้วย `recipientDepartment === 'PURCHASING'`** — ค่า `'BOTH'` (SKU ไม่มีใน Product Master) จัดซื้อก็ต้องเห็น (คลังไม่ต้องกังวลข้อนี้เพราะไม่กรอง `recipient_department` อยู่แล้ว)
 - จัดซื้อเห็น Request Item **ทุกสาขา** (query ไม่กรอง branch สำหรับเมนูนี้) คลิกแจ้งเตือนจึงเปิดใบนั้นได้เสมอ ต่างจาก Order ที่จัดซื้อกรอง `recipient_department`
@@ -132,8 +137,22 @@ helper กลางตัวเดียวใช้ทั้ง 2 ฟอร์�
 - **ไม่ backfill เหตุการณ์ย้อนหลังให้คลัง** ต่างจาก migration ของจัดซื้อที่ backfill จาก Order ค้างอยู่ ณ ตอน cutover — เพราะทิศนี้ไม่ได้แทนที่ "Order ใหม่" เดิม (ยังใช้คู่ขนานกันต่อไป) จึงไม่มีอะไรต้อง cutover ให้ต่อเนื่อง เริ่มนับจากศูนย์พอ
 
 - ⚠️ **บั๊ก 2569-08-17 (แก้แล้ว):** เดิมทั้ง 3 จุดของฝั่งแผนกใช้ `.eq('recipient_department', departmentCode)` เฉยๆ — Order ที่ `recipient_department = 'BOTH'` จึง **ไม่เคยขึ้นแจ้งเตือนให้ใครเลย** ทั้งที่เห็นในตารางปกติ (ตารางใช้ `.in()` อยู่แล้ว) เจอจากเคสจริง SKU `101369` ของสาขา SSS · ตอนนี้เหลือใช้กับคลังอย่างเดียวและใช้ `.in()` แล้ว (ปุ่ม "Order ใหม่" เดิม — ไม่เกี่ยวกับปุ่ม "อัพเดท" ใหม่ของคลังที่ไม่กรอง `recipient_department` เลย)
-- **Request Item แจ้งจัดซื้อแล้ว (2569-08-18)** — ผ่าน `notifyPurchasingUpdate` เหมือน Order ไม่ต้องเพิ่มคอลัมน์ใน `ss_request_items` เลย เพราะตารางเหตุการณ์เก็บ `menu_id`/`table_name`/`record_id` เป็น text อยู่แล้ว · เมนูอื่น (New Product / Ticket) ยังไม่มี ถ้าจะเพิ่มใช้ pattern เดียวกันได้ทันที
+- **Request Item แจ้งจัดซื้อแล้ว (2569-08-18)** — ผ่าน `notifyPurchasingUpdate` เหมือน Order ไม่ต้องเพิ่มคอลัมน์ใน `ss_request_items` เลย เพราะตารางเหตุการณ์เก็บ `menu_id`/`table_name`/`record_id` เป็น text อยู่แล้ว
 - **BackOrder แจ้งคลังแล้ว (2569-08-18)** — ผ่าน `notifyWarehouseUpdate` เหมือนกัน ไม่ต้องเพิ่มคอลัมน์เช่นกัน
+- **New Product + Ticket แจ้งแล้ว (2569-08-20)** — ครบทุกเมนูที่สาขาลงข้อมูลได้ · ไม่ต้อง migration เช่นกัน (ดูหัวข้อถัดไป)
+
+### New Product / Ticket → แจ้งจัดซื้อ-คลัง (2569-08-20)
+
+เดิม 2 เมนูนี้เรียกแค่ `notifyBranchUpdate` ซึ่ง guard คือ `!isPurchasing && !isWarehouse` → **ตอนสาขากดบันทึกมัน `return` ทันที ไม่มี event ถูกเขียนลง DB เลยด้วยซ้ำ** จัดซื้อจึงรู้ว่ามีของใหม่ก็ต่อเมื่อเปิดเมนูไปดูเอง ทั้งที่ `ss_new_products.status` เริ่มที่ `'รอพิจารณา'` โดยจัดซื้อเป็นคนอัปเดต
+
+- **New Product → จัดซื้ออย่างเดียว** ไม่แจ้งคลัง — เป็นแค่ข้อเสนอ ยังไม่มีของจริงให้คลังจัดการ (ต่างจาก Order/BackOrder) · `detail` ประกอบจาก `ask_qty`/`active_ingredient`/`pack_size`/`supplier`/`quoted_price` **ไม่ซ้ำชื่อสินค้า** เพราะ `item_name` มีบล็อกแสดงผลของตัวเองใน drawer แล้ว · **ไม่มี `itemSku`** เพราะสินค้ายังไม่มี SKU (นั่นคือเหตุผลที่มันอยู่เมนูนี้)
+- **Ticket → วิ่งตามคอลัมน์ `department` ที่มีอยู่แล้ว** (`Purchase` → จัดซื้อ · `Warehouse` → คลัง) ไม่ต้องเพิ่มช่องแบบ `notify_target` ของ BackOrder เพราะตารางนี้มีตัวบอกผู้รับอยู่ในตัว
+  - 🚨 **`ss_tickets.department` ใช้ค่า `'Purchase'`/`'Warehouse'` คนละชุดกับ `'PURCHASING'`/`'WAREHOUSE'`** ของ `notify_target`/`recipient_department` — **ห้ามเทียบข้ามชุด และห้ามส่งเข้า `orderRecipientLabel()`**
+  - ⚠️ เทียบตรงๆ ทั้ง 2 ค่าด้วย `if / else if` **ห้ามใช้ `else` ลอย** — ค่าแปลกปลอมต้องเงียบ ไม่ใช่หลุดไปหาแผนกผิด (สไตล์เดียวกับ validation ของ `notify_target`)
+  - ตอนแก้ไขอ่าน `patch.department ?? sourceRow?.department` — **`patch` มาก่อน** เพราะช่องนี้แก้ได้ในฟอร์ม ย้าย Purchase→Warehouse ต้องแจ้งแผนกใหม่ ไม่ใช่แผนกเดิมที่กำลังพ้นความรับผิดชอบ
+- ทั้ง 2 เมนูเปลี่ยน insert เป็น **`.select('id')`** เพื่อผูก `record_id` (คลิกแจ้งเตือนแล้วเปิดใบนั้นได้) — ⚠️ **ห้ามใช้ `.single()`** ด้วยเหตุผลเดียวกับที่เขียนไว้ที่ `insertWithContactChannelFallback`
+- **ไม่ต้อง migration** — CHECK ของ `branch`/`actor_code` ครบ 6 ค่าอยู่แล้ว · ทั้ง 2 เมนู**ไม่มี `roles`** (ผู้รับเห็นเมนู คลิกแล้วไม่ตันที่ whitelist ของ `openNotificationEvent`) และ query **ไม่กรอง branch** (ผู้รับเห็นทุกสาขา หาแถวเจอแน่)
+- ⚠️ **ข้อจำกัดที่ยังเหลือ: Ticket ที่ `department = 'Warehouse'` คลังได้แจ้งเตือน แต่กดเปลี่ยน Status ไม่ได้** — dropdown status ของ request/newproduct/ticket gate ด้วย `isPurchasing` เท่านั้น คลังตอบได้ทางเดียวคือปุ่ม ✏️ แก้ไข (ช่อง `answer`) ซึ่งเปิดให้ทุกโปรไฟล์อยู่แล้ว · **เป็นข้อจำกัดเดิมที่มีมาก่อนฟีเจอร์นี้** (Ticket ของคลังก็ถูกจัดซื้ออัปเดต status ให้มาตลอด) การเพิ่มแจ้งเตือนไม่ทำให้แย่ลง — ถ้าอยากให้คลังปิด Ticket เองได้ ต้องขยาย gate นั้นเป็นงานแยก
 
 ## ตาราง Order — ดีไซน์ Two-line Row (ไม่ต้องเลื่อนแนวนอน)
 

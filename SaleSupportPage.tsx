@@ -2028,7 +2028,9 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
     setSaveError('');
     try {
       const imageUrl = await uploadImage(productImage, 'new-products');
-      const { error } = await supabase.from('ss_new_products').insert({
+      // `.select('id')` เพื่อผูก record_id ของแจ้งเตือน (คลิกแล้วเปิดใบนั้นได้)
+      // ⚠️ ห้ามใช้ `.single()` ด้วยเหตุผลเดียวกับ insertWithContactChannelFallback ด้านบน
+      const { data: inserted, error } = await supabase.from('ss_new_products').insert({
         branch: productForm.branch,
         ask_qty: Number(productForm.ask_qty),
         name_brand: productForm.name_brand.trim(),
@@ -2040,11 +2042,27 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
         note: productForm.note.trim() || null,
         status: 'รอพิจารณา', // Status จริงอัปเดตโดยแผนกจัดซื้อ
         // created_at (TimeStamp) บันทึกอัตโนมัติจากฝั่งฐานข้อมูล
-      });
+      }).select('id');
       if (error) throw new Error(`บันทึกไม่สำเร็จ: ${error.message}`);
+      const newProductId = inserted?.[0]?.id ? String(inserted[0].id) : null;
       void notifyBranchUpdate(productForm.branch, {
         menuId: 'newproduct', tableName: 'ss_new_products', title: 'เพิ่ม New Product ใหม่',
         detail: productForm.name_brand,
+        itemName: productForm.name_brand,
+      });
+      // สาขาเสนอสินค้าใหม่ → แจ้งจัดซื้อ (จัดซื้อเป็นคนพิจารณา/อัปเดต status ให้ต่อ)
+      // ⚠️ ไม่แจ้งคลัง — เมนูนี้เป็นแค่ข้อเสนอ ยังไม่มีของจริงให้คลังจัดการ (ต่างจาก Order/BackOrder)
+      // ไม่มี itemSku เพราะสินค้ายังไม่มี SKU — นั่นคือเหตุผลที่มันอยู่เมนูนี้แทนที่จะเป็น Order
+      void notifyPurchasingUpdate({
+        menuId: 'newproduct', tableName: 'ss_new_products', recordId: newProductId,
+        title: 'สาขาเสนอสินค้าใหม่ (New Product)',
+        detail: [
+          `Ask ${productForm.ask_qty}`,
+          productForm.active_ingredient.trim(),
+          productForm.pack_size.trim(),
+          productForm.supplier.trim() ? `supplier ${productForm.supplier.trim()}` : '',
+          productForm.quoted_price.trim() ? `ราคาที่แจ้ง ${productForm.quoted_price.trim()}` : '',
+        ].filter(Boolean).join(' · '),
         itemName: productForm.name_brand,
       });
       setShowAddProduct(false);
@@ -2570,11 +2588,24 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
           ?? sourceRow?.product_name ?? sourceRow?.name ?? sourceRow?.name_brand,
       };
       void notifyBranchUpdate(notificationBranch, resolved);
-      // สาขาแก้ Request Item (เช่น เปลี่ยนจำนวน/วันที่ต้องการ) → แจ้งจัดซื้อด้วย
-      // ⚠️ กันเฉพาะเมนู request เท่านั้น — ฟังก์ชันนี้ใช้ร่วมกับ products/newproduct/ticket
-      //    และ popup Order ซึ่งอยู่นอกขอบเขต (Order แจ้งผ่าน applyStepChange อยู่แล้ว)
+      // สาขาแก้แถวเดิม (เช่น เปลี่ยนจำนวน/วันที่ต้องการ) → แจ้งแผนกที่รับผิดชอบด้วย
+      // 🚨 **ต้องเป็น whitelist ทีละเมนูเสมอ ห้ามกลับด้านเป็น "ทุกเมนูยกเว้น order"** — ฟังก์ชันนี้
+      //    ใช้ร่วมกับ **products (Product Master)** และ popup Order ด้วย ถ้าใช้ `else` ลอย
+      //    จัดซื้อจะโดนแจ้งเตือนทุกครั้งที่มีคนแก้ Product Master (Order แจ้งผ่าน applyStepChange อยู่แล้ว)
+      // ✅ ไม่ต้องเช็คเองว่าใครกดแก้ — guard ของ notifyPurchasing/WarehouseUpdate คือ isBranchUser อยู่แล้ว
+      //    จัดซื้อ/คลังแก้แถวเองจะเป็น no-op อัตโนมัติ (ปุ่ม ✏️ แก้ไข ของ 2 เมนูนี้ไม่มี role gate ใครก็กดได้)
       // เงื่อนไข meta.detail !== '' ด้านบนกันกรณีกดบันทึกทั้งที่ไม่ได้แก้อะไรให้แล้ว
-      if (meta.menuId === 'request') void notifyPurchasingUpdate({ ...resolved, title: 'สาขาแก้ไข Request Item' });
+      if (meta.menuId === 'request') {
+        void notifyPurchasingUpdate({ ...resolved, title: 'สาขาแก้ไข Request Item' });
+      } else if (meta.menuId === 'newproduct') {
+        void notifyPurchasingUpdate({ ...resolved, title: 'สาขาแก้ไข New Product' });
+      } else if (meta.menuId === 'ticket') {
+        // ผู้รับตามช่อง Department ของแถว — อ่านจาก patch ก่อน sourceRow เพราะช่องนี้แก้ได้ในฟอร์ม
+        // (ย้าย Purchase → Warehouse ต้องแจ้งแผนกใหม่ ไม่ใช่แผนกเดิมที่กำลังจะพ้นความรับผิดชอบ)
+        const ticketDept = String(patch.department ?? sourceRow?.department ?? '');
+        if (ticketDept === 'Purchase') void notifyPurchasingUpdate({ ...resolved, title: 'สาขาแก้ไข Ticket' });
+        else if (ticketDept === 'Warehouse') void notifyWarehouseUpdate({ ...resolved, title: 'สาขาแก้ไข Ticket' });
+      }
     }
     // แก้ ABC ผ่านฟอร์มแก้ไขก็ทำให้รายการ chip ค้างได้เหมือนกัน
     if (activeMenu === 'products') { supplierMapRef.current = null; setAbcOptions(null); setRefreshKey(k => k + 1); }
@@ -2696,21 +2727,35 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
     if (!ticketForm.issue.trim()) { setSaveError('กรุณาใส่รายละเอียดปัญหา (Issue)'); return; }
     setSaving(true);
     setSaveError('');
-    const { error } = await supabase.from('ss_tickets').insert({
+    // `.select('id')` เพื่อผูก record_id ของแจ้งเตือน · ห้ามใช้ `.single()` (ดูเหตุผลที่ helper ด้านบน)
+    const { data: inserted, error } = await supabase.from('ss_tickets').insert({
       branch: ticketForm.branch,
       department: ticketForm.department,
       issue: ticketForm.issue.trim(),
       status: 'รอดำเนินการ', // Status/Answer อัปเดตโดยแผนกปลายทาง
       // created_at (TimeStamp) บันทึกอัตโนมัติจากฝั่งฐานข้อมูล
-    });
+    }).select('id');
     setSaving(false);
     if (error) {
       setSaveError(`บันทึกไม่สำเร็จ: ${error.message}`);
     } else {
+      const newTicketId = inserted?.[0]?.id ? String(inserted[0].id) : null;
       void notifyBranchUpdate(ticketForm.branch, {
         menuId: 'ticket', tableName: 'ss_tickets', title: 'เพิ่ม Ticket ใหม่',
         detail: ticketForm.issue,
       });
+      // สาขาแจ้ง Ticket → แจ้งแผนกปลายทางตามช่อง Department ที่สาขาเลือกไว้แล้ว
+      // (ไม่ต้องเพิ่มช่องใหม่แบบ notify_target ของ BackOrder — ตารางนี้มีตัวบอกผู้รับอยู่ในตัว)
+      // ⚠️ ค่าในคอลัมน์นี้คือ 'Purchase'/'Warehouse' **คนละชุดกับ** 'PURCHASING'/'WAREHOUSE'
+      //    ของ notify_target/recipient_department — ห้ามเทียบข้ามชุดหรือส่งเข้า orderRecipientLabel()
+      // ⚠️ เทียบตรงๆ ทั้ง 2 ค่า ห้ามใช้ `else` ลอย — ค่าแปลกปลอมต้องเงียบ ไม่ใช่หลุดไปหาแผนกผิด
+      const ticketMeta = {
+        menuId: 'ticket' as const, tableName: 'ss_tickets', recordId: newTicketId,
+        title: 'สาขาแจ้ง Ticket ใหม่',
+        detail: ticketForm.issue.trim(),
+      };
+      if (ticketForm.department === 'Purchase') void notifyPurchasingUpdate(ticketMeta);
+      else if (ticketForm.department === 'Warehouse') void notifyWarehouseUpdate(ticketMeta);
       setShowAddTicket(false);
       setActiveMenu('ticket');
       setRefreshKey(k => k + 1);
