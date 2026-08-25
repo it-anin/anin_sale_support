@@ -3158,10 +3158,13 @@ body.pulse-b .cart-inline-btn.in-cart {
 .outbound-table .ob-col-picklist-group { text-align: center; letter-spacing: .03em; }
 .outbound-table td { padding: 8px 12px; }
 
-.outbound-table .ob-col-entered  { width: 9%;  white-space: nowrap; text-align: center; }
+/* คอลัมน์ checkbox เลือกหลายแถว (คลังสินค้าเท่านั้น) — ใช้ 5% เท่ากับ ob-col-del ที่พิสูจน์แล้วว่าพอสำหรับปุ่มไอคอน
+   checkbox เดี่ยวใช้พื้นที่น้อยกว่านั้นมาก จึงปลอดภัย — ห้ามลดต่ำกว่านี้โดยไม่เช็คจริงในเบราว์เซอร์ */
+.outbound-table .ob-col-check    { width: 5%;  white-space: nowrap; text-align: center; }
+.outbound-table .ob-col-entered  { width: 8%;  white-space: nowrap; text-align: center; }
 .outbound-table .ob-col-sku      { width: 10%; white-space: nowrap; }
 .outbound-table .ob-col-barcode  { width: 10%; white-space: nowrap; }
-.outbound-table .ob-col-name     { width: 18%; white-space: normal; word-break: break-word; line-height: 1.4; }
+.outbound-table .ob-col-name     { width: 14%; white-space: normal; word-break: break-word; line-height: 1.4; }
 /* ⚠️ table-layout: fixed — คอลัมน์นี้ต้องกว้างพอใส่ dropdown เลือกหน่วย (แผง/กล่อง) ไม่ใช่แค่ข้อความ */
 .outbound-table .ob-col-unit     { width: 10%; white-space: nowrap; }
 .outbound-table .ob-col-stock    { width: 12%; white-space: nowrap; text-align: center; }
@@ -3375,6 +3378,7 @@ body.pulse-b .cart-inline-btn.in-cart {
 }
 
 .outbound-row--approved td { background: #eaf7ea; }
+.outbound-row--selected td { background: #eaf3fc; }
 
 .outbound-approved-mark {
   display: flex;

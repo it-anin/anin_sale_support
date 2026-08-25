@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from './supabase';
 import { AnimatedLogoText } from './AnimatedLogo';
 import { PageNavRow } from './pageAccess';
@@ -149,6 +149,9 @@ export function OutboundPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGo
   const [pwAction, setPwAction] = useState<'approve' | 'delete'>('approve');
   const [pwInput, setPwInput] = useState('');
   const [pwError, setPwError] = useState('');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [pwBulkIds, setPwBulkIds] = useState<string[] | null>(null);
+  const selectAllRef = useRef<HTMLInputElement | null>(null);
 
   // ดึงจำนวนคงเหลือคลังสินค้าแบบ batch หลังโหลดแถว (เลียนแบบ loadWarehouseStock ในหน้า Sale Support)
   // ⚠️ ต้องทำแบบนี้เพราะตอนนี้ข้อมูลแชร์ข้ามโปรไฟล์แล้ว — คนที่ไม่ได้เป็นคนพิมพ์ SKU เองก็ต้องเห็นเลขคงเหลือด้วย
@@ -265,6 +268,21 @@ export function OutboundPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGo
     setRows(prev => [...prev, makeRow('0001', activeBranch)]);
   }, [activeBranch, rows, isWarehouse, isPurchasing, branchNotSupported]);
 
+  // เคลียร์รายการที่เลือกไว้ทุกครั้งที่สลับแท็บสาขา — กันเลือกค้างข้ามสาขาแล้วกดลบผิดสาขาโดยไม่รู้ตัว
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [activeBranch]);
+
+  // กันแถวที่ถูกลบไปแล้ว (เช่น อีกคน/อีกแท็บลบพร้อมกัน, realtime refetch) ค้างอยู่ใน selection แบบไม่มีทางเอาออก
+  useEffect(() => {
+    setSelectedIds(prev => {
+      if (prev.size === 0) return prev;
+      const liveIds = new Set(rows.map(r => r.id));
+      const next = new Set([...prev].filter(id => liveIds.has(id)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [rows]);
+
   // อัปเดตแค่ state ในเครื่อง (เร็ว ใช้ตอนพิมพ์สด ๆ) — ไม่ยิง Supabase ทุกตัวอักษร
   const updateRow = (id: string, patch: Partial<OutboundRow>) => {
     setRows(prev => prev.map(r => {
@@ -366,6 +384,13 @@ export function OutboundPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGo
 
   const visibleRows = rows.filter(row => row.branch === activeBranch);
 
+  // tri-state header checkbox — indeterminate ต้อง set ผ่าน ref เพราะ DOM ไม่มี prop ให้ตรงๆ
+  useEffect(() => {
+    if (!selectAllRef.current) return;
+    const selectedInView = visibleRows.filter(r => selectedIds.has(r.id)).length;
+    selectAllRef.current.indeterminate = selectedInView > 0 && selectedInView < visibleRows.length;
+  }, [selectedIds, visibleRows]);
+
   const addRow = () => setRows(prev => {
     const branchRows = prev.filter(r => r.branch === activeBranch);
     const nextNo = branchRows.reduce((max, row) => Math.max(max, Number(row.documentNo) || 0), 0) + 1;
@@ -393,6 +418,21 @@ export function OutboundPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGo
       window.alert('ไม่พบรายการนี้ในฐานข้อมูลแล้ว (อาจมีคนอื่นลบไปก่อน) — จะเอาออกจากหน้าจอให้');
     }
     dropRowLocally(id);
+  };
+
+  // เวอร์ชันหลายแถวของ removeRow — ใช้กับปุ่ม "ลบที่เลือก" ของคลังสินค้าเท่านั้น
+  // กฎเดียวกับ removeRow ทุกข้อ: รอผล Supabase ก่อนค่อยเอาออกจากหน้าจอ ห้าม optimistic
+  // คลังสินค้าเห็นแต่แถว requested=true จริงจาก DB เท่านั้น (ดู fetchRows) จึงไม่มีแถวร่าง local- ปนมาได้
+  const removeRows = async (ids: string[]) => {
+    if (ids.length === 0) return;
+    const { data, error } = await supabase.from('outbound_requests').delete().in('id', ids).select('id');
+    if (error) { window.alert(`ลบไม่สำเร็จ: ${error.message}\nรายการยังอยู่ในระบบ`); return; }
+    if (!data || data.length < ids.length) {
+      window.alert('บางรายการไม่พบในฐานข้อมูลแล้ว (อาจมีคนอื่นลบไปก่อน) — จะเอาออกจากหน้าจอให้');
+    }
+    const idSet = new Set(ids);
+    setRows(prev => prev.filter(r => !idSet.has(r.id)));
+    setSelectedIds(new Set());
   };
 
   // คลังสินค้ากดปุ่ม [⊘ ของหมด] = แจ้งว่าของหมด (ไม่ใช่ลบแถว) — ยกเลิกได้ที่ลิงก์ใต้ตราประทับ
@@ -473,10 +513,22 @@ export function OutboundPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGo
     setPwRowId(row.id);
   };
 
+  const handleBulkDelete = () => {
+    if (selectedIds.size === 0) return;
+    setPwAction('delete');
+    setPwInput('');
+    setPwError('');
+    setPwRowId(null);
+    setPwBulkIds([...selectedIds]);
+  };
+
   const confirmPassword = () => {
     if (pwInput === WAREHOUSE_PASSWORD) {
       setUnlocked(true);
-      if (pwRowId) {
+      if (pwBulkIds) {
+        void removeRows(pwBulkIds);
+        setPwBulkIds(null);
+      } else if (pwRowId) {
         if (pwAction === 'delete') void removeRow(pwRowId);
         else approveRow(pwRowId);
       }
@@ -567,6 +619,23 @@ export function OutboundPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGo
                   <span className="outbound-3d-btn-txt">เพิ่มแถว</span>
                 </button>
               )}
+              {isWarehouse && (
+                <button
+                  className="outbound-3d-btn outbound-3d-btn--clear"
+                  disabled={selectedIds.size === 0}
+                  onClick={handleBulkDelete}
+                  title="ลบรายการที่เลือก"
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M3 6h18" />
+                    <path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" />
+                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                    <line x1="10" y1="11" x2="10" y2="17" />
+                    <line x1="14" y1="11" x2="14" y2="17" />
+                  </svg>
+                  <span className="outbound-3d-btn-txt">{selectedIds.size > 0 ? `ลบที่เลือก (${selectedIds.size})` : 'ลบที่เลือก'}</span>
+                </button>
+              )}
               {/* ⚠️ "ล้างหมด" ให้เฉพาะคลังสินค้า — ถ้าสาขากดได้ จะเลี่ยงข้อห้ามลบรายแถวไปลบรวดเดียวทั้งสาขาได้ */}
               {isWarehouse && (
                 <button className="outbound-3d-btn outbound-3d-btn--clear" onClick={() => void clearAll()} title="ล้างทั้งหมด">
@@ -585,6 +654,23 @@ export function OutboundPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGo
           <table className="product-table stock-table outbound-table">
             <thead>
               <tr>
+                {isWarehouse && (
+                  <th className="ob-col-check">
+                    <input
+                      ref={selectAllRef}
+                      type="checkbox"
+                      aria-label="เลือกทั้งหมดในสาขานี้"
+                      checked={visibleRows.length > 0 && visibleRows.every(r => selectedIds.has(r.id))}
+                      onChange={e => {
+                        setSelectedIds(prev => {
+                          const next = new Set(prev);
+                          visibleRows.forEach(r => (e.target.checked ? next.add(r.id) : next.delete(r.id)));
+                          return next;
+                        });
+                      }}
+                    />
+                  </th>
+                )}
                 <th className="ob-col-entered">วันที่สาขาลง</th>
                 <th className="ob-col-sku">SKU</th>
                 <th className="ob-col-barcode">Barcode</th>
@@ -602,7 +688,23 @@ export function OutboundPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGo
             </thead>
             <tbody>
               {visibleRows.map(row => (
-                <tr key={row.id} className={row.approved ? 'outbound-row--approved' : ''}>
+                <tr key={row.id} className={[row.approved && 'outbound-row--approved', selectedIds.has(row.id) && 'outbound-row--selected'].filter(Boolean).join(' ')}>
+                  {isWarehouse && (
+                    <td className="ob-col-check">
+                      <input
+                        type="checkbox"
+                        aria-label={`เลือกแถว ${row.sku || row.name || row.id}`}
+                        checked={selectedIds.has(row.id)}
+                        onChange={e => {
+                          setSelectedIds(prev => {
+                            const next = new Set(prev);
+                            if (e.target.checked) next.add(row.id); else next.delete(row.id);
+                            return next;
+                          });
+                        }}
+                      />
+                    </td>
+                  )}
                   <td className="ob-col-entered">
                     {row.enteredAt ? (
                       <span
@@ -809,12 +911,12 @@ export function OutboundPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGo
         </div>
       </div>
 
-      {pwRowId && (
-        <div className="dl-modal-overlay" onClick={() => setPwRowId(null)}>
+      {(pwRowId || pwBulkIds) && (
+        <div className="dl-modal-overlay" onClick={() => { setPwRowId(null); setPwBulkIds(null); }}>
           <div className="dl-modal dl-modal-sm" onClick={e => e.stopPropagation()}>
             <div className="dl-modal-header">
-              <span>🔐 ใส่รหัสผ่านเพื่อ{pwAction === 'delete' ? 'ลบรายการ' : 'อนุมัติ'}</span>
-              <button className="dl-modal-close" onClick={() => setPwRowId(null)}>✕</button>
+              <span>🔐 ใส่รหัสผ่านเพื่อ{pwBulkIds ? `ลบ ${pwBulkIds.length} รายการ` : pwAction === 'delete' ? 'ลบรายการ' : 'อนุมัติ'}</span>
+              <button className="dl-modal-close" onClick={() => { setPwRowId(null); setPwBulkIds(null); }}>✕</button>
             </div>
             <div className="dl-modal-body">
               <input
