@@ -1372,6 +1372,10 @@ body.pulse-b .cart-inline-btn.in-cart {
   text-align: center;
   font-weight: 700;
   font-family: 'Outfit', sans-serif;
+  /* .cart-dropdown อยู่ใน DOM ใต้ .selected-table-header (color: #ffffff) แม้จะ position: fixed
+     ก็ไม่ตัด inheritance — สปันนี้เป็นตัวเดียวใน dropdown ที่ไม่เคยประกาศสีเอง (ต่างจาก
+     .cart-dropdown-name/-sku/-badge) เลยกลายเป็นตัวขาวล่องหนบนพื้นขาว */
+  color: #2d2a26;
 }
 
 .cart-row-del {
