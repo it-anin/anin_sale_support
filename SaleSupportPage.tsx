@@ -2473,6 +2473,14 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
 
   const savePurchasingOrderFields = async () => {
     if (!selectedOrder) return;
+    // บังคับกรอกครบทุกช่อง — เรียงตามลำดับในฟอร์ม ผู้ใช้จะได้เจอ error ของช่องบนก่อนช่องล่างเสมอ
+    // (แบบเดียวกับ saveOrder/saveBackOrder) เดิมกดบันทึกได้แม้เว้นว่างไว้บางช่อง
+    for (const f of PURCHASING_ORDER_FIELDS) {
+      if (!(purchasingOrderForm[f.key] ?? '').trim()) {
+        setPurchasingOrderMsg(`✕ กรุณากรอก ${f.label} ให้ครบ`);
+        return;
+      }
+    }
     const id = String(selectedOrder.id);
     const patch = Object.fromEntries(
       PURCHASING_ORDER_FIELDS.map(f => [f.key, (purchasingOrderForm[f.key] ?? '').trim() || null]),
@@ -3414,7 +3422,7 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
                     <div className="ss-purchasing-grid">
                       {PURCHASING_ORDER_FIELDS.map(field => (
                         <label key={field.key} className="ss-purchasing-field">
-                          <span className="ss-detail-label">{field.label}</span>
+                          <span className="ss-detail-label">{field.label} *</span>
                           {field.type === 'select' ? (
                             <select
                               className="ss-input"
