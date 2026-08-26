@@ -55,6 +55,30 @@ Supabase permissions required:
 - ลบ `label.medicine_translations` ก่อน แล้วจึงลบ `label.medicines`
 - Supabase ต้องมี: `GRANT DELETE ON label.medicine_translations TO anon` และ `GRANT DELETE ON label.medicines TO anon` + RLS policy "public delete" บน `label.medicines`
 
+## Drug Label — นำเข้าจากไฟล์ XLSX/CSV (2569-08-26)
+
+ปุ่ม **📤 อัปโหลดฉลากยา (XLSX/CSV)** ใน `.dl-upload-row` ข้างปุ่ม ➕ — **โผล่เฉพาะเมื่อปลดล็อกแอดมิน** (`isAdminUnlocked`) แล้ว
+โค้ด: `parseLabelSheet()` (module-level, pure) + `handleLabelImport()` ใน `DrugLabelPage.tsx`
+
+**Mapping ตามตำแหน่งคอลัมน์ ไม่ใช่ชื่อหัวคอลัมน์** (`IMPORT_COL`):
+`A`=sku · `D`=indication · `E`=usage · `F`=warning · `G`=storage · `H`=generic_name · `I`+`J`=trade_name (คั่นด้วย `TRADE_NAME_SEP = ' / '`, ฝั่งไหนว่างใช้อีกฝั่งเดี่ยวๆ) · `B`/`C` ไม่ใช้ · `barcode` = `null` เสมอ
+
+- ⚠️ positional mapping ขัดกับกฎ "match by header name only" ของ root CLAUDE.md **โดยตั้งใจ** — กฎนั้นมีไว้กับ uploader ที่ *delete-all + insert* (ไฟล์ผิด = ข้อมูลหายเกลี้ยง) ตัวนี้ **merge-only ไม่ลบไม่เขียนทับอะไรเลย** ไฟล์ผิดอย่างมากได้แถวขยะเพิ่ม · ตัวกันพลาดคือ **ตัวอย่าง 3 แถวแรกใน `window.confirm`** ให้ตาดูว่าคอลัมน์ลงถูกช่องก่อนกดตกลง — ห้ามถอดออก
+- **ข้ามแถวที่ 1 เสมอ** (ไฟล์มีหัวคอลัมน์แน่นอน) · `'-'` = ค่าว่าง · SKU ตัวเลข 1–5 หลัก → `padStart(6,'0')` (ของเดิมใน DB เป็น 6 หลักทุกแถว)
+- **SKU ที่มีอยู่แล้ว → เขียนทับคำแปลไทย** (เปลี่ยนจากเดิมที่ข้าม 2569-08-26 ตามคำสั่งผู้ใช้) · ภาษาอื่นไม่ถูกแตะ เพราะ upsert เฉพาะแถว `lang = 'th'`
+- 🚨 **unique key ของ `medicines` คือ `(sku, usage_ref)` ไม่ใช่ `sku` เดี่ยวๆ** — SKU เดียวมีได้หลายแถวถ้า "วิธีใช้" ต่างกัน (ข้อมูลจริง: 133 SKU มีแถวเดียว, 16 มี 2 แถว, 7 มี 3 แถว) ถ้า match ด้วย `(sku, usage_ref)` ตรงๆ อย่างเดียว **การแก้คำว่า "วิธีใช้" ในไฟล์จะกลายเป็นการเพิ่มแถวใหม่ซ้ำ SKU แทนที่จะทับของเดิม** — ผู้ใช้จะเห็นเป็น "อัปโหลดแล้วไม่ทับ" การจับคู่จึงแบ่ง 3 ทางใน `handleLabelImport`:
+  1. `exact` — ตรงทั้ง `sku` + `usage_ref` → ทับคำแปลอย่างเดียว ไม่แตะตาราง `medicines`
+  2. `reuse` — SKU นั้นมีแถวเดียวใน DB แต่ `usage_ref` เปลี่ยน → **แก้ `usage_ref` ของแถวเดิม** ด้วย `upsert(..., { onConflict: 'id' })`
+  3. `new` — ไม่เคยมี SKU นี้ หรือ SKU มีหลายแถวแล้วหาที่ตรงไม่ได้ → เพิ่มเป็นวิธีใช้แบบใหม่
+  - `claimed: Set<id>` กัน 2 แถวในไฟล์แย่งแถวเดิมใบเดียวกัน (ใบแรกได้ `reuse` ใบถัดไปตกเป็น `new`)
+  - ⚠️ **ลำดับเขียนสำคัญ: `reuse` ต้องรันก่อน `new` เสมอ** — ไม่งั้นแถว `new` ที่บังเอิญใช้ `usage_ref` เดิมจะไปชนแถวที่ยังไม่ถูกแก้ แล้วคำแปล 2 แถวจะทับกัน
+- 🚨 **ต้อง dedupe คู่ `(sku, usage_ref)` ภายในไฟล์ก่อน upsert** — ซ้ำในก้อนเดียวทำให้ Postgres error 21000 *"ON CONFLICT DO UPDATE command cannot affect row a second time"* ทั้ง chunk พัง
+- ⚠️ **ห้ามใส่ `barcode` ใน payload ของ `medicines`** — upsert จะ `SET` ทุกคอลัมน์ที่อยู่ใน payload ใส่ `barcode: null` ไปด้วยจะล้าง barcode ที่คนกรอกมือไว้ทิ้ง (ไฟล์นำเข้าไม่มีคอลัมน์นี้) ไม่ใส่เลย = แถวใหม่ได้ `null` ตาม default แถวเดิมไม่ถูกแตะ
+- ดึงข้อมูลเดิมด้วย `.range()` **ทีละ 1000 วนจนหมด** — Supabase คืน default 1000 แถว ดึงรอบเดียวจะเห็นไม่ครบแล้วเผลอสร้างแถวซ้ำ
+- confirm dialog บอกจำนวน "เขียนทับ / เพิ่มใหม่" แยกกัน + เตือนว่าคำแปลไทยเดิมจะถูกทับ · chunk ละ 500 ทุกขั้น
+- **จงใจไม่แปลภาษาอื่นตอนอัปโหลด** — ลูปแปลหลายร้อยแถวชน Groq 8,000 TPM / 200K TPD แน่นอน (ดูหัวข้อ Rate Limit ข้างล่าง) ผู้ใช้เปิดทีละ SKU → ✏️ แก้ไข → ✨ แปลด้วย AI เอง
+- CSV อ่านผ่าน `file.text()` (บังคับ UTF-8) ไม่ใช่ `arrayBuffer()` — ไฟล์ TIS-620 ภาษาไทยจะเพี้ยน ให้ผู้ใช้บันทึกเป็น .xlsx แทน
+
 ## Drug Label — Auto Translate
 
 ทั้ง Add modal และ Edit modal มีปุ่ม "✨ แปลด้วย AI"

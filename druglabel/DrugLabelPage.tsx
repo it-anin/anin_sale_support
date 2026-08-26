@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
+import * as XLSX from 'xlsx';
 import { supabaseLabel, supabaseLabelError, supabaseLabelWrite, TBL_SETTINGS, TBL_MEDICINES, TBL_TRANSLATIONS } from './supabase';
 import { LANGS, type Lang, type Medicine, type ShopSettings } from './types';
 import { Label } from './Label';
@@ -39,6 +40,75 @@ function flatMed(med: MedRow, tr: Omit<TrRow, 'medicine_id'> | null): Medicine {
     warning:      tr?.warning      ?? null,
     storage:      tr?.storage      ?? null,
   };
+}
+
+/* ---------- นำเข้าฉลากยาจากไฟล์ XLSX/CSV (ภาษาไทยอย่างเดียว) ---------- */
+
+// mapping ตามตำแหน่งคอลัมน์ (ไม่ใช่ชื่อหัวคอลัมน์) ตามที่ผู้ใช้กำหนด
+// A=SKU · D=ข้อบ่งใช้ · E=วิธีใช้ · F=ข้อควรระวัง · G=การเก็บรักษา · H=ชื่อยา · I+J=ชื่อการค้า
+const IMPORT_COL = { sku: 0, indication: 3, usage: 4, warning: 5, storage: 6, generic_name: 7, trade1: 8, trade2: 9 };
+const TRADE_NAME_SEP = ' / ';
+const IMPORT_CHUNK = 500;
+
+type ImportRow = TrForm & { sku: string; usage_ref: string };
+type ImportParseResult = {
+  rows: ImportRow[];
+  totalDataRows: number;
+  skippedNoSku: number;
+  skippedEmpty: number;
+  dupInFile: number;
+};
+
+function parseLabelSheet(ws: XLSX.WorkSheet): ImportParseResult {
+  // header:1 (array-of-arrays) จำเป็นเพราะ mapping เป็นตำแหน่ง · raw:false กัน SKU ตัวเลขกลายเป็น number
+  const aoa = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, defval: '', blankrows: false, raw: false });
+  if (aoa.length < 2) throw new Error('ไฟล์ไม่มีข้อมูล (มีแต่แถวหัวคอลัมน์ หรือว่างเปล่า)');
+
+  // ไฟล์มีแถวหัวคอลัมน์เสมอ → ข้ามแถวแรกทุกครั้ง
+  const dataRows = aoa.slice(1);
+
+  // AOA ตัดคอลัมน์ว่างท้ายแถวออก index 9 อาจเป็น undefined จึงต้อง ?? ''
+  const cell = (r: unknown[], i: number) => {
+    const v = String(r[i] ?? '').trim();
+    return v === '-' ? '' : v;
+  };
+
+  const rows: ImportRow[] = [];
+  const seen = new Set<string>();
+  let skippedNoSku = 0, skippedEmpty = 0, dupInFile = 0;
+
+  for (const r of dataRows) {
+    let sku = cell(r, IMPORT_COL.sku);
+    if (!sku) { skippedNoSku++; continue; }
+    if (/^\d{1,5}$/.test(sku)) sku = sku.padStart(6, '0');
+
+    const t1 = cell(r, IMPORT_COL.trade1);
+    const t2 = cell(r, IMPORT_COL.trade2);
+    const trade_name = t1 && t2 ? `${t1}${TRADE_NAME_SEP}${t2}` : (t1 || t2);
+
+    const row: ImportRow = {
+      sku,
+      trade_name,
+      generic_name: cell(r, IMPORT_COL.generic_name),
+      usage:        cell(r, IMPORT_COL.usage),
+      indication:   cell(r, IMPORT_COL.indication),
+      warning:      cell(r, IMPORT_COL.warning),
+      storage:      cell(r, IMPORT_COL.storage),
+      usage_ref:    cell(r, IMPORT_COL.usage).slice(0, 100),
+    };
+
+    if (!row.trade_name && !row.generic_name && !row.usage && !row.indication && !row.warning && !row.storage) {
+      skippedEmpty++; continue;
+    }
+
+    // dedupe ในไฟล์ — คู่ (sku, usage_ref) ซ้ำใน upsert ก้อนเดียวทำให้ Postgres error 21000
+    const key = `${row.sku}|${row.usage_ref}`;
+    if (seen.has(key)) { dupInFile++; continue; }
+    seen.add(key);
+    rows.push(row);
+  }
+
+  return { rows, totalDataRows: dataRows.length, skippedNoSku, skippedEmpty, dupInFile };
 }
 
 interface Props {
@@ -88,8 +158,12 @@ export function DrugLabelPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onG
   const [adminPwInput,     setAdminPwInput]     = useState('');
   const [adminPwError,     setAdminPwError]     = useState('');
 
+  const [importBusy,       setImportBusy]       = useState(false);
+  const [importMsg,        setImportMsg]        = useState('');
+
   const printRootRef    = useRef<HTMLDivElement>(null);
   const overlayDownRef  = useRef(false);
+  const importFileRef   = useRef<HTMLInputElement>(null);
 
   const branch = BRANCH_PROFILES.find((b) => b.id === selectedBranch) ?? BRANCH_PROFILES[0];
   const activeSettings = settings
@@ -206,6 +280,157 @@ export function DrugLabelPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onG
       setAddError(msg);
     } finally {
       setAddSaving(false);
+    }
+  }
+
+  async function handleLabelImport(file: File, input: HTMLInputElement) {
+    setImportBusy(true);
+    setImportMsg('กำลังอ่านไฟล์...');
+    try {
+      if (!supabaseLabel) throw new Error(supabaseLabelError ?? 'Supabase read client ไม่พร้อม');
+      if (!supabaseLabelWrite) throw new Error('Supabase write client ไม่พร้อม');
+
+      // CSV อ่านเป็น text ก่อนเพื่อบังคับ UTF-8 (ไฟล์ TIS-620 ภาษาไทยจะเพี้ยน — ให้บันทึกเป็น .xlsx แทน)
+      const wb = file.name.toLowerCase().endsWith('.csv')
+        ? XLSX.read(await file.text(), { type: 'string' })
+        : XLSX.read(await file.arrayBuffer());
+      const sheetName = wb.SheetNames[0];
+      const ws = sheetName ? wb.Sheets[sheetName] : undefined;
+      if (!ws) throw new Error('ไม่พบชีทข้อมูลในไฟล์');
+
+      const { rows, totalDataRows, skippedNoSku, skippedEmpty, dupInFile } = parseLabelSheet(ws);
+      if (rows.length === 0) throw new Error('ไม่พบแถวที่ใช้ได้ — ตรวจว่าคอลัมน์ A เป็น SKU และมีข้อมูลฉลากในคอลัมน์ D–J');
+
+      // ดึงรายการยาเดิมทั้งหมด — ต้องวนทีละ 1000 เพราะ Supabase จำกัด default 1000 แถวต่อ query
+      setImportMsg('กำลังตรวจข้อมูลเดิมในระบบ...');
+      const bySku = new Map<string, { id: string; usage_ref: string }[]>();
+      let existingRowCount = 0;
+      for (let from = 0; ; from += 1000) {
+        const { data, error: exErr } = await supabaseLabel
+          .from(TBL_MEDICINES).select('id, sku, usage_ref').range(from, from + 999);
+        if (exErr) throw new Error(exErr.message);
+        const page = (data ?? []) as { id: string; sku: string; usage_ref: string | null }[];
+        for (const m of page) {
+          const key = String(m.sku);
+          const list = bySku.get(key) ?? [];
+          list.push({ id: m.id, usage_ref: m.usage_ref ?? '' });
+          bySku.set(key, list);
+        }
+        existingRowCount += page.length;
+        if (page.length < 1000) break;
+      }
+
+      // จับคู่แถวในไฟล์กับแถวเดิม — unique key ของ medicines คือ (sku, usage_ref) ไม่ใช่ sku เดี่ยวๆ
+      //   exact  = ตรงทั้ง sku + usage_ref → ทับคำแปลอย่างเดียว
+      //   reuse  = sku เดิมมีแถวเดียวแต่ "วิธีใช้" เปลี่ยน → แก้ usage_ref ของแถวเดิม (ไม่งั้นจะได้แถวใหม่ซ้ำ SKU)
+      //   new    = ไม่เคยมี sku นี้ หรือ sku มีหลายแถวแล้วหาที่ตรงไม่ได้ → เพิ่มเป็นวิธีใช้แบบใหม่
+      const exactRows: { id: string; row: ImportRow }[] = [];
+      const reuseRows: { id: string; row: ImportRow }[] = [];
+      const newRows: ImportRow[] = [];
+      const claimed = new Set<string>();   // กัน 2 แถวในไฟล์แย่งแถวเดิมใบเดียวกัน
+      let newSkuCount = 0;
+      for (const r of rows) {
+        const list = bySku.get(r.sku);
+        if (!list || list.length === 0) { newRows.push(r); newSkuCount++; continue; }
+        const exact = list.find(m => m.usage_ref === r.usage_ref && !claimed.has(m.id));
+        if (exact) { claimed.add(exact.id); exactRows.push({ id: exact.id, row: r }); continue; }
+        if (list.length === 1 && !claimed.has(list[0].id)) {
+          claimed.add(list[0].id);
+          reuseRows.push({ id: list[0].id, row: r });
+          continue;
+        }
+        newRows.push(r);
+      }
+      const overwriteCount = exactRows.length + reuseRows.length;
+
+      const sample = rows.slice(0, 3).map(r =>
+        `  ${r.sku} · ${r.trade_name || '(ไม่มีชื่อการค้า)'} · ${r.usage.slice(0, 40) || '(ไม่มีวิธีใช้)'}`
+      ).join('\n');
+
+      const ok = window.confirm(
+        `ไฟล์: ${file.name}\nชีท: ${sheetName}\nอ่านข้อมูลได้ ${totalDataRows.toLocaleString()} แถว (ข้ามแถวหัวคอลัมน์แล้ว)\n\n` +
+        `📊 ในระบบตอนนี้: ${bySku.size.toLocaleString()} SKU (${existingRowCount.toLocaleString()} แถวยา)\n\n` +
+        `♻️ เขียนทับของเดิม: ${overwriteCount.toLocaleString()} รายการ` +
+        (reuseRows.length ? ` (ในนี้ ${reuseRows.length.toLocaleString()} รายการ "วิธีใช้" เปลี่ยนไปจากเดิม)` : '') + `\n` +
+        `➕ เพิ่มใหม่: ${newRows.length.toLocaleString()} รายการ` +
+        (newRows.length - newSkuCount > 0 ? ` (SKU ใหม่ ${newSkuCount.toLocaleString()} · วิธีใช้แบบใหม่ของ SKU เดิม ${(newRows.length - newSkuCount).toLocaleString()})` : '') + `\n` +
+        `⏭️ ข้ามจากไฟล์ — ไม่มี SKU: ${skippedNoSku.toLocaleString()} · ข้อมูลว่าง: ${skippedEmpty.toLocaleString()} · ซ้ำในไฟล์: ${dupInFile.toLocaleString()}\n\n` +
+        (sample ? `ตัวอย่าง 3 แถวแรก (SKU · ชื่อการค้า · วิธีใช้):\n${sample}\n\n` : '') +
+        `🚨 คำแปลภาษาไทยเดิมของ ${overwriteCount.toLocaleString()} รายการจะถูกทับด้วยข้อมูลในไฟล์ (ภาษาอื่นไม่ถูกแตะ)\n\nยืนยันนำเข้า?`
+      );
+      if (!ok) { setImportMsg(''); return; }
+
+      const idByRow = new Map<ImportRow, string>();
+      exactRows.forEach(e => idByRow.set(e.row, e.id));
+
+      // ขั้น 1 — แก้ usage_ref ของแถวเดิมที่ "วิธีใช้" เปลี่ยน
+      // ต้องทำ "ก่อน" insert แถวใหม่ ไม่งั้นแถวใหม่ที่ใช้ usage_ref เดิมจะไปชนแถวนี้ก่อนที่มันจะถูกแก้
+      for (let i = 0; i < reuseRows.length; i += IMPORT_CHUNK) {
+        const chunk = reuseRows.slice(i, i + IMPORT_CHUNK);
+        setImportMsg(`กำลังอัปเดตวิธีใช้ ${Math.min(i + IMPORT_CHUNK, reuseRows.length).toLocaleString()}/${reuseRows.length.toLocaleString()}...`);
+        const { error: upErr } = await supabaseLabelWrite
+          .from('medicines')
+          .upsert(chunk.map(e => ({ id: e.id, sku: e.row.sku, usage_ref: e.row.usage_ref })), { onConflict: 'id' });
+        if (upErr) throw new Error(upErr.message);
+        chunk.forEach(e => idByRow.set(e.row, e.id));
+      }
+
+      // ขั้น 2 — เพิ่มรายการยาใหม่ (ไม่ใส่ barcode ใน payload เพื่อไม่ให้ทับ barcode เดิมเป็น null)
+      for (let i = 0; i < newRows.length; i += IMPORT_CHUNK) {
+        const chunk = newRows.slice(i, i + IMPORT_CHUNK);
+        setImportMsg(`กำลังเพิ่มรายการยา ${Math.min(i + IMPORT_CHUNK, newRows.length).toLocaleString()}/${newRows.length.toLocaleString()}...`);
+        const { data, error: medErr } = await supabaseLabelWrite
+          .from('medicines')
+          .upsert(chunk.map(r => ({ sku: r.sku, usage_ref: r.usage_ref })), { onConflict: 'sku,usage_ref' })
+          .select('id, sku, usage_ref');
+        if (medErr) throw new Error(medErr.message);
+        const idByKey = new Map<string, string>();
+        ((data ?? []) as { id: string; sku: string; usage_ref: string | null }[])
+          .forEach(m => idByKey.set(`${m.sku}|${m.usage_ref ?? ''}`, m.id));
+        chunk.forEach(r => {
+          const id = idByKey.get(`${r.sku}|${r.usage_ref}`);
+          if (id) idByRow.set(r, id);
+        });
+      }
+
+      // ขั้น 3 — คำแปลภาษาไทย (ทับของเดิมผ่าน onConflict medicine_id,lang · ภาษาอื่นไม่ถูกแตะ)
+      const trPayload = rows.flatMap(r => {
+        const medicine_id = idByRow.get(r);
+        if (!medicine_id) return [];
+        return [{
+          medicine_id, lang: 'th',
+          trade_name:   r.trade_name   || null,
+          generic_name: r.generic_name || null,
+          usage:        r.usage        || null,
+          indication:   r.indication   || null,
+          warning:      r.warning      || null,
+          storage:      r.storage      || null,
+        }];
+      });
+      for (let i = 0; i < trPayload.length; i += IMPORT_CHUNK) {
+        setImportMsg(`กำลังบันทึกคำแปลไทย ${Math.min(i + IMPORT_CHUNK, trPayload.length).toLocaleString()}/${trPayload.length.toLocaleString()}...`);
+        const { error: trErr } = await supabaseLabelWrite
+          .from('medicine_translations')
+          .upsert(trPayload.slice(i, i + IMPORT_CHUNK), { onConflict: 'medicine_id,lang' });
+        if (trErr) throw new Error(trErr.message);
+      }
+
+      const missing = rows.length - trPayload.length;
+      setImportMsg(
+        `✅ เขียนทับ ${overwriteCount.toLocaleString()} · เพิ่มใหม่ ${newRows.length.toLocaleString()} รายการ\n` +
+        `ตอนนี้ระบบมีทั้งหมด ${(bySku.size + newSkuCount).toLocaleString()} SKU\n` +
+        (skippedNoSku + skippedEmpty + dupInFile > 0
+          ? `แถวที่ข้ามจากไฟล์: ไม่มี SKU ${skippedNoSku} · ข้อมูลว่าง ${skippedEmpty} · ซ้ำในไฟล์ ${dupInFile}\n` : '') +
+        (missing > 0 ? `⚠️ มี ${missing} แถวที่บันทึกคำแปลไม่ได้ (หา id ของรายการยาไม่เจอ)\n` : '') +
+        `ขั้นถัดไป: เปิดแต่ละ SKU → ✏️ แก้ไขข้อมูล → ✨ แปลด้วย AI เพื่อเติมภาษาอื่น`
+      );
+      if (lastQuery) void doSearch(lastQuery, lang);
+    } catch (err: unknown) {
+      setImportMsg(`❌ ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setImportBusy(false);
+      // reset ใน finally เสมอ ไม่งั้นเลือกไฟล์เดิมซ้ำหลัง error จะไม่ทำงาน
+      input.value = '';
     }
   }
 
@@ -450,7 +675,18 @@ export function DrugLabelPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onG
             <button className="dl-upload-btn" type="button" onClick={() => { setAddForm(emptyForm()); setAddError(''); setShowAddModal(true); }}>
               ➕ เพิ่มฉลากยาใหม่
             </button>
+            {isAdminUnlocked && (
+              <>
+                <input ref={importFileRef} type="file" accept=".xlsx,.xls,.csv" style={{ display: 'none' }}
+                  onChange={e => { const f = e.target.files?.[0]; if (f) void handleLabelImport(f, e.target); }} />
+                <button className="dl-upload-btn" type="button" disabled={importBusy}
+                  onClick={() => importFileRef.current?.click()}>
+                  {importBusy ? 'กำลังนำเข้า...' : '📤 อัปโหลดฉลากยา (XLSX/CSV)'}
+                </button>
+              </>
+            )}
           </div>
+          {importMsg && <div className="dl-upload-msg" style={{ whiteSpace: 'pre-line', padding: '0 0 0.75rem' }}>{importMsg}</div>}
           {error   && <div className="dl-error-line">{error}</div>}
           {loading && <div className="dl-status-line">กำลังค้นหา...</div>}
           {!loading && !searched && <div className="dl-status-line">สแกนบาร์โค้ด หรือค้นหาด้วย SKU / ชื่อยา</div>}
