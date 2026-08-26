@@ -3,3 +3,9 @@
 node_modules
 dist
 *.log
+
+# ไฟล์สำรอง/รายงานที่สคริปต์ label-*.mjs สร้าง — เป็นข้อมูลจริง ไม่ควรขึ้น git
+label-backup-*.json
+label-deleted-*.json
+label-before-import-*.json
+label-restore-manual.csv

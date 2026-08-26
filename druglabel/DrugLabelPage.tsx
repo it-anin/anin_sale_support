@@ -331,29 +331,68 @@ export function DrugLabelPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onG
         if (page.length < 1000) break;
       }
 
+      // 🚨 แถวที่มีคำแปลภาษาอื่นแล้ว = ของที่คนคัดและตรวจมาแล้ว ห้ามให้ไฟล์ทับ
+      // (บั๊กจริง 2569-08-26: การนำเข้าครั้งเดียวทับภาษาไทยของ 204 แถวที่แปลไว้ครบ 6 ภาษา
+      //  กู้กลับได้ไม่ครบเพราะตารางไม่มี created_at ให้ย้อน — ดู druglabel/CLAUDE.md)
+      setImportMsg('กำลังตรวจว่ารายการไหนแปลภาษาอื่นไว้แล้ว...');
+      const translatedIds = new Set<string>();
+      for (let from = 0; ; from += 1000) {
+        const { data, error: trErr } = await supabaseLabelWrite
+          .from('medicine_translations').select('medicine_id, lang').neq('lang', 'th').range(from, from + 999);
+        if (trErr) throw new Error(trErr.message);
+        const page = (data ?? []) as { medicine_id: string }[];
+        page.forEach(t => translatedIds.add(t.medicine_id));
+        if (page.length < 1000) break;
+      }
+
       // จับคู่แถวในไฟล์กับแถวเดิม — unique key ของ medicines คือ (sku, usage_ref) ไม่ใช่ sku เดี่ยวๆ
-      //   exact  = ตรงทั้ง sku + usage_ref → ทับคำแปลอย่างเดียว
-      //   reuse  = sku เดิมมีแถวเดียวแต่ "วิธีใช้" เปลี่ยน → แก้ usage_ref ของแถวเดิม (ไม่งั้นจะได้แถวใหม่ซ้ำ SKU)
-      //   new    = ไม่เคยมี sku นี้ หรือ sku มีหลายแถวแล้วหาที่ตรงไม่ได้ → เพิ่มเป็นวิธีใช้แบบใหม่
+      //   protected = แถวเดิมที่แปลภาษาอื่นไว้แล้ว → ข้าม ไม่แตะเลย
+      //   exact     = ตรงทั้ง sku + usage_ref → ทับคำแปลอย่างเดียว
+      //   reuse     = sku เดิมมีแถวเดียวแต่ "วิธีใช้" เปลี่ยน → แก้ usage_ref ของแถวเดิม (ไม่งั้นจะได้แถวใหม่ซ้ำ SKU)
+      //   new       = ไม่เคยมี sku นี้ หรือ sku มีหลายแถวแล้วหาที่ตรงไม่ได้ → เพิ่มเป็นวิธีใช้แบบใหม่
       const exactRows: { id: string; row: ImportRow }[] = [];
-      const reuseRows: { id: string; row: ImportRow }[] = [];
+      const reuseRows: { id: string; row: ImportRow; oldUsageRef: string }[] = [];
       const newRows: ImportRow[] = [];
+      const protectedRows: ImportRow[] = [];
       const claimed = new Set<string>();   // กัน 2 แถวในไฟล์แย่งแถวเดิมใบเดียวกัน
       let newSkuCount = 0;
       for (const r of rows) {
         const list = bySku.get(r.sku);
         if (!list || list.length === 0) { newRows.push(r); newSkuCount++; continue; }
         const exact = list.find(m => m.usage_ref === r.usage_ref && !claimed.has(m.id));
-        if (exact) { claimed.add(exact.id); exactRows.push({ id: exact.id, row: r }); continue; }
+        if (exact) {
+          if (translatedIds.has(exact.id)) { claimed.add(exact.id); protectedRows.push(r); continue; }
+          claimed.add(exact.id); exactRows.push({ id: exact.id, row: r }); continue;
+        }
         if (list.length === 1 && !claimed.has(list[0].id)) {
           claimed.add(list[0].id);
-          reuseRows.push({ id: list[0].id, row: r });
+          if (translatedIds.has(list[0].id)) { protectedRows.push(r); continue; }
+          reuseRows.push({ id: list[0].id, row: r, oldUsageRef: list[0].usage_ref });
           continue;
         }
         newRows.push(r);
       }
       const overwriteCount = exactRows.length + reuseRows.length;
 
+      // preview "ของเดิม → ของใหม่" จริงของแถวที่จะถูกทับ — ตัวอย่างจากไฟล์อย่างเดียวดู "ถูก" เสมอ
+      // จึงไม่ช่วยจับ mapping ผิดช่อง ต้องเทียบกับค่าที่มีอยู่ให้เห็นกับตา
+      let beforeAfter = '';
+      if (exactRows.length) {
+        const ids = exactRows.slice(0, 5).map(e => e.id);
+        const { data: cur } = await supabaseLabelWrite
+          .from('medicine_translations').select('medicine_id, trade_name, generic_name')
+          .eq('lang', 'th').in('medicine_id', ids);
+        const curById = new Map(((cur ?? []) as { medicine_id: string; trade_name: string | null; generic_name: string | null }[])
+          .map(t => [t.medicine_id, t]));
+        beforeAfter = exactRows.slice(0, 5).map(e => {
+          const c = curById.get(e.id);
+          return `  ${e.row.sku}\n     ชื่อการค้า: ${c?.trade_name ?? '(ว่าง)'}  →  ${e.row.trade_name || '(ว่าง)'}\n` +
+                 `     ชื่อยา    : ${c?.generic_name ?? '(ว่าง)'}  →  ${e.row.generic_name || '(ว่าง)'}`;
+        }).join('\n');
+      }
+      const usageChanges = reuseRows.slice(0, 3).map(e =>
+        `  ${e.row.sku}: ${e.oldUsageRef.slice(0, 35) || '(ว่าง)'}  →  ${e.row.usage_ref.slice(0, 35) || '(ว่าง)'}`
+      ).join('\n');
       const sample = rows.slice(0, 3).map(r =>
         `  ${r.sku} · ${r.trade_name || '(ไม่มีชื่อการค้า)'} · ${r.usage.slice(0, 40) || '(ไม่มีวิธีใช้)'}`
       ).join('\n');
@@ -361,15 +400,41 @@ export function DrugLabelPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onG
       const ok = window.confirm(
         `ไฟล์: ${file.name}\nชีท: ${sheetName}\nอ่านข้อมูลได้ ${totalDataRows.toLocaleString()} แถว (ข้ามแถวหัวคอลัมน์แล้ว)\n\n` +
         `📊 ในระบบตอนนี้: ${bySku.size.toLocaleString()} SKU (${existingRowCount.toLocaleString()} แถวยา)\n\n` +
-        `♻️ เขียนทับของเดิม: ${overwriteCount.toLocaleString()} รายการ` +
-        (reuseRows.length ? ` (ในนี้ ${reuseRows.length.toLocaleString()} รายการ "วิธีใช้" เปลี่ยนไปจากเดิม)` : '') + `\n` +
+        `♻️ เขียนทับของเดิม: ${overwriteCount.toLocaleString()} รายการ\n` +
         `➕ เพิ่มใหม่: ${newRows.length.toLocaleString()} รายการ` +
         (newRows.length - newSkuCount > 0 ? ` (SKU ใหม่ ${newSkuCount.toLocaleString()} · วิธีใช้แบบใหม่ของ SKU เดิม ${(newRows.length - newSkuCount).toLocaleString()})` : '') + `\n` +
+        `🛡️ ข้ามเพราะแปลภาษาอื่นไว้แล้ว: ${protectedRows.length.toLocaleString()} รายการ (ไม่ถูกแตะเลย)\n` +
         `⏭️ ข้ามจากไฟล์ — ไม่มี SKU: ${skippedNoSku.toLocaleString()} · ข้อมูลว่าง: ${skippedEmpty.toLocaleString()} · ซ้ำในไฟล์: ${dupInFile.toLocaleString()}\n\n` +
-        (sample ? `ตัวอย่าง 3 แถวแรก (SKU · ชื่อการค้า · วิธีใช้):\n${sample}\n\n` : '') +
-        `🚨 คำแปลภาษาไทยเดิมของ ${overwriteCount.toLocaleString()} รายการจะถูกทับด้วยข้อมูลในไฟล์ (ภาษาอื่นไม่ถูกแตะ)\n\nยืนยันนำเข้า?`
+        (beforeAfter ? `🔍 ของเดิม → ของใหม่ (5 แถวแรกที่จะถูกทับ) — ดูให้แน่ว่าคอลัมน์ลงถูกช่อง:\n${beforeAfter}\n\n`
+                     : sample ? `ตัวอย่าง 3 แถวแรก (SKU · ชื่อการค้า · วิธีใช้):\n${sample}\n\n` : '') +
+        (reuseRows.length ? `⚠️ จะเปลี่ยน "วิธีใช้" ของแถวเดิม ${reuseRows.length.toLocaleString()} รายการ (ทำให้ย้อนกลับยาก):\n${usageChanges}\n\n` : '') +
+        `🚨 คำแปลภาษาไทยเดิมของ ${overwriteCount.toLocaleString()} รายการจะถูกทับด้วยข้อมูลในไฟล์\n\nยืนยันนำเข้า?`
       );
       if (!ok) { setImportMsg(''); return; }
+
+      // สำรองแถวที่กำลังจะถูกทับลงเครื่องก่อนเริ่มเขียน — ตารางไม่มี created_at/updated_at ให้ย้อนเวลา
+      // ไฟล์นี้คือทางเดียวที่กู้ค่าเดิมกลับได้ถ้านำเข้าผิด
+      if (overwriteCount > 0) {
+        const touchedIds = [...exactRows.map(e => e.id), ...reuseRows.map(e => e.id)];
+        const before: unknown[] = [];
+        for (let i = 0; i < touchedIds.length; i += 200) {
+          const { data } = await supabaseLabelWrite
+            .from('medicine_translations')
+            .select('medicine_id, lang, trade_name, generic_name, usage, indication, warning, storage')
+            .in('medicine_id', touchedIds.slice(i, i + 200));
+          before.push(...(data ?? []));
+        }
+        const blob = new Blob([JSON.stringify({
+          backed_up_at: new Date().toISOString(), file: file.name, sheet: sheetName,
+          medicines: reuseRows.map(e => ({ id: e.id, sku: e.row.sku, usage_ref: e.oldUsageRef })),
+          translations: before,
+        }, null, 2)], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `label-before-import-${new Date().toISOString().slice(0, 19).replace(/[:.]/g, '-')}.json`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+      }
 
       const idByRow = new Map<ImportRow, string>();
       exactRows.forEach(e => idByRow.set(e.row, e.id));
@@ -426,10 +491,11 @@ export function DrugLabelPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onG
         if (trErr) throw new Error(trErr.message);
       }
 
-      const missing = rows.length - trPayload.length;
+      const missing = rows.length - protectedRows.length - trPayload.length;
       setImportMsg(
         `✅ เขียนทับ ${overwriteCount.toLocaleString()} · เพิ่มใหม่ ${newRows.length.toLocaleString()} รายการ\n` +
         `ตอนนี้ระบบมีทั้งหมด ${(bySku.size + newSkuCount).toLocaleString()} SKU\n` +
+        (protectedRows.length ? `🛡️ ข้าม ${protectedRows.length.toLocaleString()} รายการที่แปลภาษาอื่นไว้แล้ว (ไม่ถูกแตะ)\n` : '') +
         (skippedNoSku + skippedEmpty + dupInFile > 0
           ? `แถวที่ข้ามจากไฟล์: ไม่มี SKU ${skippedNoSku} · ข้อมูลว่าง ${skippedEmpty} · ซ้ำในไฟล์ ${dupInFile}\n` : '') +
         (missing > 0 ? `⚠️ มี ${missing} แถวที่บันทึกคำแปลไม่ได้ (หา id ของรายการยาไม่เจอ)\n` : '') +
