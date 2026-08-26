@@ -49,6 +49,7 @@ function flatMed(med: MedRow, tr: Omit<TrRow, 'medicine_id'> | null): Medicine {
 const IMPORT_COL = { sku: 0, indication: 3, usage: 4, warning: 5, storage: 6, generic_name: 7, trade1: 8, trade2: 9 };
 const TRADE_NAME_SEP = ' / ';
 const IMPORT_CHUNK = 500;
+const IMPORT_SHEET = 'Data_Static';   // ไฟล์มีหลายชีท — อ่านเฉพาะชีทนี้เท่านั้น
 
 type ImportRow = TrForm & { sku: string; usage_ref: string };
 type ImportParseResult = {
@@ -291,12 +292,20 @@ export function DrugLabelPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onG
       if (!supabaseLabelWrite) throw new Error('Supabase write client ไม่พร้อม');
 
       // CSV อ่านเป็น text ก่อนเพื่อบังคับ UTF-8 (ไฟล์ TIS-620 ภาษาไทยจะเพี้ยน — ให้บันทึกเป็น .xlsx แทน)
-      const wb = file.name.toLowerCase().endsWith('.csv')
+      const isCsv = file.name.toLowerCase().endsWith('.csv');
+      const wb = isCsv
         ? XLSX.read(await file.text(), { type: 'string' })
         : XLSX.read(await file.arrayBuffer());
-      const sheetName = wb.SheetNames[0];
-      const ws = sheetName ? wb.Sheets[sheetName] : undefined;
-      if (!ws) throw new Error('ไม่พบชีทข้อมูลในไฟล์');
+      // xlsx ต้องเป็นชีท Data_Static เท่านั้น — ไฟล์มีหลายชีท ถ้า fallback ไปชีทแรกจะนำเข้าข้อมูลผิดชุดแบบเงียบๆ
+      // (CSV ไม่มีชีท SheetJS ตั้งชื่อให้เองว่า Sheet1 จึงยกเว้นให้)
+      const sheetName = isCsv
+        ? wb.SheetNames[0]
+        : wb.SheetNames.find(n => n.trim().toLowerCase() === IMPORT_SHEET.toLowerCase());
+      if (!sheetName) {
+        throw new Error(`ไม่พบชีทชื่อ "${IMPORT_SHEET}" ในไฟล์นี้\nชีทที่มี: ${wb.SheetNames.join(', ')}`);
+      }
+      const ws = wb.Sheets[sheetName];
+      if (!ws) throw new Error(`ชีท "${sheetName}" ว่างเปล่า`);
 
       const { rows, totalDataRows, skippedNoSku, skippedEmpty, dupInFile } = parseLabelSheet(ws);
       if (rows.length === 0) throw new Error('ไม่พบแถวที่ใช้ได้ — ตรวจว่าคอลัมน์ A เป็น SKU และมีข้อมูลฉลากในคอลัมน์ D–J');
@@ -680,8 +689,9 @@ export function DrugLabelPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onG
                 <input ref={importFileRef} type="file" accept=".xlsx,.xls,.csv" style={{ display: 'none' }}
                   onChange={e => { const f = e.target.files?.[0]; if (f) void handleLabelImport(f, e.target); }} />
                 <button className="dl-upload-btn" type="button" disabled={importBusy}
+                  title={`ไฟล์ .xlsx ต้องมีชีทชื่อ ${IMPORT_SHEET}`}
                   onClick={() => importFileRef.current?.click()}>
-                  {importBusy ? 'กำลังนำเข้า...' : '📤 อัปโหลดฉลากยา (XLSX/CSV)'}
+                  {importBusy ? 'กำลังนำเข้า...' : `📤 อัปโหลดฉลากยา → ชีท ${IMPORT_SHEET}`}
                 </button>
               </>
             )}
