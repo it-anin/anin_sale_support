@@ -311,12 +311,14 @@ export function DrugLabelPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onG
       if (rows.length === 0) throw new Error('ไม่พบแถวที่ใช้ได้ — ตรวจว่าคอลัมน์ A เป็น SKU และมีข้อมูลฉลากในคอลัมน์ D–J');
 
       // ดึงรายการยาเดิมทั้งหมด — ต้องวนทีละ 1000 เพราะ Supabase จำกัด default 1000 แถวต่อ query
+      // ⚠️ อ่านจาก label.medicines ตรงๆ (write client) ไม่ใช่ view dl_medicines — view ถูกสร้างด้วย SELECT *
+      // ตั้งแต่ก่อนมีคอลัมน์ usage_ref ซึ่ง Postgres ตรึงรายชื่อคอลัมน์ไว้ตอนสร้าง view จึงไม่มีคอลัมน์นี้
       setImportMsg('กำลังตรวจข้อมูลเดิมในระบบ...');
       const bySku = new Map<string, { id: string; usage_ref: string }[]>();
       let existingRowCount = 0;
       for (let from = 0; ; from += 1000) {
-        const { data, error: exErr } = await supabaseLabel
-          .from(TBL_MEDICINES).select('id, sku, usage_ref').range(from, from + 999);
+        const { data, error: exErr } = await supabaseLabelWrite
+          .from('medicines').select('id, sku, usage_ref').range(from, from + 999);
         if (exErr) throw new Error(exErr.message);
         const page = (data ?? []) as { id: string; sku: string; usage_ref: string | null }[];
         for (const m of page) {

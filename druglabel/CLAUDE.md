@@ -77,6 +77,9 @@ Supabase permissions required:
 - 🚨 **ต้อง dedupe คู่ `(sku, usage_ref)` ภายในไฟล์ก่อน upsert** — ซ้ำในก้อนเดียวทำให้ Postgres error 21000 *"ON CONFLICT DO UPDATE command cannot affect row a second time"* ทั้ง chunk พัง
 - ⚠️ **ห้ามใส่ `barcode` ใน payload ของ `medicines`** — upsert จะ `SET` ทุกคอลัมน์ที่อยู่ใน payload ใส่ `barcode: null` ไปด้วยจะล้าง barcode ที่คนกรอกมือไว้ทิ้ง (ไฟล์นำเข้าไม่มีคอลัมน์นี้) ไม่ใส่เลย = แถวใหม่ได้ `null` ตาม default แถวเดิมไม่ถูกแตะ
 - ดึงข้อมูลเดิมด้วย `.range()` **ทีละ 1000 วนจนหมด** — Supabase คืน default 1000 แถว ดึงรอบเดียวจะเห็นไม่ครบแล้วเผลอสร้างแถวซ้ำ
+- 🚨 **view `dl_medicines` ไม่มีคอลัมน์ `usage_ref`** (บั๊กจริง 2569-08-26: `❌ column dl_medicines.usage_ref does not exist`) — view สร้างด้วย `CREATE VIEW ... SELECT * FROM label.medicines` ใน `supabase-setup.sql:54` ตั้งแต่**ก่อน** `alter-medicines-v2.sql` เพิ่มคอลัมน์นี้ และ Postgres **ตรึงรายชื่อคอลัมน์ไว้ตอนสร้าง view** `SELECT *` จึงไม่ขยายตามตารางที่โตขึ้นทีหลัง (ยืนยันแล้ว: view คืนแค่ `id, sku, barcode`)
+  - แก้โดยให้ import อ่านจาก **`supabaseLabelWrite.from('medicines')`** (schema `label`) ตรงๆ ไม่ผ่าน view — `supabase-setup.sql:60` ให้ `GRANT SELECT, INSERT, UPDATE ON label.medicines TO anon` อยู่แล้ว จึงอ่านได้ด้วย anon key ไม่ต้องรัน SQL migration
+  - ⚠️ view อื่น (`dl_medicine_translations`, `dl_settings`) ก็เป็น `SELECT *` เหมือนกัน — **เพิ่มคอลัมน์ใหม่ในตาราง `label.*` เมื่อไหร่ view จะไม่เห็นคอลัมน์นั้นเสมอ** ถ้าจะให้ view เห็นต้อง `CREATE OR REPLACE VIEW` ใหม่หลัง migration ทุกครั้ง
 - confirm dialog บอกจำนวน "เขียนทับ / เพิ่มใหม่" แยกกัน + เตือนว่าคำแปลไทยเดิมจะถูกทับ · chunk ละ 500 ทุกขั้น
 - **จงใจไม่แปลภาษาอื่นตอนอัปโหลด** — ลูปแปลหลายร้อยแถวชน Groq 8,000 TPM / 200K TPD แน่นอน (ดูหัวข้อ Rate Limit ข้างล่าง) ผู้ใช้เปิดทีละ SKU → ✏️ แก้ไข → ✨ แปลด้วย AI เอง
 - CSV อ่านผ่าน `file.text()` (บังคับ UTF-8) ไม่ใช่ `arrayBuffer()` — ไฟล์ TIS-620 ภาษาไทยจะเพี้ยน ให้ผู้ใช้บันทึกเป็น .xlsx แทน
