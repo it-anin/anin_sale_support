@@ -26,6 +26,47 @@ Supabase permissions required:
 - INSERT/UPSERT: `GRANT INSERT, UPDATE ON label.medicines, label.medicine_translations TO anon`
 - DELETE: `GRANT DELETE ON label.medicines, label.medicine_translations TO anon` + RLS policy "public delete"
 
+### 🚨 View `dl_*` เป็น snapshot ของคอลัมน์ ไม่ใช่ `SELECT *` ที่มีชีวิต (บั๊กจริง 2569-08-26)
+
+ทั้ง 3 view สร้างด้วย `CREATE OR REPLACE VIEW public.dl_xxx AS SELECT * FROM label.xxx` ([`supabase-setup.sql:53-55`](../supabase-setup.sql)) ซึ่ง **หลอกตา** — Postgres **ขยาย `*` เป็นรายชื่อคอลัมน์จริงตั้งแต่ตอนสร้าง view แล้วเก็บรายชื่อนั้นไว้ถาวร** (`pg_rewrite`) ไม่ได้เก็บดอกจันไว้แล้วไปขยายใหม่ทุกครั้งที่ query · **เพิ่มคอลัมน์ในตารางทีหลัง view จะไม่มีวันเห็นคอลัมน์นั้นเอง**
+
+**เคสที่เกิดจริง:** `dl_medicines` ถูกสร้างก่อน [`alter-medicines-v2.sql`](../alter-medicines-v2.sql) เพิ่ม `usage_ref` → ฟีเจอร์นำเข้า XLSX พังด้วย `❌ column dl_medicines.usage_ref does not exist` ทั้งที่คอลัมน์มีอยู่จริงในตาราง
+
+**สถานะแต่ละ view (ตรวจกับ DB จริง 2569-08-26):**
+
+| View | คอลัมน์ที่ view เห็น | ตรงกับตารางไหม |
+|---|---|---|
+| `dl_medicines` | id, sku, barcode | ❌ **ขาด `usage_ref`** |
+| `dl_medicine_translations` | id, medicine_id, lang, trade_name, generic_name, usage, indication, warning, storage | ✅ ตรง |
+| `dl_settings` | id, shop_name_th, shop_name_en, phone, line_id, logo_text, updated_at | ตรวจเทียบตรงๆ ไม่ได้ (ดูข้อ RLS ล่าง) |
+
+**วิธีแก้เมื่อ view ตกคอลัมน์ — เลือก 1 ใน 2:**
+
+1. **อ่านตารางตรงๆ ไม่ผ่าน view** (ทางที่ import ใช้อยู่) — `supabaseLabelWrite.from('medicines')` เพราะ client ตัวนั้นตั้ง `db: { schema: 'label' }` ไว้แล้ว · ข้อดี: ไม่ต้องรัน SQL ได้คอลัมน์ครบตามตารางเสมอ · **ข้อจำกัด: ใช้ได้เฉพาะตารางที่ RLS ยอม** (ดูล่าง)
+2. **สร้าง view ใหม่หลัง migration ทุกครั้ง:**
+   ```sql
+   CREATE OR REPLACE VIEW public.dl_medicines AS SELECT * FROM label.medicines;
+   ```
+   - ✅ `CREATE OR REPLACE` **เพิ่มคอลัมน์ต่อท้ายได้** และ **รักษา GRANT เดิมไว้**
+   - ❌ แต่ **ลบ / เปลี่ยนชื่อ / เปลี่ยนชนิด / สลับลำดับคอลัมน์เดิมไม่ได้** จะขึ้น `cannot change name of view column` → กรณีนั้นต้อง `DROP VIEW ... CASCADE` แล้วสร้างใหม่
+   - 🚨 **ถ้า `DROP VIEW` ต้อง `GRANT SELECT ... TO anon, authenticated` ใหม่ด้วยเสมอ** — สิทธิ์ถูกลบไปพร้อม view เว็บจะอ่านไม่ได้ทันทีทั้งที่ view มีอยู่
+
+**⚠️ RLS ทำให้ 2 ทางนี้ใช้แทนกันไม่ได้เสมอ** — view รันด้วยสิทธิ์ของ owner (`security_invoker` เป็น off โดย default) จึง **ข้าม RLS ของตารางต้นทาง** ผลคือ:
+- `label.medicines` — anon อ่านตรงได้ (ทดสอบแล้วคืนข้อมูลจริง) → ทางที่ 1 ใช้ได้
+- `label.settings` — **anon อ่านตรงได้ `[]` (ว่าง) ทั้งที่ผ่าน `dl_settings` เห็น 1 แถว** = RLS บล็อกอยู่ → **ถ้าย้าย `loadSettings` ไปอ่านตารางตรงๆ หน้าจะพังแบบเงียบๆ ไม่มี error แค่ไม่มีข้อมูลร้าน** ตัวนี้ต้องใช้ทางที่ 2 เท่านั้น
+
+**วิธีเช็คว่ามี view ไหนตกคอลัมน์บ้าง** (รันใน Supabase SQL Editor):
+```sql
+SELECT t.table_name AS tbl, t.column_name AS "คอลัมน์ที่ view มองไม่เห็น"
+FROM information_schema.columns t
+LEFT JOIN information_schema.columns v
+  ON v.table_schema = 'public'
+ AND v.table_name   = 'dl_' || t.table_name
+ AND v.column_name  = t.column_name
+WHERE t.table_schema = 'label' AND v.column_name IS NULL
+ORDER BY 1, 2;
+```
+
 ## Drug Label — Languages
 
 7 ภาษา: `th` ไทย · `en` อังกฤษ · `zh` จีน · `ja` ญี่ปุ่น · `my` พม่า · `km` กัมพูชา · `ko` เกาหลี
@@ -77,9 +118,7 @@ Supabase permissions required:
 - 🚨 **ต้อง dedupe คู่ `(sku, usage_ref)` ภายในไฟล์ก่อน upsert** — ซ้ำในก้อนเดียวทำให้ Postgres error 21000 *"ON CONFLICT DO UPDATE command cannot affect row a second time"* ทั้ง chunk พัง
 - ⚠️ **ห้ามใส่ `barcode` ใน payload ของ `medicines`** — upsert จะ `SET` ทุกคอลัมน์ที่อยู่ใน payload ใส่ `barcode: null` ไปด้วยจะล้าง barcode ที่คนกรอกมือไว้ทิ้ง (ไฟล์นำเข้าไม่มีคอลัมน์นี้) ไม่ใส่เลย = แถวใหม่ได้ `null` ตาม default แถวเดิมไม่ถูกแตะ
 - ดึงข้อมูลเดิมด้วย `.range()` **ทีละ 1000 วนจนหมด** — Supabase คืน default 1000 แถว ดึงรอบเดียวจะเห็นไม่ครบแล้วเผลอสร้างแถวซ้ำ
-- 🚨 **view `dl_medicines` ไม่มีคอลัมน์ `usage_ref`** (บั๊กจริง 2569-08-26: `❌ column dl_medicines.usage_ref does not exist`) — view สร้างด้วย `CREATE VIEW ... SELECT * FROM label.medicines` ใน `supabase-setup.sql:54` ตั้งแต่**ก่อน** `alter-medicines-v2.sql` เพิ่มคอลัมน์นี้ และ Postgres **ตรึงรายชื่อคอลัมน์ไว้ตอนสร้าง view** `SELECT *` จึงไม่ขยายตามตารางที่โตขึ้นทีหลัง (ยืนยันแล้ว: view คืนแค่ `id, sku, barcode`)
-  - แก้โดยให้ import อ่านจาก **`supabaseLabelWrite.from('medicines')`** (schema `label`) ตรงๆ ไม่ผ่าน view — `supabase-setup.sql:60` ให้ `GRANT SELECT, INSERT, UPDATE ON label.medicines TO anon` อยู่แล้ว จึงอ่านได้ด้วย anon key ไม่ต้องรัน SQL migration
-  - ⚠️ view อื่น (`dl_medicine_translations`, `dl_settings`) ก็เป็น `SELECT *` เหมือนกัน — **เพิ่มคอลัมน์ใหม่ในตาราง `label.*` เมื่อไหร่ view จะไม่เห็นคอลัมน์นั้นเสมอ** ถ้าจะให้ view เห็นต้อง `CREATE OR REPLACE VIEW` ใหม่หลัง migration ทุกครั้ง
+- 🚨 **view `dl_medicines` ไม่มีคอลัมน์ `usage_ref`** — ดูหัวข้อ "🚨 View `dl_*` เป็น snapshot" ด้านล่าง · import จึงอ่านจาก **`supabaseLabelWrite.from('medicines')`** (schema `label`) ตรงๆ ไม่ผ่าน view
 - confirm dialog บอกจำนวน "เขียนทับ / เพิ่มใหม่" แยกกัน + เตือนว่าคำแปลไทยเดิมจะถูกทับ · chunk ละ 500 ทุกขั้น
 - **จงใจไม่แปลภาษาอื่นตอนอัปโหลด** — ลูปแปลหลายร้อยแถวชน Groq 8,000 TPM / 200K TPD แน่นอน (ดูหัวข้อ Rate Limit ข้างล่าง) ผู้ใช้เปิดทีละ SKU → ✏️ แก้ไข → ✨ แปลด้วย AI เอง
 - CSV อ่านผ่าน `file.text()` (บังคับ UTF-8) ไม่ใช่ `arrayBuffer()` — ไฟล์ TIS-620 ภาษาไทยจะเพี้ยน ให้ผู้ใช้บันทึกเป็น .xlsx แทน
