@@ -37,6 +37,10 @@ Six-page React app sharing the same `App.css` and Supabase project.
 - `main.tsx` — React entry point
 - `index.html` — HTML shell
 - `.env` — VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, VITE_ADMIN_PASSWORD
+- `upload-products.mjs` — Node.js script: อ่าน `R05.106.CSV` → เขียนตารางพัก → RPC สลับเข้า `products` (Task Scheduler ทุกวัน 08:30 บนเครื่อง Server)
+- `run-upload-products.bat` — batch wrapper สำหรับ Task Scheduler (ส่ง exit code กลับด้วย `exit /b`)
+- `products-import-swap.sql` — SQL สร้างตารางพัก `products_import` + RPC `swap_products_from_import()`
+- `upload-products.test.mjs` — unit tests (`npm run test:products-upload`)
 
 **Key files — ฉลากยา (Drug Label):**
 - `druglabel/DrugLabelPage.tsx` — main page: search, preview, add/edit/delete modals, print, admin unlock
@@ -106,7 +110,7 @@ Six-page React app sharing the same `App.css` and Supabase project.
 
 | Table | RLS | จุดเสี่ยงสูงสุด |
 |---|---|---|
-| `products` (barcode, sku, name, unit, price, category, updated_at) | public read + write | Admin upload = **delete-all + insert** (ไม่ atomic) — ถ้า insert พังกลางทางตารางจะว่าง ต้องอัปโหลดซ้ำ |
+| `products` (barcode, sku, name, unit, price, category, base_multiple, updated_at) | public read + write | **มี 2 ทางเขียนคนละกลไก (ตั้งใจ)**: Admin upload หน้าเว็บ = **delete-all + insert** (ไม่ atomic — insert พังกลางทางตารางจะว่าง ต้องอัปโหลดซ้ำ) · `upload-products.mjs` (auto 08:30) = **staging + RPC swap** ปลอดภัยกว่าเพราะรันตอนไม่มีคนเฝ้า |
 | `product_category` (sku, branch, category_no, category_name, location, uploaded_at) — PK `(sku, branch)` | public read + write | Upload ใช้ **mark-and-sweep** (upsert ทุกแถวก่อน แล้วค่อย sweep แถวเก่า) — sweep ต้องรันหลัง upsert ครบทุก chunk เสมอ ไม่งั้นข้อมูลหายกลางทาง · `branch` มีแค่ `SRC/KKL/SSS` (ไม่มีคลังสินค้า) |
 | `stock` (id, branch, sku, name, qty, unit, price, uploaded_at) | read-only (ไม่มี public write) | อัปโหลดผ่าน `upload-stock.mjs` + service_role key เท่านั้น ไม่มีเว็บ UI |
 | `outbound_requests` (branch, sku, barcode, name, unit, qty, requested/requested_at, approved/approved_at, out_of_stock, request_date, document_no, location, entered_at) | public read + write | สาขา/คลังสินค้า/จัดซื้อใช้ร่วมกัน (ดูหัวข้อ "Quick Outbound" ด้านล่าง) — `stock_qty` **ไม่เก็บในตาราง** ดึงสดจาก `stock` แบบเดียวกับ BackOrder |

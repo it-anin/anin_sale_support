@@ -128,11 +128,48 @@ node upload-stock.mjs
 
 ---
 
+## Task ที่ 2 — อัปโหลดสินค้า R05.106 (วันละครั้ง 08:30)
+
+ไฟล์ `R05.106.CSV` ถูก export ใหม่ทุกเช้า วางไว้โฟลเดอร์เดียวกับ `All_stock.csv`
+
+**ต้องทำก่อน 1 ครั้ง:** เปิด Supabase → SQL Editor → รัน `products-import-swap.sql` (สร้างตารางพัก + RPC) ไม่งั้นสคริปต์จะขึ้น error บอกให้รันไฟล์นี้
+
+**ต้องมีในโฟลเดอร์เดียวกัน:** `upload-products.mjs` · `run-upload-products.bat` · `.env` (มี `SUPABASE_SERVICE_KEY`) · `node_modules\@supabase\supabase-js`
+
+**ทดสอบก่อนตั้งเวลา:**
+```cmd
+node upload-products.mjs --dry-run --force
+```
+ต้องขึ้นสรุปจำนวนแถวและ `✅ ตรวจผ่านทั้งหมด` โดยไม่เขียนอะไรลง Supabase
+
+**ตั้ง Task:** Create Basic Task → ชื่อ `ANIN Products Upload (R05.106)` → **Daily** เวลา `08:30:00` → **Start a program**
+- **Program/script:** path เต็มของ `run-upload-products.bat`
+- **Start in (optional):** โฟลเดอร์ที่ไฟล์นั้นอยู่
+
+→ Finish → Properties → แท็บ **General** → **Run whether user is logged on or not**
+
+> ⚠️ **ไม่ต้องตั้ง Repeat task** แบบ Task สต๊อค — ไฟล์อัปเดตวันละครั้ง รันซ้ำก็ได้ข้อมูลเดิม
+> ⚠️ **ตั้งได้เครื่องเดียวเท่านั้น** — 2 เครื่องรันพร้อมกันจะแย่งกันเขียนตาราง `products`
+
+**Last Run Result ที่จะเห็น:**
+
+| ค่า | ความหมาย |
+|---|---|
+| `0x0` | อัปโหลดสำเร็จ |
+| `0x2` | **ข้าม ไม่ใช่ error** — ไฟล์ R05.106.CSV ไม่ได้ถูกอัปเดตวันนี้ (เช้านั้น export ไม่ออก) ข้อมูลเดิมยังอยู่ครบ |
+| `0x1` | ผิดพลาด — เปิด `upload-products.log` ดูสาเหตุ |
+
+---
+
 ## แก้ปัญหาเบื้องต้น
 
 | ข้อความ Error | สาเหตุ | วิธีแก้ |
 |---|---|---|
 | `Cannot find package '@supabase/supabase-js'` | ยังไม่ได้รัน npm install | รัน `npm install @supabase/supabase-js` ในโฟลเดอร์ |
+| `ไฟล์นี้ไม่ใช่รายงาน R05.106` | หยิบไฟล์ผิด (เช่น R05.105) | ตรวจว่าไฟล์ที่ export มามีคอลัมน์ `CF_BARCODE` / `CF_FMLPRICE` ครบ |
+| `ไฟล์นี้น้อยกว่าข้อมูลเดิม NN%` | export มาไม่ครบ | export ใหม่ · ถ้าไฟล์ถูกต้องจริงให้รัน `node upload-products.mjs --force` |
+| `กรุณารัน products-import-swap.sql` | ยังไม่ได้สร้างตารางพัก/RPC | รันไฟล์ SQL นั้นใน Supabase SQL Editor |
+| `Could not find the function ... in the schema cache` | รัน SQL แล้วแต่ PostgREST ยังไม่รู้จัก | รอสักครู่แล้วรันใหม่ หรือ Supabase → Settings → API → Reload schema cache |
 | `ไม่พบไฟล์: \\PCNAME\...` | Network path ผิด หรือเครื่อง POS ปิดอยู่ | ตรวจสอบ PCNAME และ sharing permission |
 | `ไม่พบข้อมูล — ColD ที่พบใน CSV: ...` | ชื่อสาขาใน CSV ไม่ตรง | ตรวจสอบค่าที่แสดงและแก้ไขใน upload-stock.mjs |
 | script ไม่รันอัตโนมัติ | Task Scheduler ไม่มี permission | ตั้ง "Run whether user is logged on or not" |
