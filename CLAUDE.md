@@ -37,7 +37,7 @@ Six-page React app sharing the same `App.css` and Supabase project.
 - `main.tsx` — React entry point
 - `index.html` — HTML shell
 - `.env` — VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, VITE_ADMIN_PASSWORD
-- `upload-products.mjs` — Node.js script: อ่าน `R05.106.CSV` → เขียนตารางพัก → RPC สลับเข้า `products` (Task Scheduler ทุกวัน 08:30 บนเครื่อง Server)
+- `upload-products.mjs` — Node.js script: อ่าน `R05.106.CSV` → เขียนตารางพัก → RPC สลับเข้า `products` · ไฟล์ CSV มาจากบอท **BOTR05106** (โปรเจกต์ Python คนละ repo) ซึ่งเรียกสคริปต์นี้ต่อท้ายตอน export เสร็จผ่าน `BOTR05106\tools\run_and_upload.ps1` — **ห้ามก๊อปสคริปต์ไปวางในโปรเจกต์บอท** เรียกด้วย path เต็มเสมอ (เหตุผลอยู่ใน [`docs/database.md`](docs/database.md))
 - `run-upload-products.bat` — batch wrapper สำหรับ Task Scheduler (ส่ง exit code กลับด้วย `exit /b`)
 - `products-import-swap.sql` — SQL สร้างตารางพัก `products_import` + RPC `swap_products_from_import()`
 - `upload-products.test.mjs` — unit tests (`npm run test:products-upload`)

@@ -45,13 +45,18 @@ begin
 
   -- ใช้ delete ไม่ใช่ truncate: truncate จับ ACCESS EXCLUSIVE lock
   -- จะบล็อกคนที่กำลังค้นหาสินค้าอยู่หน้าเว็บ
-  delete from public.products;
+  --
+  -- ⚠️ ต้องมี WHERE เสมอ — Supabase เปิดส่วนขยาย safeupdate ไว้ DELETE ที่ไม่มี WHERE
+  -- จะถูกปฏิเสธด้วย 'DELETE requires a WHERE clause' (เจอจริงตอนรันรอบแรก 2569-09-05)
+  -- `id is not null` = ทุกแถว เพราะ id เป็น PK (ฝั่งเว็บเลี่ยงปัญหานี้ไปเองเพราะ
+  -- PostgREST บังคับให้ใส่ filter อยู่แล้ว เช่น .delete().neq('id', 0))
+  delete from public.products where id is not null;
 
   insert into public.products (barcode, sku, name, unit, price, category, base_multiple, updated_at)
   select barcode, sku, name, unit, price, category, base_multiple, now()
   from public.products_import;
 
-  delete from public.products_import;
+  delete from public.products_import where id is not null;
 
   return n;
 end;

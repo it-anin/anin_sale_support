@@ -14,6 +14,7 @@ import {
   buildProductRows,
   isStaleFile,
   parseCSV,
+  parseFileFlag,
   readCsvText,
   resolveProductCsvColumns,
   shrinkTooMuch,
@@ -124,6 +125,15 @@ test('isStaleFile: ไฟล์ของเมื่อวาน = ข้าม 
   assert.equal(isStaleFile(new Date(2026, 8, 2, 23, 59), now), true);
   assert.equal(isStaleFile(new Date(2026, 8, 3, 0, 0), now), false);
   assert.equal(isStaleFile(new Date(2026, 8, 3, 7, 59), now), false);
+});
+
+test('parseFileFlag: รับได้ทั้ง --file <path> และ --file=<path> · ไม่ใส่ path → throw', () => {
+  assert.equal(parseFileFlag(['--file', 'C:\\bot\\R05.106.CSV']), 'C:\\bot\\R05.106.CSV');
+  assert.equal(parseFileFlag(['--file=C:\\bot\\R05.106.CSV', '--force']), 'C:\\bot\\R05.106.CSV');
+  assert.equal(parseFileFlag(['--dry-run']), null);
+  assert.equal(parseFileFlag([]), null);
+  assert.throws(() => parseFileFlag(['--file']), /ต้องตามด้วย path/);
+  assert.throws(() => parseFileFlag(['--file', '--force']), /ต้องตามด้วย path/);
 });
 
 test('shrinkTooMuch: หดเกิน 20% เท่านั้นที่หยุด · ตารางว่างอยู่แล้วไม่หยุด', () => {

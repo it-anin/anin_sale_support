@@ -1,8 +1,13 @@
 /**
  * upload-products.mjs
  * อ่านไฟล์ R05.106.CSV แล้วอัปโหลดข้อมูลสินค้าเข้า Supabase (ตาราง products)
- * รันโดย: node upload-products.mjs [--force] [--dry-run]
+ * รันโดย: node upload-products.mjs [--file <path>] [--force] [--dry-run]
  * ตั้งเวลา: Task Scheduler วันละครั้ง 08:30 (เครื่อง Server)
+ *
+ * เรียกข้ามโปรเจกต์ได้ด้วย path เต็ม เช่นให้บอทที่ export ไฟล์เองเรียกต่อท้าย:
+ *   node "C:\Users\...\SaleSupport\upload-products.mjs" --file "C:\bot\out\R05.106.CSV"
+ * (.env และ node_modules ถูกหาจากโฟลเดอร์ของ "ไฟล์สคริปต์" ไม่ใช่ cwd ที่เรียก
+ *  โปรเจกต์ที่เรียกจึงไม่ต้องมี service key หรือ @supabase/supabase-js ของตัวเอง)
  *
  * ต่างจากหน้าเว็บ (Admin → Upload R05.106) ตรงวิธีเขียน:
  *   หน้าเว็บ = delete-all → insert (พังกลางทาง = ตารางว่าง แต่มีคนนั่งดูอยู่)
@@ -158,6 +163,25 @@ export function buildProductRows(data, col) {
   return { rows, stats: { csvRows: Math.max(data.length - 1, 0), skipped } };
 }
 
+/**
+ * อ่าน `--file <path>` หรือ `--file=<path>` จาก argv
+ * มีไว้ให้โปรเจกต์อื่น (บอทที่ export R05.106 เอง) ชี้ไฟล์ของตัวเองได้
+ * โดยไม่ต้องมาแก้ CSV_CANDIDATES ทุกครั้งที่ย้ายโฟลเดอร์
+ */
+export function parseFileFlag(argv) {
+  const eq = argv.find(a => a.startsWith('--file='));
+  if (eq) {
+    const path = eq.slice('--file='.length).trim();
+    if (!path) throw new Error('--file= ต้องตามด้วย path ของไฟล์ CSV');
+    return path;
+  }
+  const i = argv.indexOf('--file');
+  if (i < 0) return null;
+  const next = argv[i + 1];
+  if (!next || next.startsWith('--')) throw new Error('--file ต้องตามด้วย path ของไฟล์ CSV');
+  return next.trim();
+}
+
 /** ไฟล์เก่ากว่าเที่ยงคืนของวันนี้ = เช้านี้ export ไม่ออก อย่าอัปโหลดซ้ำของเมื่อวาน */
 export function isStaleFile(mtime, now = new Date()) {
   const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -231,11 +255,18 @@ export async function main(argv = process.argv.slice(2)) {
     );
   }
 
-  const csvPath = CSV_CANDIDATES.find(p => existsSync(p));
-  if (!csvPath) {
-    throw new Error(`ไม่พบ R05.106.CSV ใน path:\n${CSV_CANDIDATES.map(p => `   - ${p}`).join('\n')}`);
+  const fileArg = parseFileFlag(argv);
+  let csvPath;
+  if (fileArg) {
+    if (!existsSync(fileArg)) throw new Error(`ไม่พบไฟล์ตามที่ระบุใน --file:\n   ${fileArg}`);
+    csvPath = fileArg;
+  } else {
+    csvPath = CSV_CANDIDATES.find(p => existsSync(p));
+    if (!csvPath) {
+      throw new Error(`ไม่พบ R05.106.CSV ใน path:\n${CSV_CANDIDATES.map(p => `   - ${p}`).join('\n')}`);
+    }
   }
-  log(`   ใช้ไฟล์: ${csvPath}`);
+  log(`   ใช้ไฟล์: ${csvPath}${fileArg ? ' (จาก --file)' : ''}`);
 
   const stat = statSync(csvPath);
   if (isStaleFile(stat.mtime) && !force) {
