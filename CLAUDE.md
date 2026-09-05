@@ -37,10 +37,8 @@ Six-page React app sharing the same `App.css` and Supabase project.
 - `main.tsx` — React entry point
 - `index.html` — HTML shell
 - `.env` — VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, VITE_ADMIN_PASSWORD
-- `upload-products.mjs` — Node.js script: อ่าน `R05.106.CSV` → เขียนตารางพัก → RPC สลับเข้า `products` · ไฟล์ CSV มาจากบอท **BOTR05106** (โปรเจกต์ Python คนละ repo) ซึ่งเรียกสคริปต์นี้ต่อท้ายตอน export เสร็จผ่าน `BOTR05106\tools\run_and_upload.ps1` — **ห้ามก๊อปสคริปต์ไปวางในโปรเจกต์บอท** เรียกด้วย path เต็มเสมอ (เหตุผลอยู่ใน [`docs/database.md`](docs/database.md))
-- `run-upload-products.bat` — batch wrapper สำหรับ Task Scheduler (ส่ง exit code กลับด้วย `exit /b`)
-- `products-import-swap.sql` — SQL สร้างตารางพัก `products_import` + RPC `swap_products_from_import()`
-- `upload-products.test.mjs` — unit tests (`npm run test:products-upload`)
+> ⚠️ **การอัปโหลด R05.106 อัตโนมัติย้ายออกจาก repo นี้แล้ว (2569-09-06)** — `upload-products.mjs` + เทส + `products-import-swap.sql` ย้ายไปอยู่ repo **[it-anin/botr05106](https://github.com/it-anin/botr05106)** ซึ่งเป็นบอท Python ที่ export ไฟล์นี้จาก ProMaxx เอง (บอท 1 ตัว = 1 โปรเจกต์จบ เหมือน `bot-export` / `Bot-Customer`) · ปุ่ม **Upload R05.106** หน้า Admin ยังอยู่ที่ `App.tsx` เหมือนเดิมเป็นทางสำรอง
+> 🔗 **`PRODUCT_CSV_COLUMNS` ใน `App.tsx` กับ `upload-products.mjs` ใน repo นั้น ต้องแก้พร้อมกันเสมอ** — อ่านไฟล์เดียวกัน หัวคอลัมน์ชุดเดียวกัน เขียนตาราง `products` ตัวเดียวกัน
 
 **Key files — ฉลากยา (Drug Label):**
 - `druglabel/DrugLabelPage.tsx` — main page: search, preview, add/edit/delete modals, print, admin unlock
@@ -110,7 +108,7 @@ Six-page React app sharing the same `App.css` and Supabase project.
 
 | Table | RLS | จุดเสี่ยงสูงสุด |
 |---|---|---|
-| `products` (barcode, sku, name, unit, price, category, base_multiple, updated_at) | public read + write | **มี 2 ทางเขียนคนละกลไก (ตั้งใจ)**: Admin upload หน้าเว็บ = **delete-all + insert** (ไม่ atomic — insert พังกลางทางตารางจะว่าง ต้องอัปโหลดซ้ำ) · `upload-products.mjs` (auto 08:30) = **staging + RPC swap** ปลอดภัยกว่าเพราะรันตอนไม่มีคนเฝ้า |
+| `products` (barcode, sku, name, unit, price, category, base_multiple, updated_at) | public read + write | **มี 2 ทางเขียนคนละกลไก คนละ repo (ตั้งใจ)**: Admin upload หน้าเว็บ (repo นี้) = **delete-all + insert** ไม่ atomic — พังกลางทางตารางจะว่าง · `upload-products.mjs` ([it-anin/botr05106](https://github.com/it-anin/botr05106), รันอัตโนมัติต่อท้ายบอท export) = **staging + RPC swap** ปลอดภัยกว่าเพราะไม่มีคนเฝ้า · ตาราง `products_import` + RPC `swap_products_from_import()` ถูกสร้างจาก repo นั้น |
 | `product_category` (sku, branch, category_no, category_name, location, uploaded_at) — PK `(sku, branch)` | public read + write | Upload ใช้ **mark-and-sweep** (upsert ทุกแถวก่อน แล้วค่อย sweep แถวเก่า) — sweep ต้องรันหลัง upsert ครบทุก chunk เสมอ ไม่งั้นข้อมูลหายกลางทาง · `branch` มีแค่ `SRC/KKL/SSS` (ไม่มีคลังสินค้า) |
 | `stock` (id, branch, sku, name, qty, unit, price, uploaded_at) | read-only (ไม่มี public write) | อัปโหลดผ่าน `upload-stock.mjs` + service_role key เท่านั้น ไม่มีเว็บ UI |
 | `outbound_requests` (branch, sku, barcode, name, unit, qty, requested/requested_at, approved/approved_at, out_of_stock, request_date, document_no, location, entered_at) | public read + write | สาขา/คลังสินค้า/จัดซื้อใช้ร่วมกัน (ดูหัวข้อ "Quick Outbound" ด้านล่าง) — `stock_qty` **ไม่เก็บในตาราง** ดึงสดจาก `stock` แบบเดียวกับ BackOrder |

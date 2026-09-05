@@ -43,34 +43,21 @@
 - `DELETE` เป็นค่าหมวดที่พบมากสุด (4,818 แถว) — **ไม่กรองออก** เก็บตามไฟล์ เพื่อให้ยังค้นหาเจอ
 - ⚠️ **ห้ามสร้างไฟล์ CSV ตัวอย่างสมมติขึ้นมาใหม่** — เดิมมี `sample-products.csv` ที่คอลัมน์ไม่ตรงกับ R05.106 (B เป็น `Brand`) แล้ว `README.md` / `QUICKSTART.md` ก็ไปลอก layout ของไฟล์สมมตินั้นมาเขียนเป็น "รูปแบบไฟล์ CSV" (ราคาอยู่ I) ทำให้เอกสารผิดตามกันทั้งชุด · ลบไฟล์และแก้เอกสารแล้ว 2569-08-11 — ถ้าต้องการไฟล์เทส ให้ใช้ export จริงจาก Promax
 
-### Products — อัปโหลดอัตโนมัติต่อท้ายบอท export (เพิ่ม 2569-09-04)
+### Products — อัปโหลดอัตโนมัติ อยู่คนละ repo แล้ว (ย้ายออก 2569-09-06)
 
-`R05.106.CSV` มาจาก **บอท `BOTR05106`** (โปรเจกต์ Python + pywinauto คนละ repo, PyInstaller → `dist\promaxx-bot\promaxx-bot.exe`) ที่ automate ProMaxx แล้วเขียน `R05.106.part.CSV` → rename เป็น `R05.106.CSV` ลง `Desktop\run-upload-stock\` (atomic part-then-rename) · `upload-products.mjs` ถูกเรียก **ต่อท้ายบอทในงาน Task Scheduler เดียวกัน** ผ่าน `BOTR05106\tools\run_and_upload.ps1` · ปุ่มอัปโหลดหน้าเว็บยังอยู่เหมือนเดิมเป็นทางสำรอง
+**โค้ดไม่อยู่ repo นี้แล้ว** — `upload-products.mjs` + เทส + `products-import-swap.sql` ย้ายไป **[it-anin/botr05106](https://github.com/it-anin/botr05106)** ซึ่งเป็นบอท Python ที่ automate ProMaxx เพื่อ export ไฟล์นี้อยู่แล้ว (บอท 1 ตัว = 1 โปรเจกต์จบ เหมือน `bot-export` ที่พอร์ต `upload-stock.mjs` เป็น Python ไว้ในตัวเอง และ `Bot-Customer`) · ที่นั่นบอทเรียก uploader ต่อท้ายตอน export เสร็จผ่าน `tools\run_and_upload.ps1` ใน Task Scheduler งานเดียว
 
-- ⚠️ **ห้ามตั้ง Task 08:30 แยกแบบที่วางแผนไว้ตอนแรก** — เวลาที่ไฟล์ออกไม่แน่นอน (วัดจริงได้ 15:14 และ 18:04) ตั้งเวลาตายตัวแล้ว guard "ไฟล์ต้องเป็นของวันนี้" จะข้ามทุกวัน
-- ⚠️ task ที่ chain กับบอทต้องเป็น **`LogonType Interactive`** (บอทเป็น GUI automation, Session 0 ไม่มีเดสก์ท็อป) ต่างจาก uploader ตัวอื่นที่ตั้งเป็น "run whether user is logged on or not" ได้
-- 🚫 **ห้ามก๊อป `upload-*.mjs` ไปวางในโปรเจกต์อื่น — เรียกด้วย path เต็มแทน** (`getServiceKey()` อ่าน `.env` ข้างตัวสคริปต์ และ Node หา `node_modules` จากโฟลเดอร์ของไฟล์สคริปต์ ไม่ใช่ cwd) · เหตุผลจากของจริง: `upload-customer-history.mjs` มี **3 สำเนาที่โค้ดไม่ตรงกัน** (SaleSupport + run-upload-stock ตัวใหม่ · Bot-Customer + Bot-R16 ตัวเก่า) และตัวที่ scheduled เรียกจริงคือ**ตัวเก่า**
+> 🔗 **`PRODUCT_CSV_COLUMNS` + `handleFileUpload` ใน `App.tsx` กับ `upload-products.mjs` ใน repo นั้น ต้องแก้พร้อมกันเสมอ** — อ่านไฟล์ R05.106 ตัวเดียวกัน หัวคอลัมน์ชุดเดียวกัน เขียนตาราง `products` ตัวเดียวกัน · มีคอมเมนต์เตือนไว้ที่ `App.tsx` แล้ว
 
-**เขียนคนละกลไกกับหน้าเว็บโดยตั้งใจ** — หน้าเว็บ `delete-all → insert` พังกลางทางแล้วตารางว่าง ซึ่งยอมรับได้ตอนมีคนนั่งดู แต่ 08:30 ไม่มีใครเฝ้า สคริปต์จึง:
-1. เขียนทุกแถวลง `products_import` (ตารางพัก) ทีละ 500
-2. เรียก RPC `swap_products_from_import()` → `delete products` + `insert ... select` + ล้างตารางพัก **ใน transaction เดียว**
-3. พังตรงไหนก็ rollback หมด → `products` ไม่มีทางว่างหรือมีแค่ครึ่งเดียว · ต้องรัน `products-import-swap.sql` ก่อนใช้ครั้งแรก
+**สิ่งที่ยังเป็นเรื่องของ repo นี้ เพราะกระทบตาราง `products` โดยตรง:**
+
+- ตาราง `products_import` + RPC `swap_products_from_import()` อยู่ใน Supabase project เดียวกัน (`eogqnedbdpjuptwlqudn`) — สคริปต์เขียนลงตารางพักทีละ 500 แถวแล้วเรียก RPC สลับเข้า `products` ใน **transaction เดียว** พังตรงไหนก็ rollback หมด ตารางไม่มีทางว่างหรือมีครึ่งเดียว (ต่างจากหน้าเว็บที่ `delete-all → insert` ซึ่งพังแล้วตารางว่าง)
 - RPC ใช้ `delete` ไม่ใช่ `truncate` — truncate จับ ACCESS EXCLUSIVE lock จะบล็อกคนที่กำลังค้นหาสินค้าอยู่
-- RPC เขียน `updated_at = now()` ให้ทุกแถว → badge "Last Updated" หน้า Admin แสดงเวลาที่อัปโหลดเช้านั้น
-- `grant execute` ให้ `service_role` เท่านั้น (anon เรียกทีเดียวลบทั้งตารางได้)
-
-**guard 4 ชั้น เรียงตามลำดับที่เช็ค — ทุกชั้นหยุดก่อนแตะ DB:**
-| ชั้น | เงื่อนไข | ผล |
-|---|---|---|
-| ไฟล์ไม่อัปเดต | mtime เก่ากว่าเที่ยงคืนวันนี้ | **exit 2** (ข้าม ไม่ใช่ error) — กันเคส export เช้านั้นไม่ออกแล้วอัปโหลดของเมื่อวานซ้ำ |
-| ไฟล์ยังเขียนไม่เสร็จ | mtime ใหม่กว่า 60 วิ | รอ 20 วิ × 3 รอบให้ขนาดนิ่ง ไม่นิ่ง → exit 1 |
-| หัวคอลัมน์ | ขาดคอลัมน์ใดใน 7 ตัว | exit 1 (ตรรกะเดียวกับ `resolveProductCsvColumns` หน้าเว็บ) |
-| ไฟล์หด | น้อยกว่าของเดิมเกิน 20% | exit 1 — หน้าเว็บแค่เตือนแล้วให้คนกดยืนยัน สคริปต์ไม่มีคนกดจึงต้องหยุด (ข้ามด้วย `--force`) |
-
-- exit code: `0` สำเร็จ · `1` ผิดพลาด · `2` ข้ามเพราะไฟล์ไม่อัปเดต — `run-upload-products.bat` ส่งค่ากลับด้วย `exit /b` ให้เห็นใน Task Scheduler (ต่างจาก .bat ตัวอื่นที่ไม่ส่ง เลยขึ้นสำเร็จตลอด)
-- flag: `--dry-run` (ตรวจอย่างเดียว) · `--force` (ข้าม guard วันที่ + ไฟล์หด) · `--file <path>` (ชี้ไฟล์เอง ไม่ใช้ `CSV_CANDIDATES`)
-- **เรียกข้ามโปรเจกต์ได้ด้วย path เต็ม** — `getServiceKey()` อ่าน `.env` และ Node หา `node_modules` จากโฟลเดอร์ของ**ไฟล์สคริปต์** ไม่ใช่ cwd ที่เรียก → โปรเจกต์บอทที่ export R05.106 เองสั่ง `node "C:\...\SaleSupport\upload-products.mjs" --file "<ไฟล์ที่เพิ่ง export>"` ต่อท้ายได้เลย ไม่ต้องก๊อปไฟล์ ไม่ต้องมี service key ของตัวเอง และไม่ต้องใช้ Task Scheduler
-  - แบบนี้ guard "ไฟล์ต้องเป็นของวันนี้" ผ่านเองอัตโนมัติ (mtime = ตอนที่เพิ่ง export) · guard "ไฟล์ยังเขียนไม่เสร็จ" จะรอ 20 วิให้ขนาดนิ่งก่อนอ่าน ซึ่งเป็นสิ่งที่ต้องการพอดีเมื่อเรียกต่อท้าย export ทันที
+- 🚨 **`delete` ใน RPC ต้องมี `WHERE` เสมอ** — Supabase เปิดส่วนขยาย `safeupdate` ไว้ `DELETE` ที่ไม่มี WHERE จะถูกปฏิเสธด้วย `DELETE requires a WHERE clause` (เจอจริงตอนรันของจริงครั้งแรก 2569-09-05 · ตอนนั้น rollback หมด `products` ไม่ถูกแตะเลย) · ฝั่งเว็บไม่เคยเจอเพราะ PostgREST บังคับให้ใส่ filter อยู่แล้ว (`.delete().neq('id', 0)`)
+- RPC เขียน `updated_at = now()` ให้ทุกแถว → badge "Last Updated" หน้า Admin แสดงเวลาที่อัปโหลดรอบนั้น (ถ้าปล่อยเป็น NULL badge จะว่างเพราะ `order desc` เอา NULL ขึ้นก่อน)
+- `grant execute` ให้ `service_role` เท่านั้น — anon เรียกทีเดียวลบทั้งตารางได้
+- ⚠️ **ห้ามตั้ง Task Scheduler อัปโหลดแยกอีกทาง** — เวลาที่ไฟล์ออกไม่แน่นอน (วัดจริงได้ 15:14 และ 18:04 คนละวัน) และ 2 ทางรันพร้อมกันจะแย่งกันเขียน `products`
+- 🚫 **ห้ามก๊อป `upload-*.mjs` ไปวางหลายที่** — `upload-customer-history.mjs` มี **3 สำเนาที่โค้ดไม่ตรงกัน** (repo นี้ + `run-upload-stock` เป็นตัวใหม่ · `Bot-Customer` + `Bot-R16` เป็นตัวเก่า) และตัวที่ scheduled เรียกจริงคือ**ตัวเก่า**
 - log ทุกบรรทัดถูก mirror ลง `upload-products.log` ข้างสคริปต์ (`.gitignore` มี `*.log`) — ไม่ redirect ใน .bat เพราะจะทำให้รันมือแล้วไม่เห็น progress
 - ⚠️ **`parseCSV` ที่คัดลอกจาก `upload-stock.mjs` ไม่ตัด UTF-8 BOM** (ต่างจาก PapaParse ที่หน้าเว็บใช้) — ต้องอ่านผ่าน `readCsvText()` ซึ่ง strip BOM ตัวแรกทิ้งให้ ไม่งั้นหัวคอลัมน์แรกจะมี BOM ติดหน้า (`indexOf('CF_BARCODE')` หาไม่เจอ) แล้ว header check fail ทุกวัน · มีเทสกันไว้แล้วใน `upload-products.test.mjs`
 - ⚠️ **ตั้ง Task Scheduler เครื่องเดียวเท่านั้น** — 2 เครื่องรันพร้อมกันจะแย่งกัน swap ตารางเดียวกัน (ข้อควรระวังเดียวกับ `upload-stock.mjs`)

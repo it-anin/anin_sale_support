@@ -7,8 +7,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "test:customer-upload": "node --test upload-customer-history.test.mjs",
-    "test:products-upload": "node --test upload-products.test.mjs"
+    "test:customer-upload": "node --test upload-customer-history.test.mjs"
   },
   "dependencies": {
     "@fontsource/inter": "^5.2.8",
