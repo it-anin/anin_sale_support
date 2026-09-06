@@ -1820,26 +1820,6 @@ body.pulse-b .cart-inline-btn.in-cart {
   min-height: 60px;
 }
 
-.footer-actions > .admin-trigger {
-  position: absolute;
-  right: 1rem;
-  top: 50%;
-  transform: translateY(-50%);
-}
-
-.admin-trigger {
-  width: 28px;
-  height: 28px;
-  border: none;
-  background: transparent;
-  color: #ccc;
-  font-size: 16px;
-  cursor: pointer;
-  opacity: 0.4;
-  transition: opacity 0.2s;
-}
-.admin-trigger:hover { opacity: 1; }
-
 /* Loading State */
 .loading-state {
   text-align: center;

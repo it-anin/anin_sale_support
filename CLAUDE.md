@@ -37,8 +37,10 @@ Six-page React app sharing the same `App.css` and Supabase project.
 - `main.tsx` — React entry point
 - `index.html` — HTML shell
 - `.env` — VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, VITE_ADMIN_PASSWORD
-> ⚠️ **การอัปโหลด R05.106 อัตโนมัติย้ายออกจาก repo นี้แล้ว (2569-09-06)** — `upload-products.mjs` + เทส + `products-import-swap.sql` ย้ายไปอยู่ repo **[it-anin/botr05106](https://github.com/it-anin/botr05106)** ซึ่งเป็นบอท Python ที่ export ไฟล์นี้จาก ProMaxx เอง (บอท 1 ตัว = 1 โปรเจกต์จบ เหมือน `bot-export` / `Bot-Customer`) · ปุ่ม **Upload R05.106** หน้า Admin ยังอยู่ที่ `App.tsx` เหมือนเดิมเป็นทางสำรอง
-> 🔗 **`PRODUCT_CSV_COLUMNS` ใน `App.tsx` กับ `upload-products.mjs` ใน repo นั้น ต้องแก้พร้อมกันเสมอ** — อ่านไฟล์เดียวกัน หัวคอลัมน์ชุดเดียวกัน เขียนตาราง `products` ตัวเดียวกัน
+> ⛔ **repo นี้ไม่อัปโหลด R05.106 แล้ว (2569-09-06)** — `upload-products.mjs` + เทส + `products-import-swap.sql` ย้ายไป repo **[it-anin/botr05106](https://github.com/it-anin/botr05106)** ซึ่งเป็นบอท Python ที่ export ไฟล์นี้จาก ProMaxx เอง (บอท 1 ตัว = 1 โปรเจกต์จบ เหมือน `bot-export` / `Bot-Customer`)
+> **ปุ่ม `Upload R05.106` + Admin panel + ปุ่ม 💻 ถูกตัดออกจาก `App.tsx` แล้ว** พร้อม `handleFileUpload`, `PRODUCT_CSV_COLUMNS`, `resolveProductCsvColumns`, `colLetter`, state `isAdmin`/`adminPassword`/`adminVerified`/`uploadStatus`, CSS `.admin-trigger` และ dependency `papaparse` — เหตุผลคือ 2 ทางเขียนตาราง `products` ตัวเดียวกันเสี่ยง**อัปโหลดซ้ำซ้อน** และต้องคอยซิงค์ mapping คอลัมน์ข้าม repo · ตอนนี้เหลือ implementation เดียวในโลก
+> **อัปโหลดด้วยมือ** → ที่เครื่องบอท: `node upload-products.mjs --file <path>` หรือ `.\tools\run_and_upload.ps1 -SkipExport`
+> ⚠️ badge **Last Updated** ยังอยู่ (อ่าน `max(updated_at)` จาก `products`) · ปุ่มเฟือง ⚙️ ตั้งค่าเปิด/ปิดหน้ายังใช้ `VITE_ADMIN_PASSWORD` เหมือนเดิม คนละ state กัน
 
 **Key files — ฉลากยา (Drug Label):**
 - `druglabel/DrugLabelPage.tsx` — main page: search, preview, add/edit/delete modals, print, admin unlock
@@ -108,7 +110,7 @@ Six-page React app sharing the same `App.css` and Supabase project.
 
 | Table | RLS | จุดเสี่ยงสูงสุด |
 |---|---|---|
-| `products` (barcode, sku, name, unit, price, category, base_multiple, updated_at) | public read + write | **มี 2 ทางเขียนคนละกลไก คนละ repo (ตั้งใจ)**: Admin upload หน้าเว็บ (repo นี้) = **delete-all + insert** ไม่ atomic — พังกลางทางตารางจะว่าง · `upload-products.mjs` ([it-anin/botr05106](https://github.com/it-anin/botr05106), รันอัตโนมัติต่อท้ายบอท export) = **staging + RPC swap** ปลอดภัยกว่าเพราะไม่มีคนเฝ้า · ตาราง `products_import` + RPC `swap_products_from_import()` ถูกสร้างจาก repo นั้น |
+| `products` (barcode, sku, name, unit, price, category, base_multiple, updated_at) | public read + write | **repo นี้อ่านอย่างเดียว ไม่มีทางเขียนแล้ว** — คนเขียนคือ `upload-products.mjs` ใน [it-anin/botr05106](https://github.com/it-anin/botr05106) ที่รันต่อท้ายบอท export ด้วย **staging + RPC swap** (`products_import` + `swap_products_from_import()`) · RLS ยังเปิด `public write` ไว้เฉย ๆ ปิดได้ถ้าต้องการ |
 | `product_category` (sku, branch, category_no, category_name, location, uploaded_at) — PK `(sku, branch)` | public read + write | Upload ใช้ **mark-and-sweep** (upsert ทุกแถวก่อน แล้วค่อย sweep แถวเก่า) — sweep ต้องรันหลัง upsert ครบทุก chunk เสมอ ไม่งั้นข้อมูลหายกลางทาง · `branch` มีแค่ `SRC/KKL/SSS` (ไม่มีคลังสินค้า) |
 | `stock` (id, branch, sku, name, qty, unit, price, uploaded_at) | read-only (ไม่มี public write) | อัปโหลดผ่าน `upload-stock.mjs` + service_role key เท่านั้น ไม่มีเว็บ UI |
 | `outbound_requests` (branch, sku, barcode, name, unit, qty, requested/requested_at, approved/approved_at, out_of_stock, request_date, document_no, location, entered_at) | public read + write | สาขา/คลังสินค้า/จัดซื้อใช้ร่วมกัน (ดูหัวข้อ "Quick Outbound" ด้านล่าง) — `stock_qty` **ไม่เก็บในตาราง** ดึงสดจาก `stock` แบบเดียวกับ BackOrder |
@@ -374,12 +376,11 @@ Each panel has a close (✕) button and includes product name in subheader.
 
 ## UI — Misc
 
-- Admin panel shows R05.106 label, Enter key to verify password, Last Updated badge (no version badge)
+- Last Updated badge อ่าน `max(updated_at)` จากตาราง `products` (no version badge) — **Admin panel + ปุ่ม 💻 ถูกตัดออกแล้ว 2569-09-06** พร้อมการอัปโหลด R05.106
 - หัวตารางป้ายราคามี 4 ปุ่ม เรียงซ้าย→ขวา: `เลือกตามหมวด │ รายการที่เลือก │ เลือกทั้งหมด │ ลบทั้งหมด` — 2 dropdown (หมวด / ตะกร้า) เปิดพร้อมกันไม่ได้
-- อัปโหลดในโปรเจกต์มี 2 จุดแยกกัน status คนละตัว: **Admin panel → `Upload R05.106`** (CSV, delete-all + insert, `uploadStatus`) และ **เมนูเลือกตามหมวด → `📁 อัปโหลด Location → <สาขา>`** (XLSX, upsert + sweep, `locationStatus`, ไม่ต้องใส่รหัส)
-- ปุ่มอัปโหลดทั้ง 2 จุด**บอกชื่อไฟล์ที่ต้องเลือกบนตัวปุ่ม** — ทั้งคู่รับไฟล์ชื่ออะไรก็ได้ ตัวตัดสินคือหัวคอลัมน์ ป้ายบนปุ่มจึงเป็นตัวช่วยเดียวที่กันหยิบผิดตั้งแต่ต้นทาง
-- ทั้ง 2 จุดมีชุดกันพลาดเหมือนกัน: **เช็คหัวคอลัมน์ก่อนแตะ DB → confirm บอก `เดิม N → ใหม่ M` → เตือน 🚨 ถ้าไฟล์หดเกิน 20% → reset input ใน `finally`**
-- กล่อง `uploadStatus` ต้องมี `whiteSpace: 'pre-line'` — ข้อความ error หัวคอลัมน์เป็นหลายบรรทัด
+- **เหลือจุดอัปโหลดจุดเดียวในหน้าเว็บ**: เมนูเลือกตามหมวด → `📁 อัปโหลด Location → <สาขา>` (XLSX, upsert + sweep, `locationStatus`, ไม่ต้องใส่รหัส) · ปุ่มบอกชื่อไฟล์ที่ต้องเลือกบนตัวปุ่ม เพราะรับไฟล์ชื่ออะไรก็ได้ ตัวตัดสินคือหัวคอลัมน์
+- ชุดกันพลาดของจุดนั้น: **เช็คหัวคอลัมน์ก่อนแตะ DB → confirm บอก `เดิม N → ใหม่ M` → เตือน 🚨 ถ้าไฟล์หดเกิน 20% → reset input ใน `finally`** (ชุดเดียวกับที่ `upload-products.mjs` ใน repo บอทใช้)
+- กล่อง `locationStatus` ต้องมี `whiteSpace: 'pre-line'` — ข้อความ error หัวคอลัมน์เป็นหลายบรรทัด
 
 ## Sale Support (หน้าซัพพอร์ต)
 

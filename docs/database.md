@@ -8,8 +8,8 @@
 - RLS: `public read` (SELECT) + `public write` (ALL)
 - Search: queries Supabase directly — NOT client-side filter
 - On mount: fetches only latest `updated_at` for timestamp display
-- Admin upload: CSV (R05.106) → PapaParse → **เช็คหัวคอลัมน์** → confirm → delete all → insert in 500-row chunks
-- ⚠️ ยังเป็น **delete-all + insert** (ไม่ atomic) — ถ้า insert พังกลางทางตารางจะว่าง ต้องอัปโหลดซ้ำ · ต่างจาก `product_category` ที่ใช้ upsert + sweep
+- ⛔ **หน้าเว็บเขียนตารางนี้ไม่ได้แล้ว (2569-09-06)** — ปุ่ม Admin `Upload R05.106` ถูกตัดออกทั้งชุด · คนเขียนคือ `upload-products.mjs` ใน [it-anin/botr05106](https://github.com/it-anin/botr05106) ที่รันต่อท้ายบอท export ด้วย staging + RPC swap (รายละเอียดหัวข้อถัดไป)
+- เดิมหน้าเว็บใช้ **delete-all + insert** ซึ่งไม่ atomic (insert พังกลางทางตารางจะว่าง) — เป็นเหตุผลหนึ่งที่ตัดออก อีกเหตุผลคือ 2 ทางเขียนตารางเดียวกันเสี่ยงอัปโหลดซ้ำซ้อนและต้องซิงค์ mapping คอลัมน์ข้าม repo
 
 ### Products CSV — รูปแบบไฟล์ R05.106
 
@@ -17,9 +17,9 @@
 27 คอลัมน์ · ตรวจกับ export จริง 11 ไฟล์ (พ.ค.–ส.ค. 2569) หัวคอลัมน์นิ่งทุกไฟล์
 
 > 📌 **ชื่อเรียกกลาง = `R05.106`** (ตามเลขรายงานของ Promax) ใช้ชื่อนี้ในโค้ด เอกสาร และ UI ทุกที่
-> **ไม่มีชื่อไฟล์บังคับ** — อัปโหลดผ่านหน้าเว็บ เลือกไฟล์เอง โค้ดรับ `.csv` อะไรก็ได้แล้วตรวจ *หัวคอลัมน์* แทน (ต่างจาก `upload-stock.mjs` / `upload-customer-history.mjs` ที่ล็อกชื่อไฟล์ใน `CSV_CANDIDATES` เพราะรันอัตโนมัติ ไม่มีคนเลือก)
+> **ตัวตัดสินคือหัวคอลัมน์ ไม่ใช่ชื่อไฟล์** — `upload-products.mjs` หาไฟล์จาก `CSV_CANDIDATES` (หรือ `--file`) แล้วตรวจหัวคอลัมน์ก่อนแตะ DB เสมอ แบบเดียวกับ `upload-stock.mjs` / `upload-customer-history.mjs`
 > ชื่อที่ export กันมาจริงไม่นิ่ง — `05106.CSV`, `R05106.CSV`, `R05.106-26-5-2026.CSV`, `R05106-11082026.CSV` ฯลฯ จึงยึดหัวคอลัมน์เป็นตัวตัดสิน ไม่ใช่ชื่อไฟล์
-> ป้ายใน UI: ปุ่ม **`Upload R05.106`** + subheader `© Data → R05.106 | Assignee : Inbound` ในหน้า Admin
+> ตารางคอลัมน์ด้านล่างยังต้องรู้ไว้ เพราะเป็นสัญญาของข้อมูลที่เข้าตาราง `products` แม้ตัวโค้ดอ่านไฟล์จะอยู่ repo `botr05106` แล้ว
 
 | field | idx | คอลัมน์ | header |
 |---|---|---|---|
@@ -37,7 +37,7 @@
   - กรองเหลือ `=1` ที่ **view `v_products_by_category`** เท่านั้น (เฉพาะหน้าเลือกตามหมวด)
   - ข้อมูลจริง: 10,761 คู่ `sku-unit` → กรองแล้วเหลือ **7,905 = 1 ป้ายต่อ SKU พอดี** · ทุก SKU มีแถว `=1` เสมอ ไม่มีตัวไหนหาย
 - ⚠️ **หมวดอยู่คอลัมน์ Q ไม่ใช่ C** — คอลัมน์ C คือ `CF_COMMENTS` (โน้ตอิสระ ว่าง 10,792/10,841 แถว ที่เหลือเป็นค่ามั่ว เช่น `บาร์เก่า`, `WEGO`) · โค้ดเดิมอ่าน C มาตลอดจน `products.category` เป็น `'ทั่วไป'` เกือบทั้งตาราง — แก้แล้ว 2569-08-11
-- **ค้นคอลัมน์จากชื่อหัวเท่านั้น ไม่มี fallback ตำแหน่ง** — `PRODUCT_CSV_COLUMNS` + `resolveProductCsvColumns()` ใน `App.tsx` · ขาดคอลัมน์ไหน throw ก่อนแตะ DB
+- **ค้นคอลัมน์จากชื่อหัวเท่านั้น ไม่มี fallback ตำแหน่ง** — `PRODUCT_CSV_COLUMNS` + `resolveProductCsvColumns()` ใน `upload-products.mjs` (repo `botr05106`) · ขาดคอลัมน์ไหน throw ก่อนแตะ DB
 - ทดสอบแล้วว่ากันไฟล์ผิดได้ด้วยรายงาน Promax ตัวจริงที่หน้าตาใกล้เคียง: `R05.105` (ขาด `CF_BARCODE`), `R01.102` สต๊อค (ขาด `CF_BARCODE` + `CF_FMLPRICE`) — สองตัวนี้คือไฟล์ที่มีโอกาสหยิบผิดจริง
 - UTF-8 BOM: ไฟล์จริงมี BOM แต่ **PapaParse ตัดให้เอง** ไม่ต้อง strip
 - `DELETE` เป็นค่าหมวดที่พบมากสุด (4,818 แถว) — **ไม่กรองออก** เก็บตามไฟล์ เพื่อให้ยังค้นหาเจอ
@@ -47,7 +47,7 @@
 
 **โค้ดไม่อยู่ repo นี้แล้ว** — `upload-products.mjs` + เทส + `products-import-swap.sql` ย้ายไป **[it-anin/botr05106](https://github.com/it-anin/botr05106)** ซึ่งเป็นบอท Python ที่ automate ProMaxx เพื่อ export ไฟล์นี้อยู่แล้ว (บอท 1 ตัว = 1 โปรเจกต์จบ เหมือน `bot-export` ที่พอร์ต `upload-stock.mjs` เป็น Python ไว้ในตัวเอง และ `Bot-Customer`) · ที่นั่นบอทเรียก uploader ต่อท้ายตอน export เสร็จผ่าน `tools\run_and_upload.ps1` ใน Task Scheduler งานเดียว
 
-> 🔗 **`PRODUCT_CSV_COLUMNS` + `handleFileUpload` ใน `App.tsx` กับ `upload-products.mjs` ใน repo นั้น ต้องแก้พร้อมกันเสมอ** — อ่านไฟล์ R05.106 ตัวเดียวกัน หัวคอลัมน์ชุดเดียวกัน เขียนตาราง `products` ตัวเดียวกัน · มีคอมเมนต์เตือนไว้ที่ `App.tsx` แล้ว
+> ✅ **ไม่มีจุดต้องซิงค์ข้าม repo แล้ว** — เดิม `App.tsx` มี `PRODUCT_CSV_COLUMNS` + `handleFileUpload` ชุดที่ 2 ที่ต้องคอยแก้ตามกัน · ตัดออกหมดแล้ว 2569-09-06 เหลือ implementation เดียวคือใน repo บอท
 
 **สิ่งที่ยังเป็นเรื่องของ repo นี้ เพราะกระทบตาราง `products` โดยตรง:**
 
@@ -97,7 +97,7 @@
   - idempotent · ไม่กระทบสาขาอื่น (มี `.eq('branch', …)` คุมทั้ง upsert และ delete)
 - **safety net กันไฟล์ export ไม่ครบ**: ก่อน confirm query จำนวนเดิมของสาขานั้นมาโชว์เทียบ (`เดิม X SKU → ไฟล์ใหม่ Y SKU`) และถ้าไฟล์ใหม่เล็กลงเกิน 20% จะขึ้นเตือน 🚨 ให้ตรวจก่อน
 - ⚠️ มีไฟล์ Location แค่ 2 สาขา (WH→คลังสินค้า, SSS) — **SRC / KKL จะไม่มีหมวดจนกว่าจะมีไฟล์** ปุ่มหมวดของสาขาที่ไม่มีข้อมูลจะ disabled พร้อมข้อความบอก
-- **ไม่มี FK ไป `products(sku)` โดยตั้งใจ:** (1) `products.sku` ไม่ unique (7,907 unique จาก 10,843 แถว) เป็น FK target ไม่ได้ (2) `handleFileUpload` ลบ `products` ทั้งตารางทุกครั้งที่อัปโหลด CSV สินค้า → FK จะพังหรือ cascade ลบหมวดทิ้ง · INNER JOIN ใน view ซ่อน SKU กำพร้าให้อยู่แล้ว
+- **ไม่มี FK ไป `products(sku)` โดยตั้งใจ:** (1) `products.sku` ไม่ unique (7,907 unique จาก 10,843 แถว) เป็น FK target ไม่ได้ (2) การอัปโหลด R05.106 ลบ `products` ทั้งตารางทุกครั้ง (ทั้งของเดิมที่หน้าเว็บ และ RPC swap ปัจจุบัน) → FK จะพังหรือ cascade ลบหมวดทิ้ง · INNER JOIN ใน view ซ่อน SKU กำพร้าให้อยู่แล้ว
 - View `v_products_by_category` — join `products` × `product_category` ดึงหมวดเดียวจบในคำขอเดียว
 - View `v_product_category_counts` — จำนวนแถวต่อหมวด (badge ทั้ง 9 หมวดในคำขอเดียว)
 - ⚠️ **สินค้าใหม่ใน `products` จะไม่มีหมวด** จนกว่าจะอัปโหลดไฟล์ Location ใหม่

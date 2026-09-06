@@ -1,5 +1,4 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 import JsBarcode from 'jsbarcode';
 import QRCode from 'qrcode';
@@ -137,59 +136,11 @@ const generateBarcode = (barcode: string): string => {
 };
 
 // ── Products CSV (รายงาน R05.106 จาก Promax) ────────────────
-// 🔗 มี implementation ที่ 2 อยู่คนละ repo: upload-products.mjs ใน it-anin/botr05106
-//    (บอทที่ export ไฟล์นี้เอง แล้วอัปโหลดเข้า products อัตโนมัติทุกวัน)
-//    อ่านไฟล์เดียวกัน หัวคอลัมน์ชุดเดียวกัน เขียนตารางเดียวกัน — แก้ที่นี่ต้องแก้ที่นั่นด้วย
-// 27 คอลัมน์ ชื่อหัวคอลัมน์นิ่งมาตลอด (ตรวจกับ export จริง 11 ไฟล์ พ.ค.–ส.ค. 2569)
-// ⚠️ ค้นคอลัมน์จาก "ชื่อหัว" เท่านั้น ไม่มี fallback ตำแหน่ง — ถ้า fallback ไฟล์ผิดรูปแบบ
-//    จะหลุดผ่านแล้วลบ products ทิ้งทั้งตาราง ซึ่งเป็นปัญหาที่ validation นี้มีไว้กัน
-const PRODUCT_CSV_COLUMNS = [
-  { key: 'barcode',  header: 'CF_BARCODE',               label: 'บาร์โค้ด' },
-  { key: 'price',    header: 'CF_FMLPRICE',              label: 'ราคา' },
-  { key: 'sku',      header: 'CF_ITEMID',                label: 'SKU' },
-  { key: 'name',     header: 'CF_ITEMNAME',              label: 'ชื่อสินค้า' },
-  { key: 'unit',     header: 'CF_UNITNAME',              label: 'หน่วย' },
-  // คอลัมน์ H — 1 = หน่วยเล็กสุด, >1 = หน่วยใหญ่ (กล่อง = 10 แผง ฯลฯ)
-  // เก็บทุกแถว การกรองเหลือ =1 ทำที่ view v_products_by_category (หน้าเลือกตามหมวด)
-  { key: 'baseMultiple', header: 'CF_BASEMULTIPLE',      label: 'ตัวคูณหน่วย' },
-  // หมวดอยู่คอลัมน์ Q ไม่ใช่ C — C คือ CF_COMMENTS (โน้ตอิสระ ว่าง 99.5% ของแถว)
-  { key: 'category', header: 'CF_ITEMGROUPL1_GROUPNAME', label: 'หมวด' },
-] as const;
-
-type ProductCsvKey = typeof PRODUCT_CSV_COLUMNS[number]['key'];
-
-// index → ตัวอักษรคอลัมน์แบบ Excel (0→A, 25→Z, 26→AA) ใช้โชว์ใน confirm ให้ตรวจง่าย
-function colLetter(idx: number): string {
-  let s = '';
-  for (let n = idx; n >= 0; n = Math.floor(n / 26) - 1) {
-    s = String.fromCharCode(65 + (n % 26)) + s;
-  }
-  return s;
-}
-
-// ค้น index ของทุกคอลัมน์ที่ต้องใช้จากแถวหัว — ขาดตัวไหน throw ทันทีก่อนแตะ DB
-function resolveProductCsvColumns(headerRow: string[]): Record<ProductCsvKey, number> {
-  const head = headerRow.map(h => String(h ?? '').trim().toUpperCase());
-  const idx = {} as Record<ProductCsvKey, number>;
-  const missing: string[] = [];
-
-  for (const col of PRODUCT_CSV_COLUMNS) {
-    const i = head.indexOf(col.header);
-    if (i < 0) missing.push(`${col.header} (${col.label})`);
-    else idx[col.key] = i;
-  }
-
-  if (missing.length > 0) {
-    const found = head.filter(Boolean).slice(0, 8).join(', ');
-    throw new Error(
-      `ไฟล์นี้ไม่ใช่รายงาน R05.106\n\n` +
-      `ไม่พบคอลัมน์: ${missing.join(', ')}\n\n` +
-      `หัวคอลัมน์ที่เจอ: ${found}${head.filter(Boolean).length > 8 ? ' ...' : ''}\n\n` +
-      `→ ยังไม่ได้ลบข้อมูลเดิม`
-    );
-  }
-  return idx;
-}
+// ⛔ หน้าเว็บไม่อัปโหลด R05.106 แล้ว (ตัดออก 2569-09-06) — โค้ดอ่านไฟล์/เขียนตาราง products
+//    เหลือชุดเดียวในโลกคือ upload-products.mjs ใน repo it-anin/botr05106 ซึ่งบอทเรียกเอง
+//    หลัง export เสร็จทุกวัน · ตัดเพราะ 2 ทางเขียนตารางเดียวกันเสี่ยงอัปโหลดซ้ำซ้อน
+//    และต้องคอยซิงค์ mapping คอลัมน์ข้าม repo
+//    ต้องอัปโหลดด้วยมือ → สั่งที่เครื่องบอท: node upload-products.mjs --file <path>
 
 interface CategoryRow { sku: string; category_no: number; category_name: string; location: string | null }
 interface LocationParseResult {
@@ -360,14 +311,9 @@ const App: React.FC = () => {
   const [previewPriceProduct, setPreviewPriceProduct] = useState<Product | null>(null);
   const [previewBarcodeProduct, setPreviewBarcodeProduct] = useState<Product | null>(null);
   const [printSingle, setPrintSingle] = useState<SelectedProduct | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [adminPassword, setAdminPassword] = useState('');
-  const [adminVerified, setAdminVerified] = useState(false);
-  const [uploadStatus, setUploadStatus] = useState('');
   const [lastUpdated, setLastUpdated] = useState<string>('');
   const [showCart, setShowCart] = useState(false);
   const [rowQty, setRowQty] = useState<Map<string, number>>(new Map());
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const lastAutoAddedBarcode = useRef<string>('');
 
   // ── เลือกตามหมวด ──
@@ -716,107 +662,6 @@ const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('scannedHistory', JSON.stringify(Array.from(scannedHistory.entries())));
   }, [scannedHistory]);
-
-  // Parse CSV และ push ขึ้น Supabase (Admin only)
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    setIsLoading(true);
-    setUploadStatus('กำลัง parse CSV...');
-
-    Papa.parse(file, {
-      skipEmptyLines: true,
-      quoteChar: '"',
-      complete: async (results) => {
-        try {
-          const data = results.data as string[][];
-          if (data.length < 2) throw new Error('ไฟล์ไม่มีข้อมูล');
-
-          // ── เช็คหัวคอลัมน์ก่อนแตะ DB — ไฟล์ผิดรูปแบบต้องตกตรงนี้ ──
-          // (PapaParse ตัด UTF-8 BOM ให้แล้ว head[0] จึงสะอาด)
-          const col = resolveProductCsvColumns(data[0]);
-
-          // baseMultiple ไม่อยู่ใน Product (ไม่ได้ใช้แสดงผล) แต่ต้องส่งขึ้น DB
-          const parsedProducts: (Product & { baseMultiple: number | null })[] = [];
-          for (let i = 1; i < data.length; i++) {
-            const row = data[i];
-            const barcode = (row[col.barcode] ?? '').trim();
-            const sku = (row[col.sku] ?? '').trim();
-            if (!barcode || !sku) continue;
-            const bm = parseFloat(row[col.baseMultiple]);
-            parsedProducts.push({
-              barcode,
-              sku,
-              name: ((row[col.name] ?? '').trim()).split(/[\r\n]/)[0].trim(),
-              unit: (row[col.unit] ?? '').trim(),
-              price: parseFloat(row[col.price]) || 0,
-              category: (row[col.category] ?? '').trim() || 'ทั่วไป',
-              baseMultiple: Number.isFinite(bm) ? bm : null,
-              rowIndex: i,
-            });
-          }
-          if (parsedProducts.length === 0) throw new Error('ไม่พบแถวที่มีทั้งบาร์โค้ดและ SKU');
-
-          // ── ยืนยันก่อนลบ — โชว์จำนวนเดิมเทียบไฟล์ใหม่ ──
-          setUploadStatus('กำลังตรวจข้อมูลเดิม...');
-          const { count: existing } = await supabase
-            .from('products')
-            .select('id', { count: 'exact', head: true });
-
-          const shrink = existing && existing > 0 ? 1 - parsedProducts.length / existing : 0;
-          const shrinkWarn = shrink > 0.2
-            ? `\n\n🚨 ไฟล์นี้น้อยกว่าข้อมูลเดิม ${Math.round(shrink * 100)}% — ถ้า export มาไม่ครบ ข้อมูลที่หายจะถูกลบ\nไม่แน่ใจให้กด Cancel แล้ว export ใหม่`
-            : '';
-
-          const mapping = PRODUCT_CSV_COLUMNS
-            .map(c => `${c.label}=${colLetter(col[c.key])}`)
-            .join(' · ');
-
-          const baseUnits = parsedProducts.filter(p => p.baseMultiple === 1).length;
-
-          const ok = window.confirm(
-            `ไฟล์: ${file.name}\n` +
-            `✅ ตรวจหัวคอลัมน์ผ่าน (R05.106)\n` +
-            `   ${mapping}\n\n` +
-            `   เดิมมี ${(existing ?? 0).toLocaleString()} รายการ → ไฟล์ใหม่ ${parsedProducts.length.toLocaleString()} รายการ\n` +
-            `   ในนั้นเป็นหน่วยเล็กสุด ${baseUnits.toLocaleString()} รายการ (หน้าเลือกตามหมวดจะเห็นเท่านี้)\n\n` +
-            `⚠️ จะลบข้อมูลเดิมทั้งหมดแล้วใส่ใหม่` +
-            shrinkWarn
-          );
-          if (!ok) { setUploadStatus(''); return; }
-
-          setUploadStatus(`กำลังอัปโหลด ${parsedProducts.length.toLocaleString()} รายการ...`);
-
-          // ลบข้อมูลเก่าและใส่ใหม่
-          const { error: delError } = await supabase.from('products').delete().neq('id', 0);
-          if (delError) throw new Error(delError.message);
-
-          const rows = parsedProducts.map(p => ({ barcode: p.barcode, sku: p.sku, name: p.name, unit: p.unit, price: p.price, category: p.category, base_multiple: p.baseMultiple }));
-          const CHUNK = 500;
-          for (let i = 0; i < rows.length; i += CHUNK) {
-            setUploadStatus(`กำลังอัปโหลด ${Math.min(i + CHUNK, rows.length).toLocaleString()}/${rows.length.toLocaleString()} รายการ...`);
-            const { error } = await supabase.from('products').insert(rows.slice(i, i + CHUNK));
-            if (error) throw new Error(error.message);
-          }
-
-          setUploadStatus(`✅ อัปโหลดสำเร็จ ${parsedProducts.length.toLocaleString()} รายการ`);
-        } catch (e) {
-          setUploadStatus(`❌ ${e instanceof Error ? e.message : String(e)}`);
-        } finally {
-          setIsLoading(false);
-          // reset เสมอ — ของเดิม reset เฉพาะตอนสำเร็จ ทำให้เลือกไฟล์เดิมซ้ำหลัง error ไม่ทำงาน
-          if (event.target) event.target.value = '';
-        }
-      },
-      error: (error) => {
-        console.error('Error parsing CSV:', error);
-        setUploadStatus('❌ อ่านไฟล์ไม่สำเร็จ: ' + error.message);
-        setIsLoading(false);
-        if (event.target) event.target.value = '';
-      }
-    });
-  };
 
   // อัปโหลดไฟล์ Location (.xlsx) → ตาราง product_category
   // "แทนที่ทั้งสาขา": upsert ทุกแถวด้วย uploaded_at ชุดเดียว แล้วลบแถวของสาขานี้ที่ timestamp เก่ากว่า
@@ -1550,9 +1395,6 @@ ${sheetsHtml}
       {currentPage === 'pricetag' && (
       <div className="container">
 
-        {/* Upload CSV hidden input */}
-        <input ref={fileInputRef} type="file" accept=".csv" onChange={handleFileUpload} style={{ display: 'none' }} />
-
         {/* Upload Location (.xlsx) hidden input — หมวดสินค้า */}
         <input ref={locationFileRef} type="file" accept=".xlsx,.xls" onChange={handleLocationUpload} style={{ display: 'none' }} />
 
@@ -2061,54 +1903,7 @@ ${sheetsHtml}
             </button>
           </>
         )}
-        <button
-          className="admin-trigger"
-          onClick={() => setIsAdmin(v => !v)}
-          title="Admin"
-        >💻</button>
       </div>
-
-      {/* Admin Panel */}
-      {isAdmin && (
-        <div className="modal-overlay" onClick={() => setIsAdmin(false)}>
-          <div className="modal-content" style={{ maxWidth: 420 }} onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <div>
-                <h2 style={{ margin: 0 }}>Admin | Login</h2>
-                <p style={{ fontSize: '11px', color: '#b49150', margin: 0 }}>© Data →  R05.106 | Assignee : Inbound</p>
-                </div>
-              <button className="modal-close" onClick={() => setIsAdmin(false)}>✕</button>
-            </div>
-            <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div>
-                <label style={{ fontWeight: 600, display: 'block', marginBottom: 6 }}>Password</label>
-                <input
-                  type="password"
-                  className="search-input-premium"
-                  style={{ width: '100%', fontSize: '1rem' }}
-                  placeholder="Input password..."
-                  value={adminPassword}
-                  onChange={e => { setAdminPassword(e.target.value); setAdminVerified(false); }}
-                  onKeyDown={e => { if (e.key === 'Enter' && adminPassword === (import.meta.env.VITE_ADMIN_PASSWORD || 'admin1234')) setAdminVerified(true); }}
-                />
-              </div>
-              {adminVerified && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  <button className="btn-premium" onClick={() => fileInputRef.current?.click()}>
-                    Upload R05.106
-                  </button>
-                  {uploadStatus && (
-                    // pre-line: ข้อความ error หัวคอลัมน์เป็นหลายบรรทัด ถ้าไม่ตั้งจะยุบเป็นบรรทัดเดียว
-                    <div style={{ padding: '0.75rem', background: '#f9f9f9', borderRadius: 8, fontSize: '0.9rem', whiteSpace: 'pre-line', lineHeight: 1.5, wordBreak: 'break-word' }}>
-                      {uploadStatus}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* QR Settings Modal */}
       {showQrSettings && (
