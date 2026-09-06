@@ -423,5 +423,4 @@ Each panel has a close (✕) button and includes product name in subheader.
 
 ## Backup Files
 
-- `App.backup.20260507_110405.tsx` and `App.backup.20260507_110405.css`
-- `supabase/functions/translate-medicine/index.backup.20260508_143950.ts` — ก่อนลอง Gemini (ใช้ Groq อยู่)
+- `App.backup.20260507_110405.tsx` and `App.backup.20260507_110405.css` — `tsconfig.json` ตั้ง `exclude: ["*.backup.*"]` ไว้ ไฟล์พวกนี้จึงไม่ถูก compile (⚠️ ตัวสำรองยัง `import Papa from 'papaparse'` อยู่ ทั้งที่ dependency ถูกถอดออกแล้ว 2569-09-06 — ถ้าจะกู้ไฟล์นี้กลับมาใช้ต้อง `npm i papaparse` ก่อน)
