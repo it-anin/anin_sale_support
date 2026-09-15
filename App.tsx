@@ -1566,7 +1566,7 @@ ${sheetsHtml}
             <div className="ss-notification-header">
               <div>
                 <strong>💰 Update Price</strong>
-                <span>สินค้าที่มีการเปลี่ยนแปลงราคาล่าสุด</span>
+                <span>สินค้าที่มีการปรับราคาล่าสุด</span>
               </div>
               <button className="dl-modal-close" onClick={() => setShowPriceChanges(false)} aria-label="ปิด">✕</button>
             </div>
@@ -1576,7 +1576,7 @@ ${sheetsHtml}
                 <div className="ss-notification-state ss-notification-state--error">{priceChangeError}</div>
               )}
               {!priceChangeLoading && !priceChangeError && priceChangeBatches.length === 0 && (
-                <div className="ss-notification-state">ยังไม่มีประวัติเปลี่ยนแปลงราคา</div>
+                <div className="ss-notification-state">ยังไม่มีประวัติการปรับราคา</div>
               )}
               {!priceChangeLoading && priceChangeBatches.map(batch => (
                 <div key={batch.batchId}>
