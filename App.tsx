@@ -1523,17 +1523,18 @@ ${sheetsHtml}
                 ด้วย {profileBranch && ...} → จัดซื้อกับคลังสินค้า (2 ใน 6 ผู้รับ) จะไม่เห็นเลย
                 ⚠️ ต่อยอดจาก .updated-badge (สว่างบนพื้นเข้ม) ห้ามใช้ .ss-notification-history-btn
                 ซึ่งพื้นขาวตัวอักษรน้ำเงิน ออกแบบมาสำหรับแผง SaleSupport พื้นอ่อน — hero เป็นสีน้ำเงิน
-                ซ่อนทั้งปุ่มเมื่อ count = 0 โดยตั้งใจ — watermark ไม่มีสถานะ "อ่านแล้วแต่มีประวัติ" */}
-            {priceChangeUnreadCount > 0 && (
-              <button
-                className="updated-badge price-change-badge"
-                onClick={() => { void openPriceChanges(); }}
-                title="ดูรายการสินค้าที่ราคาเปลี่ยน"
-              >
-                💰 ราคาเปลี่ยน
+                ปุ่มแสดงตลอดเวลา (แก้ 2569-09-15 ตามคำขอผู้ใช้ — เดิมซ่อนเมื่อ count = 0
+                ทำให้กดดูประวัติย้อนหลังไม่ได้เลยหลังอ่านครั้งแรก) · เลขแดงขึ้นเฉพาะตอนมีของใหม่ */}
+            <button
+              className={`updated-badge price-change-badge${priceChangeUnreadCount > 0 ? ' price-change-badge--has-new' : ''}`}
+              onClick={() => { void openPriceChanges(); }}
+              title="ดูรายการสินค้าที่ราคาเปลี่ยน"
+            >
+              💰 ราคาเปลี่ยน
+              {priceChangeUnreadCount > 0 && (
                 <span className="ss-notification-count">{priceChangeUnreadCount > 99 ? '99+' : priceChangeUnreadCount}</span>
-              </button>
-            )}
+              )}
+            </button>
             </div>
           <PageNavRow current="pricetag" handlers={navHandlers} />
         </div>

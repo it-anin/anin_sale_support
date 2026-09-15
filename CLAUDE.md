@@ -381,6 +381,8 @@ Each panel has a close (✕) button and includes product name in subheader.
 
 ปุ่ม **💰 ราคาเปลี่ยน N** ใน `.tagline-row` ข้าง badge Last Updated → กดเปิด drawer เห็นรายการ SKU ที่ราคาเปลี่ยน (เดิม → ใหม่) · **ทุกโปรไฟล์เห็นชุดเดียวกัน** สถานะอ่าน/ยังไม่อ่านแยกรายโปรไฟล์
 
+- **ปุ่มแสดงตลอดเวลา** (แก้ 2569-09-15 ตามคำขอผู้ใช้ — เดิมซ่อนเมื่อ count = 0 ทำให้กดดูประวัติย้อนหลังไม่ได้เลยหลังอ่านครั้งแรก) · เลขแดง + `.price-change-badge--has-new` ขึ้นเฉพาะตอนมีของใหม่ · drawer ดึง log ทั้งหมดไม่กรองด้วย watermark ประวัติจึงแสดงครบแม้อ่านหมดแล้ว
+
 - **ใช้ watermark ไม่ใช่ fan-out** — ต่างจาก `ss_branch_notification_events` โดยตั้งใจ: "ราคาเปลี่ยน" คือข้อเท็จจริง global ตัวเดียว ผู้รับ 6 โปรไฟล์เหมือนกันหมด · fan-out จะเขียน `แถวที่เปลี่ยน × 6` ต่อการอัปโหลด 1 ครั้ง (เปลี่ยน 500 SKU = 3,000 แถว) · watermark เขียน 500 แถว + `price_change_seen` 6 แถวตลอดกาล · unread = `count(*) where changed_at > last_seen_at`
 - **mark-as-read ตอนเปิด drawer ไม่ใช่ตอนเข้าหน้า** (เจตนาเดียวกับ `openNotificationHistory` ของ SaleSupport — เข้าหน้าเฉย ๆ ไม่ได้แปลว่าเห็นรายการ)
 - realtime subscribe **`price_change_seen` (ตารางสรุป) ไม่ใช่ `price_change_log`** — log มีได้ทีละหลายร้อยแถว จะกลายเป็น realtime หลายร้อยข้อความรวด (บทเรียนเดียวกับปุ่ม 🔔 อัพเดท ของคลัง)

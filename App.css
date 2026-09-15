@@ -4243,6 +4243,13 @@ body.ss-col-resizing { cursor: col-resize; user-select: none; }
   border-color: rgba(255, 255, 255, 0.45);
   transform: translateY(-1px);
 }
+/* มีของใหม่ที่ยังไม่อ่าน — เน้นให้เด่นกว่าสถานะปกติ
+   (ปุ่มแสดงตลอดเวลาแล้ว จึงต้องแยกด้วยสายตาว่า "มีใหม่" กับ "ดูประวัติเฉยๆ" ต่างกัน) */
+.price-change-badge--has-new {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.5);
+  font-weight: 700;
+}
 
 /* รายการ SKU ในกลุ่ม batch ที่กางอยู่ — ย่อหน้าเข้าให้เห็นว่าเป็นลูกของการ์ดด้านบน */
 .price-change-rows {
