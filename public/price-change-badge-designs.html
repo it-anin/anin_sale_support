@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ปุ่มราคาเปลี่ยน — 10 แบบ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700;800&family=Noto+Serif+Thai:wght@400;600&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: #f4f7fa;
+    font-family: 'Noto Sans Thai', sans-serif;
+    color: #1c3d5e;
+  }
+  .page-head {
+    padding: 28px 24px 18px;
+    border-bottom: 1px solid #dce5ee;
+    background: #fff;
+  }
+  .page-head h1 { margin: 0 0 6px; font-size: 20px; font-weight: 800; }
+  .page-head p { margin: 0; font-size: 13px; color: #5f7183; line-height: 1.6; }
+  .page-head code {
+    background: #eaf3fc; padding: 1px 6px; border-radius: 5px;
+    font-size: 12px; color: #2d6cad;
+  }
+  .note {
+    margin: 12px 24px 0; padding: 10px 14px;
+    background: #fff8e7; border: 1px solid #f0d9a8; border-radius: 9px;
+    font-size: 12.5px; color: #8a6320; line-height: 1.6;
+  }
+
+  .grid { padding: 22px 24px 60px; display: grid; gap: 20px; }
+  .card {
+    background: #fff; border: 1px solid #dce5ee; border-radius: 14px;
+    overflow: hidden; box-shadow: 0 2px 8px rgba(45,108,173,0.06);
+  }
+  .card-head {
+    display: flex; align-items: baseline; gap: 10px;
+    padding: 13px 16px; border-bottom: 1px solid #edf2f7;
+  }
+  .card-no {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 24px; height: 24px; border-radius: 7px;
+    background: #2d6cad; color: #fff;
+    font: 800 12px 'Outfit', sans-serif; flex-shrink: 0;
+  }
+  .card-name { font-size: 14.5px; font-weight: 700; }
+  .card-desc { font-size: 12px; color: #7b8b9c; margin-left: auto; text-align: right; max-width: 52%; line-height: 1.5; }
+
+  /* จำลอง hero จริง — สีและฟอนต์ตรงกับ .hero-header ใน App.css */
+  .hero-sim {
+    background: #4891db;
+    padding: 26px 20px;
+    display: flex; align-items: center; justify-content: center;
+    gap: 12px; flex-wrap: wrap;
+    position: relative; overflow: hidden;
+  }
+  .hero-sim::before {
+    content: ''; position: absolute; inset: 0;
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"><path fill="%23ffffff" fill-opacity="0.05" d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,122.7C672,117,768,139,864,138.7C960,139,1056,117,1152,101.3C1248,85,1344,75,1392,69.3L1440,64L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path></svg>') bottom center/cover no-repeat;
+    pointer-events: none;
+  }
+  .hero-sim > * { position: relative; z-index: 1; }
+
+  /* badge เดิม (Last Updated) — ของจริง ไม่แก้ */
+  .updated-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: rgba(255,255,255,0.12); color: #faf8f5;
+    border: 1px solid rgba(255,255,255,0.25); border-radius: 20px;
+    font-size: 12px; font-weight: 500; padding: 3px 12px;
+    letter-spacing: 0.3px; white-space: nowrap; flex: 0 0 auto;
+  }
+  /* pill แดงเดิม */
+  .count {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 19px; height: 19px; padding: 0 5px; border-radius: 10px;
+    background: #e33f4f; color: #fff; font-size: 10px; font-weight: 700;
+    line-height: 1; box-shadow: 0 2px 5px rgba(176,36,51,0.28);
+  }
+
+  .pc {
+    display: inline-flex; align-items: center; gap: 7px;
+    cursor: pointer; font-family: inherit; white-space: nowrap;
+    border-radius: 20px; font-size: 12px; padding: 3px 12px;
+    transition: all .16s ease;
+  }
+  .state-label {
+    padding: 9px 16px 4px; font-size: 11px; font-weight: 700;
+    color: #91a0af; letter-spacing: .4px; text-transform: uppercase;
+  }
+  .row-wrap { padding-bottom: 14px; }
+
+  /* ═══ 1. Solid Alert — พื้นทึบขาว ตัวหนังสือน้ำเงิน ═══ */
+  .d1 {
+    background: #fff; color: #2d6cad; border: 1px solid #fff;
+    font-weight: 700; box-shadow: 0 2px 8px rgba(0,0,0,0.13);
+  }
+  .d1:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+
+  /* ═══ 2. Pulse Ring — วงแหวนกระเพื่อม ═══ */
+  .d2 {
+    background: rgba(255,255,255,0.2); color: #fff;
+    border: 1px solid rgba(255,255,255,0.5); font-weight: 700;
+    position: relative;
+  }
+  .d2::after {
+    content: ''; position: absolute; inset: -1px; border-radius: 20px;
+    border: 2px solid #fff; opacity: 0;
+    animation: pulseRing 2s ease-out infinite;
+  }
+  @keyframes pulseRing {
+    0%   { transform: scale(1);    opacity: .7; }
+    70%  { transform: scale(1.14); opacity: 0; }
+    100% { transform: scale(1.14); opacity: 0; }
+  }
+
+  /* ═══ 3. Amber Warning — โทนเหลืองอำพัน ═══ */
+  .d3 {
+    background: #ffc93f; color: #4a3200; border: 1px solid #ffdc82;
+    font-weight: 800; box-shadow: 0 2px 9px rgba(180,120,0,0.32);
+  }
+  .d3 .count { background: #b3341f; box-shadow: 0 2px 5px rgba(120,30,15,0.4); }
+  .d3:hover { background: #ffd666; transform: translateY(-1px); }
+
+  /* ═══ 4. Red Urgent — แดงเต็มใบ ═══ */
+  .d4 {
+    background: #e33f4f; color: #fff; border: 1px solid #ff8d97;
+    font-weight: 700; box-shadow: 0 2px 10px rgba(176,36,51,0.45);
+  }
+  .d4 .count { background: rgba(255,255,255,0.95); color: #c32a39; box-shadow: none; }
+  .d4:hover { background: #f05161; transform: translateY(-1px); }
+
+  /* ═══ 5. Glow Breathe — เรืองแสงหายใจ ═══ */
+  .d5 {
+    background: rgba(255,255,255,0.22); color: #fff;
+    border: 1px solid rgba(255,255,255,0.55); font-weight: 700;
+    animation: breathe 2.4s ease-in-out infinite;
+  }
+  @keyframes breathe {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.5); }
+    50%      { box-shadow: 0 0 14px 3px rgba(255,255,255,0.55); }
+  }
+
+  /* ═══ 6. Left Accent Bar — แถบซ้ายสีแดง ═══ */
+  .d6 {
+    background: #fff; color: #23425f; border: 1px solid #fff;
+    font-weight: 700; padding-left: 0; overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.13);
+  }
+  .d6 .bar { width: 5px; align-self: stretch; background: #e33f4f; margin-right: 8px; }
+  .d6:hover { transform: translateY(-1px); }
+
+  /* ═══ 7. Dot Blink — จุดแดงกะพริบ ═══ */
+  .d7 {
+    background: rgba(255,255,255,0.2); color: #fff;
+    border: 1px solid rgba(255,255,255,0.5); font-weight: 700;
+  }
+  .d7 .dot {
+    width: 8px; height: 8px; border-radius: 50%; background: #ff5b6a;
+    box-shadow: 0 0 6px #ff5b6a; animation: blink 1.1s steps(2) infinite;
+  }
+  @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: .2; } }
+
+  /* ═══ 8. Gradient Shine — ไล่สีทองพาดแสง ═══ */
+  .d8 {
+    background: linear-gradient(135deg, #ffd977, #ffb43f);
+    color: #4a3200; border: 1px solid #ffe9b5; font-weight: 800;
+    box-shadow: 0 2px 10px rgba(180,120,0,0.35);
+    position: relative; overflow: hidden;
+  }
+  .d8::after {
+    content: ''; position: absolute; top: 0; left: -60%; width: 40%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.75), transparent);
+    animation: shine 3s ease-in-out infinite;
+  }
+  @keyframes shine { 0% { left: -60%; } 55%, 100% { left: 130%; } }
+  .d8 .count { background: #b3341f; box-shadow: none; }
+
+  /* ═══ 9. Outlined Bold — ขอบหนา 2 ชั้น ═══ */
+  .d9 {
+    background: rgba(255,255,255,0.14); color: #fff;
+    border: 2px solid #fff; outline: 1px solid rgba(255,255,255,0.4);
+    outline-offset: 2px; font-weight: 800; letter-spacing: .3px;
+  }
+  .d9:hover { background: #fff; color: #2d6cad; }
+  .d9:hover .count { background: #e33f4f; }
+
+  /* ═══ 10. Shake Attention — สะบัดเรียกสายตา ═══ */
+  .d10 {
+    background: #fff; color: #c32a39; border: 1px solid #ffd2d6;
+    font-weight: 800; box-shadow: 0 2px 9px rgba(176,36,51,0.25);
+    animation: shake 3.4s ease-in-out infinite;
+  }
+  @keyframes shake {
+    0%, 88%, 100% { transform: translateX(0); }
+    90%  { transform: translateX(-3px); }
+    92%  { transform: translateX(3px); }
+    94%  { transform: translateX(-2px); }
+    96%  { transform: translateX(2px); }
+  }
+
+  /* สถานะ "อ่านแล้ว" ของทุกแบบ — เหมือนกันหมด ใช้ทรงเดิม */
+  .pc-read {
+    background: rgba(255,255,255,0.12); color: #faf8f5;
+    border: 1px solid rgba(255,255,255,0.25); font-weight: 500;
+  }
+  .pc-read:hover { background: rgba(255,255,255,0.22); }
+
+  @media (max-width: 560px) {
+    .card-desc { display: none; }
+    .grid { padding: 16px 12px 40px; }
+    .page-head { padding: 20px 14px 14px; }
+    .note { margin: 12px 14px 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page-head">
+  <h1>ปุ่ม 💰 ราคาเปลี่ยน — 10 แบบ (สถานะ "มีของใหม่")</h1>
+  <p>
+    พื้นหลังจำลอง <code>.hero-header</code> จริง (สีน้ำเงิน <code>#4891db</code> + คลื่น SVG)
+    ทุกแบบแสดงคู่กับ badge <code>Last Updated</code> ของจริงเพื่อเทียบขนาด<br>
+    แต่ละการ์ดโชว์ <b>2 สถานะ</b>: มีของใหม่ยังไม่อ่าน · อ่านแล้ว (ทุกแบบใช้ทรงเดิมเหมือนกัน)
+  </p>
+</div>
+
+<div class="note">
+  ⚠️ แบบที่มีอนิเมชัน (2, 5, 7, 8, 10) เล่นวนตลอดเวลาบนหน้าจอจริงที่พนักงานเปิดค้างทั้งวัน —
+  ถ้าเลือกแบบพวกนี้ ควรพิจารณาว่ารบกวนสายตาระหว่างทำงานหรือไม่
+</div>
+
+<div class="grid">
+
+  <!-- 1 -->
+  <div class="card">
+    <div class="card-head">
+      <span class="card-no">1</span>
+      <span class="card-name">Solid Alert</span>
+      <span class="card-desc">พื้นขาวทึบ ตัดกับ hero น้ำเงินชัดที่สุด · นิ่ง ไม่มีอนิเมชัน</span>
+    </div>
+    <div class="row-wrap">
+      <div class="state-label">มีของใหม่ยังไม่อ่าน</div>
+      <div class="hero-sim">
+        <span class="updated-badge">Last Updated : 15/09/26, 03:38</span>
+        <button class="pc d1">💰 ราคาเปลี่ยน <span class="count">3</span></button>
+      </div>
+      <div class="state-label">อ่านแล้ว</div>
+      <div class="hero-sim">
+        <span class="updated-badge">Last Updated : 15/09/26, 03:38</span>
+        <button class="pc pc-read">💰 ราคาเปลี่ยน</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2 -->
+  <div class="card">
+    <div class="card-head">
+      <span class="card-no">2</span>
+      <span class="card-name">Pulse Ring</span>
+      <span class="card-desc">วงแหวนกระเพื่อมออกทุก 2 วิ · ดึงสายตาโดยตัวปุ่มไม่ขยับ</span>
+    </div>
+    <div class="row-wrap">
+      <div class="state-label">มีของใหม่ยังไม่อ่าน</div>
+      <div class="hero-sim">
+        <span class="updated-badge">Last Updated : 15/09/26, 03:38</span>
+        <button class="pc d2">💰 ราคาเปลี่ยน <span class="count">3</span></button>
+      </div>
+      <div class="state-label">อ่านแล้ว</div>
+      <div class="hero-sim">
+        <span class="updated-badge">Last Updated : 15/09/26, 03:38</span>
+        <button class="pc pc-read">💰 ราคาเปลี่ยน</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3 -->
+  <div class="card">
+    <div class="card-head">
+      <span class="card-no">3</span>
+      <span class="card-name">Amber Warning</span>
+      <span class="card-desc">เหลืองอำพัน สื่อ "ควรตรวจสอบ" ไม่ถึงขั้นเร่งด่วน · นิ่ง</span>
+    </div>
+    <div class="row-wrap">
+      <div class="state-label">มีของใหม่ยังไม่อ่าน</div>
+      <div class="hero-sim">
+        <span class="updated-badge">Last Updated : 15/09/26, 03:38</span>
+        <button class="pc d3">💰 ราคาเปลี่ยน <span class="count">3</span></button>
+      </div>
+      <div class="state-label">อ่านแล้ว</div>
+      <div class="hero-sim">
+        <span class="updated-badge">Last Updated : 15/09/26, 03:38</span>
+        <button class="pc pc-read">💰 ราคาเปลี่ยน</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4 -->
+  <div class="card">
+    <div class="card-head">
+      <span class="card-no">4</span>
+      <span class="card-name">Red Urgent</span>
+      <span class="card-desc">แดงเต็มใบ เด่นสุดในชุด · เลขกลับเป็นพื้นขาวตัวแดง</span>
+    </div>
+    <div class="row-wrap">
+      <div class="state-label">มีของใหม่ยังไม่อ่าน</div>
+      <div class="hero-sim">
+        <span class="updated-badge">Last Updated : 15/09/26, 03:38</span>
+        <button class="pc d4">💰 ราคาเปลี่ยน <span class="count">3</span></button>
+      </div>
+      <div class="state-label">อ่านแล้ว</div>
+      <div class="hero-sim">
+        <span class="updated-badge">Last Updated : 15/09/26, 03:38</span>
+        <button class="pc pc-read">💰 ราคาเปลี่ยน</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5 -->
+  <div class="card">
+    <div class="card-head">
+      <span class="card-no">5</span>
+      <span class="card-name">Glow Breathe</span>
+      <span class="card-desc">เรืองแสงขาวเข้า-ออกช้าๆ เหมือนหายใจ · นุ่มกว่ากะพริบ</span>
+    </div>
+    <div class="row-wrap">
+      <div class="state-label">มีของใหม่ยังไม่อ่าน</div>
+      <div class="hero-sim">
+        <span class="updated-badge">Last Updated : 15/09/26, 03:38</span>
+        <button class="pc d5">💰 ราคาเปลี่ยน <span class="count">3</span></button>
+      </div>
+      <div class="state-label">อ่านแล้ว</div>
+      <div class="hero-sim">
+        <span class="updated-badge">Last Updated : 15/09/26, 03:38</span>
+        <button class="pc pc-read">💰 ราคาเปลี่ยน</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6 -->
+  <div class="card">
+    <div class="card-head">
+      <span class="card-no">6</span>
+      <span class="card-name">Left Accent Bar</span>
+      <span class="card-desc">แถบแดงด้านซ้ายบนพื้นขาว · ทรงเดียวกับการ์ดแจ้งเตือน SaleSupport</span>
+    </div>
+    <div class="row-wrap">
+      <div class="state-label">มีของใหม่ยังไม่อ่าน</div>
+      <div class="hero-sim">
+        <span class="updated-badge">Last Updated : 15/09/26, 03:38</span>
+        <button class="pc d6"><span class="bar"></span>💰 ราคาเปลี่ยน <span class="count">3</span></button>
+      </div>
+      <div class="state-label">อ่านแล้ว</div>
+      <div class="hero-sim">
+        <span class="updated-badge">Last Updated : 15/09/26, 03:38</span>
+        <button class="pc pc-read">💰 ราคาเปลี่ยน</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7 -->
+  <div class="card">
+    <div class="card-head">
+      <span class="card-no">7</span>
+      <span class="card-name">Dot Blink</span>
+      <span class="card-desc">จุดแดงกะพริบหน้าข้อความ · เร็วและสะดุดตาที่สุด</span>
+    </div>
+    <div class="row-wrap">
+      <div class="state-label">มีของใหม่ยังไม่อ่าน</div>
+      <div class="hero-sim">
+        <span class="updated-badge">Last Updated : 15/09/26, 03:38</span>
+        <button class="pc d7"><span class="dot"></span>💰 ราคาเปลี่ยน <span class="count">3</span></button>
+      </div>
+      <div class="state-label">อ่านแล้ว</div>
+      <div class="hero-sim">
+        <span class="updated-badge">Last Updated : 15/09/26, 03:38</span>
+        <button class="pc pc-read">💰 ราคาเปลี่ยน</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 8 -->
+  <div class="card">
+    <div class="card-head">
+      <span class="card-no">8</span>
+      <span class="card-name">Gradient Shine</span>
+      <span class="card-desc">ไล่สีทอง + แสงพาดผ่านทุก 3 วิ · หรูแต่เด่น</span>
+    </div>
+    <div class="row-wrap">
+      <div class="state-label">มีของใหม่ยังไม่อ่าน</div>
+      <div class="hero-sim">
+        <span class="updated-badge">Last Updated : 15/09/26, 03:38</span>
+        <button class="pc d8">💰 ราคาเปลี่ยน <span class="count">3</span></button>
+      </div>
+      <div class="state-label">อ่านแล้ว</div>
+      <div class="hero-sim">
+        <span class="updated-badge">Last Updated : 15/09/26, 03:38</span>
+        <button class="pc pc-read">💰 ราคาเปลี่ยน</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 9 -->
+  <div class="card">
+    <div class="card-head">
+      <span class="card-no">9</span>
+      <span class="card-name">Outlined Bold</span>
+      <span class="card-desc">ขอบขาวหนา 2 ชั้น (border + outline) · เข้าชุด Luxe Double Border ที่ใช้อยู่</span>
+    </div>
+    <div class="row-wrap">
+      <div class="state-label">มีของใหม่ยังไม่อ่าน</div>
+      <div class="hero-sim">
+        <span class="updated-badge">Last Updated : 15/09/26, 03:38</span>
+        <button class="pc d9">💰 ราคาเปลี่ยน <span class="count">3</span></button>
+      </div>
+      <div class="state-label">อ่านแล้ว</div>
+      <div class="hero-sim">
+        <span class="updated-badge">Last Updated : 15/09/26, 03:38</span>
+        <button class="pc pc-read">💰 ราคาเปลี่ยน</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 10 -->
+  <div class="card">
+    <div class="card-head">
+      <span class="card-no">10</span>
+      <span class="card-name">Shake Attention</span>
+      <span class="card-desc">สะบัดสั้นๆ ทุก 3.4 วิ แล้วนิ่ง · เรียกสายตาเป็นช่วง</span>
+    </div>
+    <div class="row-wrap">
+      <div class="state-label">มีของใหม่ยังไม่อ่าน</div>
+      <div class="hero-sim">
+        <span class="updated-badge">Last Updated : 15/09/26, 03:38</span>
+        <button class="pc d10">💰 ราคาเปลี่ยน <span class="count">3</span></button>
+      </div>
+      <div class="state-label">อ่านแล้ว</div>
+      <div class="hero-sim">
+        <span class="updated-badge">Last Updated : 15/09/26, 03:38</span>
+        <button class="pc pc-read">💰 ราคาเปลี่ยน</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>
