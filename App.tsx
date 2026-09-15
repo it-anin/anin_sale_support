@@ -1566,7 +1566,7 @@ ${sheetsHtml}
             <div className="ss-notification-header">
               <div>
                 <strong>💰 Update Price</strong>
-                <span>ทุกโปรไฟล์เห็นชุดเดียวกัน · รายการล่าสุด</span>
+                <span>สินค้าที่มีการเปลี่ยนแปลงราคาล่าสุด</span>
               </div>
               <button className="dl-modal-close" onClick={() => setShowPriceChanges(false)} aria-label="ปิด">✕</button>
             </div>
