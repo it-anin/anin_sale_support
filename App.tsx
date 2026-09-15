@@ -740,9 +740,11 @@ const App: React.FC = () => {
     localStorage.setItem('qrSettings', JSON.stringify(s));
   };
 
-  // เปิดแผงราคาเปลี่ยน — mark-as-read ตอน "เปิด drawer" ไม่ใช่ตอนเข้าหน้าป้ายราคา
-  // (เจตนาเดียวกับ openNotificationHistory ใน SaleSupportPage.tsx — เข้าหน้าเฉย ๆ
-  //  ไม่ได้แปลว่าเห็นรายการแล้ว)
+  // เปิดแผงราคาเปลี่ยน — ⚠️ "เปิดดู" ไม่เคลียร์สถานะ (แก้ 2569-09-15 ตามคำขอผู้ใช้)
+  // ต่างจาก openNotificationHistory ของ SaleSupport ที่ mark-read ตอนเปิด drawer เลย
+  // เพราะที่นี่ปลายทางคือ "ปริ้นป้ายใหม่" ไม่ใช่ "รับรู้ข่าว" — เปิดดูแล้วยังไม่ได้ปริ้น
+  // สถานะต้องค้างไว้เตือนต่อ ไม่งั้นพนักงานเผลอเปิดทีเดียวแล้วลืมปริ้นทั้งรอบ
+  // เคลียร์ด้วยปุ่ม "✓ ปริ้นแล้ว" ใน drawer เท่านั้น (confirmPriceChangesPrinted ด้านล่าง)
   const openPriceChanges = async () => {
     const profileId = authProfile?.id;
     if (!profileId) return;
@@ -774,11 +776,24 @@ const App: React.FC = () => {
     const batches = [...byBatch.values()];
     setPriceChangeBatches(batches);
     setOpenBatchId(batches[0]?.batchId ?? null);   // กางกลุ่มล่าสุดให้เลย
+  };
+
+  // กด "✓ ปริ้นแล้ว" — จุดเดียวที่เคลียร์สถานะแจ้งเตือน (ผู้ใช้ยืนยันเอง ไม่ใช่ระบบเดาให้)
+  // ไม่ผูกกับปุ่มปริ้นจริงเพราะปุ่มนั้นปริ้นตามตะกร้า ไม่ได้ปริ้นตามรายการที่ราคาเปลี่ยน
+  // — ปริ้นไป 5 จาก 20 รายการแล้วเคลียร์หมด จะกลายเป็นลืมอีก 15 รายการ
+  const confirmPriceChangesPrinted = async () => {
+    const profileId = authProfile?.id;
+    if (!profileId) return;
+    if (!window.confirm('ยืนยันว่าปริ้นป้ายราคาใหม่ครบแล้ว?\n\nการแจ้งเตือนจะถูกเคลียร์ (ประวัติยังดูย้อนหลังได้)')) return;
 
     // ⚠️ ต้อง await (ไม่ใช่ void supabase...) ไม่งั้น request ไม่เคยถูกส่ง — ดู CLAUDE.md
-    const { error: seenError } = await supabase.rpc('mark_price_changes_seen', { target_profile: profileId });
-    if (seenError) setPriceChangeError(`บันทึกสถานะอ่านไม่สำเร็จ: ${seenError.message}`);
-    else setPriceChangeUnreadCount(0);   // อัปเดตทันที ไม่รอ realtime/30 วิ
+    const { error } = await supabase.rpc('mark_price_changes_seen', { target_profile: profileId });
+    if (error) {
+      setPriceChangeError(`บันทึกสถานะไม่สำเร็จ: ${error.message}`);
+      return;
+    }
+    setPriceChangeUnreadCount(0);   // อัปเดตทันที ไม่รอ realtime/30 วิ
+    setShowPriceChanges(false);
   };
 
   const saveThermalSettings = (s: ThermalSettings) => {
@@ -1596,6 +1611,17 @@ ${sheetsHtml}
             </div>
             <div className="ss-notification-footer">
               <span>แสดงรายการล่าสุดสูงสุด 2,000 แถว · เก็บประวัติ 6 เดือน</span>
+              {/* จุดเดียวที่เคลียร์สถานะแจ้งเตือน — เปิดดูเฉยๆ ไม่เคลียร์ (ดู openPriceChanges)
+                  ซ่อนปุ่มเมื่อไม่มีของใหม่ เพราะไม่มีอะไรให้เคลียร์ */}
+              {priceChangeUnreadCount > 0 && (
+                <button
+                  type="button"
+                  className="price-change-done-btn"
+                  onClick={() => { void confirmPriceChangesPrinted(); }}
+                >
+                  ✓ ปริ้นแล้ว
+                </button>
+              )}
             </div>
           </aside>
         </div>

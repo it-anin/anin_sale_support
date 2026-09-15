@@ -384,7 +384,8 @@ Each panel has a close (✕) button and includes product name in subheader.
 - **ปุ่มแสดงตลอดเวลา** (แก้ 2569-09-15 ตามคำขอผู้ใช้ — เดิมซ่อนเมื่อ count = 0 ทำให้กดดูประวัติย้อนหลังไม่ได้เลยหลังอ่านครั้งแรก) · เลขแดง + `.price-change-badge--has-new` ขึ้นเฉพาะตอนมีของใหม่ · drawer ดึง log ทั้งหมดไม่กรองด้วย watermark ประวัติจึงแสดงครบแม้อ่านหมดแล้ว
 
 - **ใช้ watermark ไม่ใช่ fan-out** — ต่างจาก `ss_branch_notification_events` โดยตั้งใจ: "ราคาเปลี่ยน" คือข้อเท็จจริง global ตัวเดียว ผู้รับ 6 โปรไฟล์เหมือนกันหมด · fan-out จะเขียน `แถวที่เปลี่ยน × 6` ต่อการอัปโหลด 1 ครั้ง (เปลี่ยน 500 SKU = 3,000 แถว) · watermark เขียน 500 แถว + `price_change_seen` 6 แถวตลอดกาล · unread = `count(*) where changed_at > last_seen_at`
-- **mark-as-read ตอนเปิด drawer ไม่ใช่ตอนเข้าหน้า** (เจตนาเดียวกับ `openNotificationHistory` ของ SaleSupport — เข้าหน้าเฉย ๆ ไม่ได้แปลว่าเห็นรายการ)
+- 🚨 **เคลียร์สถานะด้วยปุ่ม "✓ ปริ้นแล้ว" ใน drawer เท่านั้น — เปิดดูเฉย ๆ ไม่เคลียร์** (แก้ 2569-09-15 ตามคำขอผู้ใช้) · **ต่างจาก `openNotificationHistory` ของ SaleSupport ที่ mark-read ตอนเปิด drawer เลย** เพราะปลายทางที่นี่คือ "ปริ้นป้ายใหม่" ไม่ใช่ "รับรู้ข่าว" — เปิดดูแล้วยังไม่ได้ปริ้น สถานะต้องค้างเตือนต่อ ไม่งั้นพนักงานเผลอเปิดทีเดียวแล้วลืมปริ้นทั้งรอบ
+- ⚠️ **ไม่ผูกกับปุ่มปริ้นจริง** — ปุ่มปริ้นทำงานตามตะกร้า ไม่ได้ปริ้นตามรายการที่ราคาเปลี่ยน ถ้าให้ปริ้นแล้วเคลียร์อัตโนมัติ ปริ้นไป 5 จาก 20 รายการก็จะเคลียร์หมด = ลืมอีก 15 รายการ · ให้คนยืนยันเองผ่าน `window.confirm`
 - realtime subscribe **`price_change_seen` (ตารางสรุป) ไม่ใช่ `price_change_log`** — log มีได้ทีละหลายร้อยแถว จะกลายเป็น realtime หลายร้อยข้อความรวด (บทเรียนเดียวกับปุ่ม 🔔 อัพเดท ของคลัง)
 - `PageNotificationContext` มี `pricetag` แล้ว → ปุ่มนำทาง Price มีจุดแดงอัตโนมัติ (ซ่อนเองตอนอยู่หน้านั้นเพราะ `p.id !== current` ใน `pageAccess.tsx`)
 - drawer reuse CSS ชุด `.ss-notification-*` ทั้งหมด (global อยู่แล้ว) · ของใหม่มีแค่ `.price-change-badge` / `.price-change-rows` / `.price-change-arrow`

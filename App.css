@@ -4284,6 +4284,23 @@ body.ss-col-resizing { cursor: col-resize; user-select: none; }
   padding-left: 9px;
   border-left: 2px solid #dfe7ef;
 }
+/* ปุ่ม "✓ ปริ้นแล้ว" ท้าย drawer — จุดเดียวที่เคลียร์สถานะแจ้งเตือน
+   ทรงเดียวกับ .ss-notification-clear-btn แต่โทนเขียว (ยืนยันเสร็จ) ไม่ใช่แดง (ลบ) */
+.price-change-done-btn {
+  flex-shrink: 0;
+  border: 1px solid #a8d8b8;
+  border-radius: 8px;
+  background: #f1faf4;
+  color: #2e8b47;
+  padding: 5px 10px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.16s ease, color 0.16s ease;
+}
+.price-change-done-btn:hover { background: #2e8b47; color: #fff; }
+
 .price-change-arrow { color: #5f7183; font-weight: 700; white-space: nowrap; }
 /* ใช้สีที่มีอยู่แล้วในพาเลตต์ ไม่เพิ่มสีใหม่ —
    ขึ้น = แดงชุดเดียวกับ .ss-notification-clear-btn · ลง = เขียวชุดเดียวกับ .ss-notification-actor--branch */
