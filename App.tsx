@@ -1528,9 +1528,9 @@ ${sheetsHtml}
             <button
               className={`updated-badge price-change-badge${priceChangeUnreadCount > 0 ? ' price-change-badge--has-new' : ''}`}
               onClick={() => { void openPriceChanges(); }}
-              title="ดูรายการสินค้าที่ราคาเปลี่ยน"
+              title="ดูรายการสินค้าที่เปลี่ยนราคา"
             >
-              💰 ราคาเปลี่ยน
+              💰 Update Price
               {priceChangeUnreadCount > 0 && (
                 <span className="ss-notification-count">{priceChangeUnreadCount > 99 ? '99+' : priceChangeUnreadCount}</span>
               )}
@@ -1550,7 +1550,7 @@ ${sheetsHtml}
           <aside className="ss-notification-drawer" role="dialog" aria-modal="true" aria-label="ประวัติราคาเปลี่ยน" onClick={e => e.stopPropagation()}>
             <div className="ss-notification-header">
               <div>
-                <strong>💰 ราคาเปลี่ยน</strong>
+                <strong>💰 Update Price</strong>
                 <span>ทุกโปรไฟล์เห็นชุดเดียวกัน · รายการล่าสุด</span>
               </div>
               <button className="dl-modal-close" onClick={() => setShowPriceChanges(false)} aria-label="ปิด">✕</button>
@@ -1561,7 +1561,7 @@ ${sheetsHtml}
                 <div className="ss-notification-state ss-notification-state--error">{priceChangeError}</div>
               )}
               {!priceChangeLoading && !priceChangeError && priceChangeBatches.length === 0 && (
-                <div className="ss-notification-state">ยังไม่มีประวัติราคาเปลี่ยน</div>
+                <div className="ss-notification-state">ยังไม่มีประวัติเปลี่ยนแปลงราคา</div>
               )}
               {!priceChangeLoading && priceChangeBatches.map(batch => (
                 <div key={batch.batchId}>
@@ -1569,7 +1569,7 @@ ${sheetsHtml}
                     className="ss-notification-item"
                     onClick={() => setOpenBatchId(prev => (prev === batch.batchId ? null : batch.batchId))}
                   >
-                    <strong>ราคาเปลี่ยน {batch.rows.length.toLocaleString()} รายการ</strong>
+                    <strong>มีสินค้ารายการเปลี่ยน {batch.rows.length.toLocaleString()} รายการ</strong>
                     <span className="ss-notification-time">
                       {new Date(batch.changedAt).toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' })}
                       <em>{openBatchId === batch.batchId ? 'ย่อ ▲' : 'ดูรายการ ▼'}</em>
