@@ -4243,23 +4243,36 @@ body.ss-col-resizing { cursor: col-resize; user-select: none; }
   border-color: rgba(255, 255, 255, 0.45);
   transform: translateY(-1px);
 }
-/* มีของใหม่ที่ยังไม่อ่าน — ดีไซน์ "Glow Breathe" (เลือกจาก public/price-change-badge-designs.html
-   แบบที่ 5 จากแกลเลอรี 10 แบบ) เรืองแสงขาวเข้า-ออกช้าๆ เหมือนหายใจ
-   ปุ่มแสดงตลอดเวลาแล้ว จึงต้องแยกด้วยสายตาว่า "มีใหม่" กับ "ดูประวัติเฉยๆ" ต่างกัน
-   เลือกจังหวะ 2.4 วิ (ช้ากว่ากะพริบทั่วไป) เพราะหน้านี้พนักงานเปิดค้างทั้งวันเพื่อปริ้นป้าย */
+/* มีของใหม่ที่ยังไม่อ่าน — ดีไซน์ "Gradient Shine" (เลือกจาก public/price-change-badge-designs.html
+   แบบที่ 8 จากแกลเลอรี 10 แบบ) แสงพาดผ่านทุก 3 วิ
+   ⚠️ ใช้สีเดิม (ขาวโปร่งบน hero น้ำเงิน) ไม่ใช่ไล่สีทองแบบในแกลเลอรี — สีทองถูกยกเลิก
+      ทั้งโปรเจกต์แล้ว 2026-07-28 (ดู "UI — Theme" ใน CLAUDE.md) เอามาแค่เอฟเฟกต์แสงพาด
+   ปุ่มแสดงตลอดเวลาแล้ว จึงต้องแยกด้วยสายตาว่า "มีใหม่" กับ "ดูประวัติเฉยๆ" ต่างกัน */
 .price-change-badge--has-new {
   background: rgba(255, 255, 255, 0.22);
   border-color: rgba(255, 255, 255, 0.55);
   font-weight: 700;
-  animation: priceChangeBreathe 2.4s ease-in-out infinite;
+  position: relative;
+  overflow: hidden;
 }
-@keyframes priceChangeBreathe {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.5); }
-  50%      { box-shadow: 0 0 14px 3px rgba(255, 255, 255, 0.55); }
+.price-change-badge--has-new::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -60%;
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  animation: priceChangeShine 3s ease-in-out infinite;
+  pointer-events: none;
 }
-/* เคารพการตั้งค่าระบบของผู้ใช้ที่ขอลดการเคลื่อนไหว — คงพื้น/ขอบเข้มไว้ แค่หยุดเรืองแสง */
+@keyframes priceChangeShine {
+  0%        { left: -60%; }
+  55%, 100% { left: 130%; }
+}
+/* เคารพการตั้งค่าระบบของผู้ใช้ที่ขอลดการเคลื่อนไหว — คงพื้น/ขอบเข้มไว้ แค่ซ่อนแสงพาด */
 @media (prefers-reduced-motion: reduce) {
-  .price-change-badge--has-new { animation: none; }
+  .price-change-badge--has-new::after { display: none; }
 }
 
 /* รายการ SKU ในกลุ่ม batch ที่กางอยู่ — ย่อหน้าเข้าให้เห็นว่าเป็นลูกของการ์ดด้านบน */
