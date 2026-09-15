@@ -4227,6 +4227,38 @@ body.ss-col-resizing { cursor: col-resize; user-select: none; }
 .ss-notification-clear-btn:hover:not(:disabled) { background: #b33b31; color: #fff; }
 .ss-notification-clear-btn:disabled { opacity: 0.45; cursor: default; }
 
+/* ── แจ้งเตือนราคาเปลี่ยน หน้าป้ายราคา (2569-09-15) ──
+   ปุ่มอยู่ใน .tagline-row บน hero สีน้ำเงิน #4891db จึงต่อยอดจาก .updated-badge
+   (สว่างบนพื้นเข้ม) ⚠️ ห้ามใช้ .ss-notification-history-btn ซึ่งพื้นขาว/ตัวอักษรน้ำเงิน
+   ออกแบบมาสำหรับแผง SaleSupport พื้นอ่อน — บน hero จะดูผิดที่
+   ส่วน .ss-notification-count (pill แดง) reuse ได้ตรง ๆ เพราะ self-contained */
+.price-change-badge {
+  gap: 7px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.16s ease, border-color 0.16s ease, transform 0.16s ease;
+}
+.price-change-badge:hover {
+  background: rgba(255, 255, 255, 0.22);
+  border-color: rgba(255, 255, 255, 0.45);
+  transform: translateY(-1px);
+}
+
+/* รายการ SKU ในกลุ่ม batch ที่กางอยู่ — ย่อหน้าเข้าให้เห็นว่าเป็นลูกของการ์ดด้านบน */
+.price-change-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: -3px 0 9px 13px;
+  padding-left: 9px;
+  border-left: 2px solid #dfe7ef;
+}
+.price-change-arrow { color: #5f7183; font-weight: 700; white-space: nowrap; }
+/* ใช้สีที่มีอยู่แล้วในพาเลตต์ ไม่เพิ่มสีใหม่ —
+   ขึ้น = แดงชุดเดียวกับ .ss-notification-clear-btn · ลง = เขียวชุดเดียวกับ .ss-notification-actor--branch */
+.price-change-arrow .is-up   { color: #b33b31; }
+.price-change-arrow .is-down { color: #2e8b47; }
+
 /* ช่องค้นหา toolbar (เมนู Products) */
 .ss-panel-toolbar { position: relative; }
 .ss-search-center {

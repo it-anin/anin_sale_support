@@ -33,6 +33,7 @@ Six-page React app sharing the same `App.css` and Supabase project.
 - `pageAccess.tsx` — `PageId`/`PAGE_NAV` config + `PageVisibilityContext` + `usePageVisibility` + `<PageNavRow>` (ปุ่มนำทางกลาง ใช้ทุกหน้า, รู้สถานะเปิด/ปิดหน้า)
 - `page-settings-setup.sql` — SQL สร้างตาราง `app_page_settings` (เปิด/ปิดปุ่มแต่ละหน้า)
 - `product-category-setup.sql` — SQL สร้างตาราง `product_category` + view `v_products_by_category` / `v_product_category_counts` (ปุ่ม "เลือกตามหมวด")
+- `price-change-setup.sql` — SQL สร้างตาราง `price_change_log` + `price_change_seen` + function `log_price_changes()` (แจ้งเตือนราคาเปลี่ยน — ⚠️ ต้องเพิ่ม `perform public.log_price_changes();` ใน `swap_products_from_import()` ด้วยมือ ดูท้ายไฟล์)
 - `vite.config.ts` — Vite config with `host: '0.0.0.0'` + `port: 5200` for LAN access
 - `main.tsx` — React entry point
 - `index.html` — HTML shell
@@ -112,6 +113,8 @@ Six-page React app sharing the same `App.css` and Supabase project.
 |---|---|---|
 | `products` (barcode, sku, name, unit, price, category, base_multiple, updated_at) | public read + write | **repo นี้อ่านอย่างเดียว ไม่มีทางเขียนแล้ว** — คนเขียนคือ `upload-products.mjs` ใน [it-anin/botr05106](https://github.com/it-anin/botr05106) ที่รันต่อท้ายบอท export ด้วย **staging + RPC swap** (`products_import` + `swap_products_from_import()`) · RLS ยังเปิด `public write` ไว้เฉย ๆ ปิดได้ถ้าต้องการ |
 | `product_category` (sku, branch, category_no, category_name, location, uploaded_at) — PK `(sku, branch)` | public read + write | Upload ใช้ **mark-and-sweep** (upsert ทุกแถวก่อน แล้วค่อย sweep แถวเก่า) — sweep ต้องรันหลัง upsert ครบทุก chunk เสมอ ไม่งั้นข้อมูลหายกลางทาง · `branch` มีแค่ `SRC/KKL/SSS` (ไม่มีคลังสินค้า) |
+| `price_change_log` (batch_id, changed_at, barcode, sku, name, unit, old_price, new_price, base_multiple) | **anon read-only** (ต่างจากตาราง `ss_*`) | เขียนโดย `log_price_changes()` (security definer) ที่ `swap_products_from_import()` เรียก**ก่อน** `delete from products` เท่านั้น — 🚨 re-run `products-import-swap.sql` จาก repo บอทจะลบบรรทัดนั้นทิ้งเงียบ ๆ · คีย์เทียบคือ **`barcode`** ไม่ใช่ sku |
+| `price_change_seen` (profile_id pk, last_seen_at, last_batch_at) | public read + write | watermark "อ่านถึงไหน" รายโปรไฟล์ — 6 แถวตลอดกาล ไม่ fan-out · realtime publish **ตารางนี้เท่านั้น** ไม่ publish `price_change_log` |
 | `stock` (id, branch, sku, name, qty, unit, price, uploaded_at) | read-only (ไม่มี public write) | อัปโหลดผ่าน `upload-stock.mjs` + service_role key เท่านั้น ไม่มีเว็บ UI |
 | `outbound_requests` (branch, sku, barcode, name, unit, qty, requested/requested_at, approved/approved_at, out_of_stock, request_date, document_no, location, entered_at) | public read + write | สาขา/คลังสินค้า/จัดซื้อใช้ร่วมกัน (ดูหัวข้อ "Quick Outbound" ด้านล่าง) — `stock_qty` **ไม่เก็บในตาราง** ดึงสดจาก `stock` แบบเดียวกับ BackOrder |
 | `customer_history` (id, purchase_date, phone, first_name, last_name, sku, product_name, dedupe_key, uploaded_at) | read-only (ไม่มี public write) | มี PII (เบอร์โทร/ชื่อลูกค้า) · upload เป็น incremental ผ่าน `upload-customer-history.mjs` |
@@ -373,6 +376,19 @@ Each panel has a close (✕) button and includes product name in subheader.
 > 🚨 **กับดักที่เคยพลาดจริง — ห้ามอนุมานซ้ำ:** ผลรวม `%` ของคอลัมน์ที่ประกาศไว้ **เกิน 100% (เช่น `.outbound-table` รวมได้ 109%) ไม่ได้แปลว่าตารางเป็น auto layout** — มันแค่เขียนไว้เกินแล้ว browser normalize ให้เอง · เคยอนุมานจากตรงนี้ว่า "ไม่ต้องแก้ความกว้างคอลัมน์" แล้วปุ่มถังขยะหน้า Outbound หายไปเลย (คอลัมน์ 3% ≈ 36px แต่ปุ่ม 2 อันต้องใช้ ~54px) เสียเวลาไล่หา 3 รอบเพราะทุกอย่างที่เช็ค "ผ่าน" หมด — JS มี, CSS มี, deploy แล้ว, ข้อมูลลง DB จริง
 >
 > **วิธีที่ถูก: `grep -n "table-layout" App.css` แล้วไล่ดูว่า base class ของตารางนั้นตั้งอะไรไว้ ก่อนสรุปพฤติกรรม layout ทุกครั้ง**
+
+## Price Change Notification — แจ้งเตือนราคาเปลี่ยน (หน้าป้ายราคา)
+
+ปุ่ม **💰 ราคาเปลี่ยน N** ใน `.tagline-row` ข้าง badge Last Updated → กดเปิด drawer เห็นรายการ SKU ที่ราคาเปลี่ยน (เดิม → ใหม่) · **ทุกโปรไฟล์เห็นชุดเดียวกัน** สถานะอ่าน/ยังไม่อ่านแยกรายโปรไฟล์
+
+- **ใช้ watermark ไม่ใช่ fan-out** — ต่างจาก `ss_branch_notification_events` โดยตั้งใจ: "ราคาเปลี่ยน" คือข้อเท็จจริง global ตัวเดียว ผู้รับ 6 โปรไฟล์เหมือนกันหมด · fan-out จะเขียน `แถวที่เปลี่ยน × 6` ต่อการอัปโหลด 1 ครั้ง (เปลี่ยน 500 SKU = 3,000 แถว) · watermark เขียน 500 แถว + `price_change_seen` 6 แถวตลอดกาล · unread = `count(*) where changed_at > last_seen_at`
+- **mark-as-read ตอนเปิด drawer ไม่ใช่ตอนเข้าหน้า** (เจตนาเดียวกับ `openNotificationHistory` ของ SaleSupport — เข้าหน้าเฉย ๆ ไม่ได้แปลว่าเห็นรายการ)
+- realtime subscribe **`price_change_seen` (ตารางสรุป) ไม่ใช่ `price_change_log`** — log มีได้ทีละหลายร้อยแถว จะกลายเป็น realtime หลายร้อยข้อความรวด (บทเรียนเดียวกับปุ่ม 🔔 อัพเดท ของคลัง)
+- `PageNotificationContext` มี `pricetag` แล้ว → ปุ่มนำทาง Price มีจุดแดงอัตโนมัติ (ซ่อนเองตอนอยู่หน้านั้นเพราะ `p.id !== current` ใน `pageAccess.tsx`)
+- drawer reuse CSS ชุด `.ss-notification-*` ทั้งหมด (global อยู่แล้ว) · ของใหม่มีแค่ `.price-change-badge` / `.price-change-rows` / `.price-change-arrow`
+- ⚠️ **ปุ่มต้องอยู่ใน `.tagline-row` ห้ามย้ายไป toolbar ของ `.selected-table-header`** — toolbar นั้นถูกครอบด้วย `{profileBranch && ...}` จัดซื้อกับคลังสินค้า (2 ใน 6 ผู้รับ) จะไม่เห็นเลย
+- ⚠️ **ห้ามใช้ `.ss-notification-history-btn` ตรงนี้** — พื้นขาว/ตัวอักษรน้ำเงิน ออกแบบมาสำหรับแผง SaleSupport พื้นอ่อน แต่ `.tagline-row` อยู่บน hero น้ำเงิน ต้องต่อยอดจาก `.updated-badge`
+- 🚨 **ฝั่ง DB ต้องเพิ่ม `perform public.log_price_changes();` ใน `swap_products_from_import()` ด้วยมือ** ก่อน `delete from products` — วางหลัง delete = log ว่างตลอดกาลแบบไม่มี error · re-run `products-import-swap.sql` จาก repo บอทจะลบบรรทัดนี้ทิ้ง · รายละเอียดที่ [`docs/database.md`](docs/database.md)
 
 ## UI — Misc
 

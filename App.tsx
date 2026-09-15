@@ -34,6 +34,28 @@ interface SelectedProduct extends Product {
   quantity: number;
 }
 
+/** 1 แถวของ price_change_log — สินค้าที่ราคาเปลี่ยนจากการอัปโหลด R05.106 รอบหนึ่ง
+ *  คีย์เทียบฝั่ง DB คือ `barcode` ไม่ใช่ sku (sku ซ้ำได้ ดู price-change-setup.sql) */
+interface PriceChangeRow {
+  id: number;
+  batch_id: string;
+  changed_at: string;
+  barcode: string;
+  sku: string;
+  name: string | null;
+  unit: string | null;
+  old_price: number;
+  new_price: number;
+}
+
+/** รายการที่เปลี่ยนในการอัปโหลดรอบเดียวกัน — drawer แสดงเป็น 1 การ์ดต่อ batch
+ *  ("ราคาเปลี่ยน 143 รายการ · 15/09/2569") ไม่ใช่ 143 การ์ด ซึ่งจะกลบทุกอย่าง */
+interface PriceChangeBatch {
+  batchId: string;
+  changedAt: string;
+  rows: PriceChangeRow[];
+}
+
 interface ThermalSettings {
   sheetW: number;     // mm — ความกว้าง sheet ทั้งแผ่น
   sheetH: number;     // mm — ความสูง sheet ทั้งแผ่น
@@ -350,6 +372,20 @@ const App: React.FC = () => {
   // เพราะเลขจะลดเองตามธรรมชาติเมื่อคลังกดอนุมัติ/ของหมด ต่างสาขาไหนกดก็ไม่กระทบ (ดูทุกสาขาพร้อมกัน)
   const [outboundPendingCount, setOutboundPendingCount] = useState(0);
 
+  // ── แจ้งเตือนราคาเปลี่ยน หน้าป้ายราคา (2569-09-15) ──
+  // ⚠️ ไม่ใช้ fan-out แบบ ss_branch_notification_events (1 แถวต่อผู้รับ) โดยตั้งใจ —
+  //    เหตุการณ์ของ SaleSupport ต่างกันจริงตามผู้รับ แต่ "ราคาเปลี่ยน" คือข้อเท็จจริง
+  //    global ตัวเดียว ผู้รับ 6 โปรไฟล์เหมือนกันหมด · fan-out จะเขียน (แถวที่เปลี่ยน × 6)
+  //    ต่อการอัปโหลด 1 ครั้ง (เปลี่ยน 500 SKU = 3,000 แถว)
+  //    ใช้ watermark แทน: log กลาง 1 ชุด (price_change_log) + price_change_seen
+  //    โปรไฟล์ละ 1 แถวตลอดกาล → unread = count(*) where changed_at > last_seen_at
+  const [priceChangeUnreadCount, setPriceChangeUnreadCount] = useState(0);
+  const [showPriceChanges, setShowPriceChanges] = useState(false);
+  const [priceChangeBatches, setPriceChangeBatches] = useState<PriceChangeBatch[]>([]);
+  const [priceChangeLoading, setPriceChangeLoading] = useState(false);
+  const [priceChangeError, setPriceChangeError] = useState('');
+  const [openBatchId, setOpenBatchId] = useState<string | null>(null);
+
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
   }, [currentPage]);
@@ -457,6 +493,62 @@ const App: React.FC = () => {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'ss_branch_notifications', filter: 'branch=eq.WAREHOUSE' },
+        () => { void loadUnread(); },
+      )
+      .subscribe();
+    const refreshWhenVisible = () => { if (document.visibilityState === 'visible') void loadUnread(); };
+    window.addEventListener('focus', loadUnread);
+    document.addEventListener('visibilitychange', refreshWhenVisible);
+    const timer = window.setInterval(loadUnread, 30_000);
+
+    return () => {
+      cancelled = true;
+      void supabase.removeChannel(channel);
+      window.clearInterval(timer);
+      window.removeEventListener('focus', loadUnread);
+      document.removeEventListener('visibilitychange', refreshWhenVisible);
+    };
+  }, [authProfile?.id]);
+
+  // ตัวนับ "ราคาเปลี่ยน" หน้าป้ายราคา (2569-09-15) — ทุกโปรไฟล์อ่าน log ชุดเดียวกัน
+  // ต่างกันแค่ watermark ของตัวเอง จึงไม่ต้องเช็ค branch/แผนกเลย (ต่างจาก 2 effect ด้านบน)
+  // รูปร่าง effect ลอกจากปุ่ม "🔔 อัพเดท" ของคลังด้านบนเป๊ะ: subscribe ตารางสรุป
+  // price_change_seen ไม่ใช่ price_change_log — log มีได้ทีละหลายร้อยแถว
+  // จะกลายเป็น realtime หลายร้อยข้อความรวดแล้ว refetch รัว ๆ
+  useEffect(() => {
+    const profileId = authProfile?.id;
+    if (!profileId) {
+      setPriceChangeUnreadCount(0);
+      return;
+    }
+    let cancelled = false;
+
+    const loadUnread = async () => {
+      const { data: seen, error: seenError } = await supabase
+        .from('price_change_seen')
+        .select('last_seen_at')
+        .eq('profile_id', profileId)
+        .maybeSingle();
+      // ⚠️ เช็ค cancelled หลังทุก await — effect นี้อ่าน 2 ขั้น (watermark → count)
+      if (cancelled || seenError) return;
+      // ไม่มีแถว = โปรไฟล์ยังไม่ถูก seed → ถือว่ายังไม่เคยอ่านอะไรเลย
+      const since = seen?.last_seen_at ?? '1970-01-01T00:00:00Z';
+      const { count, error } = await supabase
+        .from('price_change_log')
+        .select('id', { count: 'exact', head: true })
+        .gt('changed_at', since);
+      if (cancelled || error) return;
+      setPriceChangeUnreadCount(count ?? 0);
+    };
+
+    void loadUnread();
+    // ไม่ใส่ filter — ตารางมีแค่ 6 แถว และ mark-read ของตัวเองก็ยิงด้วย (ไม่เป็นไร
+    // แค่ refetch count ที่เพิ่งเป็น 0 ไปแล้ว)
+    const channel = supabase
+      .channel('price-change-seen')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'price_change_seen' },
         () => { void loadUnread(); },
       )
       .subscribe();
@@ -646,6 +738,47 @@ const App: React.FC = () => {
   const saveQrSettings = (s: QrSettings) => {
     setQrSettings(s);
     localStorage.setItem('qrSettings', JSON.stringify(s));
+  };
+
+  // เปิดแผงราคาเปลี่ยน — mark-as-read ตอน "เปิด drawer" ไม่ใช่ตอนเข้าหน้าป้ายราคา
+  // (เจตนาเดียวกับ openNotificationHistory ใน SaleSupportPage.tsx — เข้าหน้าเฉย ๆ
+  //  ไม่ได้แปลว่าเห็นรายการแล้ว)
+  const openPriceChanges = async () => {
+    const profileId = authProfile?.id;
+    if (!profileId) return;
+    setShowPriceChanges(true);
+    setPriceChangeLoading(true);
+    setPriceChangeError('');
+
+    const { data, error } = await supabase
+      .from('price_change_log')
+      .select('id, batch_id, changed_at, barcode, sku, name, unit, old_price, new_price')
+      .order('changed_at', { ascending: false })
+      .order('sku', { ascending: true })
+      // เพดานสูงกว่า 100 ของ SaleSupport มาก — 1 รอบอัปโหลดเปลี่ยนได้หลายร้อย SKU
+      // ⚠️ batch ที่ใหญ่ผิดปกติอาจถูกตัด (footer ของ drawer บอกเพดานนี้ไว้)
+      .limit(2000);
+    setPriceChangeLoading(false);
+    if (error) {
+      setPriceChangeError(`โหลดประวัติราคาไม่สำเร็จ: ${error.message}`);
+      return;
+    }
+
+    // จัดกลุ่มตาม batch — 1 การ์ดต่อรอบอัปโหลด ไม่ใช่ 1 การ์ดต่อ SKU
+    const byBatch = new Map<string, PriceChangeBatch>();
+    for (const row of (data ?? []) as PriceChangeRow[]) {
+      const existing = byBatch.get(row.batch_id);
+      if (existing) existing.rows.push(row);
+      else byBatch.set(row.batch_id, { batchId: row.batch_id, changedAt: row.changed_at, rows: [row] });
+    }
+    const batches = [...byBatch.values()];
+    setPriceChangeBatches(batches);
+    setOpenBatchId(batches[0]?.batchId ?? null);   // กางกลุ่มล่าสุดให้เลย
+
+    // ⚠️ ต้อง await (ไม่ใช่ void supabase...) ไม่งั้น request ไม่เคยถูกส่ง — ดู CLAUDE.md
+    const { error: seenError } = await supabase.rpc('mark_price_changes_seen', { target_profile: profileId });
+    if (seenError) setPriceChangeError(`บันทึกสถานะอ่านไม่สำเร็จ: ${seenError.message}`);
+    else setPriceChangeUnreadCount(0);   // อัปเดตทันที ไม่รอ realtime/30 วิ
   };
 
   const saveThermalSettings = (s: ThermalSettings) => {
@@ -1364,7 +1497,7 @@ ${sheetsHtml}
 
   return (
     <PageVisibilityContext.Provider value={pageVisibility}>
-    <PageNotificationContext.Provider value={{ salesupport: saleSupportUnreadCount, outbound: outboundPendingCount }}>
+    <PageNotificationContext.Provider value={{ salesupport: saleSupportUnreadCount, outbound: outboundPendingCount, pricetag: priceChangeUnreadCount }}>
     <div className="app-container">
       {/* แถบผู้ใช้ปัจจุบัน + ออกจากระบบ (แสดงทุกหน้า) */}
       <div className="app-userbar">
@@ -1386,10 +1519,86 @@ ${sheetsHtml}
             ) : (
               <span className="updated-badge updated-badge--loading">Loading...</span>
             )}
+            {/* ⚠️ วางที่นี่ไม่ใช่ใน toolbar ของ .selected-table-header เพราะ toolbar นั้นถูกครอบ
+                ด้วย {profileBranch && ...} → จัดซื้อกับคลังสินค้า (2 ใน 6 ผู้รับ) จะไม่เห็นเลย
+                ⚠️ ต่อยอดจาก .updated-badge (สว่างบนพื้นเข้ม) ห้ามใช้ .ss-notification-history-btn
+                ซึ่งพื้นขาวตัวอักษรน้ำเงิน ออกแบบมาสำหรับแผง SaleSupport พื้นอ่อน — hero เป็นสีน้ำเงิน
+                ซ่อนทั้งปุ่มเมื่อ count = 0 โดยตั้งใจ — watermark ไม่มีสถานะ "อ่านแล้วแต่มีประวัติ" */}
+            {priceChangeUnreadCount > 0 && (
+              <button
+                className="updated-badge price-change-badge"
+                onClick={() => { void openPriceChanges(); }}
+                title="ดูรายการสินค้าที่ราคาเปลี่ยน"
+              >
+                💰 ราคาเปลี่ยน
+                <span className="ss-notification-count">{priceChangeUnreadCount > 99 ? '99+' : priceChangeUnreadCount}</span>
+              </button>
+            )}
             </div>
           <PageNavRow current="pricetag" handlers={navHandlers} />
         </div>
       </div>)}
+
+      {/* แผงราคาเปลี่ยน — reuse CSS ชุด .ss-notification-* ของ SaleSupport ทั้งหมด
+          (เป็น global ใน App.css ใช้จากที่นี่ได้เลย ไม่ต้อง import อะไร)
+          ⚠️ ตั้งใจไม่ใช้ .is-unread / .ss-notification-new — watermark ทำให้ "ยังไม่อ่าน"
+          เป็นคุณสมบัติของทั้งลิสต์เทียบกับครั้งที่แล้ว และการเปิด drawer เคลียร์มันทันที
+          ป้าย "ใหม่" รายแถวจะ stale ตั้งแต่วินาทีที่ render */}
+      {showPriceChanges && (
+        <div className="ss-notification-overlay" onClick={() => setShowPriceChanges(false)}>
+          <aside className="ss-notification-drawer" role="dialog" aria-modal="true" aria-label="ประวัติราคาเปลี่ยน" onClick={e => e.stopPropagation()}>
+            <div className="ss-notification-header">
+              <div>
+                <strong>💰 ราคาเปลี่ยน</strong>
+                <span>ทุกโปรไฟล์เห็นชุดเดียวกัน · รายการล่าสุด</span>
+              </div>
+              <button className="dl-modal-close" onClick={() => setShowPriceChanges(false)} aria-label="ปิด">✕</button>
+            </div>
+            <div className="ss-notification-list">
+              {priceChangeLoading && <div className="ss-notification-state">กำลังโหลด...</div>}
+              {!priceChangeLoading && priceChangeError && (
+                <div className="ss-notification-state ss-notification-state--error">{priceChangeError}</div>
+              )}
+              {!priceChangeLoading && !priceChangeError && priceChangeBatches.length === 0 && (
+                <div className="ss-notification-state">ยังไม่มีประวัติราคาเปลี่ยน</div>
+              )}
+              {!priceChangeLoading && priceChangeBatches.map(batch => (
+                <div key={batch.batchId}>
+                  <button
+                    className="ss-notification-item"
+                    onClick={() => setOpenBatchId(prev => (prev === batch.batchId ? null : batch.batchId))}
+                  >
+                    <strong>ราคาเปลี่ยน {batch.rows.length.toLocaleString()} รายการ</strong>
+                    <span className="ss-notification-time">
+                      {new Date(batch.changedAt).toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' })}
+                      <em>{openBatchId === batch.batchId ? 'ย่อ ▲' : 'ดูรายการ ▼'}</em>
+                    </span>
+                  </button>
+                  {openBatchId === batch.batchId && (
+                    <div className="price-change-rows">
+                      {batch.rows.map(row => (
+                        <div key={row.id} className="ss-notification-product">
+                          <b>SKU {row.sku}</b>
+                          <span>{row.name}{row.unit ? ` · ${row.unit}` : ''}</span>
+                          <span className="price-change-arrow">
+                            {row.old_price.toLocaleString()} →{' '}
+                            <strong className={row.new_price > row.old_price ? 'is-up' : 'is-down'}>
+                              {row.new_price.toLocaleString()}
+                            </strong>
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            <div className="ss-notification-footer">
+              <span>แสดงรายการล่าสุดสูงสุด 2,000 แถว · เก็บประวัติ 6 เดือน</span>
+            </div>
+          </aside>
+        </div>
+      )}
 
       {/* Main Container — Price Tag Page */}
       {currentPage === 'pricetag' && (
