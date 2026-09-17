@@ -157,9 +157,11 @@ begin
   -- แตะแถวสรุปให้ realtime ยิง — ฝั่งเว็บ subscribe price_change_seen ไม่ใช่ price_change_log
   -- (log มีได้ทีละหลายร้อยแถว จะกลายเป็น realtime หลายร้อยข้อความรวดแล้ว refetch รัว ๆ
   --  บทเรียนเดียวกับที่ App.tsx บันทึกไว้: subscribe ตารางสรุป ไม่ใช่ _events)
-  -- UPDATE ไม่มี WHERE ปลอดภัย — safeupdate ในโปรเจกต์นี้ปฏิเสธเฉพาะ DELETE ที่ไม่มี WHERE
+  -- WHERE profile_id is not null = ทุกแถว (คอลัมน์เป็น primary key ห้าม null อยู่แล้ว)
+  -- ใส่ไว้เพื่อผ่าน safeupdate/lint ที่ปฏิเสธ UPDATE ไม่มี WHERE ไม่ใช่เพราะต้องกรองจริง
   if logged > 0 then
-    update public.price_change_seen set last_batch_at = now();
+    update public.price_change_seen set last_batch_at = now()
+    where profile_id is not null;
   end if;
 
   return logged;
