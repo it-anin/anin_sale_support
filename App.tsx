@@ -1539,7 +1539,8 @@ ${sheetsHtml}
                 ⚠️ ต่อยอดจาก .updated-badge (สว่างบนพื้นเข้ม) ห้ามใช้ .ss-notification-history-btn
                 ซึ่งพื้นขาวตัวอักษรน้ำเงิน ออกแบบมาสำหรับแผง SaleSupport พื้นอ่อน — hero เป็นสีน้ำเงิน
                 ปุ่มแสดงตลอดเวลา (แก้ 2569-09-15 ตามคำขอผู้ใช้ — เดิมซ่อนเมื่อ count = 0
-                ทำให้กดดูประวัติย้อนหลังไม่ได้เลยหลังอ่านครั้งแรก) · เลขแดงขึ้นเฉพาะตอนมีของใหม่ */}
+                ทำให้กดดูประวัติย้อนหลังไม่ได้เลยหลังอ่านครั้งแรก) · จุดแดงมีเลข (.price-change-count
+                ทรงเดียวกับจุดแจ้งเตือนบนปุ่มนำทาง) ขึ้นเฉพาะตอนมีของใหม่ */}
             <button
               className={`updated-badge price-change-badge${priceChangeUnreadCount > 0 ? ' price-change-badge--has-new' : ''}`}
               onClick={() => { void openPriceChanges(); }}
@@ -1547,7 +1548,7 @@ ${sheetsHtml}
             >
               💰 Update Price
               {priceChangeUnreadCount > 0 && (
-                <span className="ss-notification-count">{priceChangeUnreadCount > 99 ? '99+' : priceChangeUnreadCount}</span>
+                <span className="price-change-count">{priceChangeUnreadCount > 99 ? '99+' : priceChangeUnreadCount}</span>
               )}
             </button>
             </div>

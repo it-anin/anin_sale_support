@@ -97,9 +97,14 @@ body {
   justify-content: center;
   gap: 0.75rem;
   flex-wrap: nowrap;
-  margin-bottom: 2rem;
-  height: 34px;
-  min-height: 34px;
+  /* ⚠️ padding บน/ล่าง + margin ติดลบ = เผื่อที่ให้จุดแดง .price-change-count ที่ลอยพ้นขอบปุ่ม
+     (top: -7px + pulse scale 1.18) ไม่โดน overflow-y: hidden ตัดหัวทิ้ง
+     โดยความสูงที่กินจริงและระยะห่างกับแถวถัดไปยังเท่าเดิม 34px / 2rem */
+  margin: -10px 0 calc(2rem - 10px);
+  padding: 10px 0;
+  height: 54px;
+  min-height: 54px;
+  box-sizing: border-box;
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: none;
@@ -4231,8 +4236,10 @@ body.ss-col-resizing { cursor: col-resize; user-select: none; }
    ปุ่มอยู่ใน .tagline-row บน hero สีน้ำเงิน #4891db จึงต่อยอดจาก .updated-badge
    (สว่างบนพื้นเข้ม) ⚠️ ห้ามใช้ .ss-notification-history-btn ซึ่งพื้นขาว/ตัวอักษรน้ำเงิน
    ออกแบบมาสำหรับแผง SaleSupport พื้นอ่อน — บน hero จะดูผิดที่
-   ส่วน .ss-notification-count (pill แดง) reuse ได้ตรง ๆ เพราะ self-contained */
+   ส่วนตัวเลขใช้ .price-change-count (จุดแดงขอบขาวลอยมุม แบบเดียวกับ .page-nav-notification-dot)
+   ไม่ใช่ .ss-notification-count ซึ่งเป็น pill แบนไม่มีขอบ ออกแบบมาสำหรับพื้นอ่อน */
 .price-change-badge {
+  position: relative;
   gap: 7px;
   cursor: pointer;
   font-family: inherit;
@@ -4252,27 +4259,54 @@ body.ss-col-resizing { cursor: col-resize; user-select: none; }
   background: rgba(255, 255, 255, 0.22);
   border-color: rgba(255, 255, 255, 0.55);
   font-weight: 700;
-  position: relative;
-  overflow: hidden;
 }
+/* ⚠️ แสงพาดต้องถูก clip ที่ตัว ::after เอง (border-radius + overflow: hidden ของ pseudo)
+   ห้ามใส่ overflow: hidden ที่ตัวปุ่ม — จะตัดจุดแดง .price-change-count ที่ลอยพ้นขอบมุมขวาบนทิ้ง */
 .price-change-badge--has-new::after {
   content: '';
   position: absolute;
-  top: 0;
-  left: -60%;
-  width: 40%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
-  animation: priceChangeShine 3s ease-in-out infinite;
+  inset: 0;
+  border-radius: inherit;
+  overflow: hidden;
   pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  background-size: 40% 100%;
+  background-repeat: no-repeat;
+  animation: priceChangeShine 3s ease-in-out infinite;
 }
 @keyframes priceChangeShine {
-  0%        { left: -60%; }
-  55%, 100% { left: 130%; }
+  0%        { background-position: -60% 0; }
+  55%, 100% { background-position: 170% 0; }
 }
 /* เคารพการตั้งค่าระบบของผู้ใช้ที่ขอลดการเคลื่อนไหว — คงพื้น/ขอบเข้มไว้ แค่ซ่อนแสงพาด */
 @media (prefers-reduced-motion: reduce) {
   .price-change-badge--has-new::after { display: none; }
+  .price-change-count { animation: none; }
+}
+
+/* จุดแดงมีเลข — ดีไซน์เดียวกับ .page-nav-notification-dot ของปุ่มนำทาง
+   (จุดแดงขอบขาว ลอยมุมขวาบน + pulse) ต่างแค่กว้างตามจำนวนหลักเพื่อใส่ตัวเลขได้
+   ⚠️ ไม่ใช้ .ss-notification-count แล้ว — pill แบนไม่มีขอบขาวสำหรับพื้นอ่อนของแผง SaleSupport */
+.price-change-count {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border: 2px solid #fff;
+  border-radius: 9px;
+  background: #e33f4f;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  box-shadow: 0 2px 6px rgba(150, 20, 34, 0.45);
+  pointer-events: none;
+  animation: pageNavNotificationPulse 1.8s ease-in-out infinite;
 }
 
 /* รายการ SKU ในกลุ่ม batch ที่กางอยู่ — ย่อหน้าเข้าให้เห็นว่าเป็นลูกของการ์ดด้านบน */
