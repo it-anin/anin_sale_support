@@ -267,6 +267,8 @@ create table if not exists ss_backorders (
   phone             text,                                  -- 5.4.1 เบอร์โทรติดต่อ (ไม่มี contact_channel เหมือน ss_orders)
   paid_date         date,                                  -- 5.5 วันที่ลูกค้าชำระ
   sale_bill_no      text,                                  -- 5.6 เลขที่บิล
+  -- 5.6.1 เลขที่ PO — จัดซื้อกรอกตรงในตาราง (โปรไฟล์อื่นเห็นแต่แก้ไม่ได้) ดู migration 202609180001
+  po_no             text,                                  -- 5.6.1 เลขที่ PO
   pickup_date       date,                                  -- 5.7 วันที่นัดรับ
   note              text,                                  -- 5.8 หมายเหตุ
   outbound_date     date,                                  -- 5.9 Outbound วันที่ส่งของ (คลังกรอก)
@@ -291,6 +293,7 @@ alter table ss_backorders add column if not exists cancelled_at timestamptz;
 alter table ss_backorders add column if not exists cancel_reason text;
 alter table ss_backorders add column if not exists notify_target text
   check (notify_target in ('PURCHASING', 'WAREHOUSE'));
+alter table ss_backorders add column if not exists po_no text;
 
 -- ⚠️ คู่ alter ของ CHECK ด้านบน — จำเป็นสำหรับ DB ที่สร้างไว้ก่อนหน้า เพราะ
 --    `create table if not exists` ข้าม inline CHECK ทั้งหมดถ้าตารางมีอยู่แล้ว

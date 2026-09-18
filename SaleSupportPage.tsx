@@ -612,6 +612,10 @@ const MENUS: MenuDef[] = [
       { key: 'customer_name', label: 'ชื่อลูกค้า', min: 120,
         sub: { key: 'phone', label: 'เบอร์โทรติดต่อ' } },
       { key: 'sale_bill_no',  label: 'เลขที่บิล', min: 160 },
+      // เลขที่ PO — จัดซื้อกรอกตรงในตาราง โปรไฟล์อื่นเห็นแต่แก้ไม่ได้ (แบบเดียวกับ sku/moq ของ Request Item)
+      // ⚠️ ช่องเดี่ยว ไม่จับคู่เป็น sub ของ sale_bill_no — คอลัมน์ที่มี sub จะถูก render เป็นข้อความ
+      //    2 บรรทัดผ่าน .ss-cell-main ซึ่งไม่มีที่ให้ <input> ของจัดซื้อ
+      { key: 'po_no',         label: 'เลขที่ PO', min: 130 },
       { key: 'paid_date',     label: 'วันที่ลูกค้าชำระ', kind: 'date', min: 110,
         sub: { key: 'pickup_date', label: 'วันที่นัดรับ', kind: 'date' } },
       { key: 'outbound_date', label: 'Outbound วันที่ส่งของ', kind: 'date', min: 140,
@@ -733,6 +737,8 @@ const BACKORDER_DETAIL_FIELDS: ColumnDef[] = [
   { key: 'phone',         label: 'เบอร์โทรติดต่อ' },
   { key: 'paid_date',     label: 'วันที่ลูกค้าชำระ', kind: 'date' },
   { key: 'sale_bill_no',  label: 'เลขที่บิล' },
+  // อ่านอย่างเดียวใน popup ทุกโปรไฟล์ — จัดซื้อกรอกจากช่องในตารางเท่านั้น (จุดเดียว ไม่มี 2 ทาง)
+  { key: 'po_no',         label: 'เลขที่ PO' },
   { key: 'pickup_date',   label: 'วันที่นัดรับ', kind: 'date' },
   { key: 'note',          label: 'หมายเหตุ' },
   { key: 'outbound_date', label: 'Outbound วันที่ส่งของ', kind: 'date' },
@@ -2678,6 +2684,24 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
     });
   };
 
+  // กรอกเลขที่ PO ตรงในตาราง BackOrder (จัดซื้อเท่านั้น) — คู่ขนานกับ updateRequestSku/Moq ของ Request Item
+  // ⚠️ เขียนลง ss_backorders ไม่ใช่ ss_request_items — คนละตาราง แม้รูปร่างฟังก์ชันจะเหมือนกัน
+  // แจ้งเตือนผ่าน notifyBranchUpdate (ผู้กระทำคือจัดซื้อ ผู้รับคือสาขาเจ้าของแถว) — ตรงกับ guard
+  // ของมันพอดี ไม่ต้องเรียก notifyPurchasingUpdate/notifyWarehouseUpdate ที่ guard ด้วย isBranchUser
+  const updateBackOrderPoNo = async (id: string, poNo: string, branch?: unknown, itemSku?: unknown, itemName?: unknown) => {
+    const value = poNo.trim() || null;
+    const { error } = await supabase.from('ss_backorders').update({ po_no: value }).eq('id', id);
+    if (error) { setError(`บันทึกเลขที่ PO ไม่สำเร็จ: ${error.message}`); return; }
+    setRows(prev => prev.map(r => (String(r.id) === id ? { ...r, po_no: value } : r)));
+    setSelectedOrder(prev => prev && String(prev.id) === id ? { ...prev, po_no: value } : prev);
+    void notifyBranchUpdate(branch, {
+      menuId: 'backorder', tableName: 'ss_backorders', recordId: id,
+      title: 'อัปเดตเลขที่ PO', detail: `เลขที่ PO → ${value ?? '(ว่าง)'}`,
+      itemSku,
+      itemName,
+    });
+  };
+
   const openDeleteRow = (row: Record<string, unknown>) => {
     setDeleteTarget({
       id: String(row.id), table: menu.table, label: menu.label,
@@ -3102,6 +3126,30 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
                                   const next = e.target.value.trim();
                                   if (next !== currentSku.trim()) {
                                     void updateRequestSku(String(row.id), next, row.branch, row.product_name);
+                                  }
+                                }}
+                                onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                              />
+                            </td>
+                          );
+                        }
+                        // เลขที่ PO กรอกตรงในตาราง BackOrder (จัดซื้อเท่านั้น) — เหมือน sku/moq ของ Request Item
+                        // ทุกจุด รวมถึง key ที่ผูกกับค่าปัจจุบันเพื่อบังคับ remount ตอนค่าจาก DB เปลี่ยน
+                        // โปรไฟล์อื่นตกไปที่ formatCell ท้ายฟังก์ชัน = เห็นเลขแต่แก้ไม่ได้
+                        if (activeMenu === 'backorder' && col.key === 'po_no' && isPurchasing) {
+                          const currentPoNo = String(row.po_no ?? '');
+                          return (
+                            <td key={col.key} className={`ss-col-${col.key}`} style={columnStyle(col)} onClick={e => e.stopPropagation()}>
+                              <input
+                                key={`${String(row.id)}-${currentPoNo}`}
+                                className="ss-status-input"
+                                type="text"
+                                defaultValue={currentPoNo}
+                                placeholder="เลขที่ PO"
+                                onBlur={e => {
+                                  const next = e.target.value.trim();
+                                  if (next !== currentPoNo.trim()) {
+                                    void updateBackOrderPoNo(String(row.id), next, row.branch, row.sku, row.product_name);
                                   }
                                 }}
                                 onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); }}

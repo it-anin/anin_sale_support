@@ -311,6 +311,7 @@ helper กลางตัวเดียวใช้ทั้ง 2 ฟอร์�
 
 - ใช้กลไกเดิมทั้งหมด (`ColumnDef.sub`, `kind: 'chips'`, CSS `.ss-cell-main`/`.ss-cell-sub`/`.ss-col-sub-label`/`.ss-chip-stack`) — **ไม่ได้เพิ่มโค้ด render ใหม่เลย** แค่เปลี่ยน config `MENUS[backorder].columns`
 - คู่ที่จับ: `ค้างส่งลูกค้า / หน่วย` · `ชื่อลูกค้า / เบอร์โทรติดต่อ` · `วันชำระ / วันนัดรับ` · `Outbound / เลขโอน` · `หมายเหตุ / TimeStamp` · 3 ชิปสถานะยุบเป็นช่องเดียว
+- **คอลัมน์ `po_no` (เลขที่ PO) เพิ่ม 2569-09-18** — ช่องเดี่ยวระหว่าง `sale_bill_no` กับ `paid_date` (ดูหัวข้อถัดไป) ตาราง `min` รวมจึงเพิ่มเป็น ~1,554px ยังพอดีจอ 1920
 - 🚨 **`stock_qty` กับ `pending_qty` ตั้งใจแยกช่องกัน ห้ามจับคู่เป็น 2 บรรทัด** — เป็นตัวเลข 2 ตัวคนละแหล่ง (ดูตารางด้านบน) วางซ้อนกันในช่องเดียวจะอ่านสลับกันง่ายมาก และ `stock_qty` มี tooltip เฉพาะตัว (`คลังนับเป็น …`) ที่ชนกับ tooltip ของช่องคู่พอดี (ในโค้ด `col.key === 'stock_qty'` ถูกเช็คก่อน `col.sub` → บรรทัดล่างจะหายจาก tooltip เงียบ ๆ)
 - **`created_at` โผล่ในตารางเป็นบรรทัดล่างของ "หมายเหตุ"** — ค่านี้มีในตารางอยู่แล้ว (เห็นใน popup) แต่เดิมไม่ได้แสดงในตาราง ตรงกับที่ Order ทำ
 
@@ -323,6 +324,19 @@ helper กลางตัวเดียวใช้ทั้ง 2 ฟอร์�
 - ⚠️ **ไม่มี `contact_channel` คู่กันเหมือน `ss_orders`** — แต่ `formatCell` มี branch พิเศษที่เอา `contact_channel` มาต่อหน้า `phone` เสมอ · ปลอดภัยเพราะ `ss_backorders` ไม่มีคอลัมน์นั้น ค่าจึงเป็น `undefined` แล้วถูก `filter(Boolean)` ทิ้ง เหลือแค่เบอร์ · **ถ้าวันหลังเพิ่ม `contact_channel` เข้า `ss_backorders` มันจะโผล่หน้าเบอร์เองอัตโนมัติ** (ตั้งใจได้ แต่ต้องรู้ไว้)
 - ⚠️ **ต้องรัน migration ก่อน deploy** — อ่านตารางยังปกติเพราะ query เป็น `select('*')` แต่ `saveBackOrder` จะ insert ไม่ผ่าน (`column ss_backorders.phone does not exist`)
 - `ss_backorders` **ไม่มีใน `EDIT_FIELDS`** (ไม่มีฟอร์มแก้ไขทั้งใบ) จึงไม่ต้องเพิ่ม `phone` ที่นั่น — เพิ่มใน `BACKORDER_DETAIL_FIELDS` (popup) อย่างเดียว
+
+### คอลัมน์ "เลขที่ PO" — จัดซื้อกรอก โปรไฟล์อื่นดูอย่างเดียว (2569-09-18)
+
+คอลัมน์ `po_no` อยู่ระหว่าง `sale_bill_no` (เลขที่บิล) กับ `paid_date` (วันที่ลูกค้าชำระ) ตามคำสั่งผู้ใช้ · migration `202609180001_backorder_po_no.sql` เพิ่ม `po_no text` (nullable)
+
+- **ลอกแพทเทิร์นของ `sku`/`moq` ในเมนู Request Item มาทั้งชุด** (ดูหัวข้อ "เมนู Request Item" ด้านบน) — เหตุผลเชิงสิทธิ์เหมือนกันเป๊ะ: *จัดซื้อเป็นคนกรอก แต่สาขา/คลังต้องมองเห็นได้* (สาขาต้องรู้ว่าจัดซื้อออก PO ให้แถวที่ตัวเองรออยู่แล้วหรือยัง) จึงกันแค่**สิทธิ์แก้ไข ไม่ใช่การมองเห็น**
+- render เงื่อนไข `activeMenu === 'backorder' && col.key === 'po_no' && isPurchasing` → `<input className="ss-status-input">` · ไม่ผ่านเงื่อนไขตกไปที่ `formatCell` ท้ายฟังก์ชัน = เห็นเลขแต่แก้ไม่ได้ (ไม่ต้องเขียน branch อ่านอย่างเดียวแยก)
+- ⚠️ **uncontrolled + คอมมิตตอน `onBlur`** (Enter → `e.currentTarget.blur()`) และ **`key` ผูกกับค่าปัจจุบัน** (`` `${row.id}-${currentPoNo}` ``) ไม่ใช่แค่ `row.id` — เหตุผลเดียวกับ MOQ/SKU: บังคับ remount ตอนค่าจาก DB เปลี่ยน ไม่งั้น `defaultValue` ค้างค่าตอน mount ครั้งแรก
+- ⚠️ **ต้องเป็นช่องเดี่ยว ห้ามจับเป็น `sub` ของ `sale_bill_no`** — คอลัมน์ที่มี `sub` ถูก render เป็นข้อความ 2 บรรทัดผ่าน `.ss-cell-main` ซึ่งไม่มีที่ให้ `<input>` ของจัดซื้อ (ต่างจาก `phone` ที่เป็นข้อความอ่านอย่างเดียวจึงจับคู่ได้)
+- `updateBackOrderPoNo(id, poNo, branch, itemSku, itemName)` เขียน `ss_backorders` ตรง ๆ แล้ว `setRows` + `setSelectedOrder` (popup BackOrder ใช้ state ตัวเดียวกับ Order) โดยไม่ refetch ทั้งตาราง · ค่าว่าง → `null` ไม่ใช่ `''`
+- **แจ้งเตือนด้วย `notifyBranchUpdate` ไม่ใช่ `notifyPurchasingUpdate`/`notifyWarehouseUpdate`** — ผู้กระทำคือจัดซื้อ ผู้รับคือสาขาเจ้าของแถว ตรงกับ guard `isPurchasing || isWarehouse` ของทิศ "แผนก → สาขา" พอดี · อีก 2 ทิศ guard ด้วย `isBranchUser` จึงเป็น no-op ที่นี่อยู่แล้ว
+- **ไม่มีช่องในฟอร์ม ➕ Add BackOrder** — ตอนสาขาสร้างแถวยังไม่มี PO (นั่นคือเหตุผลที่แถวถูกสร้าง) · `BACKORDER_DETAIL_FIELDS` มีแถวนี้เป็น**ข้อความอ่านอย่างเดียวทุกโปรไฟล์** จุดกรอกจึงมีที่เดียวคือช่องในตาราง ไม่มี 2 ทางทำสิ่งเดียวกัน
+- ⚠️ **ต้องรัน migration ก่อน deploy** — อ่านตารางยังปกติเพราะ query เป็น `select('*')` (ค่าเป็น `undefined` → แสดง `—`) แต่จัดซื้อพิมพ์แล้ว `update` จะพังด้วย `column ss_backorders.po_no does not exist`
 
 ## Popup Order — โหมดคลังสินค้า
 
