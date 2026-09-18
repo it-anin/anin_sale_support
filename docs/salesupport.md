@@ -9,7 +9,7 @@
 | Table | ใช้กับเมนู | หมายเหตุ |
 |---|---|---|
 | `ss_orders` | Order | งานสั่งจอง/สั่งซื้อของลูกค้า ~23 คอลัมน์ (sku, branch, qty, paid_date, customer_name, contact_channel, สถานะ chip: arrived_branch / customer_notified / delivered ฯลฯ) |
-| `ss_backorders` | BackOrder | สินค้าค้างส่ง (ABC ≠ P) — `branch` มี CHECK `SRC/KKL/SSS/SALE_ADMIN` · เก็บ `unit` = **หน่วยของบาร์โค้ดที่สแกน** · `pending_qty` = **ค้างส่งลูกค้า** (สาขากรอกเอง) ส่วน **"คลังมีสินค้า" ไม่ได้เก็บ** ดึงสดจาก `stock` สาขาคลังสินค้า · 3 สถานะ chip default สะกดตรงกับ `ss_orders` เป๊ะ · migration `202608140001` → `202608140003` + `202608150001` + `202608190002` (เพิ่ม `SALE_ADMIN`) + `202608190003` (phone) + `202608200001` (ยกเลิกรายการ) + `202608200002` (แจ้งจัดซื้อ/คลัง) |
+| `ss_backorders` | BackOrder | สินค้าค้างส่ง (ABC ≠ P) — `branch` มี CHECK `SRC/KKL/SSS/SALE_ADMIN` · เก็บ `unit` = **หน่วยของบาร์โค้ดที่สแกน** · `pending_qty` = **ค้างส่งลูกค้า** (สาขากรอกเอง) ส่วน **"คลังมีสินค้า" ไม่ได้เก็บ** ดึงสดจาก `stock` สาขาคลังสินค้า · 3 สถานะ chip default สะกดตรงกับ `ss_orders` เป๊ะ · migration `202608140001` → `202608140003` + `202608150001` + `202608190002` (เพิ่ม `SALE_ADMIN`) + `202608190003` (phone) + `202608200001` (ยกเลิกรายการ) + `202608200002` (แจ้งจัดซื้อ/คลัง) + `202609180001` (เลขที่ PO — จัดซื้อกรอกคนเดียว) |
 | `ss_request_items` | Request Item | ขอสินค้าที่ไม่มีในสต๊อก + supplier, image_url, customer_name |
 | `ss_new_products` | New Product | เสนอสินค้าใหม่เข้าร้าน + image_url, quoted_price, status |
 | `ss_tickets` | Ticket | แจ้งปัญหา department: Purchase / Warehouse |
