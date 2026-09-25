@@ -3585,23 +3585,47 @@ body.pulse-b .cart-inline-btn.in-cart {
    ตอนยังไม่ปลดล็อก ไม่มี .modal-header เลย (ไม่มีหัวข้อจะโชว์) — ปุ่ม ✕ ลอยอยู่บน .page-settings-lock แทน */
 .page-settings-body--lock { padding: 0; }
 .page-settings-lock { display: flex; position: relative; }
-.page-settings-lock-close {
-  position: absolute;
-  top: 8px;
-  right: 10px;
-  background: none;
-  border: none;
-  font-size: 20px;
-  cursor: pointer;
-  color: #9aa7b3;
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  display: flex;
+/* ปุ่มปิด ✕ ทั้ง 2 หน้าของ modal นี้ — ดีไซน์ "Mini 3D Tile"
+   (แบบที่ 7 จาก public/admin-close-btn-designs.html, 2569-09-25) ชุดเดียวกับปุ่มปลดล็อก (.page-settings-unlock)
+   ⚠️ เป็นทางเดียวที่ปิด modal ได้ (คลิกพื้นหลังไม่ปิด) · ใช้แทน .modal-close ตัวกลางเฉพาะ modal นี้
+   ระหว่างอัปโหลด (:disabled) ค้างอยู่ในท่ากดลง ให้เห็นว่าล็อกอยู่ ไม่ใช่กดแล้วเงียบ */
+.page-settings-close {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 1px solid #e3ecf5;
+  border-radius: 11px;
+  background: #fff;
+  color: #2d6cad;
+  cursor: pointer;
+  box-shadow: 0 3px 0 #cfe0f2, 0 4px 10px rgba(0, 0, 0, 0.08);
+  transition: transform 0.2s, box-shadow 0.2s, background 0.2s, color 0.2s;
 }
-.page-settings-lock-close:hover { background: #f0f0f0; color: #2d2a26; }
+.page-settings-close svg {
+  display: block; width: 18px; height: 18px;
+  fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round;
+}
+.page-settings-close:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 5px 0 #cfe0f2, 0 8px 14px rgba(0, 0, 0, 0.12); }
+.page-settings-close:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow: 0 0 0 #cfe0f2, 0 1px 2px rgba(0, 0, 0, 0.12);
+  transition-duration: 0.08s;
+}
+.page-settings-close:focus-visible { outline: 3px solid rgba(72, 145, 219, 0.5); outline-offset: 2px; }
+.page-settings-close:disabled {
+  cursor: not-allowed;
+  transform: translateY(3px);
+  background: #f4f9fe;
+  color: #9aabbd;
+  box-shadow: inset 0 2px 5px rgba(45, 108, 173, 0.14);
+}
+@media (prefers-reduced-motion: reduce) { .page-settings-close { transition: none; } }
+/* หน้าใส่รหัส: ลอยมุมขวาบน ย่อลงนิดให้พ้นช่องรหัส */
+.page-settings-lock-close { position: absolute; top: 12px; right: 12px; z-index: 1; width: 34px; height: 34px; border-radius: 10px; }
 .page-settings-lock-icon {
   width: 90px;
   flex-shrink: 0;

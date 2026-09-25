@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="th">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ปุ่มปิดหน้าต่าง Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap">
+<style>
+  /* โทนของหน้าแกลเลอรีเปลี่ยนตามธีมผู้ดู · หน้าต่างจำลองข้างในใช้สีจริงของแอปตายตัว เพราะแอปมีแต่ธีมสว่าง */
+  :root {
+    --bg: #eef2f6;
+    --surface: #ffffff;
+    --ink: #1f2b37;
+    --muted: #5c6b7a;
+    --line: #d9e3ec;
+    --accent: #2d6cad;
+    --accent-ink: #ffffff;
+    --accent-soft: #e3eef9;
+    --stage-a: #45494e;
+    --stage-b: #404449;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #0f161e;
+      --surface: #17212b;
+      --ink: #e4ebf2;
+      --muted: #98a8b8;
+      --line: #273442;
+      --accent: #7db4ea;
+      --accent-ink: #0f161e;
+      --accent-soft: #1d2b3a;
+      --stage-a: #0b1016;
+      --stage-b: #090d12;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0f161e;
+    --surface: #17212b;
+    --ink: #e4ebf2;
+    --muted: #98a8b8;
+    --line: #273442;
+    --accent: #7db4ea;
+    --accent-ink: #0f161e;
+    --accent-soft: #1d2b3a;
+    --stage-a: #0b1016;
+    --stage-b: #090d12;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Noto Sans Thai', 'Outfit', system-ui, sans-serif;
+    padding-block: 28px 72px;
+  }
+  .wrap { max-width: 1400px; margin: 0 auto; padding-inline: clamp(16px, 3vw, 32px); }
+
+  /* ── หัวหน้า ── */
+  .page-head { display: grid; gap: 10px; margin-bottom: 26px; max-width: 900px; }
+  .eyebrow {
+    margin: 0; color: var(--accent);
+    font: 600 12px/1.4 'Outfit', 'Noto Sans Thai', sans-serif; letter-spacing: .08em; text-transform: uppercase;
+  }
+  .page-head h1 { margin: 0; font-size: clamp(22px, 2.6vw, 30px); line-height: 1.3; font-weight: 700; text-wrap: balance; }
+  .lede { margin: 0; font-size: 14.5px; line-height: 1.75; color: var(--muted); max-width: 72ch; }
+  .seg {
+    display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px; width: fit-content; max-width: 100%;
+    margin-top: 6px; padding: 4px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line);
+  }
+  .seg-label { padding: 0 8px 0 6px; font-size: 12.5px; color: var(--muted); }
+  .seg button {
+    padding: 7px 14px; border: 0; border-radius: 9px; background: transparent; color: var(--ink);
+    font: 500 13.5px 'Noto Sans Thai', sans-serif; cursor: pointer;
+  }
+  .seg button:hover { background: var(--accent-soft); }
+  .seg button[aria-checked="true"] { background: var(--accent); color: var(--accent-ink); }
+  .seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ── การ์ดแต่ละแบบ ── */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 400px), 1fr)); gap: 22px; }
+  .design {
+    display: flex; flex-direction: column; overflow: hidden;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 16px;
+  }
+  .design-head { display: grid; gap: 6px; padding: 14px 18px 13px; }
+  .design-title { display: flex; align-items: center; gap: 9px; margin: 0; font-size: 15.5px; font-weight: 700; }
+  .num {
+    display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+    width: 26px; height: 26px; border-radius: 8px; background: #2d6cad; color: #fff;
+    font: 700 13px 'Outfit', sans-serif; font-variant-numeric: tabular-nums;
+  }
+  .num--now { width: auto; padding: 0 9px; background: #7d8fa3; font: 600 12px 'Noto Sans Thai', sans-serif; }
+  .design-desc { margin: 0; padding-left: 35px; font-size: 13px; line-height: 1.65; color: var(--muted); }
+  .match { margin: 0; padding-left: 35px; font-size: 12px; color: var(--muted); }
+  .match span {
+    display: inline-block; margin-left: 4px; padding: 1px 9px; border-radius: 999px;
+    background: var(--accent-soft); color: var(--accent); font-weight: 500;
+  }
+  /* พื้นหลังจำลอง overlay มืดของหน้าต่างจริง */
+  .stage {
+    flex: 1; display: grid; justify-items: center; align-content: start; gap: 8px; padding: 18px 16px 26px;
+    background: repeating-linear-gradient(45deg, var(--stage-a) 0 10px, var(--stage-b) 10px 20px);
+  }
+  .cap {
+    width: 100%; max-width: 400px; margin: 4px 0 0; color: rgba(255,255,255,.78);
+    font-size: 12px; font-weight: 500; letter-spacing: .02em;
+  }
+
+  /* ── หน้าต่างจำลอง: ค่าจริงจาก .modal-content / .modal-header / .page-settings-* ใน App.css ── */
+  .modal {
+    position: relative; width: 100%; max-width: 400px; overflow: hidden;
+    background: #fff; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,.3);
+    font-family: 'Noto Sans Thai', sans-serif; color: #2d3a48;
+  }
+  .modal-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 32px; border-bottom: 2px solid #e8e0d5;
+  }
+  .modal-h { margin: 0; font-size: 24px; font-weight: 700; color: #2d2a26; }
+  .modal-body { padding: 22px 24px 26px; }
+  .sec-title { margin: 0; font-size: 15.2px; font-weight: 700; color: #2d6cad; }
+  .sec-sub { margin: 2px 0 12px; font-size: 12px; color: #8194a8; }
+  .hint { margin: 14px 0 0; font-size: 12px; font-weight: 300; line-height: 1.5; color: #8194a8; }
+
+  /* การ์ดเลือกไฟล์ (File Card ที่ใช้อยู่จริง) */
+  .fc {
+    position: relative; display: flex; align-items: center; gap: 14px; padding: 13px 14px 13px 16px; overflow: hidden;
+    border: 1px solid #cfe0f2; border-radius: 14px; background: #fff;
+  }
+  .fc-doc { position: relative; flex-shrink: 0; color: #4891db; }
+  .fc-doc svg { display: block; width: 38px; height: 38px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+  .fc-tag {
+    position: absolute; left: -5px; bottom: 5px; padding: 1px 5px; border-radius: 4px;
+    background: #2d6cad; color: #fff; font: 700 9px/1.4 'Outfit', sans-serif; letter-spacing: .06em;
+  }
+  .fc-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+  .fc-name { font: 600 15px 'Outfit', 'Noto Sans Thai', sans-serif; color: #2d3a48; }
+  .fc-meta { font-size: 12px; color: #8194a8; font-variant-numeric: tabular-nums; }
+  .fc-cta {
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0; min-width: 78px; height: 34px; padding: 0 14px;
+    border-radius: 999px; background: #4891db; color: #fff; font-size: 13px; font-weight: 600;
+  }
+  .fc-cta--busy { background: #eaf3fc; color: #2d6cad; }
+  .spin {
+    display: inline-block; width: 16px; height: 16px; border-radius: 50%;
+    border: 2px solid currentColor; border-right-color: transparent; animation: spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .bar { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; overflow: hidden; }
+  .bar::before {
+    content: ''; position: absolute; top: 0; bottom: 0; left: -40%; width: 40%;
+    border-radius: 3px; background: #4891db; animation: indet 1.15s ease-in-out infinite;
+  }
+  @keyframes indet { to { left: 100%; } }
+
+  /* หน้าใส่รหัส (Split Icon Panel + ปุ่มปลดล็อก 3D Tile ที่ใช้อยู่จริง) */
+  .lock { position: relative; display: flex; }
+  .lock-icon {
+    display: flex; align-items: center; justify-content: center; width: 90px; flex-shrink: 0;
+    background: linear-gradient(160deg, #2d6cad, #4891db); color: #fff;
+  }
+  .lock-icon svg, .unlock svg { display: block; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; }
+  .lock-icon svg { width: 26px; height: 26px; stroke-width: 1.8; }
+  .lock-form { flex: 1; min-width: 0; padding: 20px 18px; }
+  .lock-label { display: block; margin-bottom: 6px; font-size: 16px; font-weight: 600; color: #2d3a48; }
+  .lock-input {
+    padding: 18px 24px; border-radius: 50px; background: rgba(248,248,248,.95); box-shadow: 0 8px 50px rgba(161,161,161,.2);
+    font: 16px 'Outfit', 'Noto Sans Thai', sans-serif; color: #8a8a8a;
+  }
+  .unlock {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; height: 76px; margin-top: 12px;
+    border: 1px solid #e3ecf5; border-radius: 14px; background: #fff; color: #2d6cad; font-size: 14.5px; font-weight: 600;
+    box-shadow: 0 3px 0 #cfe0f2, 0 5px 12px rgba(0,0,0,.08);
+  }
+  .unlock svg { width: 26px; height: 26px; stroke-width: 1.75; }
+
+  /* ── สลับสถานะจำลอง ── */
+  .grid:not([data-state="busy"]) .when-busy { display: none !important; }
+  .grid[data-state="busy"] .when-idle { display: none !important; }
+
+  /* ── ปุ่มปิด: ส่วนกลาง ── */
+  .x-btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px; flex-shrink: 0;
+    padding: 0; border: 0; background: none; color: inherit; cursor: pointer;
+    font-family: 'Noto Sans Thai', sans-serif;
+    transition: background .2s, color .2s, border-color .2s, transform .2s, box-shadow .2s, opacity .2s, filter .2s;
+  }
+  .x-btn svg { display: block; width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+  .m-lock .x-btn { position: absolute; top: 10px; right: 10px; z-index: 1; }
+  .x-btn:focus-visible { outline: 3px solid rgba(72,145,219,.5); outline-offset: 2px; }
+  .x-btn:disabled { cursor: not-allowed; }
+
+  /* ตอนนี้ — ตัวอักษร ✕ (.modal-close / .page-settings-lock-close) */
+  .c0 .m-open .x-btn { width: 44px; height: 44px; border-radius: 50%; color: #6b6559; font-size: 32px; line-height: 1; }
+  .c0 .m-lock .x-btn { top: 8px; right: 10px; width: 34px; height: 34px; border-radius: 50%; color: #9aa7b3; font-size: 20px; line-height: 1; }
+  .c0 .x-btn:hover { background: #f0f0f0; color: #2d2a26; }
+
+  /* 1 — Soft Circle */
+  .c1 .x-btn { width: 36px; height: 36px; border-radius: 50%; background: #eaf3fc; color: #2d6cad; }
+  .c1 .x-btn svg { transition: transform .25s; }
+  .c1 .x-btn:hover:not(:disabled) { background: #d5e8fb; }
+  .c1 .x-btn:hover:not(:disabled) svg { transform: rotate(90deg); }
+  .c1 .m-lock .x-btn { width: 32px; height: 32px; }
+  .c1 .x-btn:disabled { opacity: .4; }
+
+  /* 2 — Ghost Rotate */
+  .c2 .x-btn { width: 40px; height: 40px; border-radius: 50%; color: #8194a8; }
+  .c2 .x-btn svg { width: 20px; height: 20px; stroke-width: 1.75; transition: transform .25s; }
+  .c2 .x-btn:hover:not(:disabled) { background: #eaf3fc; color: #2d6cad; }
+  .c2 .x-btn:hover:not(:disabled) svg { transform: rotate(90deg); }
+  .c2 .m-lock .x-btn { width: 34px; height: 34px; top: 8px; }
+  .c2 .x-btn:disabled { opacity: .35; }
+
+  /* 3 — Outline → Fill */
+  .c3 .x-btn { width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid #b8d3ee; background: #fff; color: #4891db; }
+  .c3 .x-btn:hover:not(:disabled) { background: #4891db; border-color: #4891db; color: #fff; }
+  .c3 .m-lock .x-btn { width: 32px; height: 32px; }
+  .c3 .x-btn:disabled { opacity: .4; }
+
+  /* 4 — Solid Gradient */
+  .c4 .x-btn {
+    width: 36px; height: 36px; border-radius: 50%; color: #fff;
+    background: linear-gradient(135deg, #2d6cad, #4891db); box-shadow: 0 3px 8px rgba(45,108,173,.3);
+  }
+  .c4 .x-btn svg { width: 16px; height: 16px; stroke-width: 2.4; }
+  .c4 .x-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 14px rgba(45,108,173,.4); }
+  .c4 .x-btn:active:not(:disabled) { transform: translateY(1px); box-shadow: 0 1px 3px rgba(45,108,173,.3); }
+  .c4 .m-lock .x-btn { width: 30px; height: 30px; }
+  .c4 .m-lock .x-btn svg { width: 14px; height: 14px; }
+  .c4 .x-btn:disabled { background: #c9d6e3; box-shadow: none; }
+
+  /* 5 — Pill "ปิด" */
+  .c5 .x-btn {
+    height: 34px; padding: 0 14px 0 11px; border-radius: 999px; border: 1px solid #cfe0f2;
+    background: #fff; color: #2d6cad; font-size: 13.5px; font-weight: 600;
+  }
+  .c5 .x-btn svg { width: 14px; height: 14px; stroke-width: 2.2; }
+  .c5 .x-btn:hover:not(:disabled) { background: #eaf3fc; border-color: #b8d3ee; }
+  .c5 .m-lock .x-btn { top: 12px; height: 30px; padding: 0 12px 0 9px; font-size: 12.5px; }
+  .c5 .x-btn:disabled { color: #9aabbd; border-color: #e3ecf5; background: #f8fafc; }
+
+  /* 6 — Squircle แดงตอนชี้ */
+  .c6 .x-btn { width: 36px; height: 36px; border-radius: 10px; background: #f1f4f8; color: #5c6b7a; }
+  .c6 .x-btn:hover:not(:disabled) { background: #fdecea; color: #c0392b; }
+  .c6 .m-lock .x-btn { width: 32px; height: 32px; border-radius: 9px; }
+  .c6 .x-btn:disabled { opacity: .4; }
+
+  /* 7 — Mini 3D Tile */
+  .c7 .x-btn {
+    width: 38px; height: 38px; border-radius: 11px; border: 1px solid #e3ecf5; background: #fff; color: #2d6cad;
+    box-shadow: 0 3px 0 #cfe0f2, 0 4px 10px rgba(0,0,0,.08);
+  }
+  .c7 .x-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 5px 0 #cfe0f2, 0 8px 14px rgba(0,0,0,.12); }
+  .c7 .x-btn:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 0 0 #cfe0f2, 0 1px 2px rgba(0,0,0,.12); transition-duration: .08s; }
+  .c7 .m-lock .x-btn { top: 12px; right: 12px; width: 34px; height: 34px; border-radius: 10px; }
+  .c7 .x-btn:disabled { transform: translateY(3px); background: #f4f9fe; color: #9aabbd; box-shadow: inset 0 2px 5px rgba(45,108,173,.14); }
+
+  /* 8 — Corner Tab */
+  .c8 .x-btn {
+    position: absolute; top: 0; right: 0; width: 60px; height: 58px; border-radius: 0 20px 0 18px;
+    background: linear-gradient(160deg, #2d6cad, #4891db); color: #fff;
+  }
+  .c8 .x-btn svg { width: 20px; height: 20px; transition: transform .25s; }
+  .c8 .x-btn:hover:not(:disabled) { filter: brightness(1.1); }
+  .c8 .x-btn:hover:not(:disabled) svg { transform: rotate(90deg); }
+  .c8 .m-lock .x-btn { top: 0; right: 0; width: 48px; height: 46px; border-radius: 0 20px 0 14px; }
+  .c8 .m-lock .x-btn svg { width: 17px; height: 17px; }
+  .c8 .x-btn:disabled { background: #c9d6e3; }
+
+  /* 9 — Busy Ring */
+  .c9 .m-open .x-btn { position: relative; }
+  .c9 .x-btn { width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid #cfe0f2; background: #fff; color: #5c6b7a; }
+  .c9 .x-btn:hover:not(:disabled) { border-color: #4891db; background: #eaf3fc; color: #2d6cad; }
+  .c9 .m-lock .x-btn { width: 32px; height: 32px; }
+  .c9 .x-btn:disabled { color: #b5c3d1; border-color: #e3ecf5; }
+  .c9 .x-btn:disabled::after {
+    content: ''; position: absolute; inset: -5px; border-radius: 50%;
+    border: 2px solid transparent; border-top-color: #4891db; border-right-color: #4891db;
+    animation: spin 1s linear infinite;
+  }
+
+  /* 10 — Icon + Label Tile */
+  .c10 .x-btn {
+    flex-direction: column; gap: 2px; width: 46px; height: 46px; border-radius: 10px; border: 1px solid #e3ecf5;
+    background: #f7fafd; color: #2d6cad; font-size: 11.5px; font-weight: 600; line-height: 1;
+  }
+  .c10 .x-btn svg { width: 16px; height: 16px; }
+  .c10 .x-btn:hover:not(:disabled) {
+    transform: translateY(-2px); background: #2d6cad; border-color: #2d6cad; color: #fff;
+    box-shadow: 0 6px 12px rgba(45,108,173,.25);
+  }
+  .c10 .m-lock .x-btn { top: 6px; right: 8px; width: 40px; height: 40px; gap: 2px; font-size: 10.5px; }
+  .c10 .m-lock .x-btn svg { width: 14px; height: 14px; }
+  .c10 .x-btn:disabled { opacity: .4; }
+
+  /* ── หมายเหตุท้ายหน้า ── */
+  .foot { max-width: 900px; margin-top: 30px; font-size: 13.5px; line-height: 1.75; color: var(--muted); }
+  .foot h2 { margin: 0 0 6px; font-size: 14px; color: var(--ink); }
+  .foot ul { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .x-btn, .x-btn svg { transition: none !important; }
+    .spin { animation-duration: 2.4s; }
+    .bar::before { animation: none; left: 0; width: 100%; opacity: .45; }
+    .c9 .x-btn:disabled::after { animation-duration: 3s; }
+  }
+</style>
+
+<div class="wrap" lang="th">
+  <header class="page-head">
+    <p class="eyebrow">Price Tag · ⚙️ Admin</p>
+    <h1>ปุ่มปิด ✕ ของหน้าต่าง ⚙️ Admin — 10 แบบ</h1>
+    <p class="lede">
+      ปุ่มนี้เป็นทางเดียวที่ปิดหน้าต่างได้ (คลิกพื้นหลังไม่ปิดแล้ว) จึงควรเห็นชัดและกดง่าย
+      แต่ละแบบโชว์ทั้งหน้าใส่รหัสและหน้าอัปโหลด ใช้ดีไซน์เดียวกันทั้ง 2 หน้า
+      เอาเมาส์ชี้เพื่อดูท่าตอนชี้ และสลับเป็น "กำลังอัปโหลด" เพื่อดูตอนปุ่มปิดถูกล็อกไว้ ชอบแบบไหนบอกเลขมาได้เลย
+    </p>
+    <div class="seg" role="radiogroup" aria-label="สถานะจำลอง">
+      <span class="seg-label">ดูสถานะ</span>
+      <button type="button" id="state-idle" role="radio" aria-checked="true" data-state="idle">ปกติ</button>
+      <button type="button" id="state-busy" role="radio" aria-checked="false" data-state="busy" tabindex="-1">กำลังอัปโหลด (ปิดไม่ได้)</button>
+    </div>
+  </header>
+
+  <main class="grid" id="grid" data-state="idle"></main>
+
+  <footer class="foot">
+    <h2>หมายเหตุ</h2>
+    <ul>
+      <li>เปลี่ยนเฉพาะหน้าต่าง ⚙️ Admin ปุ่ม ✕ ของหน้าต่างอื่นในแอปอีกราว 20 จุดยังเหมือนเดิม ถ้าอยากเปลี่ยนทั้งแอปบอกได้</li>
+      <li>ระหว่างอัปโหลดทุกแบบกดปิดไม่ได้ และชี้ค้างจะขึ้นข้อความ "รออัปโหลดเสร็จก่อนจึงปิดได้" · ปุ่มตอนนี้ก็กดไม่ได้เหมือนกัน แต่หน้าตาไม่เปลี่ยน เลยดูไม่ออกว่าทำไมกดแล้วไม่ปิด</li>
+      <li>สีทั้งหมดมาจากโทนฟ้าของแอป (#4891db / #2d6cad / #eaf3fc) ยกเว้นแบบ 6 ที่ใช้แดงอ่อนตอนชี้เพื่อสื่อว่า "ออก"</li>
+    </ul>
+  </footer>
+</div>
+
+<script>
+  const svg = (paths, attrs = '') => `<svg viewBox="0 0 24 24" aria-hidden="true"${attrs}>${paths}</svg>`;
+  const X = svg('<path d="M6 6l12 12M18 6 6 18"/>');
+  const LOCK = svg('<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>');
+  const UNLOCK = svg('<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.4-2"/>');
+  const FILE = svg('<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/>');
+
+  const DESIGNS = [
+    {
+      key: 'c0', num: 'ตอนนี้', name: 'ปุ่มปัจจุบัน', glyph: true,
+      desc: 'ตัวอักษร ✕ ขนาด 32px สีเทาอมน้ำตาลที่ติดมาจากธีมทองเดิม · หน้าใส่รหัสใช้ ✕ อีกแบบ เล็กกว่าและคนละสี',
+    },
+    {
+      key: 'c1', num: 1, name: 'Soft Circle', match: 'ปุ่มเฟือง ⚙️',
+      desc: 'วงกลมฟ้าอ่อน X น้ำเงิน ชี้แล้วเข้มขึ้นและ X หมุน 90° ท่าเดียวกับปุ่มเฟืองที่ชี้แล้วหมุน',
+    },
+    {
+      key: 'c2', num: 2, name: 'Ghost Rotate',
+      desc: 'ไม่มีพื้น เส้น X บางสีเทาฟ้า ชี้แล้วขึ้นวงฟ้าอ่อนและหมุน เรียบที่สุด ใกล้ของเดิมที่สุด',
+    },
+    {
+      key: 'c3', num: 3, name: 'Outline → Fill',
+      desc: 'วงกลมขอบฟ้า ชี้แล้วเติมน้ำเงินเต็มวง X กลายเป็นสีขาว',
+    },
+    {
+      key: 'c4', num: 4, name: 'Solid Gradient', match: 'ปุ่มหลักโทน Neon Blue',
+      desc: 'วงกลมไล่สีน้ำเงินแบบปุ่มหลักของแอป X สีขาว เห็นชัดที่สุดในกลุ่มที่เป็นไอคอนล้วน',
+    },
+    {
+      key: 'c5', num: 5, name: 'Pill "ปิด"', label: 'ปิด',
+      desc: 'มีคำว่า "ปิด" กำกับข้าง X พนักงานไม่ต้องเดาว่าปุ่มนี้คืออะไร',
+    },
+    {
+      key: 'c6', num: 6, name: 'Squircle แดงตอนชี้',
+      desc: 'สี่เหลี่ยมมุมมนพื้นเทาอ่อน ชี้แล้วเป็นแดงอ่อน สื่อว่า "ออก" แบบปุ่มปิดหน้าต่างของ Windows',
+    },
+    {
+      key: 'c7', num: 7, name: 'Mini 3D Tile', match: 'ปุ่มปลดล็อก (3D Tile)',
+      desc: 'ปุ่มนูนขนาดเล็ก ชี้แล้วยก กดแล้วยุบ ชุดเดียวกับปุ่มปลดล็อก ตอนอัปโหลดค้างอยู่ในท่ากดลง',
+    },
+    {
+      key: 'c8', num: 8, name: 'Corner Tab', match: 'แถบกุญแจด้านซ้าย',
+      desc: 'แถบไล่สีเกาะมุมขวาบนของหน้าต่าง หน้าตาเดียวกับแถบไอคอนกุญแจด้านซ้ายของหน้าใส่รหัส',
+    },
+    {
+      key: 'c9', num: 9, name: 'Busy Ring',
+      desc: 'วงกลมขอบฟ้า ตอนกำลังอัปโหลดมีวงหมุนรอบ X บอกว่ายังปิดไม่ได้ (ลองสลับเป็น "กำลังอัปโหลด")',
+    },
+    {
+      key: 'c10', num: 10, name: 'Icon + Label Tile', label: 'ปิด', match: 'ปุ่มนำทาง (ไอคอน + ป้ายชื่อ)',
+      desc: 'ช่องสี่เหลี่ยมเล็ก X อยู่บนคำว่า "ปิด" แบบย่อส่วนของปุ่มนำทางด้านบน',
+    },
+  ];
+
+  const closeBtn = (d, where) =>
+    `<button type="button" class="x-btn" id="x-${d.key}-${where}" aria-label="ปิด">` +
+    (d.glyph ? '✕' : X + (d.label ? `<span>${d.label}</span>` : '')) +
+    '</button>';
+
+  const lockMock = d => `
+    <p class="cap">หน้าใส่รหัส</p>
+    <div class="modal m-lock">
+      <div class="lock">
+        ${closeBtn(d, 'lock')}
+        <div class="lock-icon">${LOCK}</div>
+        <div class="lock-form">
+          <span class="lock-label">รหัส admin</span>
+          <div class="lock-input">ใส่รหัส admin...</div>
+          <div class="unlock">${UNLOCK}ปลดล็อก</div>
+        </div>
+      </div>
+    </div>`;
+
+  const openMock = d => `
+    <p class="cap">หน้าอัปโหลด</p>
+    <div class="modal m-open">
+      <div class="modal-header">
+        <p class="modal-h">⚙️ Admin</p>
+        ${closeBtn(d, 'open')}
+      </div>
+      <div class="modal-body">
+        <h3 class="sec-title">📤 Upload R05.106</h3>
+        <p class="sec-sub">สำหรับอัปเดตราคาระหว่างวัน</p>
+        <div class="fc">
+          <span class="fc-doc">${FILE}<span class="fc-tag">CSV</span></span>
+          <span class="fc-main">
+            <span class="fc-name">R05.106.CSV</span>
+            <span class="fc-meta when-idle">อัปเดทแล้ว → 25/09/2026, 07:55</span>
+            <span class="fc-meta when-busy">กำลังอัปโหลด 10,871 รายการ...</span>
+          </span>
+          <span class="fc-cta when-idle">เลือกไฟล์</span>
+          <span class="fc-cta fc-cta--busy when-busy"><span class="spin" aria-hidden="true"></span></span>
+          <span class="bar when-busy" aria-hidden="true"></span>
+        </div>
+        <p class="hint">►►► อัปโหลดอัตโนมัติประจำทุกวันเวลา 7:55</p>
+      </div>
+    </div>`;
+
+  const grid = document.getElementById('grid');
+  grid.innerHTML = DESIGNS.map(d => `
+    <article class="design" id="${d.key}">
+      <header class="design-head">
+        <h2 class="design-title"><span class="num${typeof d.num === 'string' ? ' num--now' : ''}">${d.num}</span>${d.name}</h2>
+        <p class="design-desc">${d.desc}</p>
+        ${d.match ? `<p class="match">เข้ากับ<span>${d.match}</span></p>` : ''}
+      </header>
+      <div class="stage ${d.key}">${lockMock(d)}${openMock(d)}</div>
+    </article>`).join('');
+
+  // ── สลับสถานะจำลอง: ระหว่างอัปโหลดปุ่มปิดของหน้าอัปโหลดถูกล็อก (หน้าใส่รหัสไม่มีการอัปโหลด) ──
+  const segButtons = [...document.querySelectorAll('.seg button')];
+  const setState = state => {
+    grid.dataset.state = state;
+    segButtons.forEach(b => {
+      const on = b.dataset.state === state;
+      b.setAttribute('aria-checked', String(on));
+      b.tabIndex = on ? 0 : -1;
+    });
+    grid.querySelectorAll('.m-open .x-btn').forEach(btn => {
+      btn.disabled = state === 'busy';
+      btn.title = state === 'busy' ? 'รออัปโหลดเสร็จก่อนจึงปิดได้' : '';
+    });
+  };
+  segButtons.forEach((b, i) => {
+    b.addEventListener('click', () => setState(b.dataset.state));
+    b.addEventListener('keydown', e => {
+      if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+      e.preventDefault();
+      const next = segButtons[(i + (e.key === 'ArrowRight' ? 1 : segButtons.length - 1)) % segButtons.length];
+      next.focus();
+      setState(next.dataset.state);
+    });
+  });
+</script>
+</html>

@@ -2375,13 +2375,32 @@ ${sheetsHtml}
             {adminVerified && (
               <div className="modal-header">
                 <h2 style={{ margin: 0 }}>⚙️ Admin</h2>
-                <button className="modal-close" disabled={uploadBusy} onClick={() => setShowAdminModal(false)}>✕</button>
+                {/* ปุ่มปิดดีไซน์ "Mini 3D Tile" — แบบที่ 7 จาก public/admin-close-btn-designs.html (2569-09-25)
+                    ⚠️ ใช้ .page-settings-close ไม่ใช่ .modal-close ตัวกลาง (ยังใช้กับ modal อื่นอีก 2 จุด)
+                    ระหว่างอัปโหลด disabled → ค้างอยู่ในท่ากดลง + title บอกเหตุผล */}
+                <button
+                  type="button"
+                  className="page-settings-close"
+                  disabled={uploadBusy}
+                  onClick={() => setShowAdminModal(false)}
+                  aria-label="ปิด"
+                  title={uploadBusy ? 'รออัปโหลดเสร็จก่อนจึงปิดได้' : undefined}
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+                </button>
               </div>
             )}
             <div className={`page-settings-body${!adminVerified ? ' page-settings-body--lock' : ''}`}>
               {!adminVerified ? (
                 <div className="page-settings-lock">
-                  <button className="page-settings-lock-close" onClick={() => setShowAdminModal(false)}>✕</button>
+                  <button
+                    type="button"
+                    className="page-settings-close page-settings-lock-close"
+                    onClick={() => setShowAdminModal(false)}
+                    aria-label="ปิด"
+                  >
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+                  </button>
                   <div className="page-settings-lock-icon">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                       <rect x="5" y="11" width="14" height="10" rx="2" />
