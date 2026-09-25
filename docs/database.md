@@ -8,18 +8,19 @@
 - RLS: `public read` (SELECT) + `public write` (ALL)
 - Search: queries Supabase directly — NOT client-side filter
 - On mount: fetches only latest `updated_at` for timestamp display
-- ⛔ **หน้าเว็บเขียนตารางนี้ไม่ได้แล้ว (2569-09-06)** — ปุ่ม Admin `Upload R05.106` ถูกตัดออกทั้งชุด · คนเขียนคือ `upload-products.mjs` ใน [it-anin/botr05106](https://github.com/it-anin/botr05106) ที่รันต่อท้ายบอท export ด้วย staging + RPC swap (รายละเอียดหัวข้อถัดไป)
+- ⛔ **ปุ่ม Admin `Upload R05.106` แบบเดิม (delete-all → insert) ถูกตัดออกทั้งชุด (2569-09-06)** · คนเขียนประจำคือ `upload-products.mjs` ใน [it-anin/botr05106](https://github.com/it-anin/botr05106) ที่รันต่อท้ายบอท export ด้วย staging + RPC swap (รายละเอียดหัวข้อถัดไป)
+- 🔄 **ยกเว้นอัปโหลดด่วนด้วยมือ (2569-09-25)** — ⚙️ Admin → `📤 Upload R05.106` ผ่าน RPC `upload_products_from_web` ที่จบที่ swap ตัวเดียวกับบอท (หัวข้อ "อัปโหลดด่วนจากหน้าเว็บ" ด้านล่าง) — **ห้ามกลับไปเขียน `products` ตรงจากเว็บ**
 - เดิมหน้าเว็บใช้ **delete-all + insert** ซึ่งไม่ atomic (insert พังกลางทางตารางจะว่าง) — เป็นเหตุผลหนึ่งที่ตัดออก อีกเหตุผลคือ 2 ทางเขียนตารางเดียวกันเสี่ยงอัปโหลดซ้ำซ้อนและต้องซิงค์ mapping คอลัมน์ข้าม repo
 
 ### Products CSV — รูปแบบไฟล์ R05.106
 
-**Products CSV** — เรียกไฟล์นี้ว่า **R05.106** (Admin → Upload):
+**Products CSV** — เรียกไฟล์นี้ว่า **R05.106** (บอทอัปโหลดทุกเช้า · ด่วน: ⚙️ Admin → Upload R05.106):
 27 คอลัมน์ · ตรวจกับ export จริง 11 ไฟล์ (พ.ค.–ส.ค. 2569) หัวคอลัมน์นิ่งทุกไฟล์
 
 > 📌 **ชื่อเรียกกลาง = `R05.106`** (ตามเลขรายงานของ Promax) ใช้ชื่อนี้ในโค้ด เอกสาร และ UI ทุกที่
 > **ตัวตัดสินคือหัวคอลัมน์ ไม่ใช่ชื่อไฟล์** — `upload-products.mjs` หาไฟล์จาก `CSV_CANDIDATES` (หรือ `--file`) แล้วตรวจหัวคอลัมน์ก่อนแตะ DB เสมอ แบบเดียวกับ `upload-stock.mjs` / `upload-customer-history.mjs`
 > ชื่อที่ export กันมาจริงไม่นิ่ง — `05106.CSV`, `R05106.CSV`, `R05.106-26-5-2026.CSV`, `R05106-11082026.CSV` ฯลฯ จึงยึดหัวคอลัมน์เป็นตัวตัดสิน ไม่ใช่ชื่อไฟล์
-> ตารางคอลัมน์ด้านล่างยังต้องรู้ไว้ เพราะเป็นสัญญาของข้อมูลที่เข้าตาราง `products` แม้ตัวโค้ดอ่านไฟล์จะอยู่ repo `botr05106` แล้ว
+> ตารางคอลัมน์ด้านล่างยังต้องรู้ไว้ เพราะเป็นสัญญาของข้อมูลที่เข้าตาราง `products` · โค้ดอ่านไฟล์มี 2 ชุด: `upload-products.mjs` (repo `botr05106`) + `r05106.ts` (repo นี้ — ลอกมา ต้องแก้คู่กัน)
 
 | field | idx | คอลัมน์ | header |
 |---|---|---|---|
@@ -37,9 +38,9 @@
   - กรองเหลือ `=1` ที่ **view `v_products_by_category`** เท่านั้น (เฉพาะหน้าเลือกตามหมวด)
   - ข้อมูลจริง: 10,761 คู่ `sku-unit` → กรองแล้วเหลือ **7,905 = 1 ป้ายต่อ SKU พอดี** · ทุก SKU มีแถว `=1` เสมอ ไม่มีตัวไหนหาย
 - ⚠️ **หมวดอยู่คอลัมน์ Q ไม่ใช่ C** — คอลัมน์ C คือ `CF_COMMENTS` (โน้ตอิสระ ว่าง 10,792/10,841 แถว ที่เหลือเป็นค่ามั่ว เช่น `บาร์เก่า`, `WEGO`) · โค้ดเดิมอ่าน C มาตลอดจน `products.category` เป็น `'ทั่วไป'` เกือบทั้งตาราง — แก้แล้ว 2569-08-11
-- **ค้นคอลัมน์จากชื่อหัวเท่านั้น ไม่มี fallback ตำแหน่ง** — `PRODUCT_CSV_COLUMNS` + `resolveProductCsvColumns()` ใน `upload-products.mjs` (repo `botr05106`) · ขาดคอลัมน์ไหน throw ก่อนแตะ DB
+- **ค้นคอลัมน์จากชื่อหัวเท่านั้น ไม่มี fallback ตำแหน่ง** — `PRODUCT_CSV_COLUMNS` + `resolveProductCsvColumns()` ใน `upload-products.mjs` (repo `botr05106`) และสำเนาใน `r05106.ts` · ขาดคอลัมน์ไหน throw ก่อนแตะ DB
 - ทดสอบแล้วว่ากันไฟล์ผิดได้ด้วยรายงาน Promax ตัวจริงที่หน้าตาใกล้เคียง: `R05.105` (ขาด `CF_BARCODE`), `R01.102` สต๊อค (ขาด `CF_BARCODE` + `CF_FMLPRICE`) — สองตัวนี้คือไฟล์ที่มีโอกาสหยิบผิดจริง
-- UTF-8 BOM: ไฟล์จริงมี BOM แต่ **PapaParse ตัดให้เอง** ไม่ต้อง strip
+- UTF-8 BOM: ไฟล์จริงมี BOM — parser ทั้ง 2 ชุดตัดเองก่อนเช็คหัว (`readCsvText()` ของบอท / `parseR05106()` ของเว็บ) · เว็บไม่ได้ใช้ PapaParse แล้ว (ถอด dependency 2569-09-06)
 - `DELETE` เป็นค่าหมวดที่พบมากสุด (4,818 แถว) — **ไม่กรองออก** เก็บตามไฟล์ เพื่อให้ยังค้นหาเจอ
 - ⚠️ **ห้ามสร้างไฟล์ CSV ตัวอย่างสมมติขึ้นมาใหม่** — เดิมมี `sample-products.csv` ที่คอลัมน์ไม่ตรงกับ R05.106 (B เป็น `Brand`) แล้ว `README.md` / `QUICKSTART.md` ก็ไปลอก layout ของไฟล์สมมตินั้นมาเขียนเป็น "รูปแบบไฟล์ CSV" (ราคาอยู่ I) ทำให้เอกสารผิดตามกันทั้งชุด · ลบไฟล์และแก้เอกสารแล้ว 2569-08-11 — ถ้าต้องการไฟล์เทส ให้ใช้ export จริงจาก Promax
 
@@ -47,7 +48,7 @@
 
 **โค้ดไม่อยู่ repo นี้แล้ว** — `upload-products.mjs` + เทส + `products-import-swap.sql` ย้ายไป **[it-anin/botr05106](https://github.com/it-anin/botr05106)** ซึ่งเป็นบอท Python ที่ automate ProMaxx เพื่อ export ไฟล์นี้อยู่แล้ว (บอท 1 ตัว = 1 โปรเจกต์จบ เหมือน `bot-export` ที่พอร์ต `upload-stock.mjs` เป็น Python ไว้ในตัวเอง และ `Bot-Customer`) · ที่นั่นบอทเรียก uploader ต่อท้ายตอน export เสร็จผ่าน `tools\run_and_upload.ps1` ใน Task Scheduler งานเดียว
 
-> ✅ **ไม่มีจุดต้องซิงค์ข้าม repo แล้ว** — เดิม `App.tsx` มี `PRODUCT_CSV_COLUMNS` + `handleFileUpload` ชุดที่ 2 ที่ต้องคอยแก้ตามกัน · ตัดออกหมดแล้ว 2569-09-06 เหลือ implementation เดียวคือใน repo บอท
+> ⚠️ **กลับมามีจุดต้องซิงค์ข้าม repo 1 จุด (2569-09-25)** — `r05106.ts` ลอก parser/หัวคอลัมน์จาก `upload-products.mjs` สำหรับอัปโหลดด่วน · ฝั่งเขียน DB **ไม่ต้องซิงค์** เพราะทั้งคู่จบที่ `swap_products_from_import()` ตัวเดียวกัน (เดิม 2569-09-06 ตัดชุดที่ 2 ออกหมด เพราะปุ่มเก่าเขียน `products` เองคนละวิธี)
 
 **สิ่งที่ยังเป็นเรื่องของ repo นี้ เพราะกระทบตาราง `products` โดยตรง:**
 
@@ -55,11 +56,11 @@
 - RPC ใช้ `delete` ไม่ใช่ `truncate` — truncate จับ ACCESS EXCLUSIVE lock จะบล็อกคนที่กำลังค้นหาสินค้าอยู่
 - 🚨 **`delete` ใน RPC ต้องมี `WHERE` เสมอ** — Supabase เปิดส่วนขยาย `safeupdate` ไว้ `DELETE` ที่ไม่มี WHERE จะถูกปฏิเสธด้วย `DELETE requires a WHERE clause` (เจอจริงตอนรันของจริงครั้งแรก 2569-09-05 · ตอนนั้น rollback หมด `products` ไม่ถูกแตะเลย) · ฝั่งเว็บไม่เคยเจอเพราะ PostgREST บังคับให้ใส่ filter อยู่แล้ว (`.delete().neq('id', 0)`)
 - RPC เขียน `updated_at = now()` ให้ทุกแถว → badge "Last Updated" หน้า Admin แสดงเวลาที่อัปโหลดรอบนั้น (ถ้าปล่อยเป็น NULL badge จะว่างเพราะ `order desc` เอา NULL ขึ้นก่อน)
-- `grant execute` ให้ `service_role` เท่านั้น — anon เรียกทีเดียวลบทั้งตารางได้
+- `grant execute` ให้ `service_role` เท่านั้น — anon เรียกทีเดียวลบทั้งตารางได้ · เว็บเข้าทางอ้อมผ่าน `upload_products_from_web` (security definer) ที่มีด่านไฟล์หด + ด่านชนบอทก่อนเรียก swap
 - ⚠️ **ห้ามตั้ง Task Scheduler อัปโหลดแยกอีกทาง** — เวลาที่ไฟล์ออกไม่แน่นอน (วัดจริงได้ 15:14 และ 18:04 คนละวัน) และ 2 ทางรันพร้อมกันจะแย่งกันเขียน `products`
 - 🚫 **ห้ามก๊อป `upload-*.mjs` ไปวางหลายที่** — `upload-customer-history.mjs` มี **3 สำเนาที่โค้ดไม่ตรงกัน** (repo นี้ + `run-upload-stock` เป็นตัวใหม่ · `Bot-Customer` + `Bot-R16` เป็นตัวเก่า) และตัวที่ scheduled เรียกจริงคือ**ตัวเก่า**
 - log ทุกบรรทัดถูก mirror ลง `upload-products.log` ข้างสคริปต์ (`.gitignore` มี `*.log`) — ไม่ redirect ใน .bat เพราะจะทำให้รันมือแล้วไม่เห็น progress
-- ⚠️ **`parseCSV` ที่คัดลอกจาก `upload-stock.mjs` ไม่ตัด UTF-8 BOM** (ต่างจาก PapaParse ที่หน้าเว็บใช้) — ต้องอ่านผ่าน `readCsvText()` ซึ่ง strip BOM ตัวแรกทิ้งให้ ไม่งั้นหัวคอลัมน์แรกจะมี BOM ติดหน้า (`indexOf('CF_BARCODE')` หาไม่เจอ) แล้ว header check fail ทุกวัน · มีเทสกันไว้แล้วใน `upload-products.test.mjs`
+- ⚠️ **`parseCSV` ที่คัดลอกจาก `upload-stock.mjs` ไม่ตัด UTF-8 BOM** — ต้องอ่านผ่าน `readCsvText()` ซึ่ง strip BOM ตัวแรกทิ้งให้ ไม่งั้นหัวคอลัมน์แรกจะมี BOM ติดหน้า (`indexOf('CF_BARCODE')` หาไม่เจอ) แล้ว header check fail ทุกวัน · มีเทสกันไว้แล้วใน `upload-products.test.mjs`
 - ⚠️ **ตั้ง Task Scheduler เครื่องเดียวเท่านั้น** — 2 เครื่องรันพร้อมกันจะแย่งกัน swap ตารางเดียวกัน (ข้อควรระวังเดียวกับ `upload-stock.mjs`)
 - ทดสอบกับไฟล์จริง 2569-09-04: 10,858 แถว ผ่าน header check ครบ ข้าม 0 แถว หน่วยเล็กสุด 7,984 รายการ
 
@@ -93,6 +94,25 @@ begin
 > ยังต้องใส่ `distinct on (barcode)` กันไว้อยู่ดี — "ไม่ซ้ำ" เป็นคุณสมบัติของข้อมูลวันนี้ ไม่มี unique constraint บังคับ
 
 ⚠️ **`updated_at` ใช้หาแถวที่ราคาเปลี่ยนไม่ได้** — RPC เขียน `now()` ให้ทุกแถวทุกรอบ (ดูข้อด้านบน) ต้องเทียบราคาตรง ๆ เท่านั้น
+
+### Products — อัปโหลดด่วนจากหน้าเว็บ (⚙️ Admin → Upload R05.106, 2569-09-25)
+
+ราคาเปลี่ยนเร่งด่วน ไม่รอรอบบอท → ปุ่มเฟือง ⚙️ (ทุกหน้า) → รหัส admin (`VITE_ADMIN_PASSWORD`) → modal `⚙️ Admin` ส่วนบน `📤 Upload R05.106` (ส่วนล่างคือเปิด/ปิดหน้าเดิม) · วันเดียวกันเคยเป็นปุ่มแยกใน `.tagline-row` แล้วผู้ใช้ให้ย้ายรวมเข้า modal admin
+
+**ไม่ใช่ implementation ที่ 2 ของฝั่งเขียน DB** — เว็บมีแค่ anon key แต่ `swap_products_from_import()` grant ให้ `service_role` เท่านั้น และ `products_import` เปิด RLS แบบไม่มี policy จึงเพิ่ม RPC ตัวกลาง `upload_products_from_web(p_rows jsonb, p_force boolean)` (security definer, anon เรียกได้ — migration `202609250001`) ทำตามลำดับ:
+
+1. `lock table products_import in exclusive mode` → ปฏิเสธถ้ามีแถวพัก `created_at` อายุ < 15 นาที (= บอทอยู่กลางรอบ) · แถวเก่ากว่านั้น = ค้างจาก swap ที่ล้ม ล้างทิ้งได้
+2. ลง staging จาก jsonb → ด่านไฟล์หด 20% (ข้ามได้เมื่อ `p_force`)
+3. เรียก `swap_products_from_import()` **ตัวเดียวกับบอท** → `log_price_changes()` ทำงาน → ปุ่ม 💰 Update Price ขึ้นแจ้งเตือนเหมือนรอบบอท
+
+ทั้งก้อนเป็น transaction เดียว พังตรงไหนข้อมูลเดิมอยู่ครบ
+
+- ⚠️ **ห้ามกลับไปเขียน `products` ตรงจากเว็บ (delete-all → insert แบบปุ่มเดิม)** — ข้าม `log_price_changes()` = รอบอัปโหลดด่วน (รอบที่ต้องการแจ้งเตือนที่สุด) ไม่ขึ้นแจ้งเตือนเลย + ไม่ atomic
+- ⚠️ **RPC ไหนที่ `delete from products_import` ต้องมีด่าน 15 นาทีแบบเดียวกัน** — บอทเขียน staging ทีละ 500 แถวคนละ transaction ถ้าเว็บล้างกลางรอบ บอทจะ insert chunk ที่เหลือแล้ว swap ด้วยข้อมูลครึ่งเดียว
+- คอลัมน์ `products_import.created_at` เพิ่มแบบ nullable ก่อนแล้วค่อยตั้ง default — แถวค้างเดิมได้ `NULL` (= ค้าง) · ถ้า `add column ... default now()` ทีเดียว แถวค้างจะได้เวลาตอน migrate แล้วบล็อกเว็บ 15 นาที · บอทไม่ส่งคอลัมน์นี้ → ได้ `now()` เอง
+- ด่านไฟล์หดมี 2 ชั้น: หน้าเว็บ confirm (🚨 ถ้าหด > 20%) แล้วส่ง `p_force` · RPC บังคับซ้ำ กันคนเรียก RPC ตรงโดยไม่ผ่านหน้าเว็บ
+- ⚠️ anon `statement_timeout` ของ Supabase = 3 วิ — ไฟล์จริง 10,871 แถว ≈ 1.75 MB ส่งใน RPC เดียว ถ้าช้าเกิน Postgres ยกเลิกทั้งก้อน (ข้อมูลเดิมอยู่ครบ แต่อัปโหลดไม่เข้า) · ตอนเพิ่มฟีเจอร์ยังไม่ได้วัดเวลาจริง
+- ไม่มีเช็ควันที่ไฟล์ (`isStaleFile` ของบอท) เพราะคนเลือกไฟล์เอง · ระหว่างอัปโหลดปิด modal ไม่ได้ (`uploadBusy`) ไม่งั้นผลสำเร็จ/error ไม่มีที่แสดง · สำเร็จแล้ว `fetchLastUpdated()` refetch badge Last Updated
 
 ### Products — เลข 6 หลักเป็นได้ทั้ง SKU และ barcode (แก้ 2569-08-16)
 

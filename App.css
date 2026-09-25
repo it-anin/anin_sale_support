@@ -3637,6 +3637,10 @@ body.pulse-b .cart-inline-btn.in-cart {
 }
 .page-toggle-switch.on .page-toggle-knob { transform: translateX(20px); }
 .page-settings-hint { margin-top: 14px; font-size: 12px; color: #8194a8; font-weight: 300; line-height: 1.5; }
+/* modal ⚙️ Admin มี 2 ส่วน: อัปโหลด R05.106 ด่วน / เปิด-ปิดปุ่มเมนู (2569-09-25) */
+.page-settings-section + .page-settings-section { margin-top: 20px; padding-top: 18px; border-top: 1px solid #e3e8ee; }
+.page-settings-section-title { margin: 0; font-size: 0.95rem; font-weight: 700; color: #2d6cad; }
+.page-settings-section-sub { margin: 2px 0 12px; font-size: 12px; color: #8194a8; }
 
 /* ===== SaleSupport Page (Sidebar + Status Chips) ===== */
 .ss-layout {

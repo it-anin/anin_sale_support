@@ -41,9 +41,8 @@ Six-page React app sharing the same `App.css` and Supabase project.
 > ⛔ **repo นี้ไม่อัปโหลด R05.106 แล้ว (2569-09-06)** — `upload-products.mjs` + เทส + `products-import-swap.sql` ย้ายไป repo **[it-anin/botr05106](https://github.com/it-anin/botr05106)** ซึ่งเป็นบอท Python ที่ export ไฟล์นี้จาก ProMaxx เอง (บอท 1 ตัว = 1 โปรเจกต์จบ เหมือน `bot-export` / `Bot-Customer`)
 > **ปุ่ม `Upload R05.106` + Admin panel + ปุ่ม 💻 ถูกตัดออกจาก `App.tsx` แล้ว** พร้อม `handleFileUpload`, `PRODUCT_CSV_COLUMNS`, `resolveProductCsvColumns`, `colLetter`, state `isAdmin`/`adminPassword`/`adminVerified`/`uploadStatus`, CSS `.admin-trigger` และ dependency `papaparse` — เหตุผลคือ 2 ทางเขียนตาราง `products` ตัวเดียวกันเสี่ยง**อัปโหลดซ้ำซ้อน** และต้องคอยซิงค์ mapping คอลัมน์ข้าม repo · ตอนนี้เหลือ implementation เดียวในโลก
 > **อัปโหลดด้วยมือ** → ที่เครื่องบอท: `node upload-products.mjs --file <path>` หรือ `.\tools\run_and_upload.ps1 -SkipExport`
-> 🔄 **กลับมามีปุ่ม `📤 Upload R05.106` ใน `.tagline-row` แล้ว (2569-09-25) สำหรับราคาเปลี่ยนด่วนเท่านั้น** — แต่**ไม่ใช่ implementation ที่ 2**: เว็บส่งแถวทั้งไฟล์ให้ RPC `upload_products_from_web` (`supabase/migrations/202609250001`) ซึ่งลง `products_import` แล้วเรียก **`swap_products_from_import()` ตัวเดียวกับบอท** ใน transaction เดียว → `log_price_changes()` ทำงานเหมือนรอบบอท · parser/หัวคอลัมน์อยู่ที่ `r05106.ts` (ลอกจาก `upload-products.mjs` — ProMaxx เปลี่ยนหัวคอลัมน์ต้องแก้ 2 ที่) · ด่านกันชนบอท: RPC `lock table products_import` + ปฏิเสธถ้ามีแถวพักอายุ < 15 นาที (คอลัมน์ `created_at` ใหม่) · ด่านไฟล์หด 20% บังคับทั้งฝั่งเว็บ (confirm) และ RPC (`p_force`) · modal ใช้ `.page-settings-modal` + `renderAdminLock()` ร่วมกับปุ่ม ⚙️ รหัส `VITE_ADMIN_PASSWORD`
-> ⚠️ anon `statement_timeout` = 3 วิ — ถ้า swap ช้าเกิน RPC ถูกยกเลิกทั้งก้อน (ข้อมูลเดิมอยู่ครบ ไม่พังแต่อัปโหลดไม่เข้า)
-> ⚠️ badge **Last Updated** ยังอยู่ (อ่าน `max(updated_at)` จาก `products`) · ปุ่มเฟือง ⚙️ ตั้งค่าเปิด/ปิดหน้ายังใช้ `VITE_ADMIN_PASSWORD` เหมือนเดิม คนละ state กัน
+> 🔄 **ยกเว้นอัปโหลดด่วนด้วยมือ (2569-09-25)** — ปุ่มเฟือง ⚙️ → รหัส admin → modal `⚙️ Admin` ส่วน `📤 Upload R05.106` (**ไม่มีปุ่มแยกบน hero** — ผู้ใช้ให้รวมเข้า modal admin) · **ไม่ใช่ implementation ที่ 2**: ส่งแถวให้ RPC `upload_products_from_web` ซึ่งจบที่ **`swap_products_from_import()` ตัวเดียวกับบอท** → แจ้งเตือนราคาเปลี่ยนทำงาน · parser อยู่ `r05106.ts` (ลอกจากบอท — ProMaxx เปลี่ยนหัวคอลัมน์ต้องแก้ 2 ที่) · กลไกกันชนบอท / ไฟล์หด / timeout 3 วิ ดู [`docs/database.md`](docs/database.md) หัวข้อ "อัปโหลดด่วนจากหน้าเว็บ"
+> ⚠️ badge **Last Updated** ยังอยู่ (อ่าน `max(updated_at)` จาก `products` — อัปโหลดด่วนสำเร็จแล้ว refetch เอง)
 
 **Key files — ฉลากยา (Drug Label):**
 - `druglabel/DrugLabelPage.tsx` — main page: search, preview, add/edit/delete modals, print, admin unlock
@@ -113,7 +112,7 @@ Six-page React app sharing the same `App.css` and Supabase project.
 
 | Table | RLS | จุดเสี่ยงสูงสุด |
 |---|---|---|
-| `products` (barcode, sku, name, unit, price, category, base_multiple, updated_at) | public read + write | **repo นี้อ่านอย่างเดียว ไม่มีทางเขียนแล้ว** — คนเขียนคือ `upload-products.mjs` ใน [it-anin/botr05106](https://github.com/it-anin/botr05106) ที่รันต่อท้ายบอท export ด้วย **staging + RPC swap** (`products_import` + `swap_products_from_import()`) · RLS ยังเปิด `public write` ไว้เฉย ๆ ปิดได้ถ้าต้องการ |
+| `products` (barcode, sku, name, unit, price, category, base_multiple, updated_at) | public read + write | **ทุกทางเขียนต้องจบที่ `swap_products_from_import()`** — ประจำคือ `upload-products.mjs` ใน [it-anin/botr05106](https://github.com/it-anin/botr05106) ที่รันต่อท้ายบอท export ด้วย **staging + RPC swap** · ด่วนคือ ⚙️ Admin → Upload R05.106 ผ่าน RPC `upload_products_from_web` · **ห้ามเขียน `products` ตรงจากเว็บ** (ข้ามแจ้งเตือนราคา + ไม่ atomic) · RLS ยังเปิด `public write` ไว้เฉย ๆ ปิดได้ถ้าต้องการ (RPC เป็น security definer ไม่กระทบ) |
 | `product_category` (sku, branch, category_no, category_name, location, uploaded_at) — PK `(sku, branch)` | public read + write | Upload ใช้ **mark-and-sweep** (upsert ทุกแถวก่อน แล้วค่อย sweep แถวเก่า) — sweep ต้องรันหลัง upsert ครบทุก chunk เสมอ ไม่งั้นข้อมูลหายกลางทาง · `branch` มีแค่ `SRC/KKL/SSS` (ไม่มีคลังสินค้า) |
 | `price_change_log` (batch_id, changed_at, barcode, sku, name, unit, old_price, new_price, base_multiple) | **anon read-only** (ต่างจากตาราง `ss_*`) | เขียนโดย `log_price_changes()` (security definer) ที่ `swap_products_from_import()` เรียก**ก่อน** `delete from products` เท่านั้น — 🚨 re-run `products-import-swap.sql` จาก repo บอทจะลบบรรทัดนั้นทิ้งเงียบ ๆ · คีย์เทียบคือ **`barcode`** ไม่ใช่ sku |
 | `price_change_seen` (profile_id pk, last_seen_at, last_batch_at) | public read + write | watermark "อ่านถึงไหน" รายโปรไฟล์ — 6 แถวตลอดกาล ไม่ fan-out · realtime publish **ตารางนี้เท่านั้น** ไม่ publish `price_change_log` |
@@ -397,10 +396,10 @@ Each panel has a close (✕) button and includes product name in subheader.
 
 ## UI — Misc
 
-- Last Updated badge อ่าน `max(updated_at)` จากตาราง `products` (no version badge) — **Admin panel + ปุ่ม 💻 ถูกตัดออกแล้ว 2569-09-06** พร้อมการอัปโหลด R05.106
+- Last Updated badge อ่าน `max(updated_at)` จากตาราง `products` (no version badge) — **Admin panel + ปุ่ม 💻 ถูกตัดออกแล้ว 2569-09-06** พร้อมการอัปโหลด R05.106 · อัปโหลด R05.106 ด่วนกลับมาใน modal ⚙️ Admin (2569-09-25)
 - หัวตารางป้ายราคามี 4 ปุ่ม เรียงซ้าย→ขวา: `เลือกตามหมวด │ รายการที่เลือก │ เลือกทั้งหมด │ ลบทั้งหมด` — 2 dropdown (หมวด / ตะกร้า) เปิดพร้อมกันไม่ได้
-- **เหลือจุดอัปโหลดจุดเดียวในหน้าเว็บ**: เมนูเลือกตามหมวด → `📁 อัปโหลด Location → <สาขา>` (XLSX, upsert + sweep, `locationStatus`, ไม่ต้องใส่รหัส) · ปุ่มบอกชื่อไฟล์ที่ต้องเลือกบนตัวปุ่ม เพราะรับไฟล์ชื่ออะไรก็ได้ ตัวตัดสินคือหัวคอลัมน์
-- ชุดกันพลาดของจุดนั้น: **เช็คหัวคอลัมน์ก่อนแตะ DB → confirm บอก `เดิม N → ใหม่ M` → เตือน 🚨 ถ้าไฟล์หดเกิน 20% → reset input ใน `finally`** (ชุดเดียวกับที่ `upload-products.mjs` ใน repo บอทใช้)
+- **จุดอัปโหลดในหน้าเว็บมี 2 จุด**: (1) เมนูเลือกตามหมวด → `📁 อัปโหลด Location → <สาขา>` (XLSX, upsert + sweep, `locationStatus`, ไม่ต้องใส่รหัส) · ปุ่มบอกชื่อไฟล์ที่ต้องเลือกบนตัวปุ่ม เพราะรับไฟล์ชื่ออะไรก็ได้ ตัวตัดสินคือหัวคอลัมน์ (2) ⚙️ Admin → `📤 Upload R05.106` (CSV, ต้องใส่รหัส admin, `uploadStatus`)
+- ชุดกันพลาดของทั้ง 2 จุด: **เช็คหัวคอลัมน์ก่อนแตะ DB → confirm บอก `เดิม N → ใหม่ M` → เตือน 🚨 ถ้าไฟล์หดเกิน 20% → reset input ใน `finally`** (ชุดเดียวกับที่ `upload-products.mjs` ใน repo บอทใช้)
 - กล่อง `locationStatus` ต้องมี `whiteSpace: 'pre-line'` — ข้อความ error หัวคอลัมน์เป็นหลายบรรทัด
 
 ## Sale Support (หน้าซัพพอร์ต)
@@ -433,7 +432,7 @@ Each panel has a close (✕) button and includes product name in subheader.
 
 ## Page Visibility — เปิด/ปิดปุ่มแต่ละหน้า (admin)
 
-- ปุ่มเฟือง ⚙️ (`.app-userbar-gear`) ในแถบผู้ใช้มุมขวาบน (ทุกหน้า) → ใส่ `VITE_ADMIN_PASSWORD` → toggle เปิด/ปิด 6 หน้า
+- ปุ่มเฟือง ⚙️ (`.app-userbar-gear`) ในแถบผู้ใช้มุมขวาบน (ทุกหน้า) → ใส่ `VITE_ADMIN_PASSWORD` → modal `⚙️ Admin` 2 ส่วน: `📤 Upload R05.106` ด่วน (ดู Key files) + toggle เปิด/ปิด 6 หน้า · state ปลดล็อกยังชื่อ `pageSettings*` ตามของเดิม แต่ใช้ร่วมทั้ง modal
 - เก็บสถานะใน Supabase ตาราง **`app_page_settings`** (`page_id` pk, `visible` bool) — ซิงค์ทุกเครื่อง · สร้างด้วย `page-settings-setup.sql`
 - `App.tsx`: fetch ตอน mount → `pageVisibility` state → `PageVisibilityContext.Provider` ครอบทั้งแอป · `togglePageVisible()` upsert ทันที (optimistic + revert ถ้า error)
 - `PageNavRow` อ่าน `usePageVisibility()` → ซ่อนปุ่มหน้าที่ `visible=false` **ยกเว้นหน้าปัจจุบัน** (`|| p.id === current` กันปุ่ม active หาย)
