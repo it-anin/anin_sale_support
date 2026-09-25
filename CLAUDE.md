@@ -41,7 +41,7 @@ Six-page React app sharing the same `App.css` and Supabase project.
 > ⛔ **repo นี้ไม่อัปโหลด R05.106 แล้ว (2569-09-06)** — `upload-products.mjs` + เทส + `products-import-swap.sql` ย้ายไป repo **[it-anin/botr05106](https://github.com/it-anin/botr05106)** ซึ่งเป็นบอท Python ที่ export ไฟล์นี้จาก ProMaxx เอง (บอท 1 ตัว = 1 โปรเจกต์จบ เหมือน `bot-export` / `Bot-Customer`)
 > **ปุ่ม `Upload R05.106` + Admin panel + ปุ่ม 💻 ถูกตัดออกจาก `App.tsx` แล้ว** พร้อม `handleFileUpload`, `PRODUCT_CSV_COLUMNS`, `resolveProductCsvColumns`, `colLetter`, state `isAdmin`/`adminPassword`/`adminVerified`/`uploadStatus`, CSS `.admin-trigger` และ dependency `papaparse` — เหตุผลคือ 2 ทางเขียนตาราง `products` ตัวเดียวกันเสี่ยง**อัปโหลดซ้ำซ้อน** และต้องคอยซิงค์ mapping คอลัมน์ข้าม repo · ตอนนี้เหลือ implementation เดียวในโลก
 > **อัปโหลดด้วยมือ** → ที่เครื่องบอท: `node upload-products.mjs --file <path>` หรือ `.\tools\run_and_upload.ps1 -SkipExport`
-> 🔄 **ยกเว้นอัปโหลดด่วนด้วยมือ (2569-09-25)** — ปุ่มเฟือง ⚙️ → รหัส admin → modal `⚙️ Admin` ส่วน `📤 Upload R05.106` (**ไม่มีปุ่มแยกบน hero** — ผู้ใช้ให้รวมเข้า modal admin) · **ไม่ใช่ implementation ที่ 2**: ส่งแถวให้ RPC `upload_products_from_web` ซึ่งจบที่ **`swap_products_from_import()` ตัวเดียวกับบอท** → แจ้งเตือนราคาเปลี่ยนทำงาน · parser อยู่ `r05106.ts` (ลอกจากบอท — ProMaxx เปลี่ยนหัวคอลัมน์ต้องแก้ 2 ที่) · กลไกกันชนบอท / ไฟล์หด / timeout 3 วิ ดู [`docs/database.md`](docs/database.md) หัวข้อ "อัปโหลดด่วนจากหน้าเว็บ"
+> 🔄 **ยกเว้นอัปโหลดด่วนด้วยมือ (2569-09-25)** — ปุ่มเฟือง ⚙️ → รหัส admin → modal `⚙️ Admin` → `📤 Upload R05.106` (**ไม่มีปุ่มแยกบน hero** — ผู้ใช้ให้รวมเข้า modal admin · modal ปิดได้ทาง ✕ เท่านั้น **ห้ามใส่ onClick ปิดที่ overlay กลับมา** กันลากเมาส์ออกนอกกล่องแล้ว modal หาย · ปุ่มเลือกไฟล์ดีไซน์ **File Card** แบบที่ 7 จาก `public/r05106-upload-btn-designs.html`) · **ไม่ใช่ implementation ที่ 2**: ส่งแถวให้ RPC `upload_products_from_web` ซึ่งจบที่ **`swap_products_from_import()` ตัวเดียวกับบอท** → แจ้งเตือนราคาเปลี่ยนทำงาน · parser อยู่ `r05106.ts` (ลอกจากบอท — ProMaxx เปลี่ยนหัวคอลัมน์ต้องแก้ 2 ที่) · กลไกกันชนบอท / ไฟล์หด / timeout 3 วิ ดู [`docs/database.md`](docs/database.md) หัวข้อ "อัปโหลดด่วนจากหน้าเว็บ"
 > ⚠️ badge **Last Updated** ยังอยู่ (อ่าน `max(updated_at)` จาก `products` — อัปโหลดด่วนสำเร็จแล้ว refetch เอง)
 
 **Key files — ฉลากยา (Drug Label):**
@@ -351,7 +351,7 @@ Cart and scan history survive browser close / power loss — no need to re-scan 
 - โลโก้ทุกหน้าใช้ `<AnimatedLogoText text="..." />` (font Lilita One) — ตัวอักษรทยอย blur-in ทีละตัว
 - ปุ่มนำทางระหว่างหน้า: `.page-nav-card` การ์ดโปร่งขาว 72×66px มีไอคอน+ป้ายชื่อ อยู่ใน hero ของทุกหน้า (6 ปุ่ม: ป้ายราคา / ฉลากยา / สต๊อค / ประวัติ / เบิกด่วน / ซัพพอร์ต) — หน้าปัจจุบันใส่ `.page-nav-card--active`
 - **ไอคอนปุ่มนำทางเป็น inline SVG แบบเส้น ไม่ใช่ emoji แล้ว** (2026-07-28, ดีไซน์ "Line Regular" จาก `public/nav-icon-designs.html`) — `PAGE_NAV[].icon` เป็น `ReactNode` (JSX `<svg>`) ไม่ใช่ string · สไตล์คุมจาก `.page-nav-icon svg` ใน App.css: `stroke: currentColor` + `stroke-width: 1.75` + 21×21px → **ไอคอนเปลี่ยนสีตามปุ่มเอง** (ขาวบนพื้นฟ้า → `#2d6cad` ตอน hover/active) ไม่ต้องเขียน CSS แยกต่อสถานะ
-- ไอคอนชุดเดียวกันนี้ถูกใช้ซ้ำใน modal ตั้งค่าเปิด/ปิดหน้า (`.page-toggle-icon svg`, 18×18px สี `#4891db`) เพราะอ่านจาก `PAGE_NAV[].icon` ตัวเดียวกัน — แก้ไอคอนที่ `pageAccess.tsx` ที่เดียวเปลี่ยนทั้ง 2 จุด
+- ~~ไอคอนชุดเดียวกันถูกใช้ซ้ำใน modal ตั้งค่าเปิด/ปิดหน้า (`.page-toggle-icon svg`)~~ — modal นั้นถูกถอดออก 2569-09-25 ไอคอน `PAGE_NAV[].icon` เหลือใช้ที่ปุ่มนำทางจุดเดียว
 - เปลี่ยนหน้า → panel เล่นอนิเมชั่น fadeIn
 - **สีทองถูกยกเลิกทั้งหมดแล้ว** (2026-07-28) — ไม่มี `#d4af37` / `#f2d98d` เหลือใน `App.css` แล้ว ปุ่มหลักหน้าป้ายราคา (`.btn-premium`, `.btn-outline`, `.btn-cart-toggle`) เปลี่ยนจาก Neon Gold เป็น **Neon Blue**: `linear-gradient(135deg, #2d6cad, #4891db)` ขอบ `#a9d0f5` ตัวอักษรขาว hover เรืองแสง `rgba(72,145,219,...)`
 - พาเลตต์มาตรฐาน: ฟ้าหลัก `#4891db` · น้ำเงินเข้ม `#2d6cad` · ฟ้าอ่อน (พื้นแถวที่เลือก/badge) `#eaf3fc` · ขอบอ่อน `#b8d3ee` / `#cfe0f2` · ขอบสว่างบนพื้นเข้ม `#a9d0f5`
@@ -430,16 +430,15 @@ Each panel has a close (✕) button and includes product name in subheader.
 - `PageId` union + `currentPage` type import จาก `pageAccess.tsx` (ไม่ inline ใน App.tsx แล้ว)
 - เพิ่มหน้าใหม่: เพิ่มใน `PageId` union + `PAGE_NAV` array (`pageAccess.tsx` — `icon` ต้องเป็น JSX `<svg>` ห่อด้วย `<Svg>` helper ไม่ใช่ emoji), เพิ่ม prop `onGoXxx` + ส่งใน `handlers` ทุกหน้า, เพิ่ม row ใน `app_page_settings` (SQL), และเพิ่มการ render หน้าใน `App.tsx`
 
-## Page Visibility — เปิด/ปิดปุ่มแต่ละหน้า (admin)
+## Page Visibility — เปิด/ปิดปุ่มแต่ละหน้า (ตั้งผ่าน SQL)
 
-- ปุ่มเฟือง ⚙️ (`.app-userbar-gear`) ในแถบผู้ใช้มุมขวาบน (ทุกหน้า) → ใส่ `VITE_ADMIN_PASSWORD` → modal `⚙️ Admin` 2 ส่วน: `📤 Upload R05.106` ด่วน (ดู Key files) + toggle เปิด/ปิด 6 หน้า · state ปลดล็อกยังชื่อ `pageSettings*` ตามของเดิม แต่ใช้ร่วมทั้ง modal
+- 🔧 **หน้าจอสลับเปิด/ปิดถูกถอดออกแล้ว (2569-09-25 ตามคำขอผู้ใช้)** — เดิมอยู่ใน modal ปุ่มเฟือง ⚙️ ตอนนี้ modal นั้นเหลือแค่ `📤 Upload R05.106` (ดู Key files) · ตอนถอด ทั้ง 6 หน้าเป็น `visible=true` (เช็คจาก DB แล้ว) · ระบบ**ยังอ่าน**ค่าจากตารางตามเดิม เปลี่ยนค่าต้องใช้ SQL เช่น `update app_page_settings set visible = false, updated_at = now() where page_id = 'outbound';` · โค้ดหน้าจอเดิม (`togglePageVisible` + CSS `.page-toggle-*`) ดูได้จาก git history
 - เก็บสถานะใน Supabase ตาราง **`app_page_settings`** (`page_id` pk, `visible` bool) — ซิงค์ทุกเครื่อง · สร้างด้วย `page-settings-setup.sql`
-- `App.tsx`: fetch ตอน mount → `pageVisibility` state → `PageVisibilityContext.Provider` ครอบทั้งแอป · `togglePageVisible()` upsert ทันที (optimistic + revert ถ้า error)
+- `App.tsx`: fetch ตอน mount → `pageVisibility` state → `PageVisibilityContext.Provider` ครอบทั้งแอป (เว็บอ่านอย่างเดียว ไม่มีจุดเขียนตารางนี้แล้ว)
 - `PageNavRow` อ่าน `usePageVisibility()` → ซ่อนปุ่มหน้าที่ `visible=false` **ยกเว้นหน้าปัจจุบัน** (`|| p.id === current` กันปุ่ม active หาย)
 - หน้าปัจจุบันถูกปิดตอนโหลด → เด้งไปหน้าแรกที่เปิดอยู่
 - **fail-safe**: โหลดจาก Supabase ไม่ได้ → `DEFAULT_VISIBILITY` (เปิดทุกหน้า) — แอปใช้ได้ครบเสมอ
-- ⚠️ ต้องรัน `page-settings-setup.sql` ใน Supabase ก่อน ไม่งั้น toggle บันทึกไม่ได้ (แต่แอปยังใช้ได้ครบทุกหน้า)
-- ⚠️ รหัสอยู่ฝั่ง client (เหมือน admin panel อื่น) — เป็น gate ใช้งานภายใน ไม่ใช่ security จริง
+- ⚠️ ต้องรัน `page-settings-setup.sql` ใน Supabase ก่อน ไม่งั้นอ่านค่าไม่ได้ → fallback เปิดทุกหน้า (แอปยังใช้ได้ครบทุกหน้า)
 
 ## Backup Files
 

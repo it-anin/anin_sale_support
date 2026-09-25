@@ -3575,12 +3575,13 @@ body.pulse-b .cart-inline-btn.in-cart {
 }
 .app-userbar-gear:hover { background: #d5e8fb; transform: rotate(45deg); }
 
-/* ===== Page Settings Modal — เปิด/ปิดปุ่มแต่ละหน้า (admin) ===== */
+/* ===== Admin Modal (ปุ่มเฟือง ⚙️) — รหัส admin → อัปโหลด R05.106 ด่วน =====
+   class ยังชื่อ page-settings-* ตามของเดิม (เดิมเป็น modal เปิด/ปิดปุ่มแต่ละหน้า — ถอดส่วนนั้นออก 2569-09-25) */
 .page-settings-modal { max-width: 400px; font-family: 'Noto Sans Thai', sans-serif; }
 .page-settings-body { padding: 1.4rem 1.5rem 1.6rem; }
 
 /* หน้าใส่รหัส admin — ดีไซน์ "Split Icon Panel" เลือกจาก public/admin-password-designs.html แบบที่ 5
-   ใช้เฉพาะ modal นี้ (ปุ่มเฟือง ⚙️ ตั้งค่าหน้า) — จุด admin unlock อื่นในแอปยังเป็นดีไซน์เดิม
+   ใช้เฉพาะ modal นี้ (ปุ่มเฟือง ⚙️ Admin) — จุด admin unlock อื่นในแอปยังเป็นดีไซน์เดิม
    ตอนยังไม่ปลดล็อก ไม่มี .modal-header เลย (ไม่มีหัวข้อจะโชว์) — ปุ่ม ✕ ลอยอยู่บน .page-settings-lock แทน */
 .page-settings-body--lock { padding: 0; }
 .page-settings-lock { display: flex; position: relative; }
@@ -3611,36 +3612,83 @@ body.pulse-b .cart-inline-btn.in-cart {
 }
 .page-settings-lock-icon svg { width: 26px; height: 26px; color: #fff; }
 .page-settings-lock-form { flex: 1; padding: 20px 18px; }
-.page-toggle-list { display: flex; flex-direction: column; }
-.page-toggle-row {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 11px 4px; border-bottom: 1px solid #eef2f6;
-}
-.page-toggle-row:last-of-type { border-bottom: 0; }
-.page-toggle-label { display: flex; align-items: center; gap: 10px; font-size: 0.95rem; font-weight: 600; color: #2d3a48; }
-.page-toggle-icon { font-size: 18px; display: flex; color: #4891db; }
-.page-toggle-icon svg {
-  display: block; width: 18px; height: 18px;
-  fill: none; stroke: currentColor; stroke-width: 1.75;
-  stroke-linecap: round; stroke-linejoin: round; overflow: visible;
-}
-.page-toggle-switch {
-  position: relative; width: 46px; height: 26px; flex-shrink: 0; padding: 0;
-  border: none; border-radius: 999px; background: #cfd8e3; cursor: pointer;
-  transition: background 0.2s ease;
-}
-.page-toggle-switch.on { background: #4891db; }
-.page-toggle-knob {
-  position: absolute; top: 3px; left: 3px; width: 20px; height: 20px;
-  border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-  transition: transform 0.2s ease;
-}
-.page-toggle-switch.on .page-toggle-knob { transform: translateX(20px); }
 .page-settings-hint { margin-top: 14px; font-size: 12px; color: #8194a8; font-weight: 300; line-height: 1.5; }
-/* modal ⚙️ Admin มี 2 ส่วน: อัปโหลด R05.106 ด่วน / เปิด-ปิดปุ่มเมนู (2569-09-25) */
-.page-settings-section + .page-settings-section { margin-top: 20px; padding-top: 18px; border-top: 1px solid #e3e8ee; }
+/* หัวข้อ + คำอธิบายของส่วนอัปโหลด R05.106 (2569-09-25) */
 .page-settings-section-title { margin: 0; font-size: 0.95rem; font-weight: 700; color: #2d6cad; }
 .page-settings-section-sub { margin: 2px 0 12px; font-size: 12px; color: #8194a8; }
+
+/* ปุ่มเลือกไฟล์ R05.106 — ดีไซน์ "File Card" (แบบที่ 7 จาก public/r05106-upload-btn-designs.html, 2569-09-25)
+   <label> ห่อ <input type=file> ที่ซ่อนแบบยังโฟกัสได้ → กด Tab มาแล้ว Enter/Space เลือกไฟล์ได้
+   ⚠️ ห้ามกลับไปใช้ attribute hidden กับ input (display:none = กด Tab ไม่ถึงเลย แบบปุ่มเดิม) */
+.r05106-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 13px 14px 13px 16px;
+  overflow: hidden;
+  border: 1px solid #cfe0f2;
+  border-radius: 14px;
+  background: #fff;
+  cursor: pointer;
+  user-select: none;
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+}
+.r05106-card input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  opacity: 0;
+}
+.r05106-card:has(input:focus-visible) { outline: 3px solid rgba(72, 145, 219, 0.5); outline-offset: 3px; }
+.r05106-card:hover { transform: translateY(-2px); border-color: #b8d3ee; box-shadow: 0 8px 20px rgba(45, 108, 173, 0.14); }
+.r05106-card-doc { position: relative; flex-shrink: 0; color: #4891db; }
+.r05106-card-doc svg {
+  display: block; width: 38px; height: 38px;
+  fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round;
+}
+.r05106-card-tag {
+  position: absolute; left: -5px; bottom: 5px; padding: 1px 5px; border-radius: 4px;
+  background: #2d6cad; color: #fff; font: 700 9px/1.4 'Outfit', sans-serif; letter-spacing: 0.06em;
+}
+.r05106-card-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.r05106-card-name { font: 600 15px 'Outfit', 'Noto Sans Thai', sans-serif; color: #2d3a48; }
+.r05106-card-meta { font-size: 12px; color: #8194a8; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.r05106-card-cta {
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  min-width: 78px; height: 34px; padding: 0 14px; border-radius: 999px;
+  background: #4891db; color: #fff; font-size: 13px; font-weight: 600; transition: background 0.2s;
+}
+.r05106-card:hover .r05106-card-cta { background: #2d6cad; }
+/* ระหว่างอัปโหลด: ไม่ยก ไม่เปลี่ยนสีตอนชี้ + แถบวิ่งขอบล่าง
+   ไม่บอกเป็น % โดยตั้งใจ — RPC ส่งทั้งไฟล์ทีเดียว ไม่มีตัวเลขความคืบหน้าจริงให้แสดง */
+.r05106-card.is-busy { cursor: wait; }
+.r05106-card.is-busy:hover { transform: none; border-color: #cfe0f2; box-shadow: none; }
+.r05106-card.is-busy .r05106-card-cta { background: #eaf3fc; color: #2d6cad; }
+.r05106-spin {
+  width: 16px; height: 16px; border-radius: 50%;
+  border: 2px solid currentColor; border-right-color: transparent;
+  animation: r05106Spin 0.8s linear infinite;
+}
+@keyframes r05106Spin { to { transform: rotate(360deg); } }
+.r05106-card-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; overflow: hidden; }
+.r05106-card-bar::before {
+  content: ''; position: absolute; top: 0; bottom: 0; left: -40%; width: 40%;
+  border-radius: 3px; background: #4891db; animation: r05106Indet 1.15s ease-in-out infinite;
+}
+@keyframes r05106Indet { to { left: 100%; } }
+@media (prefers-reduced-motion: reduce) {
+  .r05106-card, .r05106-card-cta { transition: none; }
+  .r05106-spin { animation-duration: 2.4s; }
+  .r05106-card-bar::before { animation: none; left: 0; width: 100%; opacity: 0.45; }
+}
 
 /* ===== SaleSupport Page (Sidebar + Status Chips) ===== */
 .ss-layout {

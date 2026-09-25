@@ -644,12 +644,15 @@ const App: React.FC = () => {
     };
   }, [authProfile?.id]);
 
-  // ── เปิด/ปิดปุ่มแต่ละหน้า (ตั้งค่าโดย admin, ซิงค์ผ่าน Supabase) ──
+  // ── เปิด/ปิดปุ่มแต่ละหน้า (app_page_settings, ซิงค์ผ่าน Supabase) ──
+  // ⚠️ หน้าจอสลับเปิด/ปิดถูกถอดออกจาก modal ⚙️ แล้ว (2569-09-25 ตามคำขอผู้ใช้) แต่ยังอ่านค่าจาก DB อยู่
+  //    หน้าที่ visible=false ยังถูกซ่อนเหมือนเดิม — เปลี่ยนค่าต้องใช้ SQL (CLAUDE.md หัวข้อ Page Visibility)
   const [pageVisibility, setPageVisibility] = useState<PageVisibility>(DEFAULT_VISIBILITY);
-  const [showPageSettings, setShowPageSettings] = useState(false);
-  const [pageSettingsPw, setPageSettingsPw] = useState('');
-  const [pageSettingsVerified, setPageSettingsVerified] = useState(false);
-  const [pageSettingsError, setPageSettingsError] = useState(false);
+  // modal ⚙️ Admin — ใส่รหัส admin แล้วอัปโหลด R05.106 ด่วน (handleR05106Upload ด้านล่าง)
+  const [showAdminModal, setShowAdminModal] = useState(false);
+  const [adminPw, setAdminPw] = useState('');
+  const [adminVerified, setAdminVerified] = useState(false);
+  const [adminPwError, setAdminPwError] = useState(false);
 
   const handleLogin = (profile: Profile) => {
     saveAuthProfile(profile.id);
@@ -707,19 +710,6 @@ const App: React.FC = () => {
     });
   }, []);
 
-  // สลับเปิด/ปิดหน้า (optimistic + บันทึกลง Supabase, revert ถ้าพลาด)
-  const togglePageVisible = async (id: PageId) => {
-    const next = !pageVisibility[id];
-    setPageVisibility(prev => ({ ...prev, [id]: next }));
-    const { error } = await supabase
-      .from('app_page_settings')
-      .upsert({ page_id: id, visible: next, updated_at: new Date().toISOString() });
-    if (error) {
-      setPageVisibility(prev => ({ ...prev, [id]: !next }));
-      alert('บันทึกไม่สำเร็จ: ' + error.message);
-    }
-  };
-
   // โหลดวันที่ update ล่าสุดจาก Supabase ตอน mount (+ หลังอัปโหลด R05.106 ด่วนสำเร็จ)
   const fetchLastUpdated = useCallback(async () => {
     const { data } = await supabase
@@ -740,7 +730,7 @@ const App: React.FC = () => {
   //    (พังตรงไหนข้อมูลเดิมอยู่ครบ + log_price_changes ทำงาน → ปุ่ม Update Price ขึ้นแจ้งเตือน)
   // ชุดกันพลาดเดียวกับอัปโหลด Location: เช็คหัวคอลัมน์ก่อนแตะ DB → confirm เดิม N → ใหม่ M
   // → เตือน 🚨 ถ้าไฟล์หดเกิน 20% → reset input ใน finally
-  // อยู่ใน modal ⚙️ Admin (หลังใส่รหัส admin) ร่วมกับเปิด/ปิดหน้า — ไม่มีปุ่มแยกบน hero
+  // อยู่ใน modal ⚙️ Admin (หลังใส่รหัส admin) — ไม่มีปุ่มแยกบน hero
   const [uploadBusy, setUploadBusy] = useState(false);
   const [uploadStatus, setUploadStatus] = useState('');
 
@@ -1572,7 +1562,7 @@ ${sheetsHtml}
       <div className="app-userbar">
         <span className="app-userbar-icon">{authProfile.icon}</span>
         <span className="app-userbar-name">{authProfile.label}</span>
-        <button className="app-userbar-gear" onClick={() => { setShowPageSettings(true); setPageSettingsPw(''); setPageSettingsVerified(false); setPageSettingsError(false); setUploadStatus(''); }} title="Admin — อัปโหลด R05.106 / เปิด-ปิดหน้า">⚙️</button>
+        <button className="app-userbar-gear" onClick={() => { setShowAdminModal(true); setAdminPw(''); setAdminVerified(false); setAdminPwError(false); setUploadStatus(''); }} title="Admin — อัปโหลด R05.106">⚙️</button>
         <button className="app-userbar-logout" onClick={handleLogout} title="ออกจากระบบ">ออกจากระบบ</button>
       </div>
 
@@ -2374,21 +2364,24 @@ ${sheetsHtml}
         )}
       </div>
 
-      {/* Admin Modal (ปุ่มเฟือง ⚙️) — ใส่รหัส admin แล้วได้ 2 อย่าง: อัปโหลด R05.106 ด่วน + เปิด/ปิดปุ่มแต่ละหน้า
-          ⚠️ ปิด modal ไม่ได้ระหว่างอัปโหลด — ไม่งั้นผลลัพธ์ (สำเร็จ/error) ไม่มีที่แสดง */}
-      {showPageSettings && (
-        <div className="modal-overlay" onClick={() => { if (!uploadBusy) setShowPageSettings(false); }}>
-          <div className="modal-content page-settings-modal" onClick={e => e.stopPropagation()}>
-            {pageSettingsVerified && (
+      {/* Admin Modal (ปุ่มเฟือง ⚙️) — ใส่รหัส admin แล้วอัปโหลด R05.106 ด่วน
+          (เดิมเป็น modal เปิด/ปิดปุ่มแต่ละหน้า — ถอดส่วนนั้นออก 2569-09-25 ตามคำขอผู้ใช้ · class ยังชื่อ page-settings-* ตามของเดิม)
+          ⚠️ ปิดได้ทางปุ่ม ✕ เท่านั้น ห้ามใส่ onClick ปิดที่ .modal-overlay กลับมา (ผู้ใช้ขอ 2569-09-25) —
+             กดเมาส์ในกล่อง (เช่นลากคลุมรหัสในช่อง) แล้วไปปล่อยนอกกล่อง click จะตกที่ overlay → modal หายทั้งที่ไม่ได้ตั้งใจปิด
+          ⚠️ ปิดไม่ได้ระหว่างอัปโหลด — ไม่งั้นผลลัพธ์ (สำเร็จ/error) ไม่มีที่แสดง */}
+      {showAdminModal && (
+        <div className="modal-overlay">
+          <div className="modal-content page-settings-modal">
+            {adminVerified && (
               <div className="modal-header">
                 <h2 style={{ margin: 0 }}>⚙️ Admin</h2>
-                <button className="modal-close" disabled={uploadBusy} onClick={() => setShowPageSettings(false)}>✕</button>
+                <button className="modal-close" disabled={uploadBusy} onClick={() => setShowAdminModal(false)}>✕</button>
               </div>
             )}
-            <div className={`page-settings-body${!pageSettingsVerified ? ' page-settings-body--lock' : ''}`}>
-              {!pageSettingsVerified ? (
+            <div className={`page-settings-body${!adminVerified ? ' page-settings-body--lock' : ''}`}>
+              {!adminVerified ? (
                 <div className="page-settings-lock">
-                  <button className="page-settings-lock-close" onClick={() => setShowPageSettings(false)}>✕</button>
+                  <button className="page-settings-lock-close" onClick={() => setShowAdminModal(false)}>✕</button>
                   <div className="page-settings-lock-icon">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                       <rect x="5" y="11" width="14" height="10" rx="2" />
@@ -2403,62 +2396,53 @@ ${sheetsHtml}
                       style={{ width: '100%', fontSize: '1rem' }}
                       placeholder="ใส่รหัส admin..."
                       autoFocus
-                      value={pageSettingsPw}
-                      onChange={e => { setPageSettingsPw(e.target.value); setPageSettingsError(false); }}
+                      value={adminPw}
+                      onChange={e => { setAdminPw(e.target.value); setAdminPwError(false); }}
                       onKeyDown={e => {
                         if (e.key !== 'Enter') return;
-                        if (pageSettingsPw === (import.meta.env.VITE_ADMIN_PASSWORD || 'admin1234')) setPageSettingsVerified(true);
-                        else setPageSettingsError(true);
+                        if (adminPw === (import.meta.env.VITE_ADMIN_PASSWORD || 'admin1234')) setAdminVerified(true);
+                        else setAdminPwError(true);
                       }}
                     />
                     <button
                       className="btn-premium"
                       style={{ marginTop: 12, width: '100%' }}
                       onClick={() => {
-                        if (pageSettingsPw === (import.meta.env.VITE_ADMIN_PASSWORD || 'admin1234')) setPageSettingsVerified(true);
-                        else setPageSettingsError(true);
+                        if (adminPw === (import.meta.env.VITE_ADMIN_PASSWORD || 'admin1234')) setAdminVerified(true);
+                        else setAdminPwError(true);
                       }}
                     >ปลดล็อก 🔓</button>
-                    {pageSettingsError && (
+                    {adminPwError && (
                       <div style={{ marginTop: 8, color: '#c0392b', fontSize: 13 }}>รหัสไม่ถูกต้อง</div>
                     )}
                   </div>
                 </div>
               ) : (
                 <>
-                  <section className="page-settings-section">
-                    <h3 className="page-settings-section-title">📤 Upload R05.106</h3>
-                    <p className="page-settings-section-sub">อัปเดตราคาด่วน — แทนที่ข้อมูลสินค้าทั้งหมดด้วยไฟล์นี้</p>
-                    <label className="btn-premium" style={{ display: 'block', width: '100%', textAlign: 'center', cursor: uploadBusy ? 'wait' : 'pointer', opacity: uploadBusy ? 0.6 : 1 }}>
-                      {uploadBusy ? 'กำลังอัปโหลด...' : '📁 เลือกไฟล์ R05.106.CSV'}
-                      <input type="file" accept=".csv,text/csv" hidden disabled={uploadBusy} onChange={handleR05106Upload} />
-                    </label>
-                    {uploadStatus && (
-                      <div style={{ marginTop: 12, fontSize: 13, whiteSpace: 'pre-line', color: uploadStatus.startsWith('❌') ? '#c0392b' : '#2d3a48' }}>{uploadStatus}</div>
-                    )}
-                    <p className="page-settings-hint">ปกติบอทอัปโหลดให้เองทุกเช้า 08:30 — ใช้เฉพาะตอนราคาเปลี่ยนด่วน · ระบบเช็คหัวคอลัมน์ก่อนแตะข้อมูล ถ้าพังกลางทางข้อมูลเดิมยังอยู่ครบ</p>
-                  </section>
-                  <section className="page-settings-section">
-                    <h3 className="page-settings-section-title">เปิด/ปิดปุ่มเมนู</h3>
-                    <p className="page-settings-section-sub">มีผลทุกเครื่อง</p>
-                    <div className="page-toggle-list">
-                      {PAGE_NAV.map(p => (
-                        <div className="page-toggle-row" key={p.id}>
-                          <span className="page-toggle-label"><span className="page-toggle-icon">{p.icon}</span>{p.label}</span>
-                          <button
-                            className={`page-toggle-switch${pageVisibility[p.id] ? ' on' : ''}`}
-                            onClick={() => togglePageVisible(p.id)}
-                            role="switch"
-                            aria-checked={pageVisibility[p.id]}
-                            title={pageVisibility[p.id] ? 'กำลังแสดง — คลิกเพื่อซ่อน' : 'ถูกซ่อน — คลิกเพื่อแสดง'}
-                          >
-                            <span className="page-toggle-knob" />
-                          </button>
-                        </div>
-                      ))}
-                      <p className="page-settings-hint">ปิดแล้วปุ่มเมนูหน้านั้นจะหายจากทุกหน้า/ทุกเครื่อง (บันทึกอัตโนมัติ)</p>
-                    </div>
-                  </section>
+                  <h3 className="page-settings-section-title">📤 Upload R05.106</h3>
+                  <p className="page-settings-section-sub">อัปเดตราคาด่วน — แทนที่ข้อมูลสินค้าทั้งหมดด้วยไฟล์นี้</p>
+                  {/* ปุ่มเลือกไฟล์ดีไซน์ "File Card" — แบบที่ 7 จาก public/r05106-upload-btn-designs.html (2569-09-25)
+                      บรรทัดล่างบอกเวลาของข้อมูลชุดที่อยู่ในระบบ (lastUpdated ตัวเดียวกับ badge) ให้เห็นก่อนกดแทนที่
+                      ระหว่างอัปโหลดบรรทัดนั้นแสดง uploadStatus แทน และซ่อนกล่องสถานะด้านล่างไว้ (ไม่งั้นข้อความซ้ำ 2 ที่) */}
+                  <label className={`r05106-card${uploadBusy ? ' is-busy' : ''}`}>
+                    <input type="file" accept=".csv,text/csv" disabled={uploadBusy} onChange={handleR05106Upload} />
+                    <span className="r05106-card-doc" aria-hidden="true">
+                      <svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" /><path d="M14 3v5h5" /></svg>
+                      <span className="r05106-card-tag">CSV</span>
+                    </span>
+                    <span className="r05106-card-main">
+                      <span className="r05106-card-name">R05.106.CSV</span>
+                      <span className="r05106-card-meta">
+                        {uploadBusy ? uploadStatus : lastUpdated ? `ข้อมูลในระบบ ${lastUpdated}` : 'คลิกเพื่อเลือกไฟล์จากเครื่อง'}
+                      </span>
+                    </span>
+                    <span className="r05106-card-cta">{uploadBusy ? <span className="r05106-spin" aria-hidden="true" /> : 'เลือกไฟล์'}</span>
+                    {uploadBusy && <span className="r05106-card-bar" aria-hidden="true" />}
+                  </label>
+                  {uploadStatus && !uploadBusy && (
+                    <div style={{ marginTop: 12, fontSize: 13, whiteSpace: 'pre-line', color: uploadStatus.startsWith('❌') ? '#c0392b' : '#2d3a48' }}>{uploadStatus}</div>
+                  )}
+                  <p className="page-settings-hint">ปกติบอทอัปโหลดให้เองทุกเช้า 08:30 — ใช้เฉพาะตอนราคาเปลี่ยนด่วน · ระบบเช็คหัวคอลัมน์ก่อนแตะข้อมูล ถ้าพังกลางทางข้อมูลเดิมยังอยู่ครบ</p>
                 </>
               )}
             </div>

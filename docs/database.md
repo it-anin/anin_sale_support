@@ -97,7 +97,7 @@ begin
 
 ### Products — อัปโหลดด่วนจากหน้าเว็บ (⚙️ Admin → Upload R05.106, 2569-09-25)
 
-ราคาเปลี่ยนเร่งด่วน ไม่รอรอบบอท → ปุ่มเฟือง ⚙️ (ทุกหน้า) → รหัส admin (`VITE_ADMIN_PASSWORD`) → modal `⚙️ Admin` ส่วนบน `📤 Upload R05.106` (ส่วนล่างคือเปิด/ปิดหน้าเดิม) · วันเดียวกันเคยเป็นปุ่มแยกใน `.tagline-row` แล้วผู้ใช้ให้ย้ายรวมเข้า modal admin
+ราคาเปลี่ยนเร่งด่วน ไม่รอรอบบอท → ปุ่มเฟือง ⚙️ (ทุกหน้า) → รหัส admin (`VITE_ADMIN_PASSWORD`) → modal `⚙️ Admin` → `📤 Upload R05.106` · วันเดียวกันเคยเป็นปุ่มแยกใน `.tagline-row` แล้วผู้ใช้ให้ย้ายรวมเข้า modal admin และถอดส่วนเปิด/ปิดหน้าออกจาก modal
 
 **ไม่ใช่ implementation ที่ 2 ของฝั่งเขียน DB** — เว็บมีแค่ anon key แต่ `swap_products_from_import()` grant ให้ `service_role` เท่านั้น และ `products_import` เปิด RLS แบบไม่มี policy จึงเพิ่ม RPC ตัวกลาง `upload_products_from_web(p_rows jsonb, p_force boolean)` (security definer, anon เรียกได้ — migration `202609250001`) ทำตามลำดับ:
 
@@ -112,7 +112,9 @@ begin
 - คอลัมน์ `products_import.created_at` เพิ่มแบบ nullable ก่อนแล้วค่อยตั้ง default — แถวค้างเดิมได้ `NULL` (= ค้าง) · ถ้า `add column ... default now()` ทีเดียว แถวค้างจะได้เวลาตอน migrate แล้วบล็อกเว็บ 15 นาที · บอทไม่ส่งคอลัมน์นี้ → ได้ `now()` เอง
 - ด่านไฟล์หดมี 2 ชั้น: หน้าเว็บ confirm (🚨 ถ้าหด > 20%) แล้วส่ง `p_force` · RPC บังคับซ้ำ กันคนเรียก RPC ตรงโดยไม่ผ่านหน้าเว็บ
 - ⚠️ anon `statement_timeout` ของ Supabase = 3 วิ — ไฟล์จริง 10,871 แถว ≈ 1.75 MB ส่งใน RPC เดียว ถ้าช้าเกิน Postgres ยกเลิกทั้งก้อน (ข้อมูลเดิมอยู่ครบ แต่อัปโหลดไม่เข้า) · ตอนเพิ่มฟีเจอร์ยังไม่ได้วัดเวลาจริง
-- ไม่มีเช็ควันที่ไฟล์ (`isStaleFile` ของบอท) เพราะคนเลือกไฟล์เอง · ระหว่างอัปโหลดปิด modal ไม่ได้ (`uploadBusy`) ไม่งั้นผลสำเร็จ/error ไม่มีที่แสดง · สำเร็จแล้ว `fetchLastUpdated()` refetch badge Last Updated
+- ไม่มีเช็ควันที่ไฟล์ (`isStaleFile` ของบอท) เพราะคนเลือกไฟล์เอง · modal ปิดได้ทาง ✕ เท่านั้น คลิกพื้นหลังไม่ปิด (กันลากเมาส์ออกนอกกล่องแล้ว modal หาย) และ ✕ ถูก disable ระหว่างอัปโหลด (`uploadBusy`) ไม่งั้นผลสำเร็จ/error ไม่มีที่แสดง · สำเร็จแล้ว `fetchLastUpdated()` refetch badge Last Updated
+- ปุ่มเลือกไฟล์ = ดีไซน์ **File Card** (แบบที่ 7 จาก `public/r05106-upload-btn-designs.html`, CSS `.r05106-card*`) — บรรทัดล่างบอก `ข้อมูลในระบบ {lastUpdated}` ให้เห็นก่อนกดแทนที่ · ระหว่างอัปโหลดบรรทัดนั้นแสดง `uploadStatus` แทน และซ่อนกล่องสถานะด้านล่างจนเสร็จ (ไม่ให้ข้อความซ้ำ 2 ที่) · `<input type=file>` ซ่อนแบบยังโฟกัสได้ — **ห้ามใช้ attribute `hidden`** (display:none = กด Tab ไม่ถึง)
+- ⚠️ รหัส admin อยู่ฝั่ง client (`VITE_ADMIN_PASSWORD` ฝังใน JS) และ RPC เปิดให้ anon เรียกได้ — เป็น gate กันกดพลาด ไม่ใช่ security จริง (แบบเดียวกับรหัสล็อกอินแผนก)
 
 ### Products — เลข 6 หลักเป็นได้ทั้ง SKU และ barcode (แก้ 2569-08-16)
 
