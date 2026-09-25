@@ -2420,7 +2420,7 @@ ${sheetsHtml}
               ) : (
                 <>
                   <h3 className="page-settings-section-title">📤 Upload R05.106</h3>
-                  <p className="page-settings-section-sub">อัปเดตราคาด่วน — แทนที่ข้อมูลสินค้าทั้งหมดด้วยไฟล์นี้</p>
+                  <p className="page-settings-section-sub">สำหรับอัปเดตราคาระหว่างวัน</p>
                   {/* ปุ่มเลือกไฟล์ดีไซน์ "File Card" — แบบที่ 7 จาก public/r05106-upload-btn-designs.html (2569-09-25)
                       บรรทัดล่างบอกเวลาของข้อมูลชุดที่อยู่ในระบบ (lastUpdated ตัวเดียวกับ badge) ให้เห็นก่อนกดแทนที่
                       ระหว่างอัปโหลดบรรทัดนั้นแสดง uploadStatus แทน และซ่อนกล่องสถานะด้านล่างไว้ (ไม่งั้นข้อความซ้ำ 2 ที่) */}
@@ -2433,7 +2433,7 @@ ${sheetsHtml}
                     <span className="r05106-card-main">
                       <span className="r05106-card-name">R05.106.CSV</span>
                       <span className="r05106-card-meta">
-                        {uploadBusy ? uploadStatus : lastUpdated ? `ข้อมูลในระบบ ${lastUpdated}` : 'คลิกเพื่อเลือกไฟล์จากเครื่อง'}
+                        {uploadBusy ? uploadStatus : lastUpdated ? `อัปเดทแล้ว → ${lastUpdated}` : 'คลิกเพื่อเลือกไฟล์จากเครื่อง'}
                       </span>
                     </span>
                     <span className="r05106-card-cta">{uploadBusy ? <span className="r05106-spin" aria-hidden="true" /> : 'เลือกไฟล์'}</span>
@@ -2442,7 +2442,7 @@ ${sheetsHtml}
                   {uploadStatus && !uploadBusy && (
                     <div style={{ marginTop: 12, fontSize: 13, whiteSpace: 'pre-line', color: uploadStatus.startsWith('❌') ? '#c0392b' : '#2d3a48' }}>{uploadStatus}</div>
                   )}
-                  <p className="page-settings-hint">ปกติบอทอัปโหลดให้เองทุกเช้า 08:30 — ใช้เฉพาะตอนราคาเปลี่ยนด่วน · ระบบเช็คหัวคอลัมน์ก่อนแตะข้อมูล ถ้าพังกลางทางข้อมูลเดิมยังอยู่ครบ</p>
+                  <p className="page-settings-hint">►►► อัปโหลดอัตโนมัติประจำทุกวันเวลา 7:55 </p>
                 </>
               )}
             </div>
