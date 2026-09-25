@@ -11,6 +11,7 @@ import { SaleSupportPage } from './SaleSupportPage';
 import { AnimatedLogoText } from './AnimatedLogo';
 import { SearchIcon } from './SearchIcon';
 import { LoginPage } from './LoginPage';
+import { parseR05106 } from './r05106';
 import { loadAuthProfile, saveAuthProfile, clearAuthProfile, BRANCH_PROFILE_CODES, type Profile } from './auth';
 import { PageVisibilityContext, PageNotificationContext, PageNavRow, PAGE_NAV, DEFAULT_VISIBILITY, type PageId, type PageVisibility, type NavHandlers } from './pageAccess';
 import './App.css';
@@ -719,21 +720,77 @@ const App: React.FC = () => {
     }
   };
 
-  // โหลดวันที่ update ล่าสุดจาก Supabase ตอน mount
-  useEffect(() => {
-    const fetchLastUpdated = async () => {
-      const { data } = await supabase
-        .from('products')
-        .select('updated_at')
-        .order('updated_at', { ascending: false })
-        .limit(1);
-      if (data && data[0]?.updated_at) {
-        const d = new Date(data[0].updated_at);
-        setLastUpdated(d.toLocaleString('en-GB', { dateStyle: 'short', timeStyle: 'short' }));
-      }
-    };
-    fetchLastUpdated();
+  // โหลดวันที่ update ล่าสุดจาก Supabase ตอน mount (+ หลังอัปโหลด R05.106 ด่วนสำเร็จ)
+  const fetchLastUpdated = useCallback(async () => {
+    const { data } = await supabase
+      .from('products')
+      .select('updated_at')
+      .order('updated_at', { ascending: false })
+      .limit(1);
+    if (data && data[0]?.updated_at) {
+      const d = new Date(data[0].updated_at);
+      setLastUpdated(d.toLocaleString('en-GB', { dateStyle: 'short', timeStyle: 'short' }));
+    }
   }, []);
+  useEffect(() => { void fetchLastUpdated(); }, [fetchLastUpdated]);
+
+  // ── อัปโหลด R05.106 ด่วน (2569-09-25) — ราคาเปลี่ยนเร่งด่วน ไม่รอบอทรอบ 08:30 ──
+  // ⚠️ ไม่เขียน products ตรง ๆ — ส่งทั้งไฟล์ให้ RPC upload_products_from_web ซึ่งลง staging
+  //    แล้วเรียก swap_products_from_import() ตัวเดียวกับบอทใน transaction เดียว
+  //    (พังตรงไหนข้อมูลเดิมอยู่ครบ + log_price_changes ทำงาน → ปุ่ม Update Price ขึ้นแจ้งเตือน)
+  // ชุดกันพลาดเดียวกับอัปโหลด Location: เช็คหัวคอลัมน์ก่อนแตะ DB → confirm เดิม N → ใหม่ M
+  // → เตือน 🚨 ถ้าไฟล์หดเกิน 20% → reset input ใน finally
+  const [showUploadR05106, setShowUploadR05106] = useState(false);
+  const [uploadPw, setUploadPw] = useState('');
+  const [uploadVerified, setUploadVerified] = useState(false);
+  const [uploadPwError, setUploadPwError] = useState(false);
+  const [uploadBusy, setUploadBusy] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState('');
+
+  const handleR05106Upload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.target;
+    const file = input.files?.[0];
+    if (!file) return;
+    setUploadBusy(true);
+    setUploadStatus(`กำลังอ่านไฟล์ ${file.name}...`);
+    try {
+      const { rows, csvRows, skipped } = parseR05106(await file.text());
+
+      const { count: existing, error: countErr } = await supabase
+        .from('products')
+        .select('id', { count: 'exact', head: true });
+      if (countErr) throw new Error(`นับข้อมูลเดิมไม่สำเร็จ: ${countErr.message}`);
+
+      const before = existing ?? 0;
+      const shrinkPct = before > 0 ? Math.round((1 - rows.length / before) * 100) : 0;
+      const force = shrinkPct > 20;
+      const msg = `อัปโหลด ${file.name}
+
+`
+        + `ข้อมูลเดิม ${before.toLocaleString()} → ใหม่ ${rows.length.toLocaleString()} รายการ
+`
+        + `(CSV ${csvRows.toLocaleString()} แถว · ข้ามที่ไม่มีบาร์โค้ด/SKU ${skipped.toLocaleString()} แถว)
+
+`
+        + (force ? `🚨 ไฟล์นี้น้อยกว่าข้อมูลเดิม ${shrinkPct}% — อาจ export มาไม่ครบ ตรวจให้แน่ใจก่อน!
+
+` : '')
+        + 'ข้อมูลสินค้าทั้งหมดจะถูกแทนที่ด้วยไฟล์นี้ ยืนยัน?';
+      if (!window.confirm(msg)) { setUploadStatus('ยกเลิกแล้ว — ยังไม่ได้แตะข้อมูลเดิม'); return; }
+
+      setUploadStatus(`กำลังอัปโหลด ${rows.length.toLocaleString()} รายการ...`);
+      const { data: swapped, error } = await supabase.rpc('upload_products_from_web', { p_rows: rows, p_force: force });
+      if (error) throw new Error(error.message);
+
+      setUploadStatus(`✅ อัปโหลดสำเร็จ ${Number(swapped ?? rows.length).toLocaleString()} รายการ`);
+      void fetchLastUpdated();
+    } catch (err) {
+      setUploadStatus(`❌ ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      input.value = '';   // เลือกไฟล์เดิมซ้ำได้ (ไม่ reset แล้ว onChange ไม่ยิง)
+      setUploadBusy(false);
+    }
+  };
 
   const saveQrSettings = (s: QrSettings) => {
     setQrSettings(s);
@@ -1510,6 +1567,47 @@ ${sheetsHtml}
     salesupport: () => setCurrentPage('salesupport'),
   };
 
+  // หน้าใส่รหัส admin ("Split Icon Panel") — ใช้ร่วมกัน 2 modal: ⚙️ ตั้งค่าหน้า + อัปโหลด R05.106
+  const checkAdminPw = (pw: string) => pw === (import.meta.env.VITE_ADMIN_PASSWORD || 'admin1234');
+  const renderAdminLock = (
+    pw: string,
+    setPw: (v: string) => void,
+    error: boolean,
+    setError: (v: boolean) => void,
+    onUnlock: () => void,
+    onClose: () => void,
+  ) => {
+    const tryUnlock = () => { if (checkAdminPw(pw)) onUnlock(); else setError(true); };
+    return (
+      <div className="page-settings-lock">
+        <button className="page-settings-lock-close" onClick={onClose}>✕</button>
+        <div className="page-settings-lock-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="5" y="11" width="14" height="10" rx="2" />
+            <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+          </svg>
+        </div>
+        <div className="page-settings-lock-form">
+          <label style={{ fontWeight: 600, display: 'block', marginBottom: 6 }}>รหัส admin</label>
+          <input
+            type="password"
+            className="search-input-premium"
+            style={{ width: '100%', fontSize: '1rem' }}
+            placeholder="ใส่รหัส admin..."
+            autoFocus
+            value={pw}
+            onChange={e => { setPw(e.target.value); setError(false); }}
+            onKeyDown={e => { if (e.key === 'Enter') tryUnlock(); }}
+          />
+          <button className="btn-premium" style={{ marginTop: 12, width: '100%' }} onClick={tryUnlock}>ปลดล็อก 🔓</button>
+          {error && (
+            <div style={{ marginTop: 8, color: '#c0392b', fontSize: 13 }}>รหัสไม่ถูกต้อง</div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <PageVisibilityContext.Provider value={pageVisibility}>
     <PageNotificationContext.Provider value={{ salesupport: saleSupportUnreadCount, outbound: outboundPendingCount, pricetag: priceChangeUnreadCount }}>
@@ -1550,6 +1648,14 @@ ${sheetsHtml}
               {priceChangeUnreadCount > 0 && (
                 <span className="price-change-count">{priceChangeUnreadCount > 99 ? '99+' : priceChangeUnreadCount}</span>
               )}
+            </button>
+            {/* อัปโหลด R05.106 ด่วน — ใช้ตอนราคาเปลี่ยนเร่งด่วน ปกติบอทอัปโหลดให้เองทุกเช้า 08:30 */}
+            <button
+              className="updated-badge price-change-badge"
+              onClick={() => { setShowUploadR05106(true); setUploadPw(''); setUploadVerified(false); setUploadPwError(false); setUploadStatus(''); }}
+              title="อัปโหลดไฟล์ R05.106 ด่วน (admin)"
+            >
+              📤 Upload R05.106
             </button>
             </div>
           <PageNavRow current="pricetag" handlers={navHandlers} />
@@ -2335,43 +2441,10 @@ ${sheetsHtml}
             )}
             <div className={`page-settings-body${!pageSettingsVerified ? ' page-settings-body--lock' : ''}`}>
               {!pageSettingsVerified ? (
-                <div className="page-settings-lock">
-                  <button className="page-settings-lock-close" onClick={() => setShowPageSettings(false)}>✕</button>
-                  <div className="page-settings-lock-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="5" y="11" width="14" height="10" rx="2" />
-                      <path d="M8 11V7a4 4 0 0 1 8 0v4" />
-                    </svg>
-                  </div>
-                  <div className="page-settings-lock-form">
-                    <label style={{ fontWeight: 600, display: 'block', marginBottom: 6 }}>รหัส admin</label>
-                    <input
-                      type="password"
-                      className="search-input-premium"
-                      style={{ width: '100%', fontSize: '1rem' }}
-                      placeholder="ใส่รหัส admin..."
-                      autoFocus
-                      value={pageSettingsPw}
-                      onChange={e => { setPageSettingsPw(e.target.value); setPageSettingsError(false); }}
-                      onKeyDown={e => {
-                        if (e.key !== 'Enter') return;
-                        if (pageSettingsPw === (import.meta.env.VITE_ADMIN_PASSWORD || 'admin1234')) setPageSettingsVerified(true);
-                        else setPageSettingsError(true);
-                      }}
-                    />
-                    <button
-                      className="btn-premium"
-                      style={{ marginTop: 12, width: '100%' }}
-                      onClick={() => {
-                        if (pageSettingsPw === (import.meta.env.VITE_ADMIN_PASSWORD || 'admin1234')) setPageSettingsVerified(true);
-                        else setPageSettingsError(true);
-                      }}
-                    >ปลดล็อก 🔓</button>
-                    {pageSettingsError && (
-                      <div style={{ marginTop: 8, color: '#c0392b', fontSize: 13 }}>รหัสไม่ถูกต้อง</div>
-                    )}
-                  </div>
-                </div>
+                renderAdminLock(
+                  pageSettingsPw, setPageSettingsPw, pageSettingsError, setPageSettingsError,
+                  () => setPageSettingsVerified(true), () => setShowPageSettings(false),
+                )
               ) : (
                 <div className="page-toggle-list">
                   {PAGE_NAV.map(p => (
@@ -2390,6 +2463,42 @@ ${sheetsHtml}
                   ))}
                   <p className="page-settings-hint">ปิดแล้วปุ่มเมนูหน้านั้นจะหายจากทุกหน้า/ทุกเครื่อง (บันทึกอัตโนมัติ)</p>
                 </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Upload R05.106 Modal — ใช้กรอบ/หน้าใส่รหัสชุดเดียวกับ ⚙️ ตั้งค่าหน้า */}
+      {showUploadR05106 && (
+        <div className="modal-overlay" onClick={() => { if (!uploadBusy) setShowUploadR05106(false); }}>
+          <div className="modal-content page-settings-modal" onClick={e => e.stopPropagation()}>
+            {uploadVerified && (
+              <div className="modal-header">
+                <div>
+                  <h2 style={{ margin: 0 }}>📤 Upload R05.106</h2>
+                  <p style={{ fontSize: '12px', color: '#8194a8', margin: '2px 0 0' }}>อัปเดตราคาด่วน — แทนที่ข้อมูลสินค้าทั้งหมดด้วยไฟล์นี้</p>
+                </div>
+                <button className="modal-close" disabled={uploadBusy} onClick={() => setShowUploadR05106(false)}>✕</button>
+              </div>
+            )}
+            <div className={`page-settings-body${!uploadVerified ? ' page-settings-body--lock' : ''}`}>
+              {!uploadVerified ? (
+                renderAdminLock(
+                  uploadPw, setUploadPw, uploadPwError, setUploadPwError,
+                  () => setUploadVerified(true), () => setShowUploadR05106(false),
+                )
+              ) : (
+                <>
+                  <label className="btn-premium" style={{ display: 'block', width: '100%', textAlign: 'center', cursor: uploadBusy ? 'wait' : 'pointer', opacity: uploadBusy ? 0.6 : 1 }}>
+                    {uploadBusy ? 'กำลังอัปโหลด...' : '📁 เลือกไฟล์ R05.106.CSV'}
+                    <input type="file" accept=".csv,text/csv" hidden disabled={uploadBusy} onChange={handleR05106Upload} />
+                  </label>
+                  {uploadStatus && (
+                    <div style={{ marginTop: 12, fontSize: 13, whiteSpace: 'pre-line', color: uploadStatus.startsWith('❌') ? '#c0392b' : '#2d3a48' }}>{uploadStatus}</div>
+                  )}
+                  <p className="page-settings-hint">ปกติบอทอัปโหลดให้เองทุกเช้า 08:30 — ใช้ปุ่มนี้เฉพาะตอนราคาเปลี่ยนด่วน · ระบบเช็คหัวคอลัมน์ก่อนแตะข้อมูล ถ้าพังกลางทางข้อมูลเดิมยังอยู่ครบ</p>
+                </>
               )}
             </div>
           </div>
