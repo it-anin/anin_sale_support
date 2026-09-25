@@ -2404,14 +2404,22 @@ ${sheetsHtml}
                         else setAdminPwError(true);
                       }}
                     />
+                    {/* ดีไซน์ "3D Tile" — แบบที่ 9 จาก public/r05106-upload-btn-designs.html (2569-09-25)
+                        ไอคอนกุญแจเปิดอยู่บนข้อความ คู่กับกุญแจปิดในแผงซ้าย */}
                     <button
-                      className="btn-premium"
-                      style={{ marginTop: 12, width: '100%' }}
+                      type="button"
+                      className="page-settings-unlock"
                       onClick={() => {
                         if (adminPw === (import.meta.env.VITE_ADMIN_PASSWORD || 'admin1234')) setAdminVerified(true);
                         else setAdminPwError(true);
                       }}
-                    >ปลดล็อก 🔓</button>
+                    >
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <rect x="5" y="11" width="14" height="10" rx="2" />
+                        <path d="M8 11V7a4 4 0 0 1 7.4-2" />
+                      </svg>
+                      ปลดล็อก
+                    </button>
                     {adminPwError && (
                       <div style={{ marginTop: 8, color: '#c0392b', fontSize: 13 }}>รหัสไม่ถูกต้อง</div>
                     )}

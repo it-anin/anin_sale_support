@@ -3612,6 +3612,41 @@ body.pulse-b .cart-inline-btn.in-cart {
 }
 .page-settings-lock-icon svg { width: 26px; height: 26px; color: #fff; }
 .page-settings-lock-form { flex: 1; padding: 20px 18px; }
+/* ปุ่ม "ปลดล็อก" — ดีไซน์ "3D Tile" (แบบที่ 9 จาก public/r05106-upload-btn-designs.html, 2569-09-25)
+   ปุ่มนูน ไอคอนอยู่บนข้อความ ชี้แล้วยกขึ้น กดแล้วยุบ — ตระกูลเดียวกับปุ่มเพิ่มแถว/ล้างหมด หน้าเบิกด่วน (.outbound-3d-btn)
+   ไม่มีสถานะรอโหลด: เช็ครหัสฝั่ง client ทันที (ต่างจากแกลเลอรีที่ออกแบบให้ปุ่มอัปโหลด) */
+.page-settings-unlock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  height: 76px;
+  margin-top: 12px;
+  border: 1px solid #e3ecf5;
+  border-radius: 14px;
+  background: #fff;
+  color: #2d6cad;
+  font-family: 'Noto Sans Thai', sans-serif;
+  font-size: 14.5px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 3px 0 #cfe0f2, 0 5px 12px rgba(0, 0, 0, 0.08);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.page-settings-unlock svg {
+  display: block; width: 26px; height: 26px;
+  fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round;
+}
+.page-settings-unlock:hover { transform: translateY(-2px); box-shadow: 0 5px 0 #cfe0f2, 0 10px 18px rgba(0, 0, 0, 0.12); }
+.page-settings-unlock:active {
+  transform: translateY(3px) scale(0.99);
+  box-shadow: 0 0 0 #cfe0f2, 0 1px 2px rgba(0, 0, 0, 0.12);
+  transition-duration: 0.08s;
+}
+.page-settings-unlock:focus-visible { outline: 3px solid rgba(72, 145, 219, 0.5); outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) { .page-settings-unlock { transition: none; } }
 .page-settings-hint { margin-top: 14px; font-size: 12px; color: #8194a8; font-weight: 300; line-height: 1.5; }
 /* หัวข้อ + คำอธิบายของส่วนอัปโหลด R05.106 (2569-09-25) */
 .page-settings-section-title { margin: 0; font-size: 0.95rem; font-weight: 700; color: #2d6cad; }
