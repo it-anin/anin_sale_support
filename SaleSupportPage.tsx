@@ -9,10 +9,13 @@ const ORDER_BRANCHES = ['SRC', 'KKL', 'SSS', 'SALE_ADMIN', 'Warehouse'] as const
 /** ผู้ลงรายการ BackOrder — ต้องตรงกับ CHECK ของ ss_backorders.branch เป๊ะ ๆ
  *  ⚠️ ไม่มี Warehouse (คลังเป็นผู้รับงาน ไม่ใช่ผู้ขอ) — ต่างจาก ORDER_BRANCHES ที่มี */
 const BACKORDER_BRANCHES = ['SRC', 'KKL', 'SSS', 'SALE_ADMIN'] as const;
+/** สาขาหน้าร้าน 3 แห่ง **ไม่รวม Sale Admin** — ใช้กับสิทธิ์ที่ผู้ใช้ระบุมาเฉพาะ "รหัส SRC/KKL/SSS"
+ *  ⚠️ คนละลิสต์กับ BRANCH_PROFILE_CODES (รวม SALE_ADMIN) — ผู้ใช้แยก 2 กลุ่มนี้ชัดเจนในคำสั่งเสมอ อย่ายุบรวม */
+const STORE_BRANCH_CODES = ['SRC', 'KKL', 'SSS'] as const;
 /** โปรไฟล์ที่กดตรา "ยกเลิก" ใน popup Order ได้ — สาขาหน้าร้านเท่านั้น (ผู้ใช้สั่ง 2569-10-12 "เฉพาะรหัส SRC,KKL,SSS")
  *  ⚠️ จงใจไม่ใช้ BRANCH_PROFILE_CODES — ตัวนั้นรวม SALE_ADMIN ด้วย · Sale Admin ยังกดตรา 3 ขั้นของ Order ได้ตามปกติ
  *     แค่กดยกเลิกไม่ได้ · ปุ่มยกเลิกของ BackOrder ไม่เกี่ยวกับลิสต์นี้ (ยังใช้ isBranchUser ซึ่งรวม Sale Admin) */
-const ORDER_CANCEL_BRANCHES = ['SRC', 'KKL', 'SSS'] as const;
+const ORDER_CANCEL_BRANCHES = STORE_BRANCH_CODES;
 /** รหัสยืนยันงานที่ย้อนกลับไม่ได้ (ลบแถว / ล้างประวัติอัพเดท)
  *  ⚠️ อยู่ฝั่ง client เหมือน VITE_ADMIN_PASSWORD — เป็น gate กันกดพลาด ไม่ใช่ security จริง */
 const ADMIN_PASSWORD = '221900';
@@ -1774,6 +1777,11 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
   // `isPurchasing` ตรงๆ ที่จุดของมันเองอยู่แล้ว ไม่เกี่ยวกับตัวแปรนี้
   const visibleColumns = menu.columns;
 
+  /** คอลัมน์ "ลบ" ท้ายตาราง — เมนู Products ซ่อนจาก SRC/KKL/SSS (ผู้ใช้สั่ง 2569-10-12)
+   *  Sale Admin / คลัง / จัดซื้อ ยังมี · เมนูอื่นทุกโปรไฟล์ยังมีตามเดิม */
+  const isStoreBranch = (STORE_BRANCH_CODES as readonly string[]).includes(userBranch ?? '');
+  const showDeleteCol = !(activeMenu === 'products' && isStoreBranch);
+
   /** ทุนซื้อของแถว Product Master นี้แสดงให้ผู้ใช้คนนี้เห็นได้ไหม — สาขา (isBranchUser = SRC/KKL/SSS/Sale Admin)
    *  เห็นเฉพาะ ABC = P · คลัง/จัดซื้อเห็นทุกแถว (ดู masterAbcShowsCost) */
   const canSeeMasterCost = (row: Record<string, unknown>) => !isBranchUser || masterAbcShowsCost(row.abc);
@@ -3320,6 +3328,7 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
   };
 
   const openDeleteRow = (row: Record<string, unknown>) => {
+    if (!showDeleteCol) return;   // กันชนชั้นที่สอง — ปุ่มไม่ render อยู่แล้วสำหรับ SRC/KKL/SSS ในเมนู Products
     setDeleteTarget({
       id: String(row.id), table: menu.table, label: menu.label,
       branch: String(row.branch ?? ''), menuId: activeMenu,
@@ -3638,12 +3647,12 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
                           onMouseDown={e => startColumnResize(e, col.key)} />
                       </th>
                     ))}
-                    <th className="ss-delete-col">ลบ</th>
+                    {showDeleteCol && <th className="ss-delete-col">ลบ</th>}
                   </tr>
                 </thead>
                 <tbody>
                   {!loading && visibleRows.length === 0 && !error && (
-                    <tr><td className="ss-empty" colSpan={visibleColumns.length}>
+                    <tr><td className="ss-empty" colSpan={visibleColumns.length + (showDeleteCol ? 1 : 0)}>
                       {stepFilter && rows.length > 0 ? 'ไม่มีรายการที่ค้างขั้นนี้ในหน้านี้' : 'ยังไม่มีข้อมูล'}
                     </td></tr>
                   )}
@@ -3863,11 +3872,13 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
                           </td>
                         );
                       })}
-                      <td className="ss-delete-col" onClick={e => e.stopPropagation()}>
-                        <button className="ss-delete-row-btn" type="button" onClick={() => openDeleteRow(row)} title="ลบข้อมูล">
-                          ลบ
-                        </button>
-                      </td>
+                      {showDeleteCol && (
+                        <td className="ss-delete-col" onClick={e => e.stopPropagation()}>
+                          <button className="ss-delete-row-btn" type="button" onClick={() => openDeleteRow(row)} title="ลบข้อมูล">
+                            ลบ
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
