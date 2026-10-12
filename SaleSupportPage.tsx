@@ -775,6 +775,373 @@ const PRODUCT_DETAIL_FIELDS: ColumnDef[] = [
 // ช่องที่ควรกินเต็มความกว้างใน popup รายละเอียด
 const DETAIL_FULL_KEYS = new Set(['issue', 'answer', 'note', 'name', 'name_brand', 'active_ingredient', 'sku_name']);
 
+// ── อัปโหลด Product Master: สรุปการเปลี่ยนแปลงก่อนยืนยัน + ดาวน์โหลดเป็น Excel (2569-10-12) ──
+// เดิมกล่องยืนยันบอกแค่ "พบสินค้า N รายการ" แล้ว upsert ทั้งไฟล์ — ไม่มีทางรู้ว่าทุนซื้อ/ABC ของ SKU ไหนเปลี่ยน
+// และไม่เห็นว่าช่องที่ไฟล์เว้นว่างจะ "ล้างค่าเดิมในระบบเป็นค่าว่าง" (upsert ส่งทุกคอลัมน์ที่ไฟล์มี ช่องว่าง = null)
+
+/** ชื่อช่องที่ผู้ใช้เห็น — อ่านจาก PRODUCT_DETAIL_FIELDS (popup Products) ที่เดียว ไม่มี map ซ้ำ */
+const MASTER_COL_LABELS: Record<string, string> = Object.fromEntries(PRODUCT_DETAIL_FIELDS.map(f => [f.key, f.label]));
+const masterColLabel = (col: string) => MASTER_COL_LABELS[col] ?? col;
+
+/** ช่องที่ในไฟล์ Excel เป็นตัวเลข — เทียบด้วยค่าตัวเลข ไม่ใช่ข้อความ
+ *  ค่าที่เคยพิมพ์ผ่านฟอร์ม ➕ New Product (เช่น "120.50") กับค่าจากไฟล์ ("120.5") ต้องนับว่าเท่ากัน
+ *  ⚠️ ห้ามใส่ supplier / group_name — เป็นรหัส เลขศูนย์นำหน้ามีความหมาย ("0066" ≠ "66") */
+const MASTER_NUMERIC_COLS = new Set(['multiply', 'set_deal', 'cost', 'buying_deal_normal', 'buying_deal_free', 'group_percent']);
+/** โชว์ส่วนต่าง (ใหม่ − เดิม) เฉพาะทุนซื้อ — ช่องตัวเลขอื่นเป็นจำนวนแพ็ก/สัดส่วน ส่วนต่างอ่านแล้วไม่มีความหมาย */
+const MASTER_DELTA_COL = 'cost';
+/** ช่องที่โชว์ในตาราง "SKU ใหม่" ของ modal (ไฟล์ดาวน์โหลดมีครบทุกช่อง) */
+const MASTER_NEW_PREVIEW_COLS = ['abc', 'cost', 'base_unit', 'supplier'];
+/** แถวที่ render ในตารางของ modal สูงสุด — ที่เหลือดูในไฟล์ดาวน์โหลด (หลายพันแถวทำ modal หน่วง) */
+const MASTER_DIFF_DISPLAY_LIMIT = 300;
+
+type MasterRow = Record<string, string | null>;
+type MasterChangeKind = 'changed' | 'added' | 'cleared';
+interface MasterFieldChange {
+  sku: string;
+  name: string;
+  col: string;
+  oldValue: string;   // '' = เดิมว่าง
+  newValue: string;   // '' = ไฟล์เว้นว่าง → ค่าเดิมจะถูกล้างเป็นค่าว่าง
+  kind: MasterChangeKind;
+}
+interface MasterDiff {
+  fileName: string;
+  rows: MasterRow[];            // แถวที่จะ upsert — ทั้งไฟล์ รวมแถวที่ไม่เปลี่ยน
+  cols: string[];               // คอลัมน์ product_master ที่ไฟล์ครอบคลุม (มี sku เสมอ)
+  importedHeaders: string[];    // หัวคอลัมน์ในไฟล์ที่จับคู่ได้
+  ignoredHeaders: string[];     // หัวคอลัมน์ในไฟล์ที่ไม่นำเข้า
+  skippedRows: number;          // แถวไม่มี SKU หรือ SKU ซ้ำในไฟล์ (ใช้แถวแรก)
+  newRows: MasterRow[];
+  changes: MasterFieldChange[]; // ทีละช่อง ไม่ใช่ทีละ SKU
+  changedSkus: number;
+  unchangedSkus: number;
+  missingFromFile: number;      // SKU ในระบบที่ไม่อยู่ในไฟล์ — merge จึงไม่ถูกลบ คงค่าเดิม
+}
+
+const parseMasterNumber = (value: string): number | null => {
+  if (!value) return null;
+  const n = Number(value.replace(/,/g, ''));
+  return Number.isFinite(n) ? n : null;
+};
+
+function sameMasterValue(col: string, a: string, b: string): boolean {
+  if (a === b) return true;
+  if (!a || !b || !MASTER_NUMERIC_COLS.has(col)) return false;
+  const na = parseMasterNumber(a);
+  const nb = parseMasterNumber(b);
+  return na !== null && nb !== null && na === nb;
+}
+
+/** เทียบแถวจากไฟล์กับ product_master ปัจจุบัน — เทียบเฉพาะคอลัมน์ที่ไฟล์มี (คอลัมน์อื่น upsert ไม่แตะ) */
+function computeMasterDiff(rows: MasterRow[], cols: string[], existing: Map<string, Record<string, unknown>>) {
+  const compareCols = cols.filter(c => c !== 'sku');
+  const newRows: MasterRow[] = [];
+  const changes: MasterFieldChange[] = [];
+  let changedSkus = 0;
+  let unchangedSkus = 0;
+  for (const row of rows) {
+    const sku = String(row.sku);
+    const old = existing.get(sku);
+    if (!old) { newRows.push(row); continue; }
+    const name = String(row.name ?? old.name ?? '');
+    let rowChanged = false;
+    for (const col of compareCols) {
+      const oldValue = String(old[col] ?? '').trim();
+      const newValue = String(row[col] ?? '').trim();
+      if (sameMasterValue(col, oldValue, newValue)) continue;
+      rowChanged = true;
+      changes.push({ sku, name, col, oldValue, newValue, kind: !newValue ? 'cleared' : !oldValue ? 'added' : 'changed' });
+    }
+    if (rowChanged) changedSkus++;
+    else unchangedSkus++;
+  }
+  const fileSkus = new Set(rows.map(r => String(r.sku)));
+  let missingFromFile = 0;
+  for (const sku of existing.keys()) if (!fileSkus.has(sku)) missingFromFile++;
+  return { newRows, changes, changedSkus, unchangedSkus, missingFromFile };
+}
+
+/** ส่วนต่างทุนซื้อ — null ถ้าไม่ใช่ทุนซื้อ หรือฝั่งใดฝั่งหนึ่งว่าง/ไม่ใช่ตัวเลข */
+function masterCostDelta(change: MasterFieldChange): { diff: number; pct: number | null } | null {
+  if (change.col !== MASTER_DELTA_COL) return null;
+  const o = parseMasterNumber(change.oldValue);
+  const n = parseMasterNumber(change.newValue);
+  if (o === null || n === null) return null;
+  const diff = Math.round((n - o) * 10000) / 10000;   // ตัดเศษทศนิยมลอยตัว (0.1 + 0.2)
+  return { diff, pct: o !== 0 ? Math.round((diff / o) * 1000) / 10 : null };
+}
+
+const formatMasterDelta = ({ diff, pct }: { diff: number; pct: number | null }) =>
+  `${diff > 0 ? '+' : ''}${diff.toLocaleString('th-TH', { maximumFractionDigits: 4 })}`
+  + (pct !== null ? ` (${pct > 0 ? '+' : ''}${pct}%)` : '');
+
+/** จำนวนช่องที่เปลี่ยน แยกตามคอลัมน์ เรียงมากไปน้อย */
+function countMasterChangesByCol(changes: MasterFieldChange[]): [string, number][] {
+  const counts = new Map<string, number>();
+  for (const c of changes) counts.set(c.col, (counts.get(c.col) ?? 0) + 1);
+  return [...counts].sort((a, b) => b[1] - a[1]);
+}
+
+/** สรุปบรรทัดเดียว — ใช้ทั้งข้อความหลังอัปโหลดและ detail ของแจ้งเตือน */
+function describeMasterDiff(diff: MasterDiff): string {
+  const top = countMasterChangesByCol(diff.changes).slice(0, 3)
+    .map(([col, n]) => `${masterColLabel(col)} ${n.toLocaleString()}`);
+  return `SKU ใหม่ ${diff.newRows.length.toLocaleString()} · เปลี่ยนแปลง ${diff.changedSkus.toLocaleString()}`
+    + ` · เหมือนเดิม ${diff.unchangedSkus.toLocaleString()}` + (top.length ? ` (${top.join(' · ')})` : '');
+}
+
+const MASTER_CHANGE_KIND_LABEL: Record<MasterChangeKind, string> = {
+  changed: 'เปลี่ยนค่า',
+  added: 'เพิ่มค่า (เดิมว่าง)',
+  cleared: 'ล้างเป็นค่าว่าง (ไฟล์เว้นว่าง)',
+};
+
+/** ดาวน์โหลดสรุปเป็น .xlsx 3 ชีท: สรุป / เปลี่ยนแปลง (ทีละช่อง ครบทุกรายการ) / SKU ใหม่
+ *  ช่องตัวเลขเขียนเป็น number ให้ Excel เรียง/รวมได้ · SKU/Supplier คงเป็นข้อความ (เลขศูนย์นำหน้าไม่หาย) */
+function downloadMasterDiff(diff: MasterDiff, meta: { uploader: string; savedAt: Date | null }) {
+  const cell = (col: string, value: string): string | number => {
+    if (!value) return '';
+    const n = MASTER_NUMERIC_COLS.has(col) ? parseMasterNumber(value) : null;
+    return n ?? value;
+  };
+  const cleared = diff.changes.filter(c => c.kind === 'cleared').length;
+  const summary: (string | number)[][] = [
+    ['สรุปการเปลี่ยนแปลง Product Master'],
+    ['ไฟล์', diff.fileName],
+    // ⚠️ ต้องบอกสถานะเสมอ — ไฟล์นี้ดาวน์โหลดได้ตั้งแต่ก่อนกดยืนยัน ถ้าไม่บอก คนที่ได้ไฟล์ต่อจะเข้าใจว่าระบบเปลี่ยนแล้ว
+    ['สถานะ', meta.savedAt ? `อัปโหลดลงระบบแล้ว ${meta.savedAt.toLocaleString('th-TH')}` : 'ยังไม่ได้อัปโหลด (สรุปก่อนกดยืนยัน)'],
+    ['ผู้อัปโหลด', meta.uploader],
+    ['สร้างไฟล์สรุปเมื่อ', new Date().toLocaleString('th-TH')],
+    [],
+    ['SKU ในไฟล์', diff.rows.length],
+    ['SKU ใหม่', diff.newRows.length],
+    ['SKU ที่เปลี่ยนแปลง', diff.changedSkus],
+    ['SKU ที่เหมือนเดิม', diff.unchangedSkus],
+    ['ช่องที่ถูกล้างเป็นค่าว่าง (ไฟล์เว้นว่าง)', cleared],
+    ['SKU ในระบบที่ไม่อยู่ในไฟล์ (คงค่าเดิม ไม่ถูกลบ)', diff.missingFromFile],
+  ];
+  if (diff.skippedRows) summary.push(['แถวที่ข้าม (ไม่มี SKU / SKU ซ้ำ ใช้แถวแรก)', diff.skippedRows]);
+  summary.push([], ['คอลัมน์ที่นำเข้า', diff.importedHeaders.join(', ')]);
+  if (diff.ignoredHeaders.length) summary.push(['คอลัมน์ที่ไม่นำเข้า', diff.ignoredHeaders.join(', ')]);
+  const byCol = countMasterChangesByCol(diff.changes);
+  if (byCol.length) {
+    summary.push([], ['จำนวนช่องที่เปลี่ยน แยกตามคอลัมน์']);
+    for (const [col, n] of byCol) summary.push([masterColLabel(col), n]);
+  }
+
+  const changeSheet: (string | number)[][] = [
+    ['SKU', 'ชื่อสินค้า', 'ช่อง', 'ค่าเดิม', 'ค่าใหม่', 'ส่วนต่าง', '% เปลี่ยน', 'ประเภท'],
+    ...diff.changes.map(c => {
+      const d = masterCostDelta(c);
+      return [c.sku, c.name, masterColLabel(c.col), cell(c.col, c.oldValue), cell(c.col, c.newValue),
+        d?.diff ?? '', d?.pct ?? '', MASTER_CHANGE_KIND_LABEL[c.kind]];
+    }),
+  ];
+  const newCols = ['sku', ...diff.cols.filter(c => c !== 'sku')];
+  const newSheet: (string | number)[][] = [
+    newCols.map(masterColLabel),
+    ...diff.newRows.map(r => newCols.map(c => (c === 'sku' ? String(r.sku) : cell(c, String(r[c] ?? ''))))),
+  ];
+
+  const wb = XLSX.utils.book_new();
+  const wsSummary = XLSX.utils.aoa_to_sheet(summary);
+  wsSummary['!cols'] = [{ wch: 46 }, { wch: 70 }];
+  XLSX.utils.book_append_sheet(wb, wsSummary, 'สรุป');
+  const wsChanges = XLSX.utils.aoa_to_sheet(changeSheet);
+  wsChanges['!cols'] = [{ wch: 10 }, { wch: 46 }, { wch: 18 }, { wch: 14 }, { wch: 14 }, { wch: 11 }, { wch: 10 }, { wch: 28 }];
+  // ตัวกรองบนหัวตาราง — กรองดูเฉพาะ "ทุนซื้อ" หรือ "ล้างเป็นค่าว่าง" ใน Excel ได้ทันที
+  wsChanges['!autofilter'] = { ref: `A1:H${changeSheet.length}` };
+  XLSX.utils.book_append_sheet(wb, wsChanges, 'เปลี่ยนแปลง');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(newSheet), 'SKU ใหม่');
+  const now = new Date();
+  const time = `${String(now.getHours()).padStart(2, '0')}.${String(now.getMinutes()).padStart(2, '0')}`;
+  XLSX.writeFile(wb, `สรุปการเปลี่ยนแปลง Product Master ${toDateInputValue(now)} ${time}.xlsx`);
+}
+
+/** modal สรุปการเปลี่ยนแปลงก่อนกดยืนยัน — ยืนยันแล้วค้างเปิดในสถานะ "อัปเดตแล้ว" ให้ดาวน์โหลดต่อได้
+ *  ⚠️ ไม่มี onClick ปิดที่ overlay โดยตั้งใจ — ลากคลุมข้อความ (เช่น ก๊อป SKU) แล้วปล่อยเมาส์นอกกล่อง
+ *     click จะตกที่ overlay แล้วสรุปหายทั้งก้อน (บทเรียนเดียวกับ modal ⚙️ Admin หน้าป้ายราคา) */
+function MasterDiffModal({ diff, saving, error, savedAt, onConfirm, onClose, onDownload }: {
+  diff: MasterDiff;
+  saving: boolean;
+  error: string;
+  savedAt: Date | null;
+  onConfirm: () => void;
+  onClose: () => void;
+  onDownload: () => void;
+}) {
+  const cleared = useMemo(() => diff.changes.filter(c => c.kind === 'cleared'), [diff]);
+  const byCol = useMemo(() => countMasterChangesByCol(diff.changes), [diff]);
+  // บรรทัดสรุปทุนซื้อ — โชว์เฉพาะกลุ่มที่มีจริง ("ขึ้น 0 · ลง 0" อ่านแล้วรก)
+  // แยก "เดิมว่าง" ออกจาก "ถูกล้างเป็นค่าว่าง" เพราะความหมายตรงข้ามกัน (ได้ทุนเพิ่ม vs ทุนหาย)
+  const costSummary = useMemo(() => {
+    const n = { up: 0, down: 0, other: 0, added: 0, cleared: 0 };
+    let total = 0;
+    for (const c of diff.changes) {
+      if (c.col !== MASTER_DELTA_COL) continue;
+      total++;
+      if (c.kind === 'added') n.added++;
+      else if (c.kind === 'cleared') n.cleared++;
+      else {
+        const d = masterCostDelta(c);
+        if (d && d.diff > 0) n.up++;
+        else if (d && d.diff < 0) n.down++;
+        else n.other++;     // ค่าที่ไม่ใช่ตัวเลข เช่นพิมพ์ "10+1" ผ่านฟอร์ม — บอกได้แค่ว่าเปลี่ยน
+      }
+    }
+    if (!total) return '';
+    const parts = [
+      n.up && `ขึ้น ${n.up.toLocaleString()}`,
+      n.down && `ลง ${n.down.toLocaleString()}`,
+      n.other && `เปลี่ยน ${n.other.toLocaleString()}`,
+      n.added && `เดิมว่าง ${n.added.toLocaleString()}`,
+      n.cleared && `ถูกล้างเป็นค่าว่าง ${n.cleared.toLocaleString()}`,
+    ].filter(Boolean);
+    return `ทุนซื้อเปลี่ยน ${total.toLocaleString()} SKU — ${parts.join(' · ')}`;
+  }, [diff]);
+  const [view, setView] = useState<'changed' | 'new' | 'cleared'>(
+    diff.changes.length ? 'changed' : diff.newRows.length ? 'new' : 'changed',
+  );
+  const [colFilter, setColFilter] = useState<string | null>(null);
+  const changeRows = view === 'cleared' ? cleared
+    : colFilter ? diff.changes.filter(c => c.col === colFilter)
+    : diff.changes;
+  const listTotal = view === 'new' ? diff.newRows.length : changeRows.length;
+  const done = savedAt !== null;
+  const nothingChanged = !diff.newRows.length && !diff.changes.length;
+  const newPreviewCols = MASTER_NEW_PREVIEW_COLS.filter(c => diff.cols.includes(c));
+
+  return (
+    <div className="dl-modal-overlay">
+      <div className="dl-modal dl-modal--mdiff" onClick={e => e.stopPropagation()}>
+        <div className="dl-modal-header">
+          <span>{done ? '✓ อัปเดต Product Master แล้ว' : '📤 สรุปการเปลี่ยนแปลง Product Master'}</span>
+          <button className="dl-modal-close" onClick={onClose} disabled={saving}>✕</button>
+        </div>
+        <div className="dl-modal-body ss-mdiff">
+          <div className="ss-mdiff-file">
+            <div>📄 {diff.fileName} · {diff.rows.length.toLocaleString()} SKU</div>
+            <div>คอลัมน์ที่นำเข้า: {diff.importedHeaders.join(', ')}</div>
+            {diff.ignoredHeaders.length > 0 && <div>ไม่นำเข้า: {diff.ignoredHeaders.join(', ')}</div>}
+          </div>
+          {/* ไฟล์ Product Master รายสาขา (SRC/KKL/SSS) ไม่มีคอลัมน์ทุนซื้อ — เลือกไฟล์ผิดแล้วทุนไม่อัปเดตแบบเงียบ ๆ */}
+          {!diff.cols.includes(MASTER_DELTA_COL) && (
+            <div className="ss-mdiff-warn">⚠️ ไฟล์นี้ไม่มีคอลัมน์ทุนซื้อ — ทุนจะไม่ถูกอัปเดต (ใช่ไฟล์ Product Master หลักหรือเปล่า?)</div>
+          )}
+          {savedAt && (
+            <div className="ss-mdiff-done">บันทึกลงระบบแล้ว {savedAt.toLocaleString('th-TH')} — ดาวน์โหลดสรุปเก็บไว้ได้</div>
+          )}
+          {nothingChanged && (
+            <div className="ss-mdiff-same">ข้อมูลในไฟล์ตรงกับระบบทุกช่อง — ไม่มีอะไรเปลี่ยน</div>
+          )}
+
+          <div className="ss-mdiff-stats">
+            <button type="button" className={`ss-mdiff-stat ss-mdiff-stat--new${view === 'new' ? ' is-active' : ''}`}
+              disabled={!diff.newRows.length} onClick={() => setView('new')}>
+              <strong>{diff.newRows.length.toLocaleString()}</strong><span>SKU ใหม่</span>
+            </button>
+            <button type="button" className={`ss-mdiff-stat ss-mdiff-stat--changed${view === 'changed' ? ' is-active' : ''}`}
+              disabled={!diff.changes.length} onClick={() => { setView('changed'); setColFilter(null); }}>
+              <strong>{diff.changedSkus.toLocaleString()}</strong><span>SKU เปลี่ยนแปลง</span>
+            </button>
+            <div className="ss-mdiff-stat ss-mdiff-stat--same">
+              <strong>{diff.unchangedSkus.toLocaleString()}</strong><span>เหมือนเดิม</span>
+            </div>
+            <button type="button" className={`ss-mdiff-stat ss-mdiff-stat--cleared${view === 'cleared' ? ' is-active' : ''}`}
+              disabled={!cleared.length} onClick={() => setView('cleared')}>
+              <strong>{cleared.length.toLocaleString()}</strong><span>ช่องถูกล้างเป็นค่าว่าง</span>
+            </button>
+          </div>
+          <div className="ss-mdiff-notes">
+            {costSummary && <span>{costSummary}</span>}
+            <span>SKU ในระบบที่ไม่อยู่ในไฟล์ {diff.missingFromFile.toLocaleString()} รายการ — คงค่าเดิม ไม่ถูกลบ</span>
+            {diff.skippedRows > 0 && <span>ข้าม {diff.skippedRows.toLocaleString()} แถว (ไม่มี SKU / SKU ซ้ำ ใช้แถวแรก)</span>}
+          </div>
+
+          {view === 'changed' && byCol.length > 0 && (
+            <div className="ss-mdiff-chips">
+              <button type="button" className={`ss-abc-chip${!colFilter ? ' is-active' : ''}`} onClick={() => setColFilter(null)}>
+                ทุกช่อง <em>{diff.changes.length.toLocaleString()}</em>
+              </button>
+              {byCol.map(([col, n]) => (
+                <button key={col} type="button" className={`ss-abc-chip${colFilter === col ? ' is-active' : ''}`}
+                  onClick={() => setColFilter(col)}>
+                  {masterColLabel(col)} <em>{n.toLocaleString()}</em>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {listTotal > 0 && (
+            <div className="ss-mdiff-table-wrap">
+              {view === 'new' ? (
+                <table className="ss-mdiff-table">
+                  <thead>
+                    <tr><th>SKU</th><th>ชื่อสินค้า</th>{newPreviewCols.map(c => <th key={c}>{masterColLabel(c)}</th>)}</tr>
+                  </thead>
+                  <tbody>
+                    {diff.newRows.slice(0, MASTER_DIFF_DISPLAY_LIMIT).map(r => (
+                      <tr key={String(r.sku)}>
+                        <td className="ss-mdiff-sku">{r.sku}</td>
+                        <td className="ss-mdiff-name">{r.name ?? ''}</td>
+                        {newPreviewCols.map(c => <td key={c}>{r[c] ?? ''}</td>)}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <table className="ss-mdiff-table">
+                  <thead>
+                    <tr><th>SKU</th><th>ชื่อสินค้า</th><th>ช่อง</th><th>ค่าเดิม</th><th>ค่าใหม่</th><th>ส่วนต่าง</th></tr>
+                  </thead>
+                  <tbody>
+                    {changeRows.slice(0, MASTER_DIFF_DISPLAY_LIMIT).map(c => {
+                      const d = masterCostDelta(c);
+                      return (
+                        <tr key={`${c.sku}-${c.col}`}>
+                          <td className="ss-mdiff-sku">{c.sku}</td>
+                          <td className="ss-mdiff-name">{c.name}</td>
+                          <td>{masterColLabel(c.col)}</td>
+                          <td className="ss-mdiff-old">{c.oldValue || <span className="ss-mdiff-blank">(ว่าง)</span>}</td>
+                          <td className={`ss-mdiff-new${c.kind === 'cleared' ? ' is-cleared' : ''}`}>{c.newValue || '(ว่าง)'}</td>
+                          <td className={`ss-mdiff-delta${d && d.diff > 0 ? ' is-up' : d && d.diff < 0 ? ' is-down' : ''}`}>
+                            {d ? formatMasterDelta(d) : ''}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          )}
+          {listTotal > MASTER_DIFF_DISPLAY_LIMIT && (
+            <div className="ss-mdiff-more">
+              แสดง {MASTER_DIFF_DISPLAY_LIMIT.toLocaleString()} จาก {listTotal.toLocaleString()} รายการ — ดาวน์โหลดไฟล์สรุปเพื่อดูครบทุกรายการ
+            </div>
+          )}
+        </div>
+        <div className="dl-modal-footer">
+          <button className="ss-add-btn ss-add-btn--secondary ss-mdiff-download" onClick={onDownload} disabled={saving}>
+            ⬇️ ดาวน์โหลดสรุป (Excel)
+          </button>
+          {error && <span className="ss-mdiff-error">{error}</span>}
+          {done ? (
+            <button className="ss-add-btn" onClick={onClose}>ปิด</button>
+          ) : (
+            <>
+              <button className="ss-add-btn ss-add-btn--secondary" onClick={onClose} disabled={saving}>ยกเลิก</button>
+              <button className="ss-add-btn" onClick={onConfirm} disabled={saving}>
+                {saving ? 'กำลังบันทึก...' : `✓ ยืนยันอัปโหลด ${diff.rows.length.toLocaleString()} SKU`}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // 3 ขั้นตอนอนุมัติใน Popup Order (ตราประทับ)
 // label    = ชื่อขั้น ใช้บนตราประทับใน popup — เป็นคำบอก "สิ่งที่ต้องทำ"
 // navLabel = ชื่อในเมนูย่อย sidebar — เป็นคำบอก "สิ่งที่ยังไม่ได้ทำ" เพราะเลขข้าง ๆ คือจำนวนที่ค้าง
@@ -1078,6 +1445,11 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
   const masterFileRef = useRef<HTMLInputElement>(null);
   const [masterMsg, setMasterMsg] = useState('');
   const [uploadingMaster, setUploadingMaster] = useState(false);
+  // สรุปการเปลี่ยนแปลงก่อนยืนยันอัปโหลด Product Master — null = modal ปิด
+  const [masterPreview, setMasterPreview] = useState<MasterDiff | null>(null);
+  const [masterSaving, setMasterSaving] = useState(false);
+  const [masterSaveError, setMasterSaveError] = useState('');
+  const [masterSavedAt, setMasterSavedAt] = useState<Date | null>(null);
   const [showAddMaster, setShowAddMaster] = useState(false);
   const [masterForm, setMasterForm] = useState<MasterForm>(emptyMasterForm);
   const [deleteTarget, setDeleteTarget] = useState<{
@@ -2156,7 +2528,9 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
     }
   };
 
-  // อ่านไฟล์ Product_Master → จับคู่หัวคอลัมน์ → แทนที่ข้อมูล product_master ทั้งหมด
+  // อ่านไฟล์ Product_Master → จับคู่หัวคอลัมน์ → เทียบกับ product_master ปัจจุบัน → เปิด modal สรุปให้ดูก่อน
+  // ยังไม่เขียนอะไรลง DB จนกว่าจะกดยืนยันใน modal (confirmMasterUpload)
+  // merge ตาม SKU: SKU ที่ไม่อยู่ในไฟล์ไม่ถูกลบ · ⚠️ แต่ช่องที่ไฟล์เว้นว่างจะล้างค่าเดิมเป็นค่าว่าง (ส่ง null ไปทั้งคอลัมน์)
   const handleMasterFile = async (file: File) => {
     setUploadingMaster(true);
     setMasterMsg('');
@@ -2193,33 +2567,79 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
       }
       if (products.length === 0) throw new Error('ไม่พบแถวที่มี SKU');
 
-      const mapped = [...headerToCol.keys()].join(', ');
-      if (!window.confirm(
-        `พบสินค้า ${products.length} รายการ\nคอลัมน์ที่นำเข้า: ${mapped}\n\n` +
-        `Merge ตาม SKU: SKU ที่มีอยู่จะถูกอัปเดตตามไฟล์, SKU ใหม่จะถูกเพิ่ม (ไม่ลบรายการอื่น)`
-      )) {
-        return;
+      // ของเดิมในระบบ — ดึงเฉพาะคอลัมน์ที่ไฟล์มี (คอลัมน์อื่น upsert ไม่แตะ จึงไม่ต้องเทียบ)
+      // วนทีละ 1000 เพราะ PostgREST ตัดที่ 1000 แถวต่อครั้ง · อ่านไม่ได้ = ไม่เปิดสรุป ไม่ปล่อยให้อัปโหลดแบบไม่รู้อะไรเปลี่ยน
+      const existing = new Map<string, Record<string, unknown>>();
+      for (let from = 0; ; from += 1000) {
+        const { data, error } = await supabase
+          .from('product_master').select(cols.join(',')).order('sku').range(from, from + 999);
+        if (error) throw new Error(`อ่าน Product Master เดิมไม่สำเร็จ: ${error.message}`);
+        const page = (data ?? []) as unknown as Record<string, unknown>[];
+        for (const r of page) existing.set(String(r.sku ?? '').trim(), r);
+        if (page.length < 1000) break;
       }
-
-      for (let i = 0; i < products.length; i += 100) {
-        const { error } = await supabase
-          .from('product_master')
-          .upsert(products.slice(i, i + 100), { onConflict: 'sku' });
-        if (error) throw new Error(`บันทึกไม่สำเร็จ: ${error.message} — ตรวจว่ารัน SQL เวอร์ชันล่าสุด (unique SKU) แล้วหรือยัง`);
-      }
-      setMasterMsg(`✓ นำเข้า/อัปเดต Product Master ${products.length} รายการ`);
-      void notifyBranchUpdate(undefined, {
-        menuId: 'products', tableName: 'product_master', title: 'อัปเดต Product Master',
-        detail: `นำเข้า/อัปเดต ${products.length.toLocaleString()} รายการ`,
+      setMasterPreview({
+        fileName: file.name,
+        rows: products,
+        cols,
+        importedHeaders: [...headerToCol.keys()],
+        ignoredHeaders: headers.filter(h => !headerToCol.has(h)),
+        skippedRows: rows.length - products.length,
+        ...computeMasterDiff(products, cols, existing),
       });
-      setAbcOptions(null);        // ไฟล์ใหม่อาจมีค่า ABC ที่ยังไม่เคยมี → โหลด chip ใหม่
-      setRefreshKey(k => k + 1);
+      setMasterSaveError('');
+      setMasterSavedAt(null);
     } catch (e) {
       setMasterMsg(`✕ ${e instanceof Error ? e.message : String(e)}`);
     } finally {
       setUploadingMaster(false);
       if (masterFileRef.current) masterFileRef.current.value = '';
     }
+  };
+
+  // กด "ยืนยันอัปโหลด" ใน modal สรุป — upsert ทั้งไฟล์ทีละ 100 (เหมือนเดิม) แล้วค้าง modal ไว้ในสถานะ "อัปเดตแล้ว"
+  const confirmMasterUpload = async () => {
+    const diff = masterPreview;
+    if (!diff || masterSaving || masterSavedAt) return;
+    setMasterSaving(true);
+    setMasterSaveError('');
+    let saved = 0;
+    let failure = '';
+    try {
+      for (let i = 0; i < diff.rows.length; i += 100) {
+        const chunk = diff.rows.slice(i, i + 100);
+        const { error } = await supabase.from('product_master').upsert(chunk, { onConflict: 'sku' });
+        if (error) throw new Error(`${error.message} — ตรวจว่ารัน SQL เวอร์ชันล่าสุด (unique SKU) แล้วหรือยัง`);
+        saved += chunk.length;
+      }
+    } catch (e) {
+      failure = e instanceof Error ? e.message : String(e);
+    }
+    setMasterSaving(false);
+    if (failure) {
+      // upsert ทีละ 100 ไม่ใช่ transaction — พังกลางทางแล้วก้อนก่อนหน้าลงไปแล้วจริง ต้องบอกว่าค้างที่เท่าไหร่
+      // (กดยืนยันซ้ำได้ — upsert ซ้ำค่าเดิมไม่เสียหาย)
+      setMasterSaveError(`✕ บันทึกไม่สำเร็จ${saved ? ` (ลงไปแล้ว ${saved.toLocaleString()} จาก ${diff.rows.length.toLocaleString()} SKU)` : ''}: ${failure}`);
+      return;
+    }
+    setMasterSavedAt(new Date());
+    const summary = describeMasterDiff(diff);
+    setMasterMsg(`✓ อัปเดต Product Master แล้ว — ${summary}`);
+    // ไม่มีอะไรเปลี่ยนก็ไม่ต้องแจ้งสาขา (เดิมแจ้ง "นำเข้า/อัปเดต N รายการ" ทุกครั้งแม้ไฟล์เหมือนเดิมเป๊ะ)
+    if (diff.newRows.length || diff.changes.length) {
+      void notifyBranchUpdate(undefined, {
+        menuId: 'products', tableName: 'product_master', title: 'อัปเดต Product Master', detail: summary,
+      });
+    }
+    setAbcOptions(null);        // ไฟล์ใหม่อาจมีค่า ABC ที่ยังไม่เคยมี → โหลด chip ใหม่
+    setRefreshKey(k => k + 1);
+  };
+
+  const closeMasterPreview = () => {
+    if (masterSaving) return;   // ระหว่าง upsert ปิดไม่ได้ — ไม่งั้นไม่มีที่ให้เห็นว่าพังกลางทางหรือเปล่า
+    setMasterPreview(null);
+    setMasterSaveError('');
+    setMasterSavedAt(null);
   };
 
   const updateMasterForm = (patch: Partial<MasterForm>) => setMasterForm(f => ({ ...f, ...patch }));
@@ -2993,7 +3413,7 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
                       onChange={e => { const f = e.target.files?.[0]; if (f) handleMasterFile(f); }} />
                     <button className="ss-add-btn ss-add-btn--secondary" disabled={uploadingMaster}
                       onClick={() => masterFileRef.current?.click()}>
-                      {uploadingMaster ? 'กำลังนำเข้า...' : '📤 อัปโหลด Product Master'}
+                      {uploadingMaster ? 'กำลังตรวจไฟล์...' : '📤 อัปโหลด Product Master'}
                     </button>
                     {!isBranchUser && (
                       <button className="ss-add-btn" onClick={openAddMaster}>➕ New Product</button>
@@ -4363,6 +4783,18 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
             </div>
           </div>
         </div>
+      )}
+
+      {masterPreview && (
+        <MasterDiffModal
+          diff={masterPreview}
+          saving={masterSaving}
+          error={masterSaveError}
+          savedAt={masterSavedAt}
+          onConfirm={() => { void confirmMasterUpload(); }}
+          onClose={closeMasterPreview}
+          onDownload={() => downloadMasterDiff(masterPreview, { uploader: notificationRecipientLabel || '—', savedAt: masterSavedAt })}
+        />
       )}
 
       {/* Toast แจ้งผลกดตราประทับ — render ตลอดแม้ไม่มีใบ เพื่อให้ aria-live ประกาศได้จริง
