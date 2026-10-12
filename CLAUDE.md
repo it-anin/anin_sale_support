@@ -407,7 +407,7 @@ Each panel has a close (✕) button and includes product name in subheader.
 
 ศูนย์รวมงานซัพพอร์ตการขาย — sidebar 6 เมนู (Order / BackOrder / Request Item / New Product / Ticket / Products) + panel ขวา (toolbar + ตาราง) ขับเคลื่อนด้วย config `MENUS` แต่ละเมนูกำหนด table/columns/roles ของตัวเอง
 
-**พฤติกรรมแยกตามโปรไฟล์** (`isPurchasing` / `isWarehouse` / `userBranch` → ยุบเป็น `currentRole`): สาขา (รวม Sale Admin) เห็นเฉพาะ Order/BackOrder ของตัวเอง · คลังสินค้าเห็นทุกสาขาและ popup Order เป็นฟอร์มกรอกแทนตราประทับ 3 ขั้น · จัดซื้อดูแลเฉพาะ SKU ที่ ABC=P แต่**เห็นเมนู BackOrder แล้ว** (2569-08-19 — ทุกเมนูไม่มี `roles` เหลือแล้ว) โดยแก้แถวที่มีอยู่ไม่ได้ (ไม่มีปุ่มตรา/ฟอร์ม) **ยกเว้นคอลัมน์ "เลขที่ PO" ที่จัดซื้อกรอกได้คนเดียว** (2569-09-18 — ช่องพิมพ์ในตาราง แบบเดียวกับ `sku`/`moq` ของ Request Item)
+**พฤติกรรมแยกตามโปรไฟล์** (`isPurchasing` / `isWarehouse` / `userBranch` → ยุบเป็น `currentRole`): สาขา (รวม Sale Admin) เห็นเฉพาะ Order/BackOrder ของตัวเอง · **เมนู Products สาขา (รวม Sale Admin) เห็นทุนซื้อเฉพาะสินค้า ABC = P** (2569-10-12 — ตาราง/popup/ฟอร์มแก้ไข/ข้อความแจ้งเตือน ดู `canSeeMasterCost`) · คลังสินค้าเห็นทุกสาขาและ popup Order เป็นฟอร์มกรอกแทนตราประทับ 3 ขั้น · จัดซื้อดูแลเฉพาะ SKU ที่ ABC=P แต่**เห็นเมนู BackOrder แล้ว** (2569-08-19 — ทุกเมนูไม่มี `roles` เหลือแล้ว) โดยแก้แถวที่มีอยู่ไม่ได้ (ไม่มีปุ่มตรา/ฟอร์ม) **ยกเว้นคอลัมน์ "เลขที่ PO" ที่จัดซื้อกรอกได้คนเดียว** (2569-09-18 — ช่องพิมพ์ในตาราง แบบเดียวกับ `sku`/`moq` ของ Request Item)
 
 มีระบบแจ้งเตือนสองทิศทาง (แผนก↔สาขา) ผ่านตารางเหตุการณ์ `ss_branch_notification_events`, ระบบตราประทับ 3 ขั้นพร้อม toast/confirm dialog, และดีไซน์ตาราง Order แบบ Two-line Row
 

@@ -779,6 +779,14 @@ const DETAIL_FULL_KEYS = new Set(['issue', 'answer', 'note', 'name', 'name_brand
 // เดิมกล่องยืนยันบอกแค่ "พบสินค้า N รายการ" แล้ว upsert ทั้งไฟล์ — ไม่มีทางรู้ว่าทุนซื้อ/ABC ของ SKU ไหนเปลี่ยน
 // และไม่เห็นว่าช่องที่ไฟล์เว้นว่างจะ "ล้างค่าเดิมในระบบเป็นค่าว่าง" (upsert ส่งทุกคอลัมน์ที่ไฟล์มี ช่องว่าง = null)
 
+/** ทุนซื้อใน Product Master — สาขา (SRC/KKL/SSS/Sale Admin) เห็นเฉพาะสินค้า ABC = P (ผู้ใช้สั่ง 2569-10-12:
+ *  "ไม่ให้เห็นช่องทุนซื้อ สินค้าที่มี ABC = A/B/C/D/REVIEW")
+ *  ⚠️ จงใจเขียนเป็น allowlist "เห็นเฉพาะ P" ไม่ใช่ "ซ่อน A/B/C/D/REVIEW" — ABC ค่าใหม่ในอนาคตหรือช่องว่าง
+ *     จะถูกซ่อนไว้ก่อน (ข้อมูลทุนอ่อนไหว ปิดไว้ปลอดภัยกว่าเปิดหลุด) · ข้อมูลปัจจุบันมีแค่ A/B/C/D/P/REVIEW จึงได้ผลเท่ากัน
+ *  ⚠️ เป็นการซ่อนที่หน้าจอเท่านั้น เหมือน gate อื่นในแอป — ทุกโปรไฟล์ใช้ anon key ตัวเดียวกัน ข้อมูลยังมากับ select('*') */
+const masterAbcShowsCost = (abc: unknown) => String(abc ?? '').trim().toUpperCase() === 'P';
+const MASTER_COST_HIDDEN_TITLE = 'ทุนซื้อแสดงให้สาขาเห็นเฉพาะสินค้า ABC = P';
+
 /** ชื่อช่องที่ผู้ใช้เห็น — อ่านจาก PRODUCT_DETAIL_FIELDS (popup Products) ที่เดียว ไม่มี map ซ้ำ */
 const MASTER_COL_LABELS: Record<string, string> = Object.fromEntries(PRODUCT_DETAIL_FIELDS.map(f => [f.key, f.label]));
 const masterColLabel = (col: string) => MASTER_COL_LABELS[col] ?? col;
@@ -1738,6 +1746,18 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
   // render เป็นข้อความอ่านอย่างเดียวเหมือนคอลัมน์อื่นทั่วไป) ส่วนฟอร์ม ➕ Add / ✏️ แก้ไข ยังกันด้วย
   // `isPurchasing` ตรงๆ ที่จุดของมันเองอยู่แล้ว ไม่เกี่ยวกับตัวแปรนี้
   const visibleColumns = menu.columns;
+
+  /** ทุนซื้อของแถว Product Master นี้แสดงให้ผู้ใช้คนนี้เห็นได้ไหม — สาขา (isBranchUser = SRC/KKL/SSS/Sale Admin)
+   *  เห็นเฉพาะ ABC = P · คลัง/จัดซื้อเห็นทุกแถว (ดู masterAbcShowsCost) */
+  const canSeeMasterCost = (row: Record<string, unknown>) => !isBranchUser || masterAbcShowsCost(row.abc);
+
+  /** ข้อความแจ้งเตือนตอนคลัง/จัดซื้อแก้ Product Master ✏️ ไปถึงสาขาทุกสาขา (notifyBranchUpdate fan-out)
+   *  — ตัดทุนซื้อออกถ้าสินค้า (หลังแก้) ไม่ใช่ ABC = P ไม่งั้น "ทุนซื้อ: 100 → 120" หลุดไปโผล่ใน drawer 🔔 ของสาขา
+   *  แก้แค่ทุนอย่างเดียว → ข้อความว่าง → applyEditPatch ไม่ส่งแจ้งเตือนเลย (เงื่อนไข meta.detail !== '') */
+  const masterPatchForBranchNotice = (row: Record<string, unknown>, patch: Record<string, unknown>) =>
+    masterAbcShowsCost(patch.abc ?? row.abc)
+      ? patch
+      : Object.fromEntries(Object.entries(patch).filter(([key]) => key !== 'cost'));
 
   /** ลากปรับความกว้างคอลัมน์ไหนก็ได้ — เดิมมีเฉพาะคอลัมน์ SKU (2569-08-20)
    *  ⚠️ ความกว้างเริ่มต้นอ่านจาก `getBoundingClientRect()` ของ `th` จริง ไม่ใช่จาก state
@@ -3767,6 +3787,14 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
                         if (col.key === 'image_url' && text) {
                           return <td key={col.key} className={`ss-col-${col.key}`} style={columnStyle(col)}><a className="ss-img-link" href={text} target="_blank" rel="noreferrer">🖼️ ดูรูป</a></td>;
                         }
+                        // ทุนซื้อ: สาขาเห็นเฉพาะ ABC = P — แถวอื่นโชว์ 🔒 จาง ๆ (ไม่ใช่ช่องว่าง ซึ่งจะอ่านเป็น "ไม่มีข้อมูล")
+                        if (activeMenu === 'products' && col.key === 'cost' && !canSeeMasterCost(row)) {
+                          return (
+                            <td key={col.key} className={`ss-col-${col.key}`} style={columnStyle(col)}>
+                              <span className="ss-cost-hidden" title={MASTER_COST_HIDDEN_TITLE}>🔒</span>
+                            </td>
+                          );
+                        }
                         const main = (
                           <>
                             {text}
@@ -4270,11 +4298,15 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
             </div>
             {editing ? (
               <DetailEditForm table={detailView.table} row={detailView.row}
+                // สาขาแก้ Product Master ได้ (ปุ่ม ✏️ ไม่มี role gate) แต่ต้องไม่เห็นทุนของสินค้าที่ไม่ใช่ P
+                // ช่องที่ซ่อนไม่อยู่ใน patch ตอนบันทึก → ทุนเดิมใน DB ไม่ถูกแตะ
+                hideKeys={detailView.table === 'product_master' && !canSeeMasterCost(detailView.row) ? ['cost'] : undefined}
                 onSaved={patch => applyEditPatch(String(detailView.row.id), patch, detailView.row.branch, {
                   menuId: activeMenu, tableName: detailView.table,
                   recordId: activeMenu === 'products' ? detailView.row.sku : detailView.row.id,
                   title: `แก้ไข ${menu.label}`,
-                  detail: describeChangedFields(detailView.table, detailView.row, patch),
+                  detail: describeChangedFields(detailView.table, detailView.row,
+                    detailView.table === 'product_master' ? masterPatchForBranchNotice(detailView.row, patch) : patch),
                 })}
                 onCancel={() => setEditing(false)} />
             ) : (
@@ -4286,7 +4318,9 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
                       <div key={f.key} className={`ss-detail-item${DETAIL_FULL_KEYS.has(f.key) ? ' ss-detail-item--full' : ''}`}>
                         <span className="ss-detail-label">{f.label}</span>
                         <span className="ss-detail-value">
-                          {f.key === 'image_url' && text ? (
+                          {detailView.table === 'product_master' && f.key === 'cost' && !canSeeMasterCost(detailView.row) ? (
+                            <span className="ss-cost-hidden-note">🔒 แสดงเฉพาะสินค้า ABC = P</span>
+                          ) : f.key === 'image_url' && text ? (
                             <a href={text} target="_blank" rel="noreferrer">
                               <img className="ss-detail-img" src={text} alt="รูปสินค้า" />
                             </a>
