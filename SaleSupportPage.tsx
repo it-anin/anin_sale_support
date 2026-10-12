@@ -2625,9 +2625,12 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
     setMasterSavedAt(new Date());
     const summary = describeMasterDiff(diff);
     setMasterMsg(`✓ อัปเดต Product Master แล้ว — ${summary}`);
-    // ไม่มีอะไรเปลี่ยนก็ไม่ต้องแจ้งสาขา (เดิมแจ้ง "นำเข้า/อัปเดต N รายการ" ทุกครั้งแม้ไฟล์เหมือนเดิมเป๊ะ)
+    // แจ้งเฉพาะ Sale Admin — ผู้ใช้สั่ง 2569-10-12 "การอัปโหลด Product Master ไม่ต้องแจ้งเตือนไปที่สาขา SRC/KKL/SSS"
+    // ⚠️ ต้องส่ง 'SALE_ADMIN' ตรง ๆ ห้ามกลับไปส่ง undefined — undefined = fan-out ทั้ง NOTIFIED_BRANCHES (รวม SRC/KKL/SSS)
+    // ⚠️ เฉพาะการอัปโหลดไฟล์ — ➕ เพิ่มสินค้า / ✏️ แก้ไขทีละตัว / อัปโหลด Supplier ยังแจ้งทุกสาขาเหมือนเดิม (ไม่ได้ขอ)
+    // ไม่มีอะไรเปลี่ยนก็ไม่ต้องแจ้ง (เดิมแจ้ง "นำเข้า/อัปเดต N รายการ" ทุกครั้งแม้ไฟล์เหมือนเดิมเป๊ะ)
     if (diff.newRows.length || diff.changes.length) {
-      void notifyBranchUpdate(undefined, {
+      void notifyBranchUpdate('SALE_ADMIN', {
         menuId: 'products', tableName: 'product_master', title: 'อัปเดต Product Master', detail: summary,
       });
     }
