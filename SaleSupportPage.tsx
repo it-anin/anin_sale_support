@@ -2676,6 +2676,8 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
   // ยังไม่เขียนอะไรลง DB จนกว่าจะกดยืนยันใน modal (confirmMasterUpload)
   // merge ตาม SKU: SKU ที่ไม่อยู่ในไฟล์ไม่ถูกลบ · ⚠️ แต่ช่องที่ไฟล์เว้นว่างจะล้างค่าเดิมเป็นค่าว่าง (ส่ง null ไปทั้งคอลัมน์)
   const handleMasterFile = async (file: File) => {
+    // กันชนชั้นที่สอง — ปุ่มซ่อนจากโปรไฟล์อื่นอยู่แล้ว (เฉพาะจัดซื้อ ผู้ใช้สั่ง 2569-10-12)
+    if (!isPurchasing) return;
     setUploadingMaster(true);
     setMasterMsg('');
     try {
@@ -2744,7 +2746,7 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
   // กด "ยืนยันอัปโหลด" ใน modal สรุป — upsert ทั้งไฟล์ทีละ 100 (เหมือนเดิม) แล้วค้าง modal ไว้ในสถานะ "อัปเดตแล้ว"
   const confirmMasterUpload = async () => {
     const diff = masterPreview;
-    if (!diff || masterSaving || masterSavedAt) return;
+    if (!diff || masterSaving || masterSavedAt || !isPurchasing) return;
     setMasterSaving(true);
     setMasterSaveError('');
     let saved = 0;
@@ -3578,14 +3580,21 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
                     )}
                   </div>
                   <div className="ss-toolbar-btns">
-                    <input ref={masterFileRef} type="file" accept=".xlsx,.xls" style={{ display: 'none' }}
-                      onChange={e => { const f = e.target.files?.[0]; if (f) handleMasterFile(f); }} />
-                    {/* undefined = ยังโหลดไม่เสร็จ/ยังไม่มีตาราง → ไม่ render (ไม่โชว์ "ยังไม่เคยอัปโหลด" หลอก ๆ ระหว่างโหลด) */}
+                    {/* undefined = ยังโหลดไม่เสร็จ/ยังไม่มีตาราง → ไม่ render (ไม่โชว์ "ยังไม่เคยอัปโหลด" หลอก ๆ ระหว่างโหลด)
+                        ปฏิทินโชว์ให้ทุกโปรไฟล์ — สาขาก็ต้องรู้ว่าข้อมูลสดแค่ไหน แม้กดอัปโหลดเองไม่ได้ */}
                     {lastMasterUpload !== undefined && <MasterUploadTile log={lastMasterUpload} now={clockNow} />}
-                    <button className="ss-add-btn ss-add-btn--secondary" disabled={uploadingMaster}
-                      onClick={() => masterFileRef.current?.click()}>
-                      {uploadingMaster ? 'กำลังตรวจไฟล์...' : '📤 อัปโหลด Product Master'}
-                    </button>
+                    {/* อัปโหลด Product Master เฉพาะจัดซื้อ (ผู้ใช้สั่ง 2569-10-12 "ป้องกันอัปซ้ำ ให้เฉพาะรหัสจัดซื้ออย่างเดียว")
+                        — gate เดียวกับปุ่มอัปโหลด Supplier ใน sidebar · ซ่อนทั้ง input ไม่ใช่แค่ปุ่ม */}
+                    {isPurchasing && (
+                      <>
+                        <input ref={masterFileRef} type="file" accept=".xlsx,.xls" style={{ display: 'none' }}
+                          onChange={e => { const f = e.target.files?.[0]; if (f) handleMasterFile(f); }} />
+                        <button className="ss-add-btn ss-add-btn--secondary" disabled={uploadingMaster}
+                          onClick={() => masterFileRef.current?.click()}>
+                          {uploadingMaster ? 'กำลังตรวจไฟล์...' : '📤 อัปโหลด Product Master'}
+                        </button>
+                      </>
+                    )}
                     {!isBranchUser && (
                       <button className="ss-add-btn" onClick={openAddMaster}>➕ New Product</button>
                     )}
