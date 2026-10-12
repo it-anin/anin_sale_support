@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from 'react';
 import * as XLSX from 'xlsx';
 import { supabaseLabel, supabaseLabelError, supabaseLabelWrite, TBL_SETTINGS, TBL_MEDICINES, TBL_TRANSLATIONS } from './supabase';
 import { LANGS, type Lang, type Medicine, type ShopSettings } from './types';
 import { Label } from './Label';
+import { fitLabelBodySize, LABEL_BODY_MAX_PT } from './fit';
 import { DLResultList } from './ResultList';
 import { translateMedicineLabel, getTargetLangs } from './translate';
 import { AnimatedLogoText } from '../AnimatedLogo';
@@ -166,10 +167,37 @@ export function DrugLabelPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onG
   const overlayDownRef  = useRef(false);
   const importFileRef   = useRef<HTMLInputElement>(null);
 
+  // ขนาดตัวอักษรเนื้อหาที่พอดีฉลาก (ดู fit.ts) — วัดบน Label ตัว Preview แล้วส่งค่าเดียวกันให้ตัวพิมพ์
+  // ⚠️ วัดบนตัวพิมพ์ไม่ได้: ตัวนั้น display:none (scrollHeight = 0 → "พอดี" หลอกทุกฉลาก)
+  const previewLabelRef = useRef<HTMLDivElement>(null);
+  const [bodyFit, setBodyFit] = useState({ size: LABEL_BODY_MAX_PT, fits: true });
+  // ฟอนต์เว็บ (Sarabun) โหลดเสร็จทีหลังได้ — วัดตอนยังเป็นฟอนต์สำรองจะได้ขนาดผิด จึงวัดซ้ำทุกครั้งที่มีฟอนต์โหลดเสร็จ
+  // ⚠️ ใช้ event loadingdone ไม่ใช่แค่ fonts.ready ตอน mount — ตอน mount ฉลากยังไม่ render ฟอนต์ยังไม่ถูกขอ
+  //    ready จะ resolve ทันทีก่อน Sarabun เริ่มโหลดด้วยซ้ำ
+  const [fontsTick, setFontsTick] = useState(0);
+  useEffect(() => {
+    const fonts = document.fonts;
+    if (!fonts) return;
+    const bump = () => setFontsTick(t => t + 1);
+    fonts.addEventListener('loadingdone', bump);
+    return () => fonts.removeEventListener('loadingdone', bump);
+  }, []);
+
   const branch = BRANCH_PROFILES.find((b) => b.id === selectedBranch) ?? BRANCH_PROFILES[0];
   const activeSettings = settings
     ? { ...settings, shop_name_th: branch.shop_name_th, shop_name_en: branch.shop_name_en, phone: branch.phone }
     : null;
+
+  // วัดขนาดที่พอดีใหม่ทุกครั้งที่สิ่งที่อยู่บนฉลากเปลี่ยน (ยา/สาขา/ภาษา/ชื่อลูกค้า) หรือฟอนต์เพิ่งโหลดเสร็จ
+  // useLayoutEffect = วัดและแก้ก่อนจอวาด ไม่เห็นฉลากกระพริบจากขนาดเต็มลงไปขนาดที่พอดี
+  // 🚨 deps ห้ามใส่ activeSettings — object ใหม่ทุก render → effect รันทุก render → setBodyFit → render ใหม่ → วนไม่จบ
+  //    ใช้ settings + selectedBranch (state ตัวจริงที่ activeSettings สร้างจาก) แทน
+  useLayoutEffect(() => {
+    const el = previewLabelRef.current;
+    if (!el) return;
+    const next = fitLabelBodySize(el);
+    setBodyFit(prev => (prev.size === next.size && prev.fits === next.fits ? prev : next));
+  }, [selected, settings, selectedBranch, lang, patientName, fontsTick]);
 
   useEffect(() => {
     if (!supabaseLabel) { setError(supabaseLabelError ?? 'Supabase not configured.'); return; }
@@ -712,8 +740,14 @@ export function DrugLabelPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onG
     </head><body><div class="dl-label-print-root">${labelMarkup}</div></body></html>`);
     win.document.close(); win.focus();
     const runPrint = () => { win.print(); win.close(); };
-    if (win.document.readyState === 'complete') setTimeout(runPrint, 150);
-    else win.addEventListener('load', () => setTimeout(runPrint, 150), { once: true });
+    // รอฟอนต์เว็บ (Sarabun) ในหน้าต่างพิมพ์โหลดเสร็จก่อน — ไม่งั้นพิมพ์ออกเป็นฟอนต์สำรองที่กว้างไม่เท่ากัน
+    // แล้วขนาดที่ fit ไว้จากตัว Preview จะไม่พอดีอีก (ไฟล์ฟอนต์ cache จากหน้าหลักแล้ว ปกติรอแทบไม่ได้เลย)
+    const printWhenReady = () => {
+      const fontsReady = win.document.fonts ? win.document.fonts.ready : Promise.resolve();
+      void fontsReady.then(() => setTimeout(runPrint, 150));
+    };
+    if (win.document.readyState === 'complete') printWhenReady();
+    else win.addEventListener('load', printWhenReady, { once: true });
   }
 
   function setTrField(lang: Lang, field: keyof TrForm, value: string) {
@@ -803,8 +837,17 @@ export function DrugLabelPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onG
           {selected && activeSettings ? (
             <>
               <div className="dl-preview-frame">
-                <Label medicine={selected} settings={activeSettings} lang={lang} patientName={patientName || undefined} preview />
+                <Label ref={previewLabelRef} medicine={selected} settings={activeSettings} lang={lang}
+                  patientName={patientName || undefined} preview bodySize={bodyFit.size} />
               </div>
+              {/* บอกเมื่อระบบลดขนาดให้ — พนักงานจะไม่งงว่าทำไมบางฉลากตัวเล็กกว่าฉลากอื่น */}
+              {!bodyFit.fits ? (
+                <div className="dl-fit-note dl-fit-note--warn">
+                  ⚠️ ข้อความยาวเกินฉลาก — ลดเหลือ {bodyFit.size}pt แล้วยังไม่พอ ส่วนท้ายจะถูกตัดตอนพิมพ์
+                </div>
+              ) : bodyFit.size < LABEL_BODY_MAX_PT && (
+                <div className="dl-fit-note">ลดขนาดตัวอักษรเนื้อหาเหลือ {bodyFit.size}pt ให้พอดีฉลาก</div>
+              )}
               <div className="dl-print-actions">
                 <button className="dl-btn-print" onClick={handlePrint} type="button">🖨️ พิมพ์ฉลากยา</button>
                 <button className="dl-btn-edit" onClick={handleOpenEditModal} type="button">✏️ แก้ไขข้อมูล</button>
@@ -822,7 +865,9 @@ export function DrugLabelPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onG
       {/* Hidden print root */}
       {selected && activeSettings && (
         <div ref={printRootRef} className="dl-label-print-root">
-          <Label medicine={selected} settings={activeSettings} lang={lang} patientName={patientName || undefined} />
+          {/* bodySize ต้องเป็นค่าเดียวกับตัว Preview เสมอ — ตัวนี้ display:none วัดเองไม่ได้ */}
+          <Label medicine={selected} settings={activeSettings} lang={lang} patientName={patientName || undefined}
+            bodySize={bodyFit.size} />
         </div>
       )}
       </div>

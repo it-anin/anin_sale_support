@@ -1,4 +1,4 @@
-import { forwardRef } from 'react';
+import { forwardRef, type CSSProperties } from 'react';
 import type { Lang, Medicine, ShopSettings } from './types';
 import { formatBeDate } from './format';
 
@@ -23,14 +23,18 @@ interface Props {
   patientName?: string;
   date?: Date;
   preview?: boolean;
+  /** ขนาดตัวอักษรเนื้อหา (pt) ที่ fitLabelBodySize คำนวณจากตัว Preview — ส่งค่าเดียวกันให้ทั้ง Preview และตัวพิมพ์
+   *  เป็น CSS var บน element (`--dl-body-size`) ตัวพิมพ์จึงพาค่าไปด้วยตอน handlePrint ก๊อป innerHTML */
+  bodySize?: number;
 }
 
 export const Label = forwardRef<HTMLDivElement, Props>(
-  ({ medicine, settings, lang = 'th', patientName, date, preview }, ref) => {
+  ({ medicine, settings, lang = 'th', patientName, date, preview, bodySize }, ref) => {
     const dateStr = formatBeDate(date ?? new Date());
     const lbl = FIELD_LABELS[lang];
+    const style = bodySize ? ({ '--dl-body-size': `${bodySize}pt` } as CSSProperties) : undefined;
     return (
-      <div ref={ref} className={`dl-label${preview ? ' dl-label-preview' : ''}`} aria-label="medicine label">
+      <div ref={ref} className={`dl-label${preview ? ' dl-label-preview' : ''}`} style={style} aria-label="medicine label">
         <div className="dl-label-header">
           <div className="dl-label-shop">
             <img className="dl-label-logo-image" src={ANIN_LOGO} alt="ANIN logo" />

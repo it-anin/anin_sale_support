@@ -53,6 +53,7 @@ Six-page React app sharing the same `App.css` and Supabase project.
 - `druglabel/types.ts` — `Lang`, `LANGS`, `Medicine`, `ShopSettings` types
 - `druglabel/translate.ts` — calls Edge Function `translate-medicine` via Groq API
 - `druglabel/format.ts` — `formatBeDate()` Thai Buddhist Era date formatter
+- `druglabel/fit.ts` — `fitLabelBodySize()` ลดขนาดเนื้อหาฉลาก (เริ่ม 9.5pt ตัวหนา) ให้พอดี 65 มม. — วัดบน Preview แล้วส่งค่าให้ตัวพิมพ์ ดูรายละเอียดใน `druglabel/CLAUDE.md`
 
 > รายละเอียด schema/languages/branches/print/delete/auto-translate/rate-limit เต็มอยู่ใน [`druglabel/CLAUDE.md`](druglabel/CLAUDE.md) (โหลดอัตโนมัติเมื่อทำงานในโฟลเดอร์นี้)
 

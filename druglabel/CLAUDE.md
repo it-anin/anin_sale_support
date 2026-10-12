@@ -88,6 +88,23 @@ ORDER BY 1, 2;
 - `handlePrint()` เปิด `window.open('', '_blank', 'width=800,height=600,left=-1000,top=-1000')` — popup นอกจอเพื่อไม่ให้กระพริบ
 - Label size: `@page { size: 95mm 65mm; margin: 0; }`
 - ดึง `<style>` และ `<link rel="stylesheet">` จาก parent head มาใส่ใน popup (รวม App.css)
+- รอ `win.document.fonts.ready` ก่อน `print()` (2569-10-12) — ฟอนต์ Sarabun เป็นฟอนต์เว็บแล้ว พิมพ์ก่อนโหลดเสร็จจะออกเป็นฟอนต์สำรองที่กว้างไม่เท่ากัน
+
+## Drug Label — ขนาดตัวอักษร + ปรับขนาดอัตโนมัติ (2569-10-12)
+
+ผู้ใช้ขอให้ตัวอักษรที่พิมพ์ใหญ่ขึ้น: ชื่อร้านไทย/อังกฤษ 8pt · เบอร์โทร/LINE 8pt · **เนื้อหา 9.5pt ตัวหนา** · ชื่อลูกค้า 9pt ตัวหนา (เดิม 7 / 7 / 7.5 / 8 ปกติ / 8.5) · วันที่คง 7.5pt
+
+- 🚨 **เนื้อหาตายตัวที่ 9.5pt ไม่ได้** — ฉลากสูง 65 มม. และหน้าต่างพิมพ์ `overflow: hidden` ตัดส่วนที่ล้นทิ้ง วัดกับยาจริง 332 รายการ (ภาษาไทย): 9.5pt ตัวหนาตายตัว**ล้น 265** (มีชื่อลูกค้า 320) จากเดิม 5 (70) · แม้ 8.5pt ปกติยังล้น 90 — ผู้ใช้เลือกแบบ "ขนาดตามที่ขอ + บีบระยะห่าง + ลดอัตโนมัติ"
+- **บีบระยะห่างแนวตั้ง** (App.css): padding บน/ล่าง 3 → 2 มม. (ซ้าย/ขวาคงเดิม — อาจเผื่อการวางกระดาษในเครื่องพิมพ์) · เส้นคั่น `margin` 1.2 → 0.6 มม. · หัวฉลาก `margin-bottom` 1.5 → 0.8 มม. · `line-height` 1.35 → 1.25 (เช็คกับข้อความไทยจริงแล้ว สระ/วรรณยุกต์ไม่ชนกัน) · `.dl-label-warn` padding 1 → 0.5 มม.
+- **ลดขนาดอัตโนมัติ** — `druglabel/fit.ts` `fitLabelBodySize(el)`: ตั้ง `--dl-body-size` บน `.dl-label` เริ่ม 9.5pt ลดทีละ 0.5pt จน `scrollHeight` ไม่เกิน `clientHeight` (ต่ำสุด 6.5pt) · `.dl-label-section { font-size: var(--dl-body-size, 9.5pt) }`
+  - **วัดบนตัว Preview เท่านั้น** แล้วส่งขนาดเดียวกันให้ทั้ง 2 ตัวทาง prop `bodySize` (`Label` เขียนเป็น inline CSS var) — 🚨 ตัวพิมพ์ (`.dl-label-print-root`) เป็น `display:none` วัดไม่ได้ (`scrollHeight` = 0 → "พอดี" หลอกทุกฉลาก) · `handlePrint` ก๊อป innerHTML ของตัวพิมพ์ inline var จึงติดไปหน้าต่างพิมพ์เอง
+  - `transform: scale(1.25)` ของ Preview ไม่กระทบการวัด (scrollHeight/clientHeight เป็นค่า layout)
+  - `useLayoutEffect` (ไม่กระพริบ) deps = `selected, settings, selectedBranch, lang, patientName, fontsTick` — 🚨 **ห้ามใส่ `activeSettings`** สร้าง object ใหม่ทุก render → effect รันทุก render → `setBodyFit` → วนไม่จบ · `setBodyFit` คืน `prev` เมื่อค่าเท่าเดิม
+  - วัดซ้ำทุกครั้งที่ `document.fonts` ยิง `loadingdone` — ⚠️ ใช้ `fonts.ready` ตอน mount ไม่ได้ (ตอนนั้นฉลากยังไม่ render ฟอนต์ยังไม่ถูกขอ ready resolve ทันที)
+  - ข้อความใต้ Preview: ลดแล้ว → "ลดขนาดตัวอักษรเนื้อหาเหลือ Xpt ให้พอดีฉลาก" · 6.5pt แล้วยังล้น → ⚠️ สีแดง "ส่วนท้ายจะถูกตัดตอนพิมพ์" (`.dl-fit-note`)
+- **ผลวัดด้วยโค้ดจริง** (หัวฉลากยาวสุด = สวนเสือศรีราชา · ภาษาไทย 333 รายการ): ไม่มีชื่อลูกค้า 9.5pt 310 · 9pt 7 · 8.5pt 14 · เล็กกว่านั้น 2 · **ถูกตัด 0** (เดิม 5) · มีชื่อลูกค้า 9.5pt 274 · **ถูกตัด 2** (เดิม 70 — Mega Naprofazt / Mega Gogaz ข้อความยาวมาก หน้าเว็บเตือนแดง) · ภาษาอื่นดีขึ้นทั้งหมด (เช่น พม่า เดิม 54/197 → 2/3)
+- 🚨 **ฟอนต์ Preview กับกระดาษเคยไม่ตรงกัน (แก้แล้ว)** — `.dl-page * { font-family: Noto Sans Thai }` (สำหรับ UI ของหน้า) กดลูกทุกตัวของฉลากใน Preview เป็น Noto Sans Thai ทั้งที่ `.dl-label` ตั้ง Sarabun · หน้าต่างพิมพ์ไม่มี `.dl-page` จึงพิมพ์ Sarabun (เฉพาะเครื่องที่ติดตั้งฟอนต์นี้ — เดิม Sarabun ไม่ได้โหลดจากเว็บเลย) → เพิ่ม `.dl-page .dl-label, .dl-page .dl-label * { font-family: Sarabun… }` (specificity สูงกว่า) + โหลด Sarabun จาก Google Fonts ใน `index.html` — ทุกเครื่องและทั้ง Preview/กระดาษเป็น Sarabun เหมือนกัน (ยืนยันด้วย CDP `CSS.getPlatformFontsForNode` ทั้ง 2 ฝั่ง)
+- ทดสอบ: Playwright บนหน้า Label จริง 11/11 (ขนาด 9.5pt/8pt/9pt · ฉลากยาวลด + ข้อความแจ้ง · เปลี่ยนสาขาแล้ววัดใหม่ · เตือนแดง · ตัวพิมพ์ค่าเดียวกับ Preview) + จำลองหน้าต่างพิมพ์ด้วย HTML เดียวกับ `handlePrint` → ฟอนต์ Sarabun และไม่ล้น
 
 ## Drug Label — Delete SKU
 

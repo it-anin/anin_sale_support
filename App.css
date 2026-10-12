@@ -2518,6 +2518,15 @@ body.pulse-b .cart-inline-btn.in-cart {
 .dl-hero-header .logo-premium * {
   font-family: 'Lilita One', cursive;
 }
+/* ฉลากใน Preview ต้องใช้ฟอนต์เดียวกับตอนพิมพ์ (2569-10-12)
+   🚨 กฎ `.dl-page *` ด้านบนเคยกดลูกทุกตัวของฉลากเป็น Noto Sans Thai ทั้งที่ .dl-label ตั้ง Sarabun —
+      หน้าต่างพิมพ์ไม่มี .dl-page จึงพิมพ์เป็น Sarabun (เครื่องที่มีฟอนต์นี้) → Preview กับกระดาษคนละฟอนต์
+      และขนาดเนื้อหาที่ fitLabelBodySize วัดจาก Preview จะไม่ตรงกับกระดาษ (ตัดบรรทัดคนละที่)
+   ⚠️ ห้ามลบ — ต้อง specificity สูงกว่า `.dl-page *` (0,1,0) */
+.dl-page .dl-label,
+.dl-page .dl-label * {
+  font-family: 'Sarabun', 'Noto Sans Thai', sans-serif;
+}
 
 .dl-page {
   padding: 1.5rem 2rem;
@@ -2749,6 +2758,9 @@ body.pulse-b .cart-inline-btn.in-cart {
 }
 
 .dl-print-actions { margin-top: 0.75rem; display: flex; gap: 0.5rem; }
+/* บอกใต้ Preview เมื่อระบบลดขนาดตัวอักษรเนื้อหาให้พอดีฉลาก (druglabel/fit.ts) */
+.dl-fit-note { margin-top: 0.5rem; font-size: 12px; color: #6b7c8f; font-family: 'Noto Sans Thai', sans-serif; }
+.dl-fit-note--warn { color: #b04a3a; font-weight: 600; }
 
 .dl-btn-print {
   flex: 1;
@@ -2826,8 +2838,11 @@ body.pulse-b .cart-inline-btn.in-cart {
   height: 65mm;
   background: #fff;
   color: #000;
+  /* Sarabun โหลดจาก Google Fonts ใน index.html แล้ว (2569-10-12) — เดิมไม่ได้โหลด เครื่องที่ไม่ได้ติดตั้งฟอนต์นี้
+     จะได้ Noto Sans Thai ซึ่งกว้างไม่เท่ากัน ฉลากเดียวกันตัดบรรทัดต่างกันแล้วแต่เครื่อง */
   font-family: 'Sarabun', 'Noto Sans Thai', sans-serif;
-  padding: 3mm 3.5mm 3mm 5mm;
+  /* บน/ล่าง 3 → 2 มม. ให้เนื้อหาตัวใหญ่ขึ้นได้ (ซ้าย/ขวาคงเดิม — อาจเผื่อการวางกระดาษในเครื่องพิมพ์) */
+  padding: 2mm 3.5mm 2mm 5mm;
   box-sizing: border-box;
   font-size: 8pt;
   line-height: 1.35;
@@ -2837,19 +2852,24 @@ body.pulse-b .cart-inline-btn.in-cart {
   position: relative;
 }
 
-.dl-label-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 4mm; margin-bottom: 1.5mm; }
+/* ── ขนาดตัวอักษรฉลากยา (ผู้ใช้สั่ง 2569-10-12) — หัวฉลาก 8pt · เนื้อหา 9.5pt ตัวหนา · ชื่อลูกค้า 9pt ตัวหนา ──
+   🚨 เนื้อหาไม่ได้ตายตัวที่ 9.5pt: ใช้ var(--dl-body-size) ที่ fitLabelBodySize (druglabel/fit.ts) ลดให้ทีละ 0.5pt
+      เมื่อฉลากล้น 65 มม. — ถ้าเปลี่ยนเป็นค่าตายตัว ฉลาก ~80% (วัดกับยาจริง) จะถูกตัดบรรทัดท้ายตอนพิมพ์
+   ⚠️ ระยะห่างแนวตั้งถูกบีบพร้อมกัน (padding / เส้นคั่น / ระยะบรรทัด) — คืนค่าเดิมเมื่อไหร่ ฉลากจะถูกลดขนาดมากขึ้นทันที */
+.dl-label-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 4mm; margin-bottom: 0.8mm; }
 .dl-label-shop { display: flex; align-items: center; gap: 2mm; flex: 1; }
 .dl-label-logo-image { width: 17mm; height: auto; max-height: 9mm; object-fit: contain; object-position: left center; flex-shrink: 0; display: block; }
-.dl-label-shop-name-th { font-size: 7pt; font-weight: 700; line-height: 1.1; }
-.dl-label-shop-name-en { font-size: 7pt; font-weight: 600; line-height: 1.1; letter-spacing: 0.3px; }
-.dl-label-contact { text-align: right; font-size: 7.5pt; line-height: 1.3; }
+.dl-label-shop-name-th { font-size: 8pt; font-weight: 700; line-height: 1.1; }
+.dl-label-shop-name-en { font-size: 8pt; font-weight: 600; line-height: 1.1; letter-spacing: 0.3px; }
+.dl-label-contact { text-align: right; font-size: 8pt; line-height: 1.3; }
 .dl-label-contact-info { display: flex; gap: 2.5mm; justify-content: flex-end; align-items: center; }
 .dl-label-contact-row { display: flex; align-items: center; gap: 1.2mm; }
 .dl-label-contact-icon { width: 4.5mm; height: 4.5mm; object-fit: contain; flex-shrink: 0; display: block; }
 .dl-label-date { font-size: 7.5pt; font-weight: 500; margin-top: 0.5mm; }
-.dl-label-divider { border-top: 0.5px solid #000; margin: 1.2mm 0; }
-.dl-label-section { margin: 0.1mm 0; font-size: 8pt; line-height: 1.35; }
-.dl-label-patient { margin: 0.1mm 0; font-size: 8.5pt; font-weight: 700; line-height: 1.35; }
+.dl-label-divider { border-top: 0.5px solid #000; margin: 0.6mm 0; }
+/* line-height 1.25 (เดิม 1.35) — ทดสอบกับข้อความไทยจริงแล้ว สระบน/ล่างกับวรรณยุกต์ของบรรทัดติดกันไม่ชนกัน */
+.dl-label-section { margin: 0.1mm 0; font-size: var(--dl-body-size, 9.5pt); font-weight: 700; line-height: 1.25; }
+.dl-label-patient { margin: 0.1mm 0; font-size: 9pt; font-weight: 700; line-height: 1.25; }
 
 .dl-upload-row { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; flex-wrap: wrap; }
 .dl-upload-btn { padding: 6px 14px; border-radius: 8px; border: 1.5px solid #f7f6f4; background: linear-gradient(122deg, #ffffff, #cfedff); color: #2d2a26; font-size: 13px; font-family: 'Noto Sans Thai','Noto Sans',sans-serif; font-weight: 600; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
@@ -2900,7 +2920,7 @@ body.pulse-b .cart-inline-btn.in-cart {
 .dl-patient-input { flex: 1; border: 1px solid #4891db; border-radius: 6px; padding: 5px 10px; font-size: 13px; font-family: 'Noto Sans Thai', 'Noto Sans', sans-serif; background: #fff; outline: none; }
 .dl-patient-input:focus { border-color: #2d6cad; box-shadow: 0 0 0 2px rgba(72,145,219,0.2); }
 .dl-patient-input::placeholder { color: #bbb; }
-.dl-label-warn { margin-top: auto; padding-top: 1mm; }
+.dl-label-warn { margin-top: auto; padding-top: 0.5mm; }
 
 .dl-label.dl-label-preview {
   box-shadow: 0 4px 14px rgba(0,0,0,0.12);
