@@ -4791,8 +4791,8 @@ body.ss-col-resizing { cursor: col-resize; user-select: none; }
 .ss-wh-actions .ss-add-btn:disabled { opacity: 0.45; cursor: default; }
 .ss-wh-msg { font-size: 12.5px; font-weight: 600; color: #3f8a4d; }
 .ss-wh-msg--error { color: #b04a3a; }
-/* ข้อความแทนฟอร์มคลัง เมื่อใบ BackOrder ถูกสาขายกเลิกแล้ว
-   ⚠️ ตัดทั้งฟอร์มทิ้งไปเลย ไม่ใช่แค่ disable ช่องกรอก — ปุ่มบันทึกอ่าน whDirty ที่ยังคำนวณอยู่ */
+/* ข้อความแทนฟอร์มคลัง (Order/BackOrder) และฟอร์มจัดซื้อ (Order) เมื่อใบถูกสาขายกเลิกแล้ว
+   ⚠️ ตัดทั้งฟอร์มทิ้งไปเลย ไม่ใช่แค่ disable ช่องกรอก — ปุ่มบันทึกอ่าน whDirty/purchasingOrderDirty ที่ยังคำนวณอยู่ */
 .ss-wh-locked {
   padding: 12px 14px;
   background: #fdf3f2;
@@ -4856,7 +4856,7 @@ body.ss-col-resizing { cursor: col-resize; user-select: none; }
 .ss-stamp--done { border-style: solid; border-color: #bfe3c9; color: #b9c6b9; }
 .ss-stamp--done .ss-stamp-mark { opacity: 1; transform: rotate(-8deg) scale(1); }
 
-/* ── ปุ่ม/ตรา "ยกเลิก" ของ BackOrder (เฉพาะสาขา) — สั่งสินค้าไม่ได้ ──
+/* ── ปุ่ม/ตรา "ยกเลิก" ของ Order/BackOrder (เฉพาะสาขา — Order ไม่รวม Sale Admin) ──
    ⚠️ ใช้ state class `--cancelled` แยก ไม่ reuse `--done` เพราะ .ss-stamp--done บังคับ
       border-color เขียว + color เทาเขียวไว้ ถ้า reuse จะต้องมาสู้ specificity กันเอง */
 .ss-stamp--cancel { border-color: #e3b0aa; background: #fdf3f2; color: #b04a3a; }

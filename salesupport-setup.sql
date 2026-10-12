@@ -34,6 +34,10 @@ create table if not exists ss_orders (
   phone            text,                    -- 1.22 เบอร์โทรติดต่อ (ค่าที่กรอก)
   contact_channel  text,                    -- 1.22 ช่องทางการติดต่อ (Tel./Line/WhatsApp)
   workflow_completed_at timestamptz,        -- เวลาที่สาขายืนยันครบทั้ง 3 ตรา
+  -- ยกเลิก Order — สาขา SRC/KKL/SSS กดเอง null = ยังไม่ยกเลิก
+  -- 🚨 ต้องเป็นคอลัมน์แยก ห้ามเขียน "ยกเลิก" ทับลง 3 คอลัมน์สถานะข้างบน — ดู migration 202610120001
+  cancelled_at     timestamptz,             -- เวลาที่ยกเลิก
+  cancel_reason    text,                    -- สาเหตุที่ยกเลิก (บังคับกรอกที่ฟอร์ม)
   created_at       timestamptz default now() -- 1.23 TimeStamp
 );
 
@@ -47,6 +51,8 @@ alter table ss_orders add column if not exists order_bill_no text;
 alter table ss_orders add column if not exists order_date date;
 alter table ss_orders add column if not exists order_source text;
 alter table ss_orders add column if not exists eta_date date;
+alter table ss_orders add column if not exists cancelled_at timestamptz;
+alter table ss_orders add column if not exists cancel_reason text;
 
 -- ข้อมูลเก่าก่อนมีตัวเลือกผู้รับยังให้ทั้งคลังและจัดซื้อเห็น และไม่นับเป็นงานใหม่
 update ss_orders

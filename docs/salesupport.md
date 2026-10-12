@@ -8,7 +8,7 @@
 
 | Table | ใช้กับเมนู | หมายเหตุ |
 |---|---|---|
-| `ss_orders` | Order | งานสั่งจอง/สั่งซื้อของลูกค้า ~23 คอลัมน์ (sku, branch, qty, paid_date, customer_name, contact_channel, สถานะ chip: arrived_branch / customer_notified / delivered ฯลฯ) |
+| `ss_orders` | Order | งานสั่งจอง/สั่งซื้อของลูกค้า ~25 คอลัมน์ (sku, branch, qty, paid_date, customer_name, contact_channel, สถานะ chip: arrived_branch / customer_notified / delivered ฯลฯ) · `cancelled_at` + `cancel_reason` (ยกเลิก Order) migration `202610120001` |
 | `ss_backorders` | BackOrder | สินค้าค้างส่ง (ABC ≠ P) — `branch` มี CHECK `SRC/KKL/SSS/SALE_ADMIN` · เก็บ `unit` = **หน่วยของบาร์โค้ดที่สแกน** · `pending_qty` = **ค้างส่งลูกค้า** (สาขากรอกเอง) ส่วน **"คลังมีสินค้า" ไม่ได้เก็บ** ดึงสดจาก `stock` สาขาคลังสินค้า · 3 สถานะ chip default สะกดตรงกับ `ss_orders` เป๊ะ · migration `202608140001` → `202608140003` + `202608150001` + `202608190002` (เพิ่ม `SALE_ADMIN`) + `202608190003` (phone) + `202608200001` (ยกเลิกรายการ) + `202608200002` (แจ้งจัดซื้อ/คลัง) + `202609180001` (เลขที่ PO — จัดซื้อกรอกคนเดียว) |
 | `ss_request_items` | Request Item | ขอสินค้าที่ไม่มีในสต๊อก + supplier, image_url, customer_name |
 | `ss_new_products` | New Product | เสนอสินค้าใหม่เข้าร้าน + image_url, quoted_price, status |
@@ -49,6 +49,7 @@
   1. ช่องค้นหา SKU (`lookupSku`/`handleSkuChange`) ใส่ `onlyP: true` ให้ `searchProductUnits()` — พิมพ์/กด Enter หา SKU ที่ไม่ใช่ P จะไม่มี suggestion ขึ้นเลย (ตรงข้ามกับ BackOrder ที่ใช้ `excludeP`)
   2. `saveOrder` เช็คซ้ำ `abc !== 'P'` (เมื่อพบใน Product Master) ก่อน insert เสมอ — กันพิมพ์ SKU เองตรงๆ โดยไม่ผ่านช่องค้นหาเลย ถ้าเจอว่าไม่ใช่ P จะไม่ insert และ error ชี้ไปเมนู BackOrder แทน (ข้อความเดียวกับที่ BackOrder ชี้กลับมา Order เวลาเจอ SKU เป็น P) · **SKU ที่หาไม่เจอใน Product Master ยังผ่านได้เป็น `BOTH` เหมือนเดิม** (ไม่บล็อกยาใหม่ที่ยังไม่มีในฐาน)
   - ผลคือ `recipient_department` ของ Order ใหม่ทุกใบมีได้แค่ `PURCHASING` หรือ `BOTH` เท่านั้น — ค่า `WAREHOUSE` เป็นได้แค่ข้อมูลเก่าก่อนวันที่นี้ (โค้ดอ่าน/แสดงผลค่านี้ได้ตามปกติ แค่ไม่มีทาง insert ใหม่แล้ว)
+- **popup Order มีปุ่ม "ยกเลิก" แล้ว (2569-10-12) — เฉพาะ SRC/KKL/SSS ไม่รวม Sale Admin** · ดูหัวข้อ "ยกเลิก Order" ใต้เมนู BackOrder (ใช้กลไกเดียวกัน)
 
 ## ช่องค้นหา SKU ในฟอร์ม (Order + BackOrder) — `searchProductUnits()`
 
@@ -289,8 +290,26 @@ helper กลางตัวเดียวใช้ทั้ง 2 ฟอร์�
 - **`.ss-stamp-mark` ฮาร์ดโค้ดสีเขียว** — ตรายกเลิกต้อง override ทั้ง `color` และ `border-color` ไม่งั้นคำว่า "ยกเลิกแล้ว" ขึ้นเป็นตราเขียวที่อ่านแล้วเข้าใจว่าอนุมัติ · ใช้ state class `--cancelled` แยก **ไม่ reuse `--done`** ที่บังคับสีเขียวไว้
 - **`.ss-confirm-box` กว้าง 270px + `text-align: center` + `overflow: hidden`** — กล่องยืนยันของโหมดนี้จึงต้องมี `--wide` (330px) และ textarea ต้องสั่ง `text-align: left` + `max-height` เอง · **ห้ามแก้คลาสเดิม** เพราะกล่องถอนตราใช้ร่วมกัน
 - **id ของหัวข้อกล่องต้องไม่ซ้ำ** (`ss-cancel-confirm-title` ไม่ใช่ `ss-confirm-title`) — 2 กล่องไม่มีทางเปิดพร้อมกัน แต่ id ซ้ำใน DOM ทำให้ `aria-labelledby` ชี้ผิดกล่อง
-- **ไม่เรียก `setStampTick`** ในเส้นทางนี้ — ตัวนับเมนูย่อยอ่านจาก `ss_orders` อย่างเดียว สั่งนับใหม่จากฝั่ง BackOrder = สแกนตารางทิ้งเปล่า
+- **BackOrder ไม่เรียก `setStampTick`** ในเส้นทางนี้ — ตัวนับเมนูย่อยอ่านจาก `ss_orders` อย่างเดียว สั่งนับใหม่จากฝั่ง BackOrder = สแกนตารางทิ้งเปล่า (Order เรียก — ดูหัวข้อถัดไป)
 - **race 2 คน:** `ss_backorders` ไม่มี realtime — สาขาอีกคนกดยกเลิกระหว่าง popup เปิดค้างได้ · `toggleOrderStep` จึงมี guard `if (isCancelled) return;` เป็นกันชนชั้นที่สองนอกเหนือจาก `disabled`
+
+### ยกเลิก Order — เฉพาะ SRC/KKL/SSS (2569-10-12)
+
+ปุ่ม **"ยกเลิก"** ใน popup 📋 รายละเอียด Order ตามคำสั่งผู้ใช้ "แบบเดียวกับ BackOrder เฉพาะรหัส SRC,KKL,SSS" · migration `202610120001_order_cancel.sql` เพิ่ม `cancelled_at timestamptz` + `cancel_reason text` ให้ `ss_orders` — **ชื่อ/ความหมายเดียวกับ `ss_backorders` เป๊ะ ฝั่งเว็บจึงใช้โค้ดชุดเดียวกัน** (`applyBackOrderCancel` เปลี่ยนชื่อเป็น `applyDetailCancel` แล้วยิงไป `selectedOrderTable` ไม่ hardcode ตาราง) · ทุกข้อของหัวข้อด้านบนใช้กับ Order ด้วย (สาเหตุบังคับกรอก · กดซ้ำ = คืนสถานะ · แบนเนอร์ทุกโปรไฟล์ · ชิปแดงในตาราง · แจ้งจัดซื้อ+คลัง · ห้ามเขียนทับ 3 คอลัมน์สถานะ)
+
+- **สิทธิ์ต่างจาก BackOrder** — `canCancelDetail`: BackOrder = `isBranchUser` (รวม Sale Admin เหมือนเดิม) · Order = `ORDER_CANCEL_BRANCHES` (`SRC/KKL/SSS`) · Sale Admin ยังกดตรา 3 ขั้นของ Order ได้ แค่ไม่มีปุ่มยกเลิก
+  - ⚠️ **ห้ามเปลี่ยนเป็น `BRANCH_PROFILE_CODES`/`isBranchUser`** — Sale Admin จะได้ปุ่มทันที (นี่คือข้อยกเว้นของกฎ "ห้าม hardcode 3 สาขา" ที่ตั้งใจ — ผู้ใช้ระบุรหัสมาเอง)
+- **`isCancelled` ไม่มี `isBackOrderDetail` คู่แล้ว** — เดิมจำเป็นเพราะ `ss_orders` ไม่มีคอลัมน์ ตอนนี้มีครบทั้ง 2 ตาราง · ชิปแดงในตาราง gate ด้วย `isStampMenu` (เดิม `menu.id === 'backorder'`)
+- **ยกเลิกแล้วล็อกอะไรบ้าง:** ตรา 3 ขั้น `disabled` · ฟอร์มคลัง 3 ช่องถูกแทนด้วย `.ss-wh-locked` · **ฟอร์มจัดซื้อ 5 ช่องถูกแทนด้วยกล่องเดียวกัน** (ข้อนี้ BackOrder ไม่มีเพราะไม่มีฟอร์มจัดซื้อใน popup — ตัดสินใจล็อกให้เหมือนฟอร์มคลัง: ใบที่สาขายกเลิกแล้วไม่ควรมีใครทำงานต่อจนกว่าสาขาจะคืนสถานะ)
+- **ค่าที่คลัง/จัดซื้อเคยกรอกไว้ยังเห็นได้** — ปกติ `orderDetailFields` กรองช่องงานของตัวเองออก (เพราะอยู่ในฟอร์มด้านล่าง) แต่ตอนยกเลิกฟอร์มหายไป จึงไม่กรองเมื่อ `isCancelled` (memo มี `isCancelled` เป็น dep) — **ใช้กับคลังใน BackOrder ด้วย** (เดิมเปิดใบที่ยกเลิกแล้วคลังมองไม่เห็น Outbound/เลขโอนที่ตัวเองกรอกเลยสักที่)
+- **เมนูย่อย 3 ขั้นข้ามใบที่ยกเลิก** — effect นับ select `cancelled_at` มาด้วยแล้ว `continue` (ไม่งั้นเลขค้างตลอดเพราะไม่มีใครกดตราได้ และเลยนัดแล้วกะพริบแดงไม่มีวันดับ) · `visibleRows` ตัดใบที่ยกเลิกออกตอนกรองให้ตรงกับเลข · ยกเลิก/คืนสถานะ Order เรียก `setStampTick` ให้นับใหม่ทันที
+  - 🚨 **ต้องรัน migration ก่อน deploy** — แย่กว่ากรณี BackOrder (ที่ก่อน migration แค่กดปุ่มไม่ผ่าน): query นับเมนูย่อยจะพังทั้งก้อน (`column ss_orders.cancelled_at does not exist`) แล้วเมนูย่อยใต้ปุ่ม Order **หายเงียบ ๆ ทุกโปรไฟล์**
+- ป้าย `showOutboundAlert` (สาขา) / `stampStatusBadge` (คลัง) เช็ค `row.cancelled_at` อยู่แล้วตั้งแต่ทำ BackOrder ไม่ผูกเมนู — ใช้กับ Order ได้ทันทีไม่ต้องแก้
+- ข้อความกล่องยืนยัน / placeholder / tooltip ตรา สลับตาม `isBackOrderDetail` — Order: "ใช้เมื่อลูกค้ายกเลิก หรือสั่งสินค้าไม่ได้ · สถานะ 3 ขั้นจะถูกล็อก และคลัง/จัดซื้อบันทึกต่อไม่ได้" (ตัดให้พอดี 2 บรรทัดในกล่อง 330px — ยาวกว่านี้คำว่า "ได้" ตกไปบรรทัดที่ 3)
+- แจ้งเตือน title `สาขายกเลิก Order` / `สาขาคืนสถานะ Order` ด้วย `orderDetailMenuId`/`selectedOrderTable` (ห้าม hardcode เหตุผลเดียวกับ `applyStepChange`)
+- trigger `ss_track_order_workflow_completion` **ไม่ fire** ตอนยกเลิก — update แค่ `cancelled_at`/`cancel_reason` ซึ่งไม่อยู่ในรายการ `update of ...` ของ trigger
+- ⚠️ **Order ที่ยกเลิกแล้วไม่ถูกลบอัตโนมัติ** — `ss_delete_expired_completed_orders()` (migration `202608130004`) ลบเฉพาะใบที่ครบ 3 ตรา ใบที่ยกเลิกกลางทางจึงค้างตลอดเหมือน Order ที่ยังไม่จบ · ถ้าต้องการให้ลบด้วยต้องแก้ฟังก์ชันนั้น (ยังไม่ได้ทำ — ไม่ได้ขอมา)
+- ทดสอบด้วย Playwright กับ dev server (mock `ss_orders`/`ss_backorders` แบบ stateful + ดักทุก request เขียน ไม่แตะ DB จริง): ครบ 6 โปรไฟล์ — SRC/KKL/SSS มีปุ่ม · Sale Admin ไม่มี (BackOrder ยังมี) · คลัง/จัดซื้อเห็นแบนเนอร์ + กล่องล็อก + ค่าของตัวเองแบบอ่านอย่างเดียว · เลขเมนูย่อยไม่นับใบที่ยกเลิกและนับใหม่หลังยกเลิก/คืนสถานะ
 
 ### แจ้งจัดซื้อ/คลังสินค้า — บังคับเลือกตอนสร้าง BackOrder 2569-08-20
 
@@ -391,6 +410,7 @@ pill/โมดัลกลางจอ โผล่เฉพาะตอนก�
 2. `isStampMenu` = `activeMenu === 'order' || 'backorder'` — ตัวแปรร่วมของทั้ง 2 ป้าย ใช้ได้เพราะ `ss_backorders` มี `outbound_date` + 3 คอลัมน์สถานะ ชื่อเดียวกับ `ss_orders`
 3. `row.branch === userBranch` — **เฉพาะออเดอร์ของสาขาตัวเอง** เป็นกันชนซ้ำกับ query (ทั้ง Order และ BackOrder กรองสาขาที่ server ให้อยู่แล้ว) เก็บไว้เผื่อวันหลังเลิกกรอง
 4. `outbound_date` มีค่า **และ** `arrived_branch` ยังไม่ done (`!stepDone(...)`)
+5. `!row.cancelled_at` — ใบที่สาขายกเลิกแล้ว (Order/BackOrder) ไม่มีป้าย เพราะตรา "ของถึงสาขา" ถูกล็อก ป้ายจะชวนไปกดสิ่งที่กดไม่ได้
 
 - ⚠️ **ข้อ 4 ต้องมีทั้งสองส่วน** — ถ้าเช็คแค่ `outbound_date` ป้ายจะติดค้างตลอดไปไม่มีวันดับ · กดตรา "ของถึงสาขา" = ป้ายหายทันที (ตราอัปเดต `rows` อยู่แล้ว ไม่ต้อง refetch)
 
@@ -415,6 +435,7 @@ pill/โมดัลกลางจอ โผล่เฉพาะตอนก�
 - 3 ขั้นมาจาก `ORDER_STEPS` ชุดเดียวกับตราประทับใน popup: `arrived_branch` / `customer_notified` / `delivered`
 - ⚠️ **`ORDER_STEPS` มีชื่อ 2 ชุด อย่าสลับกัน** — `label` (`ของถึงสาขา`) ใช้บนตราประทับใน popup + confirm ตอนยกเลิกตรา · `navLabel` (`ยังไม่ถึงสาขา` / `ยังไม่ได้แจ้งลูกค้า` / `ยังไม่ได้ส่งมอบ`) ใช้ในเมนูย่อย sidebar + ป้ายตัวกรอง เพราะเลขข้าง ๆ คือ**จำนวนที่ยังค้าง** · tooltip ตอนขั้นนั้นครบแล้วกลับไปใช้ `label` (พูดว่า "ยังไม่..." ทั้งที่ครบแล้วจะสับสน) · หัวคอลัมน์ในตารางเป็นคนละชุด อยู่ใน `MENUS[].columns` ไม่ได้อ่านจาก `ORDER_STEPS`
 - เลข = จำนวนที่**ยังไม่ผ่านขั้นนั้น** ตัดสินด้วย `stepDone()` (มีคำว่า "แล้ว" และไม่มี "ยังไม่") — **นับฝั่ง client ไม่กรองใน SQL** เพราะเกณฑ์เป็น string-contains ถ้าเขียนซ้ำใน SQL จะมี 2 แหล่งความจริงที่หลุดจากกันได้ · ค่า `null`/ว่าง นับว่ายังไม่ผ่าน
+- **ไม่นับ Order ที่ยกเลิกแล้ว** (`cancelled_at` มีค่า — 2569-10-12) และตอนกดกรองก็ตัดออกจากตารางด้วย · ⚠️ query นับ select `cancelled_at` ตรง ๆ ต้องรัน migration `202610120001` ก่อน deploy ไม่งั้นเมนูย่อยหายทั้งชุด
 - **แถวเดียวนับเข้าได้หลายขั้นพร้อมกัน** — ผลรวม 3 ขั้นจึงมากกว่าจำนวน Order ที่ค้างจริงได้ (ตั้งใจ: แต่ละเลขตอบคำถาม "ขั้นนี้ต้องทำอีกกี่รายการ")
 - กดเมนูย่อย → `setActiveMenu('order')` + กรองตารางเหลือเฉพาะที่ยังไม่ผ่านขั้นนั้น (กดซ้ำ = เลิกกรอง) · ตัวกรองค้างข้ามเมนู
 - **ไม่มีป้ายบอกสถานะตัวกรองใน toolbar** — เคยมี `.ss-step-filter-tag` (บอกว่ากรองขั้นไหน + ปุ่ม ✕ เลิกกรอง) แล้วผู้ใช้ให้เอาออกเพราะรก (2569-08-13) อย่าใส่กลับ · ตัวบอกสถานะที่เหลือคือ `.is-active` บนเมนูย่อย และทางเลิกกรองคือกดเมนูย่อยอันเดิมซ้ำ
