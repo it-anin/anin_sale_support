@@ -1142,6 +1142,72 @@ function MasterDiffModal({ diff, saving, error, savedAt, onConfirm, onClose, onD
   );
 }
 
+// ── ปฏิทิน "อัปโหลด Product Master ล่าสุด" ในแถบเครื่องมือเมนู Products (2569-10-12) ──
+// ดีไซน์ "Calendar Tile" แบบที่ 8 จาก public/product-master-timestamp-designs.html
+// อ่านแถวล่าสุดของตาราง product_master_uploads (migration 202610120002) — confirmMasterUpload เป็นคนเขียน
+
+/** 1 แถวของ product_master_uploads เท่าที่หน้าจอใช้ */
+interface MasterUploadLog {
+  uploaded_at: string;
+  uploader: string | null;
+  file_name: string | null;
+  sku_count: number | null;
+  new_count: number | null;
+  changed_count: number | null;
+  unchanged_count: number | null;
+  cleared_count: number | null;
+}
+const MASTER_UPLOAD_LOG_COLUMNS =
+  'uploaded_at, uploader, file_name, sku_count, new_count, changed_count, unchanged_count, cleared_count';
+
+/** "… ที่แล้ว" แบบสั้น — เวลาติดลบ (นาฬิกาเครื่องช้ากว่า server) นับเป็น "เมื่อสักครู่" */
+function relativeTimeTh(then: number, now: number): string {
+  const minutes = Math.floor((now - then) / 60000);
+  if (minutes < 1) return 'เมื่อสักครู่';
+  if (minutes < 60) return `${minutes} นาทีที่แล้ว`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} ชม.ที่แล้ว`;
+  return `${Math.floor(hours / 24)} วันที่แล้ว`;
+}
+
+/** log = null → ยังไม่เคยอัปโหลด (ตารางมีแล้วแต่ว่าง) · ผู้เรียกไม่ render เลยถ้าอ่านตารางไม่ได้ */
+function MasterUploadTile({ log, now }: { log: MasterUploadLog | null; now: number }) {
+  if (!log) {
+    return (
+      <span className="ss-mupload ss-mupload--none" title="ยังไม่มีประวัติอัปโหลด Product Master — เวลาจะขึ้นหลังอัปโหลดครั้งแรก">
+        <span className="ss-mupload-cal"><span className="ss-mupload-mon">—</span><span className="ss-mupload-day">?</span></span>
+        <span className="ss-mupload-txt">
+          <span className="ss-mupload-top">อัปโหลดล่าสุด</span>
+          <span className="ss-mupload-bot">ยังไม่เคยอัปโหลด</span>
+        </span>
+      </span>
+    );
+  }
+  const at = new Date(log.uploaded_at);
+  const count = (n: number | null) => (n ?? 0).toLocaleString();
+  // ชี้แล้วเห็นรายละเอียดเต็ม — ข้อมูลมีอยู่แล้วในแถวเดียวกัน ไม่ต้อง query เพิ่ม
+  const tip = [
+    `อัปโหลดเมื่อ ${at.toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' })} น.`,
+    log.uploader && `โดย ${log.uploader}`,
+    log.file_name,
+    log.sku_count !== null && `${count(log.sku_count)} SKU — ใหม่ ${count(log.new_count)} · เปลี่ยน ${count(log.changed_count)} · เหมือนเดิม ${count(log.unchanged_count)}`,
+  ].filter(Boolean).join('\n');
+  return (
+    <span className="ss-mupload" title={tip}>
+      <span className="ss-mupload-cal">
+        <span className="ss-mupload-mon">{at.toLocaleDateString('th-TH', { month: 'short' })}</span>
+        <span className="ss-mupload-day">{at.getDate()}</span>
+      </span>
+      <span className="ss-mupload-txt">
+        <span className="ss-mupload-top">อัปโหลดล่าสุด</span>
+        <span className="ss-mupload-bot">
+          {at.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น. · {relativeTimeTh(at.getTime(), now)}
+        </span>
+      </span>
+    </span>
+  );
+}
+
 // 3 ขั้นตอนอนุมัติใน Popup Order (ตราประทับ)
 // label    = ชื่อขั้น ใช้บนตราประทับใน popup — เป็นคำบอก "สิ่งที่ต้องทำ"
 // navLabel = ชื่อในเมนูย่อย sidebar — เป็นคำบอก "สิ่งที่ยังไม่ได้ทำ" เพราะเลขข้าง ๆ คือจำนวนที่ค้าง
@@ -1450,6 +1516,9 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
   const [masterSaving, setMasterSaving] = useState(false);
   const [masterSaveError, setMasterSaveError] = useState('');
   const [masterSavedAt, setMasterSavedAt] = useState<Date | null>(null);
+  // ปฏิทิน "อัปโหลดล่าสุด" — undefined = ยังโหลดไม่เสร็จ/อ่านตารางไม่ได้ (ไม่ render เลย) · null = ยังไม่เคยอัปโหลด
+  const [lastMasterUpload, setLastMasterUpload] = useState<MasterUploadLog | null | undefined>(undefined);
+  const [clockNow, setClockNow] = useState(() => Date.now());
   const [showAddMaster, setShowAddMaster] = useState(false);
   const [masterForm, setMasterForm] = useState<MasterForm>(emptyMasterForm);
   const [deleteTarget, setDeleteTarget] = useState<{
@@ -1752,6 +1821,34 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
     })();
     return () => { cancelled = true; };
   }, [activeMenu, abcOptions]);
+
+  // แถวล่าสุดของ product_master_uploads → ปฏิทิน "อัปโหลดล่าสุด" · โหลดตอนเข้าเมนู Products และหลังอัปโหลด (refreshKey)
+  useEffect(() => {
+    if (activeMenu !== 'products') return;
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from('product_master_uploads').select(MASTER_UPLOAD_LOG_COLUMNS)
+        .order('uploaded_at', { ascending: false }).limit(1);
+      if (cancelled) return;
+      if (error) {
+        // ยังไม่รัน migration 202610120002 หรืออ่านไม่ได้ชั่วคราว — คงค่าเดิมไว้ (ครั้งแรกคือ undefined = ไม่ render ปฏิทิน)
+        // ไม่ throw ไม่ขึ้น error ให้ผู้ใช้ — แถบเครื่องมือที่เหลือต้องทำงานปกติ
+        console.warn('อ่านเวลาอัปโหลด Product Master ล่าสุดไม่สำเร็จ:', error.message);
+        return;
+      }
+      setLastMasterUpload(((data ?? []) as unknown as MasterUploadLog[])[0] ?? null);
+    })();
+    return () => { cancelled = true; };
+  }, [activeMenu, refreshKey]);
+
+  // "… ที่แล้ว" ต้องขยับเองระหว่างเปิดหน้าค้าง (พนักงานเปิดทิ้งไว้ทั้งวัน) — ทุกนาที เฉพาะตอนอยู่เมนู Products
+  useEffect(() => {
+    if (activeMenu !== 'products') return;
+    setClockNow(Date.now());
+    const timer = window.setInterval(() => setClockNow(Date.now()), 60_000);
+    return () => window.clearInterval(timer);
+  }, [activeMenu]);
 
   // นับ Order ที่ยังค้าง "แยกทีละขั้น" → เมนูย่อยใต้ปุ่ม Order
   // ดึงเฉพาะ 5 คอลัมน์แล้วนับฝั่ง client ด้วย stepDone ตัวเดียวกับหน้ารายละเอียด
@@ -2623,8 +2720,30 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
       return;
     }
     setMasterSavedAt(new Date());
+    // บันทึกประวัติ → ปฏิทิน "อัปโหลดล่าสุด" · ⚠️ ต้อง await — query builder ที่ไม่ถูก await ไม่ถูกส่งจริง
+    // พังก็ไม่ย้อนการอัปโหลด (ข้อมูลลงไปแล้วจริง) แค่บอกว่าเวลาจะไม่ขยับ — ส่วนใหญ่คือยังไม่รัน migration 202610120002
+    // ⚠️ `.select()` แบบ array ห้าม `.single()` (เหตุผลเดียวกับ insertWithContactChannelFallback)
+    const { data: logRows, error: logError } = await supabase.from('product_master_uploads').insert({
+      uploader: notificationRecipientLabel || null,
+      file_name: diff.fileName,
+      sku_count: diff.rows.length,
+      new_count: diff.newRows.length,
+      changed_count: diff.changedSkus,
+      unchanged_count: diff.unchangedSkus,
+      cleared_count: diff.changes.filter(c => c.kind === 'cleared').length,
+    }).select(MASTER_UPLOAD_LOG_COLUMNS);
+    if (logError) {
+      console.error('บันทึกประวัติอัปโหลด Product Master ไม่สำเร็จ:', logError.message);
+    } else {
+      const logged = ((logRows ?? []) as unknown as MasterUploadLog[])[0];
+      if (logged) {
+        setLastMasterUpload(logged);
+        setClockNow(Date.now());
+      }
+    }
     const summary = describeMasterDiff(diff);
-    setMasterMsg(`✓ อัปเดต Product Master แล้ว — ${summary}`);
+    setMasterMsg(`✓ อัปเดต Product Master แล้ว — ${summary}`
+      + (logError ? ` · ⚠️ บันทึกเวลาอัปโหลดไม่สำเร็จ (${logError.message})` : ''));
     // แจ้งเฉพาะ Sale Admin — ผู้ใช้สั่ง 2569-10-12 "การอัปโหลด Product Master ไม่ต้องแจ้งเตือนไปที่สาขา SRC/KKL/SSS"
     // ⚠️ ต้องส่ง 'SALE_ADMIN' ตรง ๆ ห้ามกลับไปส่ง undefined — undefined = fan-out ทั้ง NOTIFIED_BRANCHES (รวม SRC/KKL/SSS)
     // ⚠️ เฉพาะการอัปโหลดไฟล์ — ➕ เพิ่มสินค้า / ✏️ แก้ไขทีละตัว / อัปโหลด Supplier ยังแจ้งทุกสาขาเหมือนเดิม (ไม่ได้ขอ)
@@ -3414,6 +3533,8 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
                   <div className="ss-toolbar-btns">
                     <input ref={masterFileRef} type="file" accept=".xlsx,.xls" style={{ display: 'none' }}
                       onChange={e => { const f = e.target.files?.[0]; if (f) handleMasterFile(f); }} />
+                    {/* undefined = ยังโหลดไม่เสร็จ/ยังไม่มีตาราง → ไม่ render (ไม่โชว์ "ยังไม่เคยอัปโหลด" หลอก ๆ ระหว่างโหลด) */}
+                    {lastMasterUpload !== undefined && <MasterUploadTile log={lastMasterUpload} now={clockNow} />}
                     <button className="ss-add-btn ss-add-btn--secondary" disabled={uploadingMaster}
                       onClick={() => masterFileRef.current?.click()}>
                       {uploadingMaster ? 'กำลังตรวจไฟล์...' : '📤 อัปโหลด Product Master'}

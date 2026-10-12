@@ -229,6 +229,27 @@ where id not in (
 alter table product_master drop constraint if exists product_master_sku_key;
 alter table product_master add constraint product_master_sku_key unique (sku);
 
+-- ── ประวัติการอัปโหลด Product Master (ปฏิทิน "อัปโหลดล่าสุด" เมนู Products) — ดู migration 202610120002 ──
+-- append-only: เว็บอ่าน + เพิ่มเท่านั้น ไม่มี update/delete
+create table if not exists product_master_uploads (
+  id              uuid primary key default gen_random_uuid(),
+  uploaded_at     timestamptz not null default now(),
+  uploader        text,
+  file_name       text,
+  sku_count       integer,
+  new_count       integer,
+  changed_count   integer,
+  unchanged_count integer,
+  cleared_count   integer
+);
+create index if not exists product_master_uploads_uploaded_at_idx on product_master_uploads (uploaded_at desc);
+alter table product_master_uploads enable row level security;
+drop policy if exists "anon read product_master_uploads" on product_master_uploads;
+create policy "anon read product_master_uploads" on product_master_uploads for select using (true);
+drop policy if exists "anon insert product_master_uploads" on product_master_uploads;
+create policy "anon insert product_master_uploads" on product_master_uploads for insert with check (true);
+grant select, insert on product_master_uploads to anon, authenticated;
+
 -- ── Supplier — รายชื่อผู้จำหน่าย (นำเข้าจาก Excel ผ่านหน้าเว็บ) ──
 create table if not exists ss_suppliers (
   id         uuid primary key default gen_random_uuid(),
