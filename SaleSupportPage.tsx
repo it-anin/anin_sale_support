@@ -1781,6 +1781,9 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
    *  Sale Admin / คลัง / จัดซื้อ ยังมี · เมนูอื่นทุกโปรไฟล์ยังมีตามเดิม */
   const isStoreBranch = (STORE_BRANCH_CODES as readonly string[]).includes(userBranch ?? '');
   const showDeleteCol = !(activeMenu === 'products' && isStoreBranch);
+  /** ปุ่ม ✏️ แก้ไข ใน popup รายละเอียด — Product Master ซ่อนจาก SRC/KKL/SSS (ผู้ใช้สั่ง 2569-10-12)
+   *  Sale Admin / คลัง / จัดซื้อ ยังแก้ได้ · popup ตัวเดียวกันของ New Product / Ticket ไม่เกี่ยว (ผูกกับตาราง ไม่ใช่ activeMenu) */
+  const canEditDetail = (table: string) => !(table === 'product_master' && isStoreBranch);
 
   /** ทุนซื้อของแถว Product Master นี้แสดงให้ผู้ใช้คนนี้เห็นได้ไหม — สาขา (isBranchUser = SRC/KKL/SSS/Sale Admin)
    *  เห็นเฉพาะ ABC = P · คลัง/จัดซื้อเห็นทุกแถว (ดู masterAbcShowsCost) */
@@ -4337,15 +4340,16 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
             <div className="dl-modal-header">
               <span>{detailView.title}</span>
               <div className="ss-head-actions">
-                {!editing && EDIT_FIELDS[detailView.table] && (
+                {!editing && EDIT_FIELDS[detailView.table] && canEditDetail(detailView.table) && (
                   <button className="ss-head-edit" onClick={() => setEditing(true)}>✏️ แก้ไข</button>
                 )}
                 <button className="dl-modal-close" onClick={closeDetail}>✕</button>
               </div>
             </div>
-            {editing ? (
+            {/* canEditDetail ซ้ำตรงนี้ด้วย — กันชนชั้นที่สอง ถ้า editing ค้าง true มาจากที่อื่น ฟอร์มก็ไม่โผล่ */}
+            {editing && canEditDetail(detailView.table) ? (
               <DetailEditForm table={detailView.table} row={detailView.row}
-                // สาขาแก้ Product Master ได้ (ปุ่ม ✏️ ไม่มี role gate) แต่ต้องไม่เห็นทุนของสินค้าที่ไม่ใช่ P
+                // Sale Admin แก้ Product Master ได้ (SRC/KKL/SSS ไม่มีปุ่มแล้ว) แต่ต้องไม่เห็นทุนของสินค้าที่ไม่ใช่ P
                 // ช่องที่ซ่อนไม่อยู่ใน patch ตอนบันทึก → ทุนเดิมใน DB ไม่ถูกแตะ
                 hideKeys={detailView.table === 'product_master' && !canSeeMasterCost(detailView.row) ? ['cost'] : undefined}
                 onSaved={patch => applyEditPatch(String(detailView.row.id), patch, detailView.row.branch, {
