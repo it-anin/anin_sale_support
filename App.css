@@ -4615,10 +4615,23 @@ button.ss-mdiff-stat:not(:disabled):hover { background: #f5f9fd; }
   .ss-mdiff-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
-/* ทุนซื้อที่ซ่อนจากสาขา (เมนู Products · สาขาเห็นเฉพาะ ABC = P) — จางพอให้รู้ว่า "ซ่อนไว้" ไม่ใช่ "ไม่มีข้อมูล"
-   แต่ไม่ดึงสายตา เพราะแถวส่วนใหญ่ (~85%) ไม่ใช่ P */
-.ss-cost-hidden { font-size: 12px; opacity: 0.65; cursor: help; }
-.ss-cost-hidden-note { font-size: 12px; color: #8194a8; }
+/* ทุนซื้อที่ซ่อนจากสาขา (เมนู Products · สาขาเห็นเฉพาะ ABC = P) — ตัวเลขเบลอ (ผู้ใช้เลือก 2569-10-12 แทน 🔒)
+   🚨 ตัวเลขข้างในเป็นค่าปลอมจาก blurredCostPlaceholder() ไม่ใช่ทุนจริง — ห้ามเปลี่ยนไปเบลอค่าจริง
+      (ลากคลุม/ก๊อป หรือปิด filter ใน DevTools แล้วเห็นทันที)
+   user-select: none กันก๊อปเลขปลอมไปใช้ต่อแบบเข้าใจผิด */
+/* blur 2.5px + สีเข้ม + ตัวหนา — 4px สีอ่อนจางจนเหมือนช่องว่าง · 2px ยังเกือบอ่านออก
+   ⚠️ ต้องอ่านไม่ออกจริง: ถ้าอ่านเลขปลอมออก พนักงานจะเข้าใจผิดว่าเป็นทุนจริง (เลือกจากการเทียบภาพจริง) */
+.ss-cost-blur {
+  display: inline-block;
+  filter: blur(2.5px);
+  user-select: none;
+  -webkit-user-select: none;
+  color: #1c2b3a;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  cursor: help;
+}
+.ss-cost-hidden-note { margin-left: 10px; font-size: 12px; color: #8194a8; }
 
 /* ── ปฏิทิน "อัปโหลด Product Master ล่าสุด" ซ้ายปุ่ม 📤 เมนู Products (2569-10-12) ──
    ดีไซน์ "Calendar Tile" แบบที่ 8 จาก public/product-master-timestamp-designs.html

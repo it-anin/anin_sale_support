@@ -787,6 +787,33 @@ const DETAIL_FULL_KEYS = new Set(['issue', 'answer', 'note', 'name', 'name_brand
 const masterAbcShowsCost = (abc: unknown) => String(abc ?? '').trim().toUpperCase() === 'P';
 const MASTER_COST_HIDDEN_TITLE = 'ทุนซื้อแสดงให้สาขาเห็นเฉพาะสินค้า ABC = P';
 
+/** ตัวเลข "ปลอม" สำหรับโชว์แบบเบลอแทนทุนที่ซ่อน (ผู้ใช้เลือก 2569-10-12 แทน 🔒)
+ *  🚨 ห้ามเปลี่ยนไปเบลอทุนจริง — ค่าจริงที่อยู่ใน DOM ลากคลุม/ก๊อป หรือปิด filter ใน DevTools ก็เห็นทันที
+ *  · ยาวเท่ากันทุกแถว (3 หลัก + ทศนิยม 2) ไม่บอกใบ้ว่าทุนจริงกี่หลัก
+ *  · สุ่มจาก SKU — แต่ละแถวหน้าตาต่างกันให้ดูเป็นตัวเลขจริง แต่คงที่ทุกครั้งที่ render (ไม่กระพริบเปลี่ยนเลข) */
+function blurredCostPlaceholder(seed: unknown): string {
+  // FNV-1a + ขั้นผสมบิตท้าย (murmur3 fmix32) — hash แบบง่าย (×31) ทำให้ SKU ที่เรียงติดกัน (100016, 100017, …)
+  // ได้เลขเรียงกันเป็นแพทเทิร์น 848.47 / 849.47 / 850.47 ดูออกว่าเป็นเลขปลอม
+  let hash = 0x811c9dc5;
+  for (const ch of String(seed ?? '')) hash = Math.imul(hash ^ ch.charCodeAt(0), 0x01000193) >>> 0;
+  hash ^= hash >>> 16;
+  hash = Math.imul(hash, 0x85ebca6b) >>> 0;
+  hash ^= hash >>> 13;
+  hash = Math.imul(hash, 0xc2b2ae35) >>> 0;
+  // ⚠️ `>>> 0` ปิดท้ายจำเป็น — XOR ใน JS คืนค่า int32 มีเครื่องหมาย ถ้าติดลบ `% 900` จะติดลบตาม ได้ "-418.67"
+  hash = (hash ^ (hash >>> 16)) >>> 0;
+  return `${100 + (hash % 900)}.${String((hash >>> 12) % 100).padStart(2, '0')}`;
+}
+
+/** ทุนที่ซ่อนจากสาขา — role="img" + aria-label ให้โปรแกรมอ่านหน้าจออ่านคำอธิบาย ไม่ใช่อ่านเลขปลอม */
+function BlurredCost({ seed }: { seed: unknown }) {
+  return (
+    <span className="ss-cost-blur" role="img" aria-label={MASTER_COST_HIDDEN_TITLE} title={MASTER_COST_HIDDEN_TITLE}>
+      {blurredCostPlaceholder(seed)}
+    </span>
+  );
+}
+
 /** ชื่อช่องที่ผู้ใช้เห็น — อ่านจาก PRODUCT_DETAIL_FIELDS (popup Products) ที่เดียว ไม่มี map ซ้ำ */
 const MASTER_COL_LABELS: Record<string, string> = Object.fromEntries(PRODUCT_DETAIL_FIELDS.map(f => [f.key, f.label]));
 const masterColLabel = (col: string) => MASTER_COL_LABELS[col] ?? col;
@@ -3787,11 +3814,11 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
                         if (col.key === 'image_url' && text) {
                           return <td key={col.key} className={`ss-col-${col.key}`} style={columnStyle(col)}><a className="ss-img-link" href={text} target="_blank" rel="noreferrer">🖼️ ดูรูป</a></td>;
                         }
-                        // ทุนซื้อ: สาขาเห็นเฉพาะ ABC = P — แถวอื่นโชว์ 🔒 จาง ๆ (ไม่ใช่ช่องว่าง ซึ่งจะอ่านเป็น "ไม่มีข้อมูล")
+                        // ทุนซื้อ: สาขาเห็นเฉพาะ ABC = P — แถวอื่นโชว์ตัวเลขปลอมแบบเบลอ (ไม่ใช่ช่องว่าง ซึ่งจะอ่านเป็น "ไม่มีข้อมูล")
                         if (activeMenu === 'products' && col.key === 'cost' && !canSeeMasterCost(row)) {
                           return (
                             <td key={col.key} className={`ss-col-${col.key}`} style={columnStyle(col)}>
-                              <span className="ss-cost-hidden" title={MASTER_COST_HIDDEN_TITLE}>🔒</span>
+                              <BlurredCost seed={row.sku} />
                             </td>
                           );
                         }
@@ -4319,7 +4346,10 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
                         <span className="ss-detail-label">{f.label}</span>
                         <span className="ss-detail-value">
                           {detailView.table === 'product_master' && f.key === 'cost' && !canSeeMasterCost(detailView.row) ? (
-                            <span className="ss-cost-hidden-note">🔒 แสดงเฉพาะสินค้า ABC = P</span>
+                            <>
+                              <BlurredCost seed={detailView.row.sku} />
+                              <span className="ss-cost-hidden-note">แสดงเฉพาะสินค้า ABC = P</span>
+                            </>
                           ) : f.key === 'image_url' && text ? (
                             <a href={text} target="_blank" rel="noreferrer">
                               <img className="ss-detail-img" src={text} alt="รูปสินค้า" />
