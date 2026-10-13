@@ -868,7 +868,7 @@ export function DrugLabelPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onG
               {/* บอกเมื่อระบบลดขนาดให้ — พนักงานจะไม่งงว่าทำไมบางฉลากตัวเล็กกว่าฉลากอื่น */}
               {!bodyFit.fits ? (
                 <div className="dl-fit-note dl-fit-note--warn">
-                  ⚠️ ข้อความยาวเกินฉลาก — ลดเหลือ {bodyFit.size}pt แล้วยังไม่พอ ส่วนท้าย (รวมชื่อเภสัชกร) จะถูกตัดตอนพิมพ์
+                  ⚠️ ข้อความยาวเกินฉลาก — ลดเหลือ {bodyFit.size}pt แล้วยังไม่พอ ส่วนท้าย (รวมชื่อเภสัชกร) จะชิดขอบล่างหรือถูกตัดตอนพิมพ์
                 </div>
               ) : bodyFit.size < LABEL_BODY_MAX_PT && (
                 <div className="dl-fit-note">ลดขนาดตัวอักษรเนื้อหาเหลือ {bodyFit.size}pt ให้พอดีฉลาก</div>
