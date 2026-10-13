@@ -2546,16 +2546,17 @@ body.pulse-b .cart-inline-btn.in-cart {
 }
 
 /* สาขาที่ใช้พิมพ์ฉลาก = ตามรหัสที่ล็อกอิน (2569-10-13) — เดิมเป็นปุ่ม .dl-branch-btn 3 ปุ่มให้เลือกเอง เลิกแล้ว
-   ตอนนี้แสดงอย่างเดียวบน hero สีน้ำเงิน: ใช้หน้าตาเดียวกับปุ่มสาขาที่ถูกเลือกเดิม (พื้นขาว ตัวอักษรน้ำเงิน) แต่กดไม่ได้
+   ตอนนี้แสดงอย่างเดียวบน hero สีน้ำเงิน กดไม่ได้ · หน้าตา = สไตล์ .active เดิมของปุ่มสาขา (พื้นฟ้าไล่สี ขอบฟ้าอ่อน ตัวอักษรขาว)
+   — ผู้ใช้สั่งให้เป็นแบบนี้ (ครั้งแรกทำเป็นพื้นขาวตัวอักษรน้ำเงินตามที่ hero เคย override ปุ่มที่เลือก ผู้ใช้ไม่เอา)
    --none = รหัสที่ล็อกอินไม่ใช่รหัสสาขา (Sale Admin / คลังสินค้า / จัดซื้อ) */
 .dl-branch-chip {
   flex: 0 0 auto;
   white-space: nowrap;
   padding: 6px 16px;
   border-radius: 999px;
-  border: 1.5px solid #fff;
-  background: #fff;
-  color: #2d6cad;
+  border: 1.5px solid #a9d0f5;
+  background: linear-gradient(135deg, #2d6cad, #4891db);
+  color: #fff;
   font-size: 13px;
   font-weight: 600;
   cursor: default;
