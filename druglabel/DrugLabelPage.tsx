@@ -778,7 +778,7 @@ export function DrugLabelPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onG
           <div className="tagline-row">
             {/* สาขาตามรหัสที่ล็อกอิน — แสดงอย่างเดียว กดเปลี่ยนไม่ได้ (เดิมเป็นปุ่มเลือกสาขา 3 ปุ่ม) */}
             {branch
-              ? <span className="dl-branch-chip" title="สาขาตามรหัสที่ล็อกอิน">🔒 {branch.shop_name_th}</span>
+              ? <span className="dl-branch-chip" title="สาขาตามรหัสที่ล็อกอิน">{branch.shop_name_th}</span>
               : <span className="dl-branch-chip dl-branch-chip--none">ไม่ใช่รหัสสาขา — พิมพ์ฉลากไม่ได้</span>}
           </div>
           <PageNavRow current="druglabel" handlers={{ pricetag: onGoPriceTag, druglabel: onGoDrugLabel, stockcheck: onGoStockCheck, customerhistory: onGoCustomerHistory, outbound: onGoOutbound, salesupport: onGoSaleSupport }} />
