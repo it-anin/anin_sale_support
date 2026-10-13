@@ -545,7 +545,9 @@ export function OutboundPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGo
       <div className="hero-content">
         <h1 className="logo-premium"><AnimatedLogoText text="QUICK OUTBOUND" /></h1>
         <div className="tagline-row">
-          <span className="updated-badge">เบิกสินค้าด่วน {unlocked ? '🔓' : '🔐'}</span>
+          {/* เอา 🔐 (ยังไม่ปลดล็อก) ออกตามคำสั่งผู้ใช้ 2569-10-13 — 🔓 ยังขึ้นเมื่อคลังสินค้าปลดล็อกแล้ว (อนุมัติรอบต่อไปไม่ต้องใส่รหัสซ้ำ)
+              ⚠️ 🔐 ในหัว modal ใส่รหัสผ่านด้านล่างเป็นคนละจุด ไม่ได้เอาออก */}
+          <span className="updated-badge">เบิกสินค้าด่วน{unlocked && ' 🔓'}</span>
         </div>
         <PageNavRow current="outbound" handlers={{ pricetag: onGoPriceTag, druglabel: onGoDrugLabel, stockcheck: onGoStockCheck, customerhistory: onGoCustomerHistory, outbound: onGoOutbound, salesupport: onGoSaleSupport }} />
       </div>
