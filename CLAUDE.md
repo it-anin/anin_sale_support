@@ -50,7 +50,7 @@ Six-page React app sharing the same `App.css` and Supabase project.
 - `druglabel/ResultList.tsx` — search result list
 - `druglabel/SearchBar.tsx` — search bar component
 - `druglabel/supabase.ts` — read client (public views) + write client (schema: `label`)
-- `druglabel/types.ts` — `Lang`, `LANGS`, `Medicine`, `ShopSettings` types
+- `druglabel/types.ts` — `Lang`, `LANGS`, `Medicine`, `ShopSettings`, `LabelShopInfo` (= `ShopSettings` + เภสัชกรประจำสาขา) types
 - `druglabel/translate.ts` — calls Edge Function `translate-medicine` via Groq API
 - `druglabel/format.ts` — `formatBeDate()` Thai Buddhist Era date formatter
 - `druglabel/fit.ts` — `fitLabelBodySize()` ลดขนาดเนื้อหาฉลาก (เริ่ม 9.5pt ตัวหนา) ให้พอดี 65 มม. — วัดบน Preview แล้วส่งค่าให้ตัวพิมพ์ ดูรายละเอียดใน `druglabel/CLAUDE.md`
@@ -90,7 +90,7 @@ Six-page React app sharing the same `App.css` and Supabase project.
 
 - Gate หน้าแรก: `App.tsx` ถ้ายังไม่ล็อกอิน (`authProfile == null`) → `return <LoginPage />` ก่อนถึง render หลัก (early-return อยู่หลัง hooks ทั้งหมด — อย่าย้ายขึ้นไปก่อน hooks)
 - `auth.ts` — เก็บ `PROFILES` (id, label, group, password, icon, **branch**) + helper `loadAuthProfile` / `saveAuthProfile` / `clearAuthProfile` (persist ผ่าน localStorage key `authProfileId`)
-- ⚠️ `Profile.branch` ทำ **2 หน้าที่**: (1) ค่าที่เขียนลงคอลัมน์ `branch` ใน DB (`ss_orders` ฯลฯ) และเป็น `actor_code` ของตารางแจ้งเตือน (2) สาขาของปุ่ม "เลือกตามหมวด" ซึ่งใช้ได้เฉพาะค่าที่อยู่ใน `CATEGORY_BRANCHES` (`App.tsx`) + `product_category.branch` ด้วย — `SRC`/`KKL`/`SSS` ผ่านทั้ง 2 · `SALE_ADMIN` ผ่านแค่ (1) ปุ่มหมวดจึงถูกซ่อน **โดยตั้งใจ ไม่ error** · **`WAREHOUSE`/`PURCHASING` เป็น `null`** = ไม่ผ่านทั้งคู่
+- ⚠️ `Profile.branch` ทำ **3 หน้าที่**: (1) ค่าที่เขียนลงคอลัมน์ `branch` ใน DB (`ss_orders` ฯลฯ) และเป็น `actor_code` ของตารางแจ้งเตือน (2) สาขาของปุ่ม "เลือกตามหมวด" ซึ่งใช้ได้เฉพาะค่าที่อยู่ใน `CATEGORY_BRANCHES` (`App.tsx`) + `product_category.branch` ด้วย (3) สาขา+เภสัชกรบนฉลากยา (2569-10-13) จับคู่กับ `BRANCH_PROFILES[].code` ใน `DrugLabelPage.tsx` — `SRC`/`KKL`/`SSS` ผ่านทั้ง 3 · `SALE_ADMIN` ผ่านแค่ (1) ปุ่มหมวดถูกซ่อนและฉลากยาไม่แสดง/พิมพ์ไม่ได้ **โดยตั้งใจ ไม่ error** · **`WAREHOUSE`/`PURCHASING` เป็น `null`** = ไม่ผ่านทั้งหมด
 - `BRANCH_PROFILE_CODES` (ใน `auth.ts`) = รายชื่อรหัสที่ "ลงข้อมูลเป็นผู้ขอ" ได้ = `SRC/KKL/SSS/SALE_ADMIN` — **import ไปใช้แทน hardcode ทุกที่** (`App.tsx` `notificationSource`+`profileBranch`, `SaleSupportPage.tsx` `isBranchUser`+`NOTIFIED_BRANCHES`) เดิมรายชื่อนี้ถูก hardcode ซ้ำ 5 จุดคนละไฟล์ เพิ่มโปรไฟล์ทีต้องไล่แก้ทุกจุด
 - `branchCodeLabel(code)` (ใน `auth.ts`) = แปลงรหัส DB → ชื่อที่ผู้ใช้เห็น (`SALE_ADMIN` → `Sale Admin`) อ่านจาก `PROFILES.label` โดยตรงจึงไม่มี map ซ้ำให้หลุด sync · เรียกที่ `formatCell` (ครอบทุกตาราง+popup ที่มีคอลัมน์ `branch`), option ของ dropdown สาขา, ป้ายสาขาที่ล็อกในฟอร์ม และ `notificationRecipientLabel`
 - `LoginPage.tsx` — ใส่รหัสผ่านช่องเดียว → กด "เข้าสู่ระบบ" (หรือ Enter) → ระบบจับคู่รหัสกับ `PROFILES` อัตโนมัติ ไม่ต้องเลือกแผนกก่อน (ไม่มีการ์ดเลือกโปรไฟล์แล้ว)
@@ -106,7 +106,7 @@ Six-page React app sharing the same `App.css` and Supabase project.
 - แถบผู้ใช้ + ปุ่มออกจากระบบ: `.app-userbar` fixed มุมขวาบน แสดงทุกหน้า (render ใน `App.tsx`)
 - ⚠️ รหัสอยู่ฝั่ง client (เหมือน `VITE_ADMIN_PASSWORD`) — เป็น gate ใช้งานภายใน ไม่ใช่ security จริง
 - ส่วนใหญ่ยังเป็น **gate เข้าใช้งาน** — ยังไม่จำกัดหน้าตามแผนก (การเปิด/ปิดหน้าใช้ `app_page_settings` ไม่ใช่โปรไฟล์)
-- **ข้อยกเว้นเดียวที่ผูกกับโปรไฟล์จริง:** ปุ่ม "เลือกตามหมวด" หน้าป้ายราคา — ล็อกสาขาตาม `Profile.branch` และซ่อนทั้งปุ่มถ้า `branch === null`
+- **ข้อยกเว้นที่ผูกกับโปรไฟล์จริง มี 2 จุด:** (1) ปุ่ม "เลือกตามหมวด" หน้าป้ายราคา — ล็อกสาขาตาม `Profile.branch` และซ่อนทั้งปุ่มถ้า `branch === null` (2) **หน้าฉลากยา (2569-10-13)** — สาขา/ชื่อร้าน/เบอร์/**เภสัชกรท้ายฉลาก**ตามรหัสที่ล็อกอิน (SRC/KKL/SSS) ไม่มีปุ่มเลือกสาขาแล้ว · รหัสอื่น (Sale Admin / คลังสินค้า / จัดซื้อ) ดู/พิมพ์ฉลากไม่ได้ แต่ยังค้นหา/เพิ่ม/แก้ไขข้อมูลยาได้ — ดู [`druglabel/CLAUDE.md`](druglabel/CLAUDE.md) หัวข้อ "Branches"
 
 ## Database (Supabase)
 

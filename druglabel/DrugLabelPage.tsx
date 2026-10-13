@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from 'react';
 import * as XLSX from 'xlsx';
 import { supabaseLabel, supabaseLabelError, supabaseLabelWrite, TBL_SETTINGS, TBL_MEDICINES, TBL_TRANSLATIONS } from './supabase';
-import { LANGS, type Lang, type Medicine, type ShopSettings } from './types';
+import { LANGS, type Lang, type LabelShopInfo, type Medicine, type ShopSettings } from './types';
 import { Label } from './Label';
 import { fitLabelBodySize, LABEL_BODY_MAX_PT } from './fit';
 import { DLResultList } from './ResultList';
@@ -10,13 +10,13 @@ import { AnimatedLogoText } from '../AnimatedLogo';
 import { PageNavRow } from '../pageAccess';
 import { SearchIcon } from '../SearchIcon';
 
+// ข้อมูลหัวฉลาก/ท้ายฉลากของแต่ละสาขา — สาขาที่ใช้ = ตามรหัสที่ล็อกอิน ไม่มีปุ่มให้เลือกเองแล้ว (2569-10-13)
+// code ต้องตรงกับ `PROFILES[].branch` ใน auth.ts · pharmacist = ชื่อเภสัชกรประจำสาขา + เลขใบอนุญาต (พิมพ์ท้ายฉลาก)
 const BRANCH_PROFILES = [
-  { id: 'hq',        shop_name_th: 'สาขาชากค้อ',          shop_name_en: 'Chak Kho Branch',           phone: '082-0311590' },
-  { id: 'nine-kilo', shop_name_th: 'สาขาเก้ากิโล',         shop_name_en: 'Kao Ki Lo Branch',          phone: '098-8201512' },
-  { id: 'suan-suea', shop_name_th: 'สาขาสวนเสือศรีราชา',   shop_name_en: 'Suan Suea SiRacha Branch',  phone: '092-2469002' },
+  { code: 'SRC', shop_name_th: 'สาขาชากค้อ',          shop_name_en: 'Chak Kho Branch',           phone: '082-0311590', pharmacist: 'วัชรพันธ์ สุริยะคุปต์ (ภ. 45878)' },
+  { code: 'KKL', shop_name_th: 'สาขาเก้ากิโล',         shop_name_en: 'Kao Ki Lo Branch',          phone: '098-8201512', pharmacist: 'เกียรติศักดิ์ ภาคี (ภ. 43609)' },
+  { code: 'SSS', shop_name_th: 'สาขาสวนเสือศรีราชา',   shop_name_en: 'Suan Suea SiRacha Branch',  phone: '092-2469002', pharmacist: 'ภรัณยู เหลื่อมสิงขร (ภ. 50908)' },
 ] as const;
-
-type BranchId = (typeof BRANCH_PROFILES)[number]['id'];
 
 type MedRow = { id: string; sku: string; barcode: string | null };
 type TrRow  = { medicine_id: string; trade_name?: string | null; generic_name?: string | null;
@@ -120,11 +120,13 @@ interface Props {
   onGoCustomerHistory: () => void;
   onGoOutbound: () => void;
   onGoSaleSupport: () => void;
+  /** รหัสสาขาของโปรไฟล์ที่ล็อกอิน (`Profile.branch` ใน auth.ts) — เป็นตัวกำหนดสาขา/เภสัชกรบนฉลาก
+   *  ไม่ใช่ SRC/KKL/SSS (Sale Admin / คลังสินค้า / จัดซื้อ) = undefined → ดู/พิมพ์ฉลากไม่ได้ */
+  userBranch?: string;
 }
 
-export function DrugLabelPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGoCustomerHistory, onGoOutbound, onGoSaleSupport }: Props) {
+export function DrugLabelPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGoCustomerHistory, onGoOutbound, onGoSaleSupport, userBranch }: Props) {
   const [settings,       setSettings]       = useState<ShopSettings | null>(null);
-  const [selectedBranch, setSelectedBranch] = useState<BranchId>('hq');
   const [lang,           setLang]           = useState<Lang>('th');
   const [searchInput,    setSearchInput]    = useState('');
   const [lastQuery,      setLastQuery]      = useState('');
@@ -183,21 +185,24 @@ export function DrugLabelPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onG
     return () => fonts.removeEventListener('loadingdone', bump);
   }, []);
 
-  const branch = BRANCH_PROFILES.find((b) => b.id === selectedBranch) ?? BRANCH_PROFILES[0];
-  const activeSettings = settings
-    ? { ...settings, shop_name_th: branch.shop_name_th, shop_name_en: branch.shop_name_en, phone: branch.phone }
+  // สาขาตามรหัสที่ล็อกอิน — ไม่เจอ (Sale Admin / คลังสินค้า / จัดซื้อ) = undefined → activeSettings เป็น null → ไม่มีฉลากให้ดู/พิมพ์
+  // 🚨 ห้าม fallback เป็นสาขาใดสาขาหนึ่ง: ฉลากจะพิมพ์ชื่อร้าน/เบอร์/เภสัชกรของสาขานั้นทั้งที่ผู้พิมพ์ไม่ใช่สาขานั้น
+  //    (ชื่อเภสัชกรบนฉลากยาที่จ่ายจริงผิดคน) — เดิมปุ่มเลือกสาขายังบอกผู้ใช้ว่ากำลังพิมพ์สาขาไหน ตอนนี้ไม่มีปุ่มแล้ว
+  const branch = BRANCH_PROFILES.find(b => b.code === userBranch);
+  const activeSettings: LabelShopInfo | null = settings && branch
+    ? { ...settings, shop_name_th: branch.shop_name_th, shop_name_en: branch.shop_name_en, phone: branch.phone, pharmacist: branch.pharmacist }
     : null;
 
   // วัดขนาดที่พอดีใหม่ทุกครั้งที่สิ่งที่อยู่บนฉลากเปลี่ยน (ยา/สาขา/ภาษา/ชื่อลูกค้า) หรือฟอนต์เพิ่งโหลดเสร็จ
   // useLayoutEffect = วัดและแก้ก่อนจอวาด ไม่เห็นฉลากกระพริบจากขนาดเต็มลงไปขนาดที่พอดี
   // 🚨 deps ห้ามใส่ activeSettings — object ใหม่ทุก render → effect รันทุก render → setBodyFit → render ใหม่ → วนไม่จบ
-  //    ใช้ settings + selectedBranch (state ตัวจริงที่ activeSettings สร้างจาก) แทน
+  //    ใช้ settings + branch (ค่าคงที่ใน BRANCH_PROFILES ที่ activeSettings สร้างจาก — identity คงที่) แทน
   useLayoutEffect(() => {
     const el = previewLabelRef.current;
     if (!el) return;
     const next = fitLabelBodySize(el);
     setBodyFit(prev => (prev.size === next.size && prev.fits === next.fits ? prev : next));
-  }, [selected, settings, selectedBranch, lang, patientName, fontsTick]);
+  }, [selected, settings, branch, lang, patientName, fontsTick]);
 
   useEffect(() => {
     if (!supabaseLabel) { setError(supabaseLabelError ?? 'Supabase not configured.'); return; }
@@ -754,6 +759,16 @@ export function DrugLabelPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onG
     setAddForm(f => ({ ...f, translations: { ...f.translations, [lang]: { ...f.translations[lang], [field]: value } } }));
   }
 
+  // ปุ่มแก้ไข/ลบของรายการที่เลือก — ใช้ทั้งตอนมีฉลากให้ดู และตอนล็อกอินด้วยรหัสที่ไม่ใช่สาขา (ไม่มีฉลาก แต่ยังแก้ข้อมูลยาได้)
+  const editDeleteButtons = (
+    <>
+      <button className="dl-btn-edit" onClick={handleOpenEditModal} type="button">✏️ แก้ไขข้อมูล</button>
+      {isAdminUnlocked && (
+        <button className="dl-btn-delete" onClick={() => { setDeletePassword(''); setDeleteError(''); setShowDeleteModal(true); }} type="button">🗑️ ลบ</button>
+      )}
+    </>
+  );
+
   return (
     <>
       {/* Hero Header */}
@@ -761,10 +776,10 @@ export function DrugLabelPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onG
         <div className="hero-content">
           <h1 className="logo-premium"><AnimatedLogoText text="DRUG LABEL" /></h1>
           <div className="tagline-row">
-            {BRANCH_PROFILES.map(b => (
-              <button key={b.id} className={`dl-branch-btn${selectedBranch === b.id ? ' active' : ''}`}
-                onClick={() => setSelectedBranch(b.id)} type="button">{b.shop_name_th}</button>
-            ))}
+            {/* สาขาตามรหัสที่ล็อกอิน — แสดงอย่างเดียว กดเปลี่ยนไม่ได้ (เดิมเป็นปุ่มเลือกสาขา 3 ปุ่ม) */}
+            {branch
+              ? <span className="dl-branch-chip" title="สาขาตามรหัสที่ล็อกอิน">🔒 {branch.shop_name_th}</span>
+              : <span className="dl-branch-chip dl-branch-chip--none">ไม่ใช่รหัสสาขา — พิมพ์ฉลากไม่ได้</span>}
           </div>
           <PageNavRow current="druglabel" handlers={{ pricetag: onGoPriceTag, druglabel: onGoDrugLabel, stockcheck: onGoStockCheck, customerhistory: onGoCustomerHistory, outbound: onGoOutbound, salesupport: onGoSaleSupport }} />
         </div>
@@ -834,7 +849,16 @@ export function DrugLabelPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onG
               placeholder="ระบุชื่อลูกค้า (ถ้ามี)" value={patientName}
               onChange={e => setPatientName(e.target.value)} />
           </div>
-          {selected && activeSettings ? (
+          {!branch ? (
+            <>
+              {/* รหัสที่ล็อกอินไม่ใช่สาขา → ไม่รู้ว่าจะพิมพ์เป็นสาขา/เภสัชกรคนไหน จึงไม่แสดงฉลาก (ดูหมายเหตุที่ const branch) */}
+              <div className="dl-empty-preview">
+                ฉลากยาพิมพ์ได้เฉพาะรหัสสาขา SRC / KKL / SSS<br />
+                รหัสที่ล็อกอินอยู่ไม่ใช่รหัสสาขา จึงดูตัวอย่างและพิมพ์ฉลากไม่ได้ — ยังค้นหา เพิ่ม และแก้ไขข้อมูลยาได้ตามปกติ
+              </div>
+              {selected && <div className="dl-print-actions">{editDeleteButtons}</div>}
+            </>
+          ) : selected && activeSettings ? (
             <>
               <div className="dl-preview-frame">
                 <Label ref={previewLabelRef} medicine={selected} settings={activeSettings} lang={lang}
@@ -843,17 +867,14 @@ export function DrugLabelPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onG
               {/* บอกเมื่อระบบลดขนาดให้ — พนักงานจะไม่งงว่าทำไมบางฉลากตัวเล็กกว่าฉลากอื่น */}
               {!bodyFit.fits ? (
                 <div className="dl-fit-note dl-fit-note--warn">
-                  ⚠️ ข้อความยาวเกินฉลาก — ลดเหลือ {bodyFit.size}pt แล้วยังไม่พอ ส่วนท้ายจะถูกตัดตอนพิมพ์
+                  ⚠️ ข้อความยาวเกินฉลาก — ลดเหลือ {bodyFit.size}pt แล้วยังไม่พอ ส่วนท้าย (รวมชื่อเภสัชกร) จะถูกตัดตอนพิมพ์
                 </div>
               ) : bodyFit.size < LABEL_BODY_MAX_PT && (
                 <div className="dl-fit-note">ลดขนาดตัวอักษรเนื้อหาเหลือ {bodyFit.size}pt ให้พอดีฉลาก</div>
               )}
               <div className="dl-print-actions">
                 <button className="dl-btn-print" onClick={handlePrint} type="button">🖨️ พิมพ์ฉลากยา</button>
-                <button className="dl-btn-edit" onClick={handleOpenEditModal} type="button">✏️ แก้ไขข้อมูล</button>
-                {isAdminUnlocked && (
-                  <button className="dl-btn-delete" onClick={() => { setDeletePassword(''); setDeleteError(''); setShowDeleteModal(true); }} type="button">🗑️ ลบ</button>
-                )}
+                {editDeleteButtons}
               </div>
             </>
           ) : (

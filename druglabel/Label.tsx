@@ -1,15 +1,15 @@
 import { forwardRef, type CSSProperties } from 'react';
-import type { Lang, Medicine, ShopSettings } from './types';
+import type { Lang, LabelShopInfo, Medicine } from './types';
 import { formatBeDate } from './format';
 
-const FIELD_LABELS: Record<Lang, { trade_name: string; generic_name: string; usage: string; indication: string; warning: string; storage: string; patient: string }> = {
-  th: { trade_name: 'ชื่อการค้า',  generic_name: 'ชื่อยา',       usage: 'วิธีใช้',     indication: 'ข้อบ่งใช้',    warning: 'ข้อควรระวัง',    storage: 'การเก็บรักษา',  patient: 'ชื่อลูกค้า'    },
-  en: { trade_name: 'Trade Name',  generic_name: 'Generic Name', usage: 'Directions',  indication: 'Indication',   warning: 'Warning',         storage: 'Storage',        patient: 'Patient'        },
-  zh: { trade_name: '商品名',       generic_name: '通用名',        usage: '用法用量',     indication: '适应症',        warning: '注意事项',         storage: '储存方法',        patient: '患者姓名'        },
-  ja: { trade_name: '商品名',       generic_name: '一般名',        usage: '用法・用量',   indication: '効能・効果',    warning: '注意事項',         storage: '保管方法',        patient: '患者名'          },
-  my: { trade_name: 'ကုန်အမှတ်',   generic_name: 'အမည်တွင်',    usage: 'အသုံးပြုနည်း', indication: 'အကြောင်းပြချက်', warning: 'သတိပြုရန်',    storage: 'သိမ်းဆည်းနည်း', patient: 'လူနာအမည်'      },
-  km: { trade_name: 'ឈ្មោះពាណិជ្ជ', generic_name: 'ឈ្មោះទូទៅ',  usage: 'របៀបប្រើ',   indication: 'សញ្ញាបង្ហាញ',  warning: 'ការព្រមាន',      storage: 'ការរក្សាទុក',   patient: 'ឈ្មោះអ្នកជំងឺ' },
-  ko: { trade_name: '상품명',       generic_name: '일반명',        usage: '복용법',       indication: '적응증',         warning: '주의사항',         storage: '보관방법',        patient: '환자명'          },
+const FIELD_LABELS: Record<Lang, { trade_name: string; generic_name: string; usage: string; indication: string; warning: string; storage: string; patient: string; pharmacist: string }> = {
+  th: { trade_name: 'ชื่อการค้า',  generic_name: 'ชื่อยา',       usage: 'วิธีใช้',     indication: 'ข้อบ่งใช้',    warning: 'ข้อควรระวัง',    storage: 'การเก็บรักษา',  patient: 'ชื่อลูกค้า', pharmacist: 'เภสัชกร' },
+  en: { trade_name: 'Trade Name',  generic_name: 'Generic Name', usage: 'Directions',  indication: 'Indication',   warning: 'Warning',         storage: 'Storage',        patient: 'Patient', pharmacist: 'Pharmacist' },
+  zh: { trade_name: '商品名',       generic_name: '通用名',        usage: '用法用量',     indication: '适应症',        warning: '注意事项',         storage: '储存方法',        patient: '患者姓名', pharmacist: '药剂师' },
+  ja: { trade_name: '商品名',       generic_name: '一般名',        usage: '用法・用量',   indication: '効能・効果',    warning: '注意事項',         storage: '保管方法',        patient: '患者名', pharmacist: '薬剤師' },
+  my: { trade_name: 'ကုန်အမှတ်',   generic_name: 'အမည်တွင်',    usage: 'အသုံးပြုနည်း', indication: 'အကြောင်းပြချက်', warning: 'သတိပြုရန်',    storage: 'သိမ်းဆည်းနည်း', patient: 'လူနာအမည်', pharmacist: 'ဆေးဝါးပညာရှင်' },
+  km: { trade_name: 'ឈ្មោះពាណិជ្ជ', generic_name: 'ឈ្មោះទូទៅ',  usage: 'របៀបប្រើ',   indication: 'សញ្ញាបង្ហាញ',  warning: 'ការព្រមាន',      storage: 'ការរក្សាទុក',   patient: 'ឈ្មោះអ្នកជំងឺ', pharmacist: 'ឱសថការី' },
+  ko: { trade_name: '상품명',       generic_name: '일반명',        usage: '복용법',       indication: '적응증',         warning: '주의사항',         storage: '보관방법',        patient: '환자명', pharmacist: '약사' },
 };
 
 const ANIN_LOGO  = '/anin.png';
@@ -18,7 +18,8 @@ const PHONE_ICON = '/phone-icon.png';
 
 interface Props {
   medicine: Medicine;
-  settings: ShopSettings;
+  /** ข้อมูลร้านของสาขาที่ล็อกอิน — รวมเภสัชกรประจำสาขา (พิมพ์เป็นบรรทัดสุดท้ายของฉลากเสมอ) */
+  settings: LabelShopInfo;
   lang?: Lang;
   patientName?: string;
   date?: Date;
@@ -82,19 +83,26 @@ export const Label = forwardRef<HTMLDivElement, Props>(
           </>
         )}
 
-        {(medicine.warning || medicine.storage) && (
-          <div className="dl-label-warn">
-            {medicine.warning && (
-              <>
-                <div className="dl-label-section"><strong>{lbl.warning}:</strong> {medicine.warning}</div>
-                <div className="dl-label-divider" />
-              </>
-            )}
-            {medicine.storage && (
-              <div className="dl-label-section"><strong>{lbl.storage}:</strong> {medicine.storage}</div>
-            )}
-          </div>
-        )}
+        {/* ท้ายฉลาก: ข้อควรระวัง/การเก็บรักษา + เภสัชกร — ดันลงล่างสุดด้วย margin-top:auto ของกล่องนี้ที่เดียว
+            (ใส่ auto ทั้งกล่องนอกและ .dl-label-warn พื้นที่ว่างจะถูกแบ่งครึ่ง ข้อควรระวังลอยกลางฉลาก)
+            เส้นคั่นเหนือเภสัชกรเป็น border-top ของบรรทัดเภสัชกรเอง (กระชับกว่า .dl-label-divider — ดูเหตุผลใน App.css)
+            → เส้นหลังข้อควรระวังจึงมีเฉพาะเมื่อมีการเก็บรักษาตามหลัง */}
+        <div className="dl-label-bottom">
+          {(medicine.warning || medicine.storage) && (
+            <div className="dl-label-warn">
+              {medicine.warning && (
+                <>
+                  <div className="dl-label-section"><strong>{lbl.warning}:</strong> {medicine.warning}</div>
+                  {medicine.storage && <div className="dl-label-divider" />}
+                </>
+              )}
+              {medicine.storage && (
+                <div className="dl-label-section"><strong>{lbl.storage}:</strong> {medicine.storage}</div>
+              )}
+            </div>
+          )}
+          <div className="dl-label-pharmacist"><strong>{lbl.pharmacist} :</strong> {settings.pharmacist}</div>
+        </div>
       </div>
     );
   }

@@ -30,3 +30,10 @@ export interface ShopSettings {
   line_id: string;
   logo_text: string;
 }
+
+/** ข้อมูลร้านที่ `Label` ใช้จริง = แถว `dl_settings` ทับด้วยค่าประจำสาขาที่ล็อกอิน (ชื่อร้าน/เบอร์โทร)
+ *  + เภสัชกรประจำสาขา — ประกอบที่ `activeSettings` ใน DrugLabelPage (ข้อมูลสาขาอยู่ใน `BRANCH_PROFILES`)
+ *  `pharmacist` เป็นข้อความสำเร็จรูปรวมเลขใบอนุญาต เช่น "วัชรพันธ์ สุริยะคุปต์ (ภ. 45878)" ไม่ได้มาจาก DB */
+export interface LabelShopInfo extends ShopSettings {
+  pharmacist: string;
+}

@@ -2105,6 +2105,7 @@ ${sheetsHtml}
           onGoCustomerHistory={() => setCurrentPage('customerhistory')}
           onGoOutbound={() => setCurrentPage('outbound')}
           onGoSaleSupport={() => setCurrentPage('salesupport')}
+          userBranch={authProfile.branch ?? undefined}
         />
       )}
 

@@ -6,13 +6,16 @@ export interface Profile {
   password: string;
   icon: string;
   /**
-   * รหัสที่ใช้แทนตัวโปรไฟล์นี้ในฐานข้อมูล — ทำ 2 หน้าที่พร้อมกัน:
+   * รหัสที่ใช้แทนตัวโปรไฟล์นี้ในฐานข้อมูล — ทำ 3 หน้าที่พร้อมกัน:
    *
    * 1. **ค่าในคอลัมน์ `branch`** ของ ss_orders / ss_request_items / ss_new_products /
    *    ss_tickets และเป็น `actor_code` ของตารางแจ้งเตือน (ดู `BRANCH_PROFILE_CODES` ด้านล่าง)
    * 2. **สาขาของปุ่ม "เลือกตามหมวด"** หน้าป้ายราคา — ใช้ได้เฉพาะค่าที่อยู่ใน
    *    `CATEGORY_BRANCHES` ของ App.tsx และ `product_category.branch` ด้วย
    *    (`SALE_ADMIN` ผ่านข้อ 1 แต่ไม่ผ่านข้อ 2 → ปุ่มถูกซ่อน ตั้งใจ ไม่ใช่บั๊ก)
+   * 3. **สาขา+เภสัชกรบนฉลากยา** (หน้า Label) — จับคู่กับ `BRANCH_PROFILES[].code` ใน
+   *    druglabel/DrugLabelPage.tsx · ไม่ใช่ SRC/KKL/SSS = ไม่มีฉลากให้ดู/พิมพ์ (ตั้งใจ ไม่เดาสาขา)
+   *    ⚠️ เปลี่ยนค่า SRC/KKL/SSS ต้องแก้ `BRANCH_PROFILES[].code` ตามด้วย
    *
    * `null` = ไม่สังกัดสาขา ไม่ลงข้อมูลเป็นผู้ขอ และไม่ปริ้นป้ายตามหมวด
    *   - `WAREHOUSE` คลังสินค้าไม่ได้ติดป้ายราคาที่ชั้นวาง

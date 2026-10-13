@@ -164,11 +164,6 @@ body {
   min-height: 66px;
 }
 
-.hero-header .dl-branch-btn {
-  flex: 0 0 auto;
-  white-space: nowrap;
-}
-
 /* กล่องค้นหาที่ย้ายลงมาอยู่เหนือตาราง */
 .table-search-row {
   max-width: 800px;
@@ -2550,40 +2545,26 @@ body.pulse-b .cart-inline-btn.in-cart {
   flex-wrap: wrap;
 }
 
-.dl-branch-btn {
+/* สาขาที่ใช้พิมพ์ฉลาก = ตามรหัสที่ล็อกอิน (2569-10-13) — เดิมเป็นปุ่ม .dl-branch-btn 3 ปุ่มให้เลือกเอง เลิกแล้ว
+   ตอนนี้แสดงอย่างเดียวบน hero สีน้ำเงิน: ใช้หน้าตาเดียวกับปุ่มสาขาที่ถูกเลือกเดิม (พื้นขาว ตัวอักษรน้ำเงิน) แต่กดไม่ได้
+   --none = รหัสที่ล็อกอินไม่ใช่รหัสสาขา (Sale Admin / คลังสินค้า / จัดซื้อ) */
+.dl-branch-chip {
+  flex: 0 0 auto;
+  white-space: nowrap;
   padding: 6px 16px;
   border-radius: 999px;
-  border: 1.5px solid #e8e0d5;
-  background: white;
-  color: #6b6559;
-  font-family: 'Noto Sans Thai', 'Noto Sans', sans-serif;
+  border: 1.5px solid #fff;
+  background: #fff;
+  color: #2d6cad;
   font-size: 13px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.dl-branch-btn:hover { border-color: #4891db; color: #2d2a26; }
-.dl-branch-btn.active {
-  background: linear-gradient(135deg, #2d6cad, #4891db);
-  border-color: #a9d0f5;
-  color: #fff;
   font-weight: 600;
+  cursor: default;
 }
-
-/* Branch buttons inside the dark hero-header */
-.hero-header .dl-branch-btn {
+.dl-branch-chip--none {
   border-color: rgba(255,255,255,0.28);
   background: rgba(255,255,255,0.1);
   color: #fff;
-}
-.hero-header .dl-branch-btn:hover {
-  background: rgba(255,255,255,0.22);
-  border-color: rgba(255,255,255,0.5);
-  color: #fff;
-}
-.hero-header .dl-branch-btn.active {
-  background: #fff;
-  border-color: #fff;
-  color: #2d6cad;
+  font-weight: 400;
 }
 
 .dl-search-wrap {
@@ -2852,7 +2833,7 @@ body.pulse-b .cart-inline-btn.in-cart {
   position: relative;
 }
 
-/* ── ขนาดตัวอักษรฉลากยา (ผู้ใช้สั่ง 2569-10-12) — หัวฉลาก 8pt · เนื้อหา 9.5pt ตัวหนา · ชื่อลูกค้า 9pt ตัวหนา ──
+/* ── ขนาดตัวอักษรฉลากยา (ผู้ใช้สั่ง 2569-10-12) — หัวฉลาก 8pt · เนื้อหา 9.5pt ตัวหนา · ชื่อลูกค้า 9pt ตัวหนา · เภสัชกรท้ายฉลาก 8pt ตัวหนา ──
    🚨 เนื้อหาไม่ได้ตายตัวที่ 9.5pt: ใช้ var(--dl-body-size) ที่ fitLabelBodySize (druglabel/fit.ts) ลดให้ทีละ 0.5pt
       เมื่อฉลากล้น 65 มม. — ถ้าเปลี่ยนเป็นค่าตายตัว ฉลาก ~80% (วัดกับยาจริง) จะถูกตัดบรรทัดท้ายตอนพิมพ์
    ⚠️ ระยะห่างแนวตั้งถูกบีบพร้อมกัน (padding / เส้นคั่น / ระยะบรรทัด) — คืนค่าเดิมเมื่อไหร่ ฉลากจะถูกลดขนาดมากขึ้นทันที */
@@ -2920,7 +2901,23 @@ body.pulse-b .cart-inline-btn.in-cart {
 .dl-patient-input { flex: 1; border: 1px solid #4891db; border-radius: 6px; padding: 5px 10px; font-size: 13px; font-family: 'Noto Sans Thai', 'Noto Sans', sans-serif; background: #fff; outline: none; }
 .dl-patient-input:focus { border-color: #2d6cad; box-shadow: 0 0 0 2px rgba(72,145,219,0.2); }
 .dl-patient-input::placeholder { color: #bbb; }
-.dl-label-warn { margin-top: auto; padding-top: 0.5mm; }
+/* ท้ายฉลาก (ข้อควรระวัง/การเก็บรักษา + เภสัชกร) ถูกดันลงล่างสุดด้วย margin-top:auto ของกล่องนี้ที่เดียว
+   🚨 ห้ามใส่ margin-top:auto ที่ .dl-label-warn ซ้ำ — auto 2 ตัวใน flex column แบ่งพื้นที่ว่างครึ่งๆ ข้อควรระวังจะลอยกลางฉลาก */
+.dl-label-bottom { margin-top: auto; }
+.dl-label-warn { padding-top: 0.5mm; }
+/* เภสัชกรประจำสาขา (เพิ่ม 2569-10-13) — บรรทัดสุดท้ายของฉลากเสมอ · 8pt ตัวหนา เท่าชื่อร้านที่หัวฉลาก
+   ไม่ผูกกับ --dl-body-size: เป็นข้อมูลระบุผู้จ่ายยา ต้องอ่านชัดเสมอ ไม่ถูกลดขนาดตามความยาวเนื้อหา
+   เส้นคั่นด้านบนเป็น border-top ของบรรทัดนี้เอง และกระชับกว่า .dl-label-divider (เหนือเส้น 0.4 / ใต้เส้น 0.3 มม. แทน 0.6 / 0.6)
+   — บรรทัดนี้กินความสูงฉลากเพิ่มราว 4.5 มม. ทุก 0.5 มม. ที่ประหยัดได้มีผลมาก: วัดกับยาไทย 333 รายการ (หัวฉลากสาขาสวนเสือ)
+   ใช้ divider ปกติได้ 9.5pt 190 ใบ · แบบกระชับนี้ 272 ใบ (ก่อนมีบรรทัดนี้ 303) — ⚠️ คืนเป็น .dl-label-divider แล้วฉลากจะถูกลดขนาดมากขึ้นทันที */
+.dl-label-pharmacist {
+  margin: 0.4mm 0 0.1mm;
+  padding-top: 0.3mm;
+  border-top: 0.5px solid #000;
+  font-size: 8pt;
+  font-weight: 700;
+  line-height: 1.25;
+}
 
 .dl-label.dl-label-preview {
   box-shadow: 0 4px 14px rgba(0,0,0,0.12);
