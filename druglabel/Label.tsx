@@ -1,6 +1,5 @@
 import { forwardRef, type CSSProperties } from 'react';
 import type { Lang, LabelShopInfo, Medicine } from './types';
-import { formatBeDate } from './format';
 
 const FIELD_LABELS: Record<Lang, { trade_name: string; generic_name: string; usage: string; indication: string; warning: string; storage: string; patient: string; pharmacist: string }> = {
   th: { trade_name: 'ชื่อการค้า',  generic_name: 'ชื่อยา',       usage: 'วิธีใช้',     indication: 'ข้อบ่งใช้',    warning: 'ข้อควรระวัง',    storage: 'การเก็บรักษา',  patient: 'ชื่อลูกค้า', pharmacist: 'เภสัชกร' },
@@ -18,11 +17,10 @@ const PHONE_ICON = '/phone-icon.png';
 
 interface Props {
   medicine: Medicine;
-  /** ข้อมูลร้านของสาขาที่ล็อกอิน — รวมเภสัชกรประจำสาขา (พิมพ์เป็นบรรทัดสุดท้ายของฉลากเสมอ) */
+  /** ข้อมูลร้านของสาขาที่ล็อกอิน — ชื่อ/เบอร์/ที่อยู่ที่หัวฉลาก และเภสัชกรประจำสาขา (บรรทัดสุดท้ายของฉลากเสมอ) */
   settings: LabelShopInfo;
   lang?: Lang;
   patientName?: string;
-  date?: Date;
   preview?: boolean;
   /** ขนาดตัวอักษรเนื้อหา (pt) ที่ fitLabelBodySize คำนวณจากตัว Preview — ส่งค่าเดียวกันให้ทั้ง Preview และตัวพิมพ์
    *  เป็น CSS var บน element (`--dl-body-size`) ตัวพิมพ์จึงพาค่าไปด้วยตอน handlePrint ก๊อป innerHTML */
@@ -30,20 +28,16 @@ interface Props {
 }
 
 export const Label = forwardRef<HTMLDivElement, Props>(
-  ({ medicine, settings, lang = 'th', patientName, date, preview, bodySize }, ref) => {
-    const dateStr = formatBeDate(date ?? new Date());
+  ({ medicine, settings, lang = 'th', patientName, preview, bodySize }, ref) => {
     const lbl = FIELD_LABELS[lang];
     const style = bodySize ? ({ '--dl-body-size': `${bodySize}pt` } as CSSProperties) : undefined;
     return (
       <div ref={ref} className={`dl-label${preview ? ' dl-label-preview' : ''}`} style={style} aria-label="medicine label">
+        {/* หัวฉลาก 2 แถว (ตัดชื่อสาขาอังกฤษ + วันที่ออก ใส่ที่อยู่แทน — 2569-10-13):
+            แถวบน = โลโก้ | ชื่อสาขา | เบอร์+LINE · แถวล่าง = ที่อยู่ ต่อจากโลโก้ถึงขอบขวา (จัดวางด้วย grid-template-areas ใน App.css) */}
         <div className="dl-label-header">
-          <div className="dl-label-shop">
-            <img className="dl-label-logo-image" src={ANIN_LOGO} alt="ANIN logo" />
-            <div>
-              <div className="dl-label-shop-name-th">{settings.shop_name_th}</div>
-              <div className="dl-label-shop-name-en">{settings.shop_name_en}</div>
-            </div>
-          </div>
+          <img className="dl-label-logo-image" src={ANIN_LOGO} alt="ANIN logo" />
+          <div className="dl-label-shop-name-th">{settings.shop_name_th}</div>
           <div className="dl-label-contact">
             <div className="dl-label-contact-info">
               <div className="dl-label-contact-row">
@@ -55,8 +49,8 @@ export const Label = forwardRef<HTMLDivElement, Props>(
                 <span>{settings.line_id}</span>
               </div>
             </div>
-            <div className="dl-label-date">{dateStr}</div>
           </div>
+          <div className="dl-label-shop-address">{settings.address}</div>
         </div>
 
         <div className="dl-label-divider" />

@@ -11,11 +11,12 @@ import { PageNavRow } from '../pageAccess';
 import { SearchIcon } from '../SearchIcon';
 
 // ข้อมูลหัวฉลาก/ท้ายฉลากของแต่ละสาขา — สาขาที่ใช้ = ตามรหัสที่ล็อกอิน ไม่มีปุ่มให้เลือกเองแล้ว (2569-10-13)
-// code ต้องตรงกับ `PROFILES[].branch` ใน auth.ts · pharmacist = ชื่อเภสัชกรประจำสาขา + เลขใบอนุญาต (พิมพ์ท้ายฉลาก)
+// code ต้องตรงกับ `PROFILES[].branch` ใน auth.ts · address = ที่อยู่สาขา (หัวฉลากแถวล่าง แทนชื่อสาขาภาษาอังกฤษเดิม ซึ่งตัดออกแล้ว)
+// pharmacist = ชื่อเภสัชกรประจำสาขา + เลขใบอนุญาต (พิมพ์ท้ายฉลาก)
 const BRANCH_PROFILES = [
-  { code: 'SRC', shop_name_th: 'สาขาชากค้อ',          shop_name_en: 'Chak Kho Branch',           phone: '082-0311590', pharmacist: 'วัชรพันธ์ สุริยะคุปต์ (ภ. 45878)' },
-  { code: 'KKL', shop_name_th: 'สาขาเก้ากิโล',         shop_name_en: 'Kao Ki Lo Branch',          phone: '098-8201512', pharmacist: 'เกียรติศักดิ์ ภาคี (ภ. 43609)' },
-  { code: 'SSS', shop_name_th: 'สาขาสวนเสือศรีราชา',   shop_name_en: 'Suan Suea SiRacha Branch',  phone: '092-2469002', pharmacist: 'ภรัณยู เหลื่อมสิงขร (ภ. 50908)' },
+  { code: 'SRC', shop_name_th: 'สาขาชากค้อ',          phone: '082-0311590', address: '291/62 หมู่ 8 ต.สุรศักดิ์ อ.ศรีราชา จ.ชลบุรี',    pharmacist: 'วัชรพันธ์ สุริยะคุปต์ (ภ. 45878)' },
+  { code: 'KKL', shop_name_th: 'สาขาเก้ากิโล',         phone: '098-8201512', address: '48/23 หมู่ที่ 3 ต.สุรศักดิ์ อ.ศรีราชา จ.ชลบุรี',  pharmacist: 'เกียรติศักดิ์ ภาคี (ภ. 43609)' },
+  { code: 'SSS', shop_name_th: 'สาขาสวนเสือศรีราชา',   phone: '092-2469002', address: '517/44 หมู่ที่ 3 ต.หนองขาม อ.ศรีราชา จ.ชลบุรี', pharmacist: 'ภรัณยู เหลื่อมสิงขร (ภ. 50908)' },
 ] as const;
 
 type MedRow = { id: string; sku: string; barcode: string | null };
@@ -190,7 +191,7 @@ export function DrugLabelPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onG
   //    (ชื่อเภสัชกรบนฉลากยาที่จ่ายจริงผิดคน) — เดิมปุ่มเลือกสาขายังบอกผู้ใช้ว่ากำลังพิมพ์สาขาไหน ตอนนี้ไม่มีปุ่มแล้ว
   const branch = BRANCH_PROFILES.find(b => b.code === userBranch);
   const activeSettings: LabelShopInfo | null = settings && branch
-    ? { ...settings, shop_name_th: branch.shop_name_th, shop_name_en: branch.shop_name_en, phone: branch.phone, pharmacist: branch.pharmacist }
+    ? { ...settings, shop_name_th: branch.shop_name_th, phone: branch.phone, address: branch.address, pharmacist: branch.pharmacist }
     : null;
 
   // วัดขนาดที่พอดีใหม่ทุกครั้งที่สิ่งที่อยู่บนฉลากเปลี่ยน (ยา/สาขา/ภาษา/ชื่อลูกค้า) หรือฟอนต์เพิ่งโหลดเสร็จ

@@ -32,8 +32,11 @@ export interface ShopSettings {
 }
 
 /** ข้อมูลร้านที่ `Label` ใช้จริง = แถว `dl_settings` ทับด้วยค่าประจำสาขาที่ล็อกอิน (ชื่อร้าน/เบอร์โทร)
- *  + เภสัชกรประจำสาขา — ประกอบที่ `activeSettings` ใน DrugLabelPage (ข้อมูลสาขาอยู่ใน `BRANCH_PROFILES`)
- *  `pharmacist` เป็นข้อความสำเร็จรูปรวมเลขใบอนุญาต เช่น "วัชรพันธ์ สุริยะคุปต์ (ภ. 45878)" ไม่ได้มาจาก DB */
+ *  + ที่อยู่สาขา + เภสัชกรประจำสาขา — ประกอบที่ `activeSettings` ใน DrugLabelPage (ข้อมูลสาขาอยู่ใน `BRANCH_PROFILES`)
+ *  `address` / `pharmacist` เป็นข้อความสำเร็จรูป ไม่ได้มาจาก DB — เช่น "291/62 หมู่ 8 ต.สุรศักดิ์ อ.ศรีราชา จ.ชลบุรี"
+ *  และ "วัชรพันธ์ สุริยะคุปต์ (ภ. 45878)" (pharmacist รวมเลขใบอนุญาตแล้ว)
+ *  ⚠️ `shop_name_en` ของ ShopSettings ไม่ถูกแสดงบนฉลากแล้ว (ผู้ใช้สั่งตัดชื่อสาขาภาษาอังกฤษออก 2569-10-13) */
 export interface LabelShopInfo extends ShopSettings {
+  address: string;
   pharmacist: string;
 }
