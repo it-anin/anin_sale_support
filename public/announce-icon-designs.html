@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ไอคอนโทรโข่งแจ้งประกาศ — 9 แบบ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700;800&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: #f4f7fa;
+    font-family: 'Noto Sans Thai', sans-serif;
+    color: #1c3d5e;
+  }
+  .page-head {
+    padding: 28px 24px 18px;
+    border-bottom: 1px solid #dce5ee;
+    background: #fff;
+  }
+  .page-head h1 { margin: 0 0 6px; font-size: 20px; font-weight: 800; }
+  .page-head p { margin: 0; font-size: 13px; color: #5f7183; line-height: 1.7; }
+  .page-head code {
+    background: #eaf3fc; padding: 1px 6px; border-radius: 5px;
+    font-size: 12px; color: #2d6cad;
+  }
+  .note {
+    margin: 12px 24px 0; padding: 10px 14px;
+    background: #fff8e7; border: 1px solid #f0d9a8; border-radius: 9px;
+    font-size: 12.5px; color: #8a6320; line-height: 1.7;
+  }
+  .flow {
+    margin: 12px 24px 0; padding: 14px 18px 14px 34px;
+    background: #fff; border: 1px solid #dce5ee; border-radius: 12px;
+    font-size: 12.8px; color: #31516f; line-height: 1.8;
+  }
+  .flow b { color: #2d6cad; }
+  .flow li { margin-bottom: 2px; }
+
+  .grid { padding: 22px 24px 60px; display: grid; gap: 20px; }
+  .card {
+    background: #fff; border: 1px solid #dce5ee; border-radius: 14px;
+    overflow: hidden; box-shadow: 0 2px 8px rgba(45,108,173,0.06);
+  }
+  .card-head {
+    display: flex; align-items: baseline; gap: 10px;
+    padding: 13px 16px; border-bottom: 1px solid #edf2f7;
+  }
+  .card-no {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 24px; height: 24px; border-radius: 7px;
+    background: #2d6cad; color: #fff;
+    font: 800 12px 'Outfit', sans-serif; flex-shrink: 0;
+  }
+  .card-name { font-size: 14.5px; font-weight: 700; }
+  .card-desc { font-size: 12px; color: #7b8b9c; margin-left: auto; text-align: right; max-width: 52%; line-height: 1.5; }
+
+  /* จำลอง hero จริง — สีตรงกับ .hero-header ใน App.css */
+  .hero-sim {
+    background: #4891db;
+    padding: 30px 20px 26px;
+    display: flex; align-items: flex-start; justify-content: center;
+    gap: 28px; flex-wrap: wrap;
+    position: relative; overflow: hidden;
+  }
+  .hero-sim::before {
+    content: ''; position: absolute; inset: 0;
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"><path fill="%23ffffff" fill-opacity="0.05" d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,122.7C672,117,768,139,864,138.7C960,139,1056,117,1152,101.3C1248,85,1344,75,1392,69.3L1440,64L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path></svg>') bottom center/cover no-repeat;
+    pointer-events: none;
+  }
+  .hero-sim > * { position: relative; z-index: 1; }
+  .state { display: flex; flex-direction: column; align-items: center; gap: 9px; }
+  .state-label { font-size: 11px; color: rgba(255,255,255,0.85); font-weight: 600; letter-spacing: .3px; }
+  .state-label em { font-style: normal; opacity: .75; font-weight: 500; }
+
+  /* แถบผู้ใช้จริง (.app-userbar ใน App.css) — ไม่ fixed เพื่อวางในการ์ดได้ */
+  .ub {
+    display: flex; align-items: center; gap: 8px;
+    padding: 5px 6px 5px 12px;
+    background: rgba(255,255,255,0.95);
+    border-radius: 999px;
+    box-shadow: 0 3px 12px rgba(20,60,100,0.25);
+    font-family: 'Noto Sans Thai', sans-serif;
+  }
+  .ub-icon { font-size: 16px; line-height: 1; }
+  .ub-name { font-size: .85rem; font-weight: 700; color: #2d6cad; }
+  .ub-gear {
+    border: none; border-radius: 999px; width: 30px; height: 30px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: #eaf3fc; color: #2d6cad; font-size: 15px;
+  }
+  .ub-logout {
+    border: none; border-radius: 999px; padding: 5px 12px;
+    background: #eaf3fc; color: #2d6cad;
+    font: 600 .8rem 'Noto Sans Thai', sans-serif;
+  }
+
+  /* ───── ปุ่มโทรโข่ง — พื้นฐานร่วม (ขนาดเดียวกับปุ่มเฟือง 30px) ───── */
+  .mg {
+    position: relative;
+    display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+    width: 30px; height: 30px; padding: 0;
+    border: none; border-radius: 999px;
+    background: #eaf3fc; color: #2d6cad;
+    font: 600 12.5px 'Noto Sans Thai', sans-serif;
+    cursor: pointer;
+    transition: background .18s ease, color .18s ease, transform .18s ease, box-shadow .18s ease;
+  }
+  .mg svg {
+    display: block; width: 18px; height: 18px; overflow: visible;
+    fill: none; stroke: currentColor; stroke-width: 1.75;
+    stroke-linecap: round; stroke-linejoin: round;
+  }
+  .mg:hover { background: #d5e8fb; }
+  .mg:focus-visible { outline: 3px solid rgba(72,145,219,.5); outline-offset: 2px; }
+
+  /* จุดแดงขอบขาว — ทรงเดียวกับ .page-nav-notification-dot ของปุ่มนำทาง */
+  .mg-dot {
+    position: absolute; top: -2px; right: -2px;
+    width: 11px; height: 11px;
+    border: 2px solid #fff; border-radius: 50%;
+    background: #e33f4f;
+    box-shadow: 0 2px 6px rgba(150,20,34,.45);
+    pointer-events: none;
+    animation: mgPulse 1.8s ease-in-out infinite;
+  }
+  .mg-count {
+    position: absolute; top: -6px; right: -6px;
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 17px; height: 17px; padding: 0 4px;
+    border: 2px solid #fff; border-radius: 9px;
+    background: #e33f4f; color: #fff;
+    font: 700 10px/1 'Noto Sans Thai', sans-serif;
+    box-shadow: 0 2px 6px rgba(150,20,34,.45);
+    pointer-events: none;
+    animation: mgPulse 1.8s ease-in-out infinite;
+  }
+  .mg:not(.is-new) .mg-dot,
+  .mg:not(.is-new) .mg-count { display: none; }
+  @keyframes mgPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.18); } }
+
+  /* 1 — Line Soft: เหมือนปุ่มเฟือง + จุดแดง (ไม่มีแอนิเมชันที่ตัวไอคอน) */
+
+  /* 2 — Wiggle: ไอคอนสั่นเหมือนกำลังตะโกน ทุก 3.2 วิ */
+  .mg-2.is-new svg { animation: mgWiggle 3.2s ease-in-out infinite; transform-origin: 40% 60%; }
+  @keyframes mgWiggle {
+    0%, 52%, 100% { transform: rotate(0); }
+    8% { transform: rotate(-16deg); }  16% { transform: rotate(13deg); }
+    24% { transform: rotate(-10deg); } 32% { transform: rotate(7deg); }
+    40% { transform: rotate(-3deg); }
+  }
+
+  /* 3 — Sound Waves: คลื่นเสียง 2 ชั้นทยอยโผล่ (ปกติซ่อนไว้ เหลือแค่ตัวโทรโข่ง) */
+  .mg-3 .w1, .mg-3 .w2 { opacity: 0; }
+  .mg-3.is-new .w1 { animation: mgWave 1.8s ease-in-out infinite; }
+  .mg-3.is-new .w2 { animation: mgWave 1.8s ease-in-out .3s infinite; }
+  @keyframes mgWave { 0% { opacity: 0; } 30%, 65% { opacity: 1; } 100% { opacity: 0; } }
+
+  /* 4 — Ripple Ring: วงแหวนแดงแผ่ออกรอบปุ่ม */
+  .mg-4.is-new::before {
+    content: ''; position: absolute; inset: 0; border-radius: 50%;
+    animation: mgRipple 1.8s ease-out infinite; pointer-events: none;
+  }
+  @keyframes mgRipple {
+    0%   { box-shadow: 0 0 0 0 rgba(227,63,79,.55); }
+    100% { box-shadow: 0 0 0 10px rgba(227,63,79,0); }
+  }
+
+  /* 5 — Solid Blue + Bounce: พื้นน้ำเงินเข้ม ไอคอนขาว เด้งขึ้นเบา ๆ ทุก 2.4 วิ */
+  .mg-5 { background: #2d6cad; color: #fff; }
+  .mg-5:hover { background: #4891db; }
+  .mg-5.is-new { animation: mgBounce 2.4s ease-in-out infinite; }
+  @keyframes mgBounce {
+    0%, 55%, 100% { transform: translateY(0); }
+    65% { transform: translateY(-4px); } 75% { transform: translateY(0); }
+    85% { transform: translateY(-2px); }
+  }
+
+  /* 6 — Count Badge: จุดแดงมีเลข (จำนวนประกาศที่ยังไม่ได้เปิดอ่านในเครื่องนี้) */
+
+  /* 7 — Label Pill: มีป้าย "ประกาศ" บอกชัดว่าคืออะไร ไม่ต้องเดาจากไอคอน */
+  .mg-7 { width: auto; padding: 0 12px 0 9px; }
+  .mg-7.is-new { background: #2d6cad; color: #fff; }
+  .mg-7.is-new:hover { background: #4891db; }
+
+  /* 8 — Mini 3D Tile: ชุดเดียวกับปุ่มปิด ✕ / ปุ่มปลดล็อกใน modal Admin ที่เลือกไว้ (แบบที่ 7) */
+  .mg-8 {
+    border: 1px solid #e3ecf5; border-radius: 10px; background: #fff;
+    box-shadow: 0 2px 0 #cfe0f2, 0 3px 8px rgba(0,0,0,.08);
+  }
+  .mg-8:hover { background: #fff; transform: translateY(-1px); box-shadow: 0 3px 0 #cfe0f2, 0 6px 10px rgba(0,0,0,.12); }
+  .mg-8:active { transform: translateY(2px); box-shadow: 0 0 0 #cfe0f2, 0 1px 2px rgba(0,0,0,.12); }
+
+  /* 9 — Shine: ปกติพื้นฟ้าอ่อน · มีใหม่ = พื้นฟ้าเข้ม + แสงพาดทุก 3 วิ (ทรงเดียวกับปุ่ม Update Price) */
+  .mg-9.is-new { background: #4891db; color: #fff; }
+  .mg-9.is-new:hover { background: #2d6cad; }
+  .mg-9.is-new::after {
+    content: ''; position: absolute; inset: 0; border-radius: inherit; overflow: hidden;
+    pointer-events: none;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.7), transparent);
+    background-size: 45% 100%; background-repeat: no-repeat;
+    animation: mgShine 3s ease-in-out infinite;
+  }
+  @keyframes mgShine { 0% { background-position: -70% 0; } 55%, 100% { background-position: 180% 0; } }
+
+  @media (prefers-reduced-motion: reduce) {
+    .mg, .mg *, .mg::before, .mg::after { animation: none !important; }
+    .mg-3 .w1, .mg-3 .w2 { opacity: 1; }
+  }
+
+  /* ───── จำลองหน้าต่าง drawer ที่เปิดเมื่อกดโทรโข่ง — ใช้ CSS ชุด .ss-notification-* ของจริง ───── */
+  .drawer-wrap { padding: 22px; background: rgba(20,35,50,.35); display: flex; justify-content: center; }
+  .drawer {
+    width: min(430px, 100%); background: #f7f9fc;
+    border-radius: 10px; overflow: hidden;
+    box-shadow: -12px 0 34px rgba(18,42,66,.24);
+    display: flex; flex-direction: column;
+  }
+  .dr-header {
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+    padding: 18px 18px 15px; border-bottom: 1px solid #dce5ee; background: #fff;
+  }
+  .dr-header div { display: flex; flex-direction: column; gap: 2px; }
+  .dr-header strong { font-size: 16px; }
+  .dr-header span { color: #8194a8; font-size: 11.5px; font-weight: 500; }
+  .dr-x {
+    width: 34px; height: 34px; border: 1px solid #e3ecf5; border-radius: 10px; background: #fff;
+    color: #2d6cad; font-size: 15px; box-shadow: 0 2px 0 #cfe0f2;
+  }
+  .dr-list { padding: 12px; }
+  .dr-item {
+    position: relative; display: flex; flex-direction: column; gap: 4px;
+    margin-bottom: 8px; padding: 12px 13px;
+    border: 1px solid #dfe7ef; border-radius: 11px; background: #fff; color: #2d3a48;
+  }
+  .dr-item.is-unread { border-left: 4px solid #4891db; background: #f8fbff; }
+  .dr-item > strong { font: 700 13px/1.45 'Noto Sans Thai', sans-serif; color: #1c3d5e; }
+  .dr-new { position: absolute; top: 11px; right: 12px; color: #e33f4f; font-size: 10px; font-weight: 800; }
+  .dr-time { color: #91a0af; font-size: 10.5px; }
+  .dr-muted > strong { color: #5f7183; font-weight: 600; }
+  .dr-footer {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    padding: 10px 14px; border-top: 1px solid #dce5ee; background: #fff;
+  }
+  .dr-footer small { color: #91a0af; font-size: 10.5px; line-height: 1.5; }
+  .dr-btns { display: flex; gap: 8px; flex-shrink: 0; }
+  .dr-btn {
+    border-radius: 9px; padding: 7px 12px; font: 700 12px 'Noto Sans Thai', sans-serif;
+    border: 1px solid #b8d3ee; background: #fff; color: #2d6cad;
+  }
+  .dr-btn.primary { background: #2d6cad; border-color: #2d6cad; color: #fff; }
+
+  .foot { padding: 0 24px 40px; font-size: 12.5px; color: #5f7183; line-height: 1.8; }
+</style>
+</head>
+<body>
+
+<div class="page-head">
+  <h1>ไอคอนโทรโข่งแจ้งประกาศ — 9 แบบ</h1>
+  <p>
+    ปุ่มนี้จะอยู่ใน <code>.app-userbar</code> (แถบผู้ใช้มุมขวาบน) ระหว่างชื่อผู้ใช้กับปุ่มเฟือง ⚙️ — เห็นทุกหน้า ทุกโปรไฟล์ ·
+    แต่ละการ์ดแสดง 3 สถานะ: <b>ปกติ</b> · <b>มีประกาศใหม่</b> · <b>ลองกดเอง</b> (กดที่ปุ่มสุดท้ายเพื่อสลับสถานะ) ·
+    ทุกแบบเคารพ <code>prefers-reduced-motion</code> (ผู้ที่ตั้งลดการเคลื่อนไหวจะเห็นแค่จุดแดงนิ่ง ๆ)
+  </p>
+</div>
+
+<div class="note">
+  ⚠️ หน้า Google Sites นี้เข้าได้เฉพาะอีเมลที่กำหนด และห้ามฝังใน iframe (<code>X-Frame-Options: DENY</code>) →
+  แอปจึง <b>อ่านเองไม่ได้ว่าไซต์เปลี่ยนเมื่อไหร่</b> และ <b>เปิดดูในแอปไม่ได้</b> (เปิดเป็นแท็บใหม่เท่านั้น)
+</div>
+
+<ol class="flow">
+  <li><b>ผู้ลงประกาศ</b> แก้ไซต์เสร็จ → เปิดแอป → ⚙️ Admin → ใส่รหัส → <b>📣 แจ้งประกาศใหม่</b> (พิมพ์หัวข้อสั้น ๆ หรือไม่ใส่ก็ได้) → ส่ง</li>
+  <li><b>ทุกเครื่องที่เปิดแอปอยู่</b> เห็นจุดแดงบนโทรโข่งภายในไม่กี่วินาที (สำรองด้วยการเช็คทุก 30 วิ + ตอนกลับมาที่แท็บ)</li>
+  <li><b>กดโทรโข่ง</b> → เห็นรายการประกาศล่าสุด (ด้านล่างสุดของหน้านี้) → กด <b>เปิดหน้าประกาศ ↗</b> เปิด Google Sites ในแท็บใหม่ · จุดแดงหายเฉพาะเครื่องที่กด</li>
+  <li>คนที่อีเมล Google ไม่อยู่ในรายชื่อ จะเห็นหน้าขอสิทธิ์ของ Google — แอปตรวจไม่ได้ว่าเครื่องนั้นล็อกอินอีเมลไหนอยู่</li>
+  <li>ถ้ายังไม่มีข้อมูลในระบบเลย ปุ่มโทรโข่งยังทำหน้าที่เป็นทางลัดไปหน้าประกาศได้ตามปกติ (ไม่มีจุดแดง)</li>
+</ol>
+
+<div class="grid" id="grid"></div>
+
+<div class="grid" style="padding-top:0">
+  <div class="card">
+    <div class="card-head">
+      <span class="card-no">↗</span>
+      <span class="card-name">หน้าต่างที่เปิดเมื่อกดโทรโข่ง</span>
+      <span class="card-desc">ใช้ร่วมกับทุกแบบ · reuse ทรงเดียวกับ drawer แจ้งเตือนราคาเปลี่ยน / SaleSupport</span>
+    </div>
+    <div class="drawer-wrap">
+      <div class="drawer">
+        <div class="dr-header">
+          <div><strong>📣 ประกาศ</strong><span>ประกาศล่าสุดจากส่วนกลาง</span></div>
+          <button class="dr-x">✕</button>
+        </div>
+        <div class="dr-list">
+          <div class="dr-item is-unread">
+            <span class="dr-new">ใหม่</span>
+            <strong>แจ้งปิดปรับปรุงระบบ ProMaxx คืนวันเสาร์</strong>
+            <span class="dr-time">14 ต.ค. 2569 14:05</span>
+          </div>
+          <div class="dr-item is-unread">
+            <span class="dr-new">ใหม่</span>
+            <strong>มีประกาศใหม่</strong>
+            <span class="dr-time">13 ต.ค. 2569 09:30</span>
+          </div>
+          <div class="dr-item dr-muted">
+            <strong>ปรับเวลาทำการช่วงเทศกาล</strong>
+            <span class="dr-time">2 ต.ค. 2569 16:12</span>
+          </div>
+        </div>
+        <div class="dr-footer">
+          <small>ไอคอนจำสถานะ "อ่านแล้ว"<br>ในเครื่องนี้เท่านั้น</small>
+          <div class="dr-btns">
+            <button class="dr-btn">อ่านแล้ว</button>
+            <button class="dr-btn primary">เปิดหน้าประกาศ ↗</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="foot">
+  ℹ️ <b>หัวข้อเป็นตัวเลือก ไม่บังคับ</b> — ข้อความที่พิมพ์ตอนแจ้งจะถูกเก็บในฐานข้อมูลของแอป ซึ่งอ่านได้โดยทุกคนที่เปิดแอปได้
+  (ไม่ได้ถูกจำกัดสิทธิ์แบบ Google Sites) จึงควรใช้หัวข้อกลาง ๆ เช่น "มีประกาศใหม่" และไม่ใส่ข้อมูลที่ไม่อยากให้คนนอกรายชื่อเห็น
+</div>
+
+<script>
+  var MG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>';
+  var MGW = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m2 10.5 11-3.6v10.2l-11-3.6v-3z"/><path d="M9 15.9a2.8 2.8 0 1 1-5-1.4"/><path class="w1" d="M16.5 9.5a3.8 3.8 0 0 1 0 5"/><path class="w2" d="M19.2 7a7.6 7.6 0 0 1 0 10"/></svg>';
+  var DOT = '<span class="mg-dot"></span>';
+  var CNT = '<span class="mg-count">2</span>';
+
+  var DESIGNS = [
+    { n: 'Line Soft', d: 'เรียบที่สุด · หน้าตาเหมือนปุ่มเฟือง ⚙️ ข้างกัน + จุดแดง', icon: MG, extra: DOT },
+    { n: 'Wiggle', d: 'มีใหม่ → ไอคอนสั่นเหมือนกำลังตะโกน ทุก 3 วิ + จุดแดง', icon: MG, extra: DOT },
+    { n: 'Sound Waves', d: 'มีใหม่ → คลื่นเสียง 2 ชั้นทยอยโผล่ออกจากปากโทรโข่ง + จุดแดง', icon: MGW, extra: DOT },
+    { n: 'Ripple Ring', d: 'มีใหม่ → วงแหวนแดงแผ่ออกรอบปุ่มเหมือนสัญญาณ + จุดแดง', icon: MG, extra: DOT },
+    { n: 'Solid Blue + Bounce', d: 'พื้นน้ำเงินเข้มไอคอนขาว เด่นกว่าปุ่มอื่นตลอดเวลา · มีใหม่ → เด้งเบา ๆ', icon: MG, extra: DOT },
+    { n: 'Count Badge', d: 'จุดแดงมีตัวเลข (กี่ประกาศที่ยังไม่ได้เปิดอ่านในเครื่องนี้) ทรงเดียวกับป้ายแจ้งเตือนราคา', icon: MG, extra: CNT },
+    { n: 'Label Pill', d: 'ไอคอน + คำว่า "ประกาศ" ไม่ต้องเดาว่าปุ่มนี้คืออะไร · มีใหม่ → พื้นน้ำเงินเข้ม', icon: MG + '<span>ประกาศ</span>', extra: DOT },
+    { n: 'Mini 3D Tile', d: 'ปุ่มนูนสีขาวทรงเดียวกับปุ่มปิด ✕ / ปลดล็อกใน modal Admin ที่เคยเลือก', icon: MG, extra: DOT },
+    { n: 'Shine', d: 'มีใหม่ → พื้นฟ้าเข้ม + แสงพาดทุก 3 วิ ทรงเดียวกับปุ่ม 💰 Update Price', icon: MG, extra: DOT }
+  ];
+
+  function ub(i, cls, live) {
+    var d = DESIGNS[i];
+    return '<div class="ub"><span class="ub-icon">🏪</span><span class="ub-name">SRC</span>' +
+      '<button class="mg mg-' + (i + 1) + ' ' + cls + '"' + (live ? ' data-live="1"' : ' tabindex="-1" style="pointer-events:none"') +
+      ' title="ประกาศ">' + d.icon + d.extra + '</button>' +
+      '<button class="ub-gear" tabindex="-1">⚙️</button><button class="ub-logout" tabindex="-1">ออกจากระบบ</button></div>';
+  }
+
+  var html = '';
+  DESIGNS.forEach(function (d, i) {
+    html += '<div class="card"><div class="card-head"><span class="card-no">' + (i + 1) + '</span>' +
+      '<span class="card-name">' + d.n + '</span><span class="card-desc">' + d.d + '</span></div>' +
+      '<div class="hero-sim">' +
+      '<div class="state"><div class="state-label">ปกติ</div>' + ub(i, '', false) + '</div>' +
+      '<div class="state"><div class="state-label">มีประกาศใหม่</div>' + ub(i, 'is-new', false) + '</div>' +
+      '<div class="state"><div class="state-label">ลองกด <em>(สลับสถานะ)</em></div>' + ub(i, 'is-new', true) + '</div>' +
+      '</div></div>';
+  });
+  document.getElementById('grid').innerHTML = html;
+
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('.mg[data-live]');
+    if (b) b.classList.toggle('is-new');
+  });
+</script>
+</body>
+</html>
