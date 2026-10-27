@@ -1541,6 +1541,15 @@ ${sheetsHtml}
     generateQR(previewBarcodeProduct.barcode).then(setPreviewQrSrc);
   }, [previewBarcodeProduct, generateQR]);
 
+  // จัดซื้อ/Sale Admin ไม่เห็นปุ่มหน้า Pending (ผู้ใช้สั่ง 2569-10-27) — override ต่อโปรไฟล์ทับค่าจาก DB
+  // ⚠️ เป็น hook ต้องอยู่ก่อน early-return ด้านล่าง
+  const effectiveVisibility = useMemo<PageVisibility>(
+    () => (authProfile?.id === 'PURCHASING' || authProfile?.id === 'SALE_ADMIN')
+      ? { ...pageVisibility, pendingdocs: false }
+      : pageVisibility,
+    [pageVisibility, authProfile?.id],
+  );
+
   // Gate: ต้องล็อกอินก่อนเข้าใช้งานโปรแกรม
   if (!authProfile) {
     return <LoginPage onLogin={handleLogin} />;
@@ -1557,7 +1566,7 @@ ${sheetsHtml}
   };
 
   return (
-    <PageVisibilityContext.Provider value={pageVisibility}>
+    <PageVisibilityContext.Provider value={effectiveVisibility}>
     <PageNotificationContext.Provider value={{ salesupport: saleSupportUnreadCount, outbound: outboundPendingCount, pricetag: priceChangeUnreadCount }}>
     <div className="app-container">
       {/* แถบผู้ใช้ปัจจุบัน + ออกจากระบบ (แสดงทุกหน้า) */}
