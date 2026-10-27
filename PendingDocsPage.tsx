@@ -317,7 +317,7 @@ export function PendingDocsPage({
   const today = bangkokToday();
   const lastDataText = Number.isFinite(dataMs) ? formatSyncTime(dataMs) : null;
   const shownAt = lastDataText ? ` — แสดงข้อมูล ณ ${lastDataText}` : '';
-  const changedTitle = successMs !== null ? `รายการใบโอนเปลี่ยนครั้งล่าสุด ${formatSyncTime(successMs)}` : undefined;
+  const changedTitle = successMs !== null ? `รายการเอกสารเปลี่ยนครั้งล่าสุด ${formatSyncTime(successMs)}` : undefined;
 
   let syncBadge: ReactNode;
   if (!status) {
@@ -375,7 +375,7 @@ export function PendingDocsPage({
           <div className="product-table-wrap stock-table-wrap">
             <div className="outbound-empty-note">
               <p><strong>หน้านี้ใช้ได้เฉพาะรหัสสาขา (SRC / KKL / SSS) และคลังสินค้า/จัดซื้อ</strong></p>
-              <p>โปรไฟล์ที่เข้าสู่ระบบอยู่ไม่ได้สังกัดสาขาหน้าร้าน จึงไม่มีใบโอนสินค้าของตัวเอง</p>
+              <p>โปรไฟล์ที่เข้าสู่ระบบอยู่ไม่ได้สังกัดสาขาหน้าร้าน จึงไม่มีเอกสารของตัวเอง</p>
             </div>
           </div>
         </div>
@@ -400,7 +400,7 @@ export function PendingDocsPage({
             <input
               type="text"
               className="search-input-premium"
-              placeholder="ค้นหาเลขที่ใบโอน รหัส หรือชื่อสินค้า..."
+              placeholder="ค้นหาเลขที่เอกสาร รหัส หรือชื่อสินค้า..."
               value={search}
               onChange={e => setSearch(e.target.value)}
             />
@@ -435,7 +435,7 @@ export function PendingDocsPage({
           <table className="product-table stock-table pd-table">
             <thead>
               <tr>
-                <th className="pd-col-doc">เลขที่ใบโอน</th>
+                <th className="pd-col-doc">เลขที่เอกสาร</th>
                 <th className="pd-col-date">วันที่</th>
                 <th className="pd-col-route">ต้นทาง → ปลายทาง</th>
                 <th className="pd-col-items">รายการ</th>
@@ -462,8 +462,8 @@ export function PendingDocsPage({
                   <tr>
                     <td colSpan={6} className="pd-empty">
                       {rows.length === 0 && !loadError
-                        ? 'ไม่มีใบโอนค้างส่ง 🎉'
-                        : 'ไม่พบใบโอนที่ตรงกับคำค้นหา'}
+                        ? 'ไม่มีเอกสารค้างส่ง 🎉'
+                        : 'ไม่พบเอกสารที่ตรงกับคำค้นหา'}
                     </td>
                   </tr>
                 ) : (
@@ -503,7 +503,7 @@ export function PendingDocsPage({
           <div className="modal-content pd-items-modal" role="dialog" aria-modal="true" aria-labelledby="pd-items-title">
             <div className="modal-header pd-items-header">
               <div>
-                <h2 id="pd-items-title">ใบโอน {openDoc.doc_no}</h2>
+                <h2 id="pd-items-title">เอกสาร {openDoc.doc_no}</h2>
                 <p className="pd-items-meta">
                   {formatDocDate(openDoc.doc_date)} · {branchText(openDoc.from_branch)} → {branchText(openDoc.to_branch)}
                   {' · '}ค้าง <DaysBadge days={openDocDays} />
