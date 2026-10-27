@@ -789,7 +789,7 @@ const App: React.FC = () => {
   // ต่างจาก openNotificationHistory ของ SaleSupport ที่ mark-read ตอนเปิด drawer เลย
   // เพราะที่นี่ปลายทางคือ "ปริ้นป้ายใหม่" ไม่ใช่ "รับรู้ข่าว" — เปิดดูแล้วยังไม่ได้ปริ้น
   // สถานะต้องค้างไว้เตือนต่อ ไม่งั้นพนักงานเผลอเปิดทีเดียวแล้วลืมปริ้นทั้งรอบ
-  // เคลียร์ด้วยปุ่ม "✓ ปริ้นแล้ว" ใน drawer เท่านั้น (confirmPriceChangesPrinted ด้านล่าง)
+  // เคลียร์ด้วยปุ่ม "✓ รับทราบ" ใน drawer เท่านั้น (confirmPriceChangesPrinted ด้านล่าง)
   const openPriceChanges = async () => {
     const profileId = authProfile?.id;
     if (!profileId) return;
@@ -823,7 +823,7 @@ const App: React.FC = () => {
     setOpenBatchId(batches[0]?.batchId ?? null);   // กางกลุ่มล่าสุดให้เลย
   };
 
-  // กด "✓ ปริ้นแล้ว" — จุดเดียวที่เคลียร์สถานะแจ้งเตือน (ผู้ใช้ยืนยันเอง ไม่ใช่ระบบเดาให้)
+  // กด "✓ รับทราบ" — จุดเดียวที่เคลียร์สถานะแจ้งเตือน (ผู้ใช้ยืนยันเอง ไม่ใช่ระบบเดาให้)
   // ไม่ผูกกับปุ่มปริ้นจริงเพราะปุ่มนั้นปริ้นตามตะกร้า ไม่ได้ปริ้นตามรายการที่ราคาเปลี่ยน
   // — ปริ้นไป 5 จาก 20 รายการแล้วเคลียร์หมด จะกลายเป็นลืมอีก 15 รายการ
   const confirmPriceChangesPrinted = async () => {
@@ -1675,7 +1675,7 @@ ${sheetsHtml}
                   className="price-change-done-btn"
                   onClick={() => { void confirmPriceChangesPrinted(); }}
                 >
-                  ✓ ปริ้นแล้ว
+                  ✓ รับทราบ
                 </button>
               )}
             </div>
