@@ -7,7 +7,8 @@ import { STORE_BRANCH_CODES, branchCodeLabel } from './auth';
 
 // หน้า "ตรวจสอบเอกสารค้าง" — ใบโอนสินค้าออกที่สาขายังไม่กด "ส่ง" ใน ProMaxx
 // ข้อมูลมาจาก pending-docs-agent.mjs (เครื่องในร้าน อ่าน MSSQL แบบ SELECT อย่างเดียว) ผ่าน Supabase
-// เว็บไม่ได้ต่อ MSSQL ตรง — แค่ "ขอ" ข้อมูลสดผ่าน RPC แล้วรอ Agent ส่งกลับมา (~2-3 วิ)
+// เว็บไม่ได้ต่อ MSSQL ตรง — ตอนเปิดหน้า / กด 🔄 "ขอ" ข้อมูลสดผ่าน RPC แล้วรอ Agent ตอบ (~2-3 วิ)
+// เปิดค้างไว้หน้าเว็บไม่ดึงเอง: Agent ตรวจ ProMaxx ทุก 5 นาที แล้วส่งชุดใหม่มา (realtime) เฉพาะตอนข้อมูลเปลี่ยน
 
 interface TransferItem {
   line_no: number | null;
@@ -29,7 +30,10 @@ interface PendingTransfer {
 
 interface SyncStatus {
   refresh_requested_at: string | null;
+  /** Agent ส่งชุดใบโอนใหม่ล่าสุด = ข้อมูลใน ProMaxx เปลี่ยน → ค่านี้ขยับเมื่อไรโหลดตารางใหม่ */
   last_success_at: string | null;
+  /** Agent ตรวจ ProMaxx สำเร็จล่าสุด เปลี่ยนหรือไม่ก็ตาม — undefined ถ้ายังไม่ได้รัน pending-docs-setup.sql รอบใหม่ */
+  last_checked_at?: string | null;
   last_error: string | null;
   last_error_at: string | null;
   row_count: number;
@@ -38,18 +42,20 @@ interface SyncStatus {
 /** ค้างกี่วันถึงขึ้นสี — ใบโอนควรกดส่งภายในวันที่ทำ */
 const WARN_DAYS = 1;
 const ALERT_DAYS = 3;
-/** หน้าที่เปิดค้างไว้ขอข้อมูลสดเองทุก 1 นาที — RPC ฝั่ง Supabase ยุบรวมทุกเครื่องเหลือ ≤ 1 ครั้ง/นาที */
-const AUTO_REFRESH_MS = 60_000;
+/**
+ * เปิดค้างไว้: ทุก 1 นาทีแค่อ่านแถวสถานะ 1 แถวใน Supabase (เผื่อ realtime หลุด) + ส่งคำขอแบบเงียบ (ไม่มีป้ายหมุน)
+ * ฝั่ง Supabase ปล่อยคำขอนี้ผ่านเฉพาะตอน Agent เงียบไปเกิน 7 นาที = ไว้จับว่าเครื่องในร้านดับ ตอนปกติไม่ได้ไปถาม ProMaxx
+ */
+const WATCH_MS = 60_000;
 /** ขอแล้วเครื่องในร้านไม่ตอบนานเกินนี้ = บอกผู้ใช้ว่าข้อมูลที่เห็นอาจเก่า (นับด้วยนาฬิกาเครื่องนี้เอง) */
 const AGENT_TIMEOUT_MS = 15_000;
-/** focus/สลับแท็บถี่ๆ ไม่ต้องยิง RPC ทุกครั้ง (ฝั่ง Supabase throttle 10 วิอยู่แล้ว ตรงนี้แค่ไม่ส่งเปล่าๆ) */
-const MANUAL_MIN_GAP_MS = 10_000;
+/** focus + visibilitychange ยิงพร้อมกันตอนสลับแท็บ — ไม่ต้องยิง RPC ทุกครั้ง (ปุ่ม 🔄 ข้ามข้อนี้ ฝั่ง Supabase ยังกันถี่ 10 วิ) */
+const REQUEST_MIN_GAP_MS = 10_000;
 const ROW_LIMIT = 1000;
 const ALL_TAB = 'ทั้งหมด';
 // "คลังสินค้า" = คลัง Warehouse ของสาขาแยกชากค้อ · SRC = คลัง Front Store สาขาเดียวกัน
 // Agent แยกจากคลังต้นทางของใบ (WAREHOUSE_MAP ใน pending-docs-agent.mjs) — ชื่อแท็บต้องตรงกับค่าใน map เป๊ะ
 const TAB_ORDER: readonly string[] = ['คลังสินค้า', ...STORE_BRANCH_CODES];
-const SYNC_COLUMNS = 'refresh_requested_at, last_success_at, last_error, last_error_at, row_count';
 
 /** เวลาจาก Supabase → มิลลิวินาที (realtime อาจส่งรูปแบบ "YYYY-MM-DD HH:MM:SS.ffffff+00" มา ไม่ใช่ ISO เป๊ะ) */
 function toMs(value: string | null | undefined): number | null {
@@ -125,9 +131,11 @@ export function PendingDocsPage({
   const [activeTab, setActiveTab] = useState(ALL_TAB);
   const [search, setSearch] = useState('');
   const [openDoc, setOpenDoc] = useState<PendingTransfer | null>(null);
+  /** เวลา (ของ DB) ของคำขอที่คนบนหน้านี้สั่งเอง — ป้ายหมุนจนกว่า Agent ตอบคำขอนี้ */
+  const [userRequestMs, setUserRequestMs] = useState<number | null>(null);
   const lastSuccessMsRef = useRef<number | null | undefined>(undefined);
   const statusVersionRef = useRef(-Infinity);
-  const lastManualRequestRef = useRef(0);
+  const lastRequestRef = useRef(0);
   const fetchSeqRef = useRef(0);
 
   const fetchRows = useCallback(async () => {
@@ -153,42 +161,52 @@ export function PendingDocsPage({
     setLoadError('');
   }, [branchFilter]);
 
-  // สถานะเปลี่ยน (realtime / โหลดซ้ำ) → ถ้า Agent ซิงค์สำเร็จรอบใหม่ ให้โหลดตารางใหม่
+  // สถานะเปลี่ยน (realtime / โหลดซ้ำ) → ถ้า Agent ส่งชุดใบโอนใหม่ ให้โหลดตารางใหม่
   const applyStatus = useCallback((next: SyncStatus) => {
-    // เวลาทั้ง 3 ช่องเดินหน้าอย่างเดียว (now() ของ DB) → ค่าสูงสุด = "รุ่น" ของสถานะ
+    // เวลาทุกช่องเดินหน้าอย่างเดียว (now() ของ DB) → ค่าสูงสุด = "รุ่น" ของสถานะ
     // ผลที่ขอไปก่อนแต่มาถึงทีหลัง (request ซ้อนกัน) จะไม่ย้อนสถานะบนหน้าจอ
     const version = Math.max(
       toMs(next.refresh_requested_at) ?? -Infinity,
       toMs(next.last_success_at) ?? -Infinity,
+      toMs(next.last_checked_at) ?? -Infinity,
       toMs(next.last_error_at) ?? -Infinity,
     );
     if (version < statusVersionRef.current) return;
     statusVersionRef.current = version;
     setStatus(next);
+    // last_success_at ขยับเฉพาะตอน Agent ส่งชุดใหม่ (ข้อมูลใน ProMaxx เปลี่ยน) — ตรวจแล้วเหมือนเดิมไม่โหลดตารางซ้ำ
     const successMs = toMs(next.last_success_at);
     if (lastSuccessMsRef.current !== undefined && successMs !== lastSuccessMsRef.current) void fetchRows();
     lastSuccessMsRef.current = successMs;
   }, [fetchRows]);
 
-  const fetchStatus = useCallback(async () => {
+  const fetchStatus = useCallback(async (): Promise<SyncStatus | null> => {
+    // '*' ไม่ใช่รายชื่อคอลัมน์โดยตั้งใจ — เว็บ deploy ทันทีที่ push แต่ last_checked_at มีหลังผู้ใช้รัน
+    // pending-docs-setup.sql รอบใหม่ · ระบุคอลัมน์ที่ยังไม่มี = PostgREST ปฏิเสธทั้งคำขอ ป้ายค้าง "Loading..."
     const { data, error } = await supabase
       .from('pending_docs_sync')
-      .select(SYNC_COLUMNS)
+      .select('*')
       .eq('id', 1)
       .maybeSingle();
-    if (!error && data) applyStatus(data as SyncStatus);
+    if (error || !data) return null;
+    applyStatus(data as SyncStatus);
+    return data as SyncStatus;
   }, [applyStatus]);
 
-  // ขอข้อมูลสดจาก Agent — auto = ตัวจับเวลาทุก 1 นาที (throttle ฝั่ง Supabase 60 วิ) / คนกด = 10 วิ
+  // ขอให้ Agent ตรวจ ProMaxx
+  //   auto = ตัวจับเวลา 1 นาที / กลับมาที่แท็บ → เงียบ ไม่มีป้ายหมุน (Supabase ปล่อยผ่านเฉพาะตอน Agent เงียบเกิน 7 นาที)
+  //   คนสั่งเอง = เปิดหน้า / 🔄 → ตรวจทันที (Supabase กันถี่ 10 วิ) และป้ายหมุนรอผลของคำขอนี้
   const requestRefresh = useCallback(async (auto: boolean) => {
-    if (!auto) {
-      if (Date.now() - lastManualRequestRef.current < MANUAL_MIN_GAP_MS) return;
-      lastManualRequestRef.current = Date.now();
-    }
+    if (Date.now() - lastRequestRef.current < REQUEST_MIN_GAP_MS) return;
+    lastRequestRef.current = Date.now();
     // ⚠️ ต้อง await — query builder ของ supabase-js ไม่ส่ง request จนกว่าจะถูกเรียก .then() (CLAUDE.md)
-    const { error } = await supabase.rpc('request_pending_docs_refresh', { p_auto: auto });
+    const { data, error } = await supabase.rpc('request_pending_docs_refresh', { p_auto: auto });
     if (error) console.error('[เอกสารค้าง] ขอข้อมูลสดไม่สำเร็จ', error);
-    await fetchStatus();
+    const row = await fetchStatus();
+    if (auto) return;
+    // null = มีคำขอภายใน 10 วิอยู่แล้ว → รอผลของคำขอนั้นแทน (ถ้าตอบไปแล้ว ป้ายก็ไม่หมุน)
+    const target = toMs(typeof data === 'string' ? data : null) ?? toMs(row?.refresh_requested_at);
+    if (target !== null) setUserRequestMs(prev => (prev === null || target > prev ? target : prev));
   }, [fetchStatus]);
 
   useEffect(() => {
@@ -196,8 +214,8 @@ export function PendingDocsPage({
     lastSuccessMsRef.current = undefined;
     statusVersionRef.current = -Infinity;
     // อ่านสถานะก่อนแล้วค่อยอ่านตาราง — ตารางจะใหม่เท่ากับหรือกว่าเวลาที่ป้ายบอกเสมอ
-    // รอบที่ซิงค์เสร็จหลังจากนี้มาทาง realtime/applyStatus แล้วโหลดตารางใหม่เอง
-    void fetchStatus().then(fetchRows);
+    // รอบที่ข้อมูลเปลี่ยนหลังจากนี้มาทาง realtime/applyStatus แล้วโหลดตารางใหม่เอง
+    void fetchStatus().then(() => fetchRows());
     void requestRefresh(false);
 
     // publish แค่ตาราง status 1 แถว (ไม่ใช่ตารางใบโอน) — replace ทีละหลายร้อยแถวจะเป็น realtime หลายร้อยข้อความ
@@ -210,34 +228,39 @@ export function PendingDocsPage({
       })
       .subscribe();
 
-    const refreshWhenVisible = () => {
-      if (document.visibilityState === 'visible') void requestRefresh(false);
-    };
-    window.addEventListener('focus', refreshWhenVisible);
-    document.addEventListener('visibilitychange', refreshWhenVisible);
-    // เปิดค้างไว้ = ขอข้อมูลสดเองทุก 1 นาที เฉพาะแท็บที่มองเห็นอยู่ (แท็บที่ซ่อนไม่ไปกวน MSSQL Express ที่ใช้ร่วมกับ POS)
-    // fetchStatus ในนั้นเป็นตัวสำรองด้วย — realtime หลุดก็ยังรู้ว่ามีข้อมูลรอบใหม่
-    const timer = window.setInterval(() => {
+    // แท็บที่มองเห็นอยู่เท่านั้น · กลับมาที่แท็บก็แค่เช็คแบบเงียบ — ข้อมูลบน Supabase ใหม่เสมอภายใน ~5 นาทีจากรอบตรวจของ Agent
+    // (เดิมกลับมาที่แท็บ = ถาม MSSQL ทันที สลับแท็บไปมาก็ถามซ้ำ · อยากได้เดี๋ยวนี้กด 🔄)
+    // fetchStatus ใน requestRefresh เป็นตัวสำรองด้วย — realtime หลุดก็ยังรู้ว่ามีข้อมูลรอบใหม่ภายใน 1 นาที
+    const watchWhenVisible = () => {
       if (document.visibilityState === 'visible') void requestRefresh(true);
-    }, AUTO_REFRESH_MS);
+    };
+    window.addEventListener('focus', watchWhenVisible);
+    document.addEventListener('visibilitychange', watchWhenVisible);
+    const timer = window.setInterval(watchWhenVisible, WATCH_MS);
 
     return () => {
       void supabase.removeChannel(channel);
-      window.removeEventListener('focus', refreshWhenVisible);
-      document.removeEventListener('visibilitychange', refreshWhenVisible);
+      window.removeEventListener('focus', watchWhenVisible);
+      document.removeEventListener('visibilitychange', watchWhenVisible);
       window.clearInterval(timer);
     };
   }, [notSupported, branchFilter, fetchRows, fetchStatus, requestRefresh, applyStatus]);
 
   const requestedMs = toMs(status?.refresh_requested_at);
   const successMs = toMs(status?.last_success_at);
+  const checkedMs = toMs(status?.last_checked_at);
   const errorMs = toMs(status?.last_error_at);
-  // คำขอล่าสุดใหม่กว่าผลล่าสุด (สำเร็จหรือ error) = Agent ยังทำอยู่ — เทียบเวลาของ DB กับ DB จึงไม่โดนนาฬิกาเครื่องเพี้ยน
-  const waiting = requestedMs !== null && requestedMs > Math.max(successMs ?? -Infinity, errorMs ?? -Infinity);
-  const showError = !waiting && Boolean(status?.last_error) && errorMs !== null && errorMs > (successMs ?? -Infinity);
+  // ข้อมูลถูกต้อง ณ ครั้งล่าสุดที่ Agent อ่าน MSSQL สำเร็จ — ส่งชุดใหม่ (success) หรือตรวจแล้วเหมือนเดิม (checked) ก็นับ
+  const dataMs = Math.max(successMs ?? -Infinity, checkedMs ?? -Infinity);
+  const answeredMs = Math.max(dataMs, errorMs ?? -Infinity);
+  // คำขอล่าสุด (ของใครก็ได้) ใหม่กว่าผลล่าสุด = Agent ยังไม่ตอบ — เทียบเวลาของ DB กับ DB จึงไม่โดนนาฬิกาเครื่องเพี้ยน
+  const waiting = requestedMs !== null && requestedMs > answeredMs;
+  // ป้ายหมุนเฉพาะตอนรอคำขอที่หน้านี้สั่งเอง — คำขอแบบเงียบ / คนอื่นเปิดหน้า ไม่ทำให้ป้ายกระพริบ
+  const userWaiting = userRequestMs !== null && userRequestMs > answeredMs;
+  const showError = !userWaiting && Boolean(status?.last_error) && errorMs !== null && errorMs > dataMs;
 
-  // นับ 15 วิตั้งแต่เริ่มรอ — คำขอใหม่ระหว่างที่ยังรออยู่ (ตัวจับเวลา 1 นาที) ไม่เริ่มนับใหม่
-  // ไม่งั้นตอนเครื่องในร้านดับ ป้ายจะสลับ "กำลังดึง…" ↔ "ไม่ตอบ" ทุกนาทีเหมือนกำลังทำงานอยู่
+  // นับ 15 วิตั้งแต่เริ่มรอ (คำขอของใครก็ได้ รวมคำขอแบบเงียบ) — คำขอใหม่ระหว่างที่ยังรออยู่ไม่เริ่มนับใหม่
+  // ไม่งั้นตอนเครื่องในร้านดับ ป้ายจะสลับ "กำลังดึง…" ↔ "ไม่ตอบ" ทุกครั้งที่มีคำขอเหมือนกำลังทำงานอยู่
   useEffect(() => {
     if (!waiting) {
       setAgentSilent(false);
@@ -279,24 +302,25 @@ export function PendingDocsPage({
   }, [rows, search, canSeeAll, effectiveTab]);
 
   const today = bangkokToday();
-  const lastDataText = successMs !== null ? formatSyncTime(successMs) : null;
+  const lastDataText = Number.isFinite(dataMs) ? formatSyncTime(dataMs) : null;
   const shownAt = lastDataText ? ` — แสดงข้อมูล ณ ${lastDataText}` : '';
+  const changedTitle = successMs !== null ? `รายการใบโอนเปลี่ยนครั้งล่าสุด ${formatSyncTime(successMs)}` : undefined;
 
   let syncBadge: ReactNode;
   if (!status) {
     syncBadge = <span className="updated-badge updated-badge--loading">Loading...</span>;
-  } else if (waiting && !agentSilent) {
+  } else if (waiting && agentSilent) {
+    syncBadge = <span className="updated-badge pd-sync-badge--warn">⚠️ เครื่องในร้านไม่ตอบ{shownAt}</span>;
+  } else if (userWaiting) {
     syncBadge = (
       <span className="updated-badge pd-sync-badge--busy">
         <span className="pd-spin" aria-hidden="true">🔄</span> กำลังดึงข้อมูลล่าสุด…
       </span>
     );
-  } else if (waiting) {
-    syncBadge = <span className="updated-badge pd-sync-badge--warn">⚠️ เครื่องในร้านไม่ตอบ{shownAt}</span>;
   } else if (showError) {
     syncBadge = <span className="updated-badge pd-sync-badge--error">❌ {status.last_error}{shownAt}</span>;
   } else if (lastDataText) {
-    syncBadge = <span className="updated-badge">ข้อมูล ณ {lastDataText}</span>;
+    syncBadge = <span className="updated-badge" title={changedTitle}>ข้อมูล ณ {lastDataText}</span>;
   } else {
     syncBadge = <span className="updated-badge pd-sync-badge--warn">ยังไม่มีข้อมูลจากเครื่องในร้าน</span>;
   }
@@ -313,10 +337,10 @@ export function PendingDocsPage({
                 type="button"
                 className="updated-badge pd-refresh-btn"
                 onClick={() => {
-                  lastManualRequestRef.current = 0; // คนกดเองส่งเสมอ (ฝั่ง Supabase ยังกันถี่ 10 วิ)
+                  lastRequestRef.current = 0; // คนกดเองส่งเสมอ (ฝั่ง Supabase ยังกันถี่ 10 วิ)
                   void requestRefresh(false);
                 }}
-                disabled={waiting && !agentSilent}
+                disabled={userWaiting && !agentSilent}
                 title="ขอข้อมูลล่าสุดจาก ProMaxx"
               >
                 🔄 ดึงข้อมูลล่าสุด
