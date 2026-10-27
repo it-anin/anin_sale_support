@@ -67,6 +67,30 @@ SELECT SYSBRANCHID, SYSWAREHOUSEID, NAME FROM WAREHOUSE ORDER BY SYSBRANCHID, SY
 > ปลายทางดูจากคลังปลายทางของใบ (`REFTRANFERSYSWAREHOUSE`) ถ้าใบไม่ระบุ ใช้สาขาแทน: สาขาแยกชากค้อ = **คลังสินค้า** (KKL/SSS โอนเข้า Warehouse เท่านั้น) · ใบที่โอนผิดกฎแสดงตามจริง ไม่มีป้ายเตือน
 > มีสาขา/คลังใหม่ → เพิ่มใน `WAREHOUSE_MAP` + โปรไฟล์ใน `auth.ts` (แก้ใน repo แล้ว `git pull` ห้ามแก้ไฟล์ในเครื่อง Agent ตรงๆ)
 
+**ตรวจเส้นทางโอนจริง** (ทำตอนติดตั้ง หรือเมื่อสงสัยว่าใบไปขึ้นผิดคน) — นับใบโอนออกย้อนหลัง 90 วัน ทั้งที่ส่งแล้วและยังไม่ส่ง แยกตามคลัง (อ่านอย่างเดียว ใช้ login `web_readonly` ได้):
+```sql
+DECLARE @days int = 90;
+SELECT SRCWH.NAME  AS from_warehouse,
+       DESTWH.NAME AS to_warehouse,
+       COUNT(*)    AS all_docs,
+       SUM(CASE WHEN REF.SYSTRANNO IS NULL THEN 1 ELSE 0 END) AS pending_docs
+FROM TRANS
+JOIN VOUCHER       ON VOUCHER.SYSVOUCHERID = TRANS.SYSVOUCHERID
+JOIN TRANEXTRAINFO ON TRANEXTRAINFO.SYSTRANNO = TRANS.SYSTRANNO
+LEFT JOIN TRANS REF ON REF.SYSTRANNO = TRANEXTRAINFO.SYSREFERENCETRANNO
+LEFT JOIN WAREHOUSE SRCWH  ON SRCWH.SYSBRANCHID = TRANS.SYSBRANCHID
+                          AND SRCWH.SYSWAREHOUSEID = TRANS.SYSWAREHOUSEID
+LEFT JOIN WAREHOUSE DESTWH ON DESTWH.SYSBRANCHID = TRANEXTRAINFO.REFTRANFERSYSBRANCH
+                          AND DESTWH.SYSWAREHOUSEID = TRANEXTRAINFO.REFTRANFERSYSWAREHOUSE
+WHERE VOUCHER.VOUCHERTYPE = 'TB' AND VOUCHER.VOUCHERINOUT = 'O' AND TRANS.FCANCEL = 0
+  AND TRANS.TRANDATE >= DATEADD(day, -@days, CAST(GETDATE() AS date))
+GROUP BY SRCWH.NAME, DESTWH.NAME
+ORDER BY SRCWH.NAME, DESTWH.NAME;
+```
+ผลตอนติดตั้ง (2569-10-27): `Main KKL → Warehouse 46` · `Main SSS → Warehouse 58` · `Warehouse → Main KKL 321` · `Warehouse → Main SSS 324` — **ไม่มีใบจาก Front Store เลย** และร้านยืนยันว่าคลังเป็นคนทำใบโอนออกทั้งหมด
+
+> ล็อกอิน SRC จึงเห็นหน้าเอกสารค้าง**ว่างเป็นปกติ ไม่ใช่บั๊ก** · ถ้าวันหน้า Front Store โอนออกเอง ใบจะขึ้นเป็น SRC ให้เอง (`0:1 → SRC` อยู่ใน map แล้ว)
+
 **1.3 หาคอลัมน์หน่วยสินค้า** (รายงาน R16.150 ไม่มีหน่วย — ถ้าเจอคอลัมน์ที่ใช่ ส่งชื่อให้ Claude เพิ่มใน popup)
 ```sql
 SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE
@@ -193,9 +217,15 @@ node pending-docs-agent.mjs --dry-run
 login ใหม่นี้ **อ่านได้แค่ 7 ตารางที่ Agent ใช้** (6 ตารางของ R16.150 + `WAREHOUSE` ไว้แยกคลัง) ฐานข้อมูลบล็อกการเขียนให้เองแม้โค้ดมีบั๊ก
 และเป็นการเพิ่ม "ผู้ใช้" เท่านั้น ไม่ได้แตะตารางหรือข้อมูลของ ProMaxx (ถ้าไม่อยากทำเอง ขอ SeniorSoft ว่า "ขอ user อ่านอย่างเดียวสำหรับทำรายงาน")
 
-รันใน SSMS ด้วยสิทธิ์ admin (login เดิมของ SeniorSoft มักทำได้):
+> ไม่ใช้ Windows Authentication แทน: ตัวเชื่อม `tedious` ของ Agent ทำได้แค่แบบ NTLM ที่ต้องเก็บรหัส Windows ไว้ใน `.env` และ Agent จะได้สิทธิ์เท่าผู้ใช้ Windows นั้น ซึ่งถ้าใช้จัดการ SQL Server อยู่มักเป็น admin
+
+รันใน SSMS ด้วยสิทธิ์ admin (login เดิมของ SeniorSoft มักทำได้ เช่น `sa`) **ช่วงร้านปิดหรือคนน้อย** และไม่มีใครเปิดรายงานใหญ่ใน ProMaxx:
 ```sql
-CREATE LOGIN web_readonly WITH PASSWORD = N'<ตั้งรหัสยาวๆ>', CHECK_POLICY = ON;
+SET LOCK_TIMEOUT 3000;
+CREATE LOGIN web_readonly
+  WITH PASSWORD = N'<ตั้งรหัสใหม่ยาวๆ>',
+       DEFAULT_DATABASE = [<ชื่อฐานข้อมูลของ ProMaxx>],
+       CHECK_POLICY = ON;
 GO
 USE [<ชื่อฐานข้อมูลของ ProMaxx>];
 GO
@@ -208,15 +238,33 @@ GRANT SELECT ON dbo.BRANCH         TO web_readonly;
 GRANT SELECT ON dbo.ITEMS          TO web_readonly;
 GRANT SELECT ON dbo.WAREHOUSE      TO web_readonly;
 ```
+- แทนที่ `<ตั้งรหัสใหม่ยาวๆ>` **รวม `< >`** ด้วยรหัสใหม่ คง `N'` กับ `'` ไว้ · 12 ตัวขึ้นไป ผสมพิมพ์ใหญ่/เล็ก/ตัวเลข/สัญลักษณ์ (`! @ # % _ -`) · **ห้ามมี `'` `"` หรือช่องว่าง** · อย่าใช้รหัสเดียวกับ admin
+- แทนที่ `<ชื่อฐานข้อมูลของ ProMaxx>` 2 ที่ ด้วยค่าเดียวกับ `MSSQL_DATABASE` ใน `.env` (คงวงเล็บ `[ ]` ไว้)
+- `SET LOCK_TIMEOUT 3000` — GRANT ต้องขอล็อกตารางแป๊บเดียว ถ้าตารางกำลังถูกรายงานหนักๆ อ่านอยู่ คำสั่งจะยกเลิกตัวเองหลัง 3 วิ แทนที่จะรอจนคำสั่งของ POS ต้องต่อคิว (มีผลแค่หน้าต่าง query นี้)
+- ขึ้น `Lock request time out period exceeded` → รอจังหวะแล้วรัน**เฉพาะบรรทัด GRANT** ซ้ำ (GRANT ซ้ำได้ไม่ error · `CREATE LOGIN` / `CREATE USER` ห้ามรันซ้ำ)
+- ไม่ได้เปิด `CHECK_EXPIRATION` → รหัสไม่หมดอายุ Agent ไม่หยุดทำงานกะทันหันเพราะรหัสหมดอายุ
+- สร้าง login ไม่แตะข้อมูลหรือโครงสร้างตารางของ ProMaxx และไม่ต้องรีสตาร์ทอะไร · เสร็จแล้วปิดหน้าต่าง query แบบ **Don't Save** ไม่ให้รหัสค้างเป็นไฟล์ `.sql`
+
 > ตารางไม่ได้อยู่ใน schema `dbo` → เช็คด้วย `SELECT TABLE_SCHEMA, TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'TRANS';` แล้วเปลี่ยน `dbo.` ตามนั้น
 
-**ตรวจสิทธิ์** — ล็อกอิน SSMS ใหม่ด้วย `web_readonly` แล้วรัน (คำสั่งนี้อ่านอย่างเดียว):
+**ตรวจสิทธิ์** — Object Explorer → Connect → Database Engine… → SQL Server Authentication ด้วย `web_readonly` → คลิกขวาฐานข้อมูลของ ProMaxx → New Query → รัน (อ่านอย่างเดียว แค่ถามว่ามีสิทธิ์อะไร ไม่ได้ลองเขียน):
 ```sql
-SELECT permission_name FROM fn_my_permissions('dbo.TRANS', 'OBJECT');
+SELECT t.name AS table_name,
+       HAS_PERMS_BY_NAME('dbo.' + t.name, 'OBJECT', 'SELECT') AS can_select,
+       HAS_PERMS_BY_NAME('dbo.' + t.name, 'OBJECT', 'INSERT') AS can_insert,
+       HAS_PERMS_BY_NAME('dbo.' + t.name, 'OBJECT', 'UPDATE') AS can_update,
+       HAS_PERMS_BY_NAME('dbo.' + t.name, 'OBJECT', 'DELETE') AS can_delete
+FROM (VALUES ('TRANS'), ('VOUCHER'), ('TRANEXTRAINFO'), ('TRANDETAILITEM'),
+             ('BRANCH'), ('ITEMS'), ('WAREHOUSE')) AS t(name);
 ```
-ต้องเห็นแค่ `SELECT` (ไม่มี INSERT / UPDATE / DELETE) · ⚠️ **ห้ามทดสอบด้วยการลองเขียนข้อมูลจริง**
+ต้องได้ `can_select = 1` ครบ 7 แถว และอีก 3 ช่องเป็น `0` · `can_select` เป็น `0` หรือ `NULL` = ตารางนั้นยังไม่ได้ GRANT · ⚠️ **ห้ามทดสอบด้วยการลองเขียนข้อมูลจริง**
 
-จากนั้นแก้ `.env` 2 บรรทัด → `MSSQL_USER=web_readonly` + `MSSQL_PASSWORD=<รหัสใหม่>` → รัน `node pending-docs-agent.mjs --dry-run` ซ้ำ ผลต้องเหมือนขั้นที่ 4
+จากนั้นแก้ `.env` 2 บรรทัด (แทนที่ของเดิม ไม่ต้องเก็บรหัส admin ไว้ในไฟล์ · ใน `.env` ไม่มี `N` และใช้ `"` ครอบแทน `'`):
+```
+MSSQL_USER=web_readonly
+MSSQL_PASSWORD="<รหัสใหม่>"
+```
+แล้วรัน `node pending-docs-agent.mjs --dry-run` ซ้ำ ผลต้องเหมือนขั้นที่ 4
 
 เลิกใช้เมื่อไรก็ได้ (ไม่กระทบ POS):
 ```sql
@@ -274,7 +322,7 @@ update app_page_settings set visible = true, updated_at = now() where page_id = 
 - [ ] กด "ส่ง" ใบหนึ่งใน ProMaxx → เปิดหน้าใหม่/กด 🔄 → ใบนั้นหายภายใน 2-3 วิ
 - [ ] เปิดหน้าค้างไว้ไม่แตะอะไร → ป้ายไม่หมุนเอง ตารางไม่กระพริบ (เวลาใน `ข้อมูล ณ` ขยับเงียบๆ ทุก ~5 นาที)
 - [ ] เปิดหน้าค้างไว้ → สาขากด "ส่ง" อีกใบ → ใบนั้นหายเองภายใน ~5 นาที (อยากเห็นทันทีกด 🔄)
-- [ ] ล็อกอิน SRC เห็นเฉพาะใบที่ออกจาก Front Store · KKL/SSS เห็นเฉพาะของตัวเอง · คลังสินค้า/จัดซื้อเห็นทุกใบ (แท็บ คลังสินค้า / SRC / KKL / SSS) · Sale Admin เห็นข้อความว่าใช้ไม่ได้
+- [ ] ล็อกอิน SRC เห็นเฉพาะใบที่ออกจาก Front Store (**ปกติว่าง** — Front Store ไม่โอนออก ดูขั้น 1.2) · KKL/SSS เห็นเฉพาะของตัวเอง · คลังสินค้า/จัดซื้อเห็นทุกใบ (แท็บ คลังสินค้า / SRC / KKL / SSS) · Sale Admin เห็นข้อความว่าใช้ไม่ได้
 - [ ] หยุด Task ใน Task Scheduler → กด 🔄 → ภายใน 15 วิ ป้ายขึ้น `⚠️ เครื่องในร้านไม่ตอบ` แต่ตารางเดิมยังอยู่ (เปิดค้างไว้เฉยๆ ป้ายนี้ขึ้นเองภายใน ~8 นาที) — เสร็จแล้วอย่าลืม Run กลับ
 
 ---
