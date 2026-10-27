@@ -4,12 +4,12 @@
 -- วิธีใช้: Supabase Dashboard → SQL Editor → วางทั้งไฟล์ → Run (รันซ้ำได้ ไม่ทับข้อมูล)
 --
 -- ทางเดินข้อมูล:
---   pending-docs-agent.mjs (เครื่องในร้าน) อ่าน MSSQL แบบ SELECT อย่างเดียว — ตรวจเองทุก 5 นาที + ตอนเว็บขอ
+--   pending-docs-agent.mjs (เครื่องในร้าน) อ่าน MSSQL แบบ SELECT อย่างเดียว — เฉพาะตอนเว็บขอ (ไม่มีใครเปิดหน้า = ไม่ถาม)
 --     → ข้อมูลเปลี่ยน: replace_pending_transfers() → pending_transfers → หน้าเว็บโหลดตารางใหม่
 --     → เหมือนเดิม:   mark_pending_docs_unchanged() บันทึกแค่เวลาที่ตรวจ → หน้าเว็บไม่ต้องโหลดซ้ำ
 --   เว็บขอข้อมูลสดผ่าน request_pending_docs_refresh() → Agent ได้ยินทาง realtime ของ pending_docs_sync
 -- 🚨 MSSQL ของ ProMaxx ห้ามเขียน/สร้างอะไรเด็ดขาด — ทุกอย่างที่ต้อง "เก็บ" อยู่ในไฟล์นี้ฝั่ง Supabase เท่านั้น
---    MSSQL จึงบอกเองไม่ได้ว่าข้อมูลเปลี่ยน (ต้องเปิด Change Tracking/Trigger = เขียน MSSQL) → Agent ต้อง "ไปถาม" ตามรอบ
+--    MSSQL จึงบอกเองไม่ได้ว่าข้อมูลเปลี่ยน (ต้องเปิด Change Tracking/Trigger = เขียน MSSQL) → Agent ต้อง "ไปถาม" ตอนมีคนขอ
 -- ============================================================
 
 
@@ -66,15 +66,13 @@ grant select on table public.pending_docs_sync to anon, authenticated;
 
 
 -- ── 3. เว็บขอข้อมูลสด (anon เรียกได้) ──
+-- คำขอจากที่นี่เป็นทางเดียวที่ทำให้ Agent ไปถาม MSSQL — ไม่มีใครเปิดหน้า Pending = ไม่ถามเลย (ผู้ใช้สั่ง 2569-10-27)
 -- throttle กัน MSSQL Express (ใช้ทรัพยากรร่วมกับ POS ทุกสาขา) โดนยิงถี่:
 --   คนสั่งเอง (p_auto = false: เปิดหน้า / F5 / 🔄) → ห่างจากคำขอก่อนหน้า ≥ 10 วิ
---   อัตโนมัติ (p_auto = true: หน้าที่เปิดค้างส่งแบบเงียบทุก 1 นาที + ตอนกลับมาที่แท็บ)
---     → ผ่านเฉพาะตอนไม่มีทั้งคำขอและผลการตรวจเลยเกิน 7 นาที = Agent เงียบผิดปกติ (ปกติตรวจเองทุก 5 นาที)
---     → ไว้จับว่าเครื่องในร้านดับ (เว็บรอ 15 วิแล้วขึ้น "เครื่องในร้านไม่ตอบ") · ตอนปกติไม่ทำให้ถาม MSSQL เพิ่มเลย
---     ไม่นับ last_error_at โดยตั้งใจ — Agent เขียนค่านั้นด้วยนาฬิกาเครื่องตัวเอง ถ้าเครื่องนั้นเวลาเดินเร็ว ตัวจับเครื่องดับจะช้าตาม
---     (MSSQL ล่มนานๆ = คำขอนี้ผ่านทุก 7 นาที ให้ Agent ลองใหม่ + หน้าเว็บได้ข้อความ error สดๆ — ภาระเท่าการต่อไม่ติด 1 ครั้ง)
---     ⚠️ 7 นาทีต้องมากกว่ารอบตรวจของ Agent (CHECK_INTERVAL_MS 5 นาที + CHECK_TICK_MS 30 วิ ใน pending-docs-agent.mjs)
---        ไม่งั้นหน้าที่เปิดค้างจะส่งคำขอแทรกก่อนรอบของ Agent = ถาม MSSQL ซ้ำโดยไม่ได้อะไร (มีเทสเช็คให้)
+--   อัตโนมัติ (p_auto = true: สลับกลับมาที่แท็บ/หน้าต่างนี้) → ผ่านเฉพาะตอนข้อมูลล่าสุดเก่ากว่า 2 นาที
+--     (เทียบทั้งคำขอ, ส่งชุดใหม่, ตรวจแล้วเหมือนเดิม) → สลับไปกด "ส่ง" ใน ProMaxx แล้วกลับมา ได้ข้อมูลใหม่เอง
+--     แต่สลับหน้าต่างไปมาถี่ๆ ไม่ถาม MSSQL ซ้ำ · ⚠️ อย่าลดต่ำกว่า 1 นาที (มีเทสเช็ค)
+--     ไม่นับ last_error_at โดยตั้งใจ — Agent เขียนค่านั้นด้วยนาฬิกาเครื่องตัวเอง ไม่ใช่เวลา DB
 -- คืนเวลาคำขอใหม่ หรือ null = ไม่ได้ตั้งคำขอใหม่ (มีคำขอ/ข้อมูลสดอยู่แล้ว — รอผลรอบเดิมได้เลย)
 -- ⚠️ anon key เป็นสาธารณะ ใครก็เรียก RPC นี้ได้ — throttle ที่นี่จึงเป็นด่านจริงด่านเดียวที่กัน ERP
 create or replace function public.request_pending_docs_refresh(p_auto boolean default false)
@@ -91,7 +89,7 @@ begin
    where id = 1
      and case
            when p_auto then coalesce(greatest(refresh_requested_at, last_success_at, last_checked_at), '-infinity')
-                              < now() - interval '7 minutes'
+                              < now() - interval '2 minutes'
            else coalesce(refresh_requested_at, '-infinity') < now() - interval '10 seconds'
          end
   returning refresh_requested_at into requested;

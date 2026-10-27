@@ -7,8 +7,9 @@ import { STORE_BRANCH_CODES, branchCodeLabel } from './auth';
 
 // หน้า "ตรวจสอบเอกสารค้าง" — ใบโอนสินค้าออกที่สาขายังไม่กด "ส่ง" ใน ProMaxx
 // ข้อมูลมาจาก pending-docs-agent.mjs (เครื่องในร้าน อ่าน MSSQL แบบ SELECT อย่างเดียว) ผ่าน Supabase
-// เว็บไม่ได้ต่อ MSSQL ตรง — ตอนเปิดหน้า / กด 🔄 "ขอ" ข้อมูลสดผ่าน RPC แล้วรอ Agent ตอบ (~2-3 วิ)
-// เปิดค้างไว้หน้าเว็บไม่ดึงเอง: Agent ตรวจ ProMaxx ทุก 5 นาที แล้วส่งชุดใหม่มา (realtime) เฉพาะตอนข้อมูลเปลี่ยน
+// เว็บไม่ได้ต่อ MSSQL ตรง — ตอนเปิดหน้า / กด 🔄 / กลับมาที่แท็บ "ขอ" ข้อมูลสดผ่าน RPC แล้วรอ Agent ตอบ (~2-3 วิ)
+// Agent ถาม ProMaxx เฉพาะตอนมีคำขอ (ผู้ใช้สั่ง 2569-10-27 — บางวันไม่มีการโอนเลย ไม่เข้าหน้านี้ก็ไม่ต้องโหลด)
+// ส่งชุดใหม่มา (realtime) เฉพาะตอนข้อมูลเปลี่ยน · เปิดค้างไว้เฉยๆ ไม่มีใครไปถาม ProMaxx
 
 interface TransferItem {
   line_no: number | null;
@@ -43,10 +44,12 @@ interface SyncStatus {
 const WARN_DAYS = 1;
 const ALERT_DAYS = 3;
 /**
- * เปิดค้างไว้: ทุก 1 นาทีแค่อ่านแถวสถานะ 1 แถวใน Supabase (เผื่อ realtime หลุด) + ส่งคำขอแบบเงียบ (ไม่มีป้ายหมุน)
- * ฝั่ง Supabase ปล่อยคำขอนี้ผ่านเฉพาะตอน Agent เงียบไปเกิน 7 นาที = ไว้จับว่าเครื่องในร้านดับ ตอนปกติไม่ได้ไปถาม ProMaxx
+ * เปิดค้างไว้: อ่านแถวสถานะ 1 แถวใน Supabase ทุก 1 นาที (เผื่อ realtime หลุด) — ไม่ได้ขอให้ Agent ไปถาม ProMaxx
+ * คนอื่นเปิดหน้าแล้วข้อมูลเปลี่ยน หน้านี้ก็ได้ชุดใหม่ตามไปด้วย
  */
-const WATCH_MS = 60_000;
+const STATUS_POLL_MS = 60_000;
+/** ระหว่างรอคำตอบของคำขอที่หน้านี้สั่ง อ่านสถานะถี่ขึ้น — realtime ของเบราว์เซอร์ใช้ไม่ได้ก็ยังเห็นผลทันที */
+const WAITING_POLL_MS = 3_000;
 /** ขอแล้วเครื่องในร้านไม่ตอบนานเกินนี้ = บอกผู้ใช้ว่าข้อมูลที่เห็นอาจเก่า (นับด้วยนาฬิกาเครื่องนี้เอง) */
 const AGENT_TIMEOUT_MS = 15_000;
 /** focus + visibilitychange ยิงพร้อมกันตอนสลับแท็บ — ไม่ต้องยิง RPC ทุกครั้ง (ปุ่ม 🔄 ข้ามข้อนี้ ฝั่ง Supabase ยังกันถี่ 10 วิ) */
@@ -193,9 +196,10 @@ export function PendingDocsPage({
     return data as SyncStatus;
   }, [applyStatus]);
 
-  // ขอให้ Agent ตรวจ ProMaxx
-  //   auto = ตัวจับเวลา 1 นาที / กลับมาที่แท็บ → เงียบ ไม่มีป้ายหมุน (Supabase ปล่อยผ่านเฉพาะตอน Agent เงียบเกิน 7 นาที)
-  //   คนสั่งเอง = เปิดหน้า / 🔄 → ตรวจทันที (Supabase กันถี่ 10 วิ) และป้ายหมุนรอผลของคำขอนี้
+  // ขอให้ Agent ไปถาม ProMaxx — ทางเดียวที่ทำให้ MSSQL ถูกถาม (ไม่มีใครเปิดหน้านี้ = ไม่ถามเลย)
+  //   คนสั่งเอง (เปิดหน้า / 🔄) → ถามทันที (Supabase กันถี่ 10 วิ)
+  //   กลับมาที่แท็บ (auto) → Supabase ปล่อยผ่านเฉพาะตอนข้อมูลเก่ากว่า 2 นาที ไม่ผ่านก็เงียบไป
+  // ป้ายหมุนรอผลเฉพาะคำขอที่หน้านี้ทำให้เกิดจริง
   const requestRefresh = useCallback(async (auto: boolean) => {
     if (Date.now() - lastRequestRef.current < REQUEST_MIN_GAP_MS) return;
     lastRequestRef.current = Date.now();
@@ -203,9 +207,9 @@ export function PendingDocsPage({
     const { data, error } = await supabase.rpc('request_pending_docs_refresh', { p_auto: auto });
     if (error) console.error('[เอกสารค้าง] ขอข้อมูลสดไม่สำเร็จ', error);
     const row = await fetchStatus();
-    if (auto) return;
-    // null = มีคำขอภายใน 10 วิอยู่แล้ว → รอผลของคำขอนั้นแทน (ถ้าตอบไปแล้ว ป้ายก็ไม่หมุน)
-    const target = toMs(typeof data === 'string' ? data : null) ?? toMs(row?.refresh_requested_at);
+    // null = Supabase ไม่ตั้งคำขอใหม่ · คนสั่งเอง → มีคำขอภายใน 10 วิอยู่แล้ว รอผลของคำขอนั้นแทน (ตอบไปแล้วก็ไม่หมุน)
+    const created = toMs(typeof data === 'string' ? data : null);
+    const target = created ?? (auto ? null : toMs(row?.refresh_requested_at));
     if (target !== null) setUserRequestMs(prev => (prev === null || target > prev ? target : prev));
   }, [fetchStatus]);
 
@@ -228,20 +232,21 @@ export function PendingDocsPage({
       })
       .subscribe();
 
-    // แท็บที่มองเห็นอยู่เท่านั้น · กลับมาที่แท็บก็แค่เช็คแบบเงียบ — ข้อมูลบน Supabase ใหม่เสมอภายใน ~5 นาทีจากรอบตรวจของ Agent
-    // (เดิมกลับมาที่แท็บ = ถาม MSSQL ทันที สลับแท็บไปมาก็ถามซ้ำ · อยากได้เดี๋ยวนี้กด 🔄)
-    // fetchStatus ใน requestRefresh เป็นตัวสำรองด้วย — realtime หลุดก็ยังรู้ว่ามีข้อมูลรอบใหม่ภายใน 1 นาที
-    const watchWhenVisible = () => {
+    // กลับมาที่แท็บ = เหมือนเข้าหน้านี้ใหม่ → ขอข้อมูลสดถ้าข้อมูลเก่ากว่า 2 นาที (สลับไปกด "ส่ง" ใน ProMaxx แล้วกลับมาเห็นผลเอง)
+    const refreshWhenBack = () => {
       if (document.visibilityState === 'visible') void requestRefresh(true);
     };
-    window.addEventListener('focus', watchWhenVisible);
-    document.addEventListener('visibilitychange', watchWhenVisible);
-    const timer = window.setInterval(watchWhenVisible, WATCH_MS);
+    window.addEventListener('focus', refreshWhenBack);
+    document.addEventListener('visibilitychange', refreshWhenBack);
+    // 🚨 เปิดค้างไว้เฉยๆ ห้ามขอให้ Agent ถาม ProMaxx ตามรอบ (ผู้ใช้สั่ง) — ตรงนี้แค่อ่านแถวสถานะใน Supabase
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === 'visible') void fetchStatus();
+    }, STATUS_POLL_MS);
 
     return () => {
       void supabase.removeChannel(channel);
-      window.removeEventListener('focus', watchWhenVisible);
-      document.removeEventListener('visibilitychange', watchWhenVisible);
+      window.removeEventListener('focus', refreshWhenBack);
+      document.removeEventListener('visibilitychange', refreshWhenBack);
       window.clearInterval(timer);
     };
   }, [notSupported, branchFilter, fetchRows, fetchStatus, requestRefresh, applyStatus]);
@@ -255,11 +260,11 @@ export function PendingDocsPage({
   const answeredMs = Math.max(dataMs, errorMs ?? -Infinity);
   // คำขอล่าสุด (ของใครก็ได้) ใหม่กว่าผลล่าสุด = Agent ยังไม่ตอบ — เทียบเวลาของ DB กับ DB จึงไม่โดนนาฬิกาเครื่องเพี้ยน
   const waiting = requestedMs !== null && requestedMs > answeredMs;
-  // ป้ายหมุนเฉพาะตอนรอคำขอที่หน้านี้สั่งเอง — คำขอแบบเงียบ / คนอื่นเปิดหน้า ไม่ทำให้ป้ายกระพริบ
+  // ป้ายหมุนเฉพาะตอนรอคำขอที่หน้านี้ทำให้เกิด — คนอื่นเปิดหน้า Pending ไม่ทำให้ป้ายของเรากระพริบ
   const userWaiting = userRequestMs !== null && userRequestMs > answeredMs;
   const showError = !userWaiting && Boolean(status?.last_error) && errorMs !== null && errorMs > dataMs;
 
-  // นับ 15 วิตั้งแต่เริ่มรอ (คำขอของใครก็ได้ รวมคำขอแบบเงียบ) — คำขอใหม่ระหว่างที่ยังรออยู่ไม่เริ่มนับใหม่
+  // นับ 15 วิตั้งแต่เริ่มรอ (คำขอของใครก็ได้) — คำขอใหม่ระหว่างที่ยังรออยู่ไม่เริ่มนับใหม่
   // ไม่งั้นตอนเครื่องในร้านดับ ป้ายจะสลับ "กำลังดึง…" ↔ "ไม่ตอบ" ทุกครั้งที่มีคำขอเหมือนกำลังทำงานอยู่
   useEffect(() => {
     if (!waiting) {
@@ -269,6 +274,14 @@ export function PendingDocsPage({
     const t = window.setTimeout(() => setAgentSilent(true), AGENT_TIMEOUT_MS);
     return () => window.clearTimeout(t);
   }, [waiting]);
+
+  // รอคำตอบของคำขอที่หน้านี้สั่ง → อ่านสถานะทุก 3 วิ (ไม่เกิน 15 วิ) ไม่ต้องพึ่ง realtime อย่างเดียว
+  // เน็ตสาขาบล็อก websocket ก็ยังเห็นผลทันที แทนที่จะขึ้น "เครื่องในร้านไม่ตอบ" ทั้งที่ Agent ตอบแล้ว
+  useEffect(() => {
+    if (!userWaiting || agentSilent) return;
+    const t = window.setInterval(() => void fetchStatus(), WAITING_POLL_MS);
+    return () => window.clearInterval(t);
+  }, [userWaiting, agentSilent, fetchStatus]);
 
   useEffect(() => {
     if (!openDoc) return;

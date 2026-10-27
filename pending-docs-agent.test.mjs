@@ -3,8 +3,6 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 import {
-  CHECK_INTERVAL_MS,
-  CHECK_TICK_MS,
   DEST_BRANCH_FALLBACK,
   TRANSFER_SQL,
   WAREHOUSE_MAP,
@@ -23,6 +21,7 @@ import {
   snapshotHash,
   sqlForSsms,
   timestampMs,
+  unansweredRequestMs,
   warehouseKey,
 } from './pending-docs-agent.mjs';
 
@@ -355,12 +354,33 @@ test('pending-docs-setup.sql ถอนสิทธิ์ anon จาก RPC ฝ�
   assert.ok(setupSql.includes('drop function if exists public.replace_pending_transfers(jsonb);'));
 });
 
-// หน้าเว็บที่เปิดค้างส่งคำขออัตโนมัติแบบเงียบ — Supabase ปล่อยผ่านเฉพาะตอน Agent เงียบเกินเกณฑ์ (ไว้จับเครื่องในร้านดับ)
-// ถ้า Agent ตรวจห่างกว่าเกณฑ์ คำขอจะหลุดมาแทรกทุกรอบ = ถาม MSSQL เพิ่มโดยไม่ได้อะไร
-test('Agent ตรวจเองถี่กว่าเกณฑ์คำขออัตโนมัติของหน้าเว็บ', () => {
-  const m = setupSql.match(/when p_auto then[\s\S]*?interval '(\d+) minutes'/);
+// คำขออัตโนมัติ = สลับกลับมาที่แท็บ · เกณฑ์ต่ำเกินไป สลับหน้าต่างไปมาก็กลายเป็นถาม MSSQL ถี่ๆ ซึ่งผู้ใช้ไม่เอา
+test('คำขอตอนกลับมาที่แท็บผ่านเฉพาะตอนข้อมูลเก่ากว่าอย่างน้อย 1 นาที', () => {
+  const m = setupSql.match(/when p_auto then[\s\S]*?interval '(\d+) (minutes?|seconds?)'/);
   assert.ok(m, 'ไม่พบเกณฑ์ interval ของคำขออัตโนมัติใน request_pending_docs_refresh');
-  assert.ok(CHECK_INTERVAL_MS + CHECK_TICK_MS < Number(m[1]) * 60_000);
+  const ms = Number(m[1]) * (m[2].startsWith('minute') ? 60_000 : 1000);
+  assert.ok(ms >= 60_000, `${m[1]} ${m[2]}`);
+});
+
+// Agent ไม่ถาม MSSQL ตามรอบแล้ว — ตอนเริ่มทำงานจะถามก็ต่อเมื่อมีคนเปิดหน้าค้างไว้ระหว่าง Agent ปิด/รีสตาร์ท
+test('unansweredRequestMs บอกคำขอที่ยังไม่มีใครตอบ', () => {
+  const t = iso => Date.parse(iso);
+  assert.equal(unansweredRequestMs({ refresh_requested_at: null }), null, 'ยังไม่เคยมีใครขอ');
+  assert.equal(unansweredRequestMs({
+    refresh_requested_at: '2026-10-27T08:00:00Z', last_success_at: '2026-10-27T08:00:02Z', last_checked_at: null,
+  }), null, 'ส่งชุดใหม่ไปแล้ว');
+  assert.equal(unansweredRequestMs({
+    refresh_requested_at: '2026-10-27T08:00:00Z', last_success_at: '2026-10-27T07:00:00Z', last_checked_at: '2026-10-27T08:00:03Z',
+  }), null, 'ตรวจแล้วเหมือนเดิม');
+  assert.equal(unansweredRequestMs({
+    refresh_requested_at: '2026-10-27T08:00:00Z', last_success_at: '2026-10-27T07:00:00Z', last_checked_at: '2026-10-27T07:00:00Z',
+  }), t('2026-10-27T08:00:00Z'), 'ขอแล้วยังไม่มีคำตอบ');
+  assert.equal(unansweredRequestMs({
+    refresh_requested_at: '2026-10-27T08:00:00Z', last_success_at: null, last_checked_at: null,
+    last_error_at: '2026-10-27T08:00:05Z',
+  }), t('2026-10-27T08:00:00Z'), 'จบด้วย error → รีสตาร์ทแล้วลองใหม่ได้');
+  // ตารางรุ่นก่อนไม่มี last_checked_at
+  assert.equal(unansweredRequestMs({ refresh_requested_at: '2026-10-27T08:00:00Z', last_success_at: '2026-10-27T08:00:01Z' }), null);
 });
 
 test('publicErrorMessage ไม่ส่งข้อความดิบของ driver (มีชื่อเครื่อง/IP ใน LAN) ขึ้น Supabase', () => {

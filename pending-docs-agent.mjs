@@ -8,7 +8,8 @@
  * ซิงค์รอบเดียว:   node pending-docs-agent.mjs --once     (ส่งทั้งชุดขึ้น Supabase เสมอ แม้ไม่มีอะไรเปลี่ยน)
  * เอา SQL ไปลองใน SSMS: node pending-docs-agent.mjs --print-sql
  *
- * ทำงานยังไง: Agent ตรวจ ProMaxx เองทุก 5 นาที + ทันทีที่หน้าเว็บขอ (เปิดหน้า / กด 🔄)
+ * ทำงานยังไง: Agent ถาม ProMaxx เฉพาะตอนหน้าเว็บขอ (เปิดหน้า Pending / กด 🔄 / กลับมาที่แท็บ)
+ *   ไม่มีใครเปิดหน้า = ไม่แตะ MSSQL เลยทั้งวัน (ผู้ใช้สั่ง — บางวันไม่มีการโอนเลย ถามตามรอบก็เปล่าประโยชน์)
  *   หน้าเว็บเรียก RPC request_pending_docs_refresh() → แถว pending_docs_sync เปลี่ยน
  *   → Agent ได้ยินทาง Supabase Realtime (ต่อออกจากร้านอย่างเดียว ไม่มีช่องให้อินเทอร์เน็ตเข้ามา)
  *   → SELECT จาก MSSQL → เทียบ "ลายนิ้วมือ" (snapshotHash) กับชุดที่อยู่บน Supabase (pushSnapshot)
@@ -31,14 +32,12 @@ import { pathToFileURL } from 'url';
 // ─── CONFIG ───────────────────────────────────────────────
 const SUPABASE_URL = 'https://eogqnedbdpjuptwlqudn.supabase.co';
 const DEFAULT_DAYS = 90;                    // ย้อนหลังกี่วัน (เปลี่ยนได้ด้วย PENDING_TRANSFER_DAYS ใน .env)
-// ตรวจ ProMaxx เองทุก 5 นาที นับจากการตรวจครั้งล่าสุด (รอบที่หน้าเว็บขอก็นับ) — แม้ไม่มีใครเปิดหน้า
-// ⚠️ รอบ + tick ต้องน้อยกว่าเกณฑ์ 7 นาทีของคำขออัตโนมัติใน request_pending_docs_refresh() (pending-docs-setup.sql)
-//    หน้าเว็บที่เปิดค้างใช้เกณฑ์นั้นจับว่าเครื่องในร้านเงียบไป — ตั้งรอบนานเกิน หน้าเว็บจะส่งคำขอแทรกมาถาม MSSQL เพิ่มเอง (มีเทสเช็ค)
-export const CHECK_INTERVAL_MS = 5 * 60_000;
-export const CHECK_TICK_MS = 30_000;
+// 🚨 ห้ามใส่รอบถาม MSSQL เองกลับมา — ถามเฉพาะตอนมีคำขอจากหน้าเว็บ (ผู้ใช้สั่ง 2569-10-27 "ไม่เข้าหน้านี้ก็ไม่ต้องโหลด")
+// ที่วนทุก 30 วิคือเช็คคำขอที่ค้างใน Supabase (อ่าน 1 แถว ไม่แตะ MSSQL) เผื่อ realtime ไม่ส่งคำขอมา:
+//   realtime หลุดชั่วคราว / firewall ร้านบล็อก websocket / pending_docs_sync ไม่ได้อยู่ใน publication (SUBSCRIBED แต่ไม่มี event)
+const REQUEST_POLL_MS = 30_000;
 const QUERY_TIMEOUT_MS = 20_000;
-// realtime ต่อไม่ติดนานเกินนี้ → ออกให้ .bat เปิดใหม่ (ได้ connection สด)
-// ⚠️ ต้องนานกว่า CHECK_INTERVAL_MS — ถ้า firewall ร้านบล็อก websocket ถาวร ระหว่างรอยังต้องได้ตรวจตามรอบบ้าง
+// realtime ต่อไม่ติดนานเกินนี้ → ออกให้ .bat เปิดใหม่ (ได้ connection สด) · ระหว่างรอยังรับคำขอได้จากการเช็คทุก 30 วิ
 const REALTIME_DOWN_RESTART_MS = 10 * 60_000;
 const LOG_FILE = new URL('./pending-docs-agent.log', import.meta.url);
 const LOG_MAX_BYTES = 5 * 1024 * 1024;
@@ -344,6 +343,18 @@ export function timestampMs(value) {
 }
 
 /**
+ * เวลาของคำขอที่ยังไม่มีใครตอบ (ms) หรือ null — ใช้ตอน Agent เพิ่งเริ่มทำงาน (มีคนเปิดหน้าระหว่าง Agent ปิด/รีสตาร์ท)
+ * "ตอบแล้ว" = ส่งชุดใหม่ (last_success_at) หรือตรวจแล้วเหมือนเดิม (last_checked_at) หลังเวลาคำขอ
+ * ไม่นับ last_error_at: คำขอที่จบด้วย error ให้ลองใหม่ได้ 1 ครั้งตอนรีสตาร์ท (และค่านั้นเป็นเวลาเครื่อง Agent ไม่ใช่เวลา DB)
+ */
+export function unansweredRequestMs(row) {
+  const requestedMs = timestampMs(row?.refresh_requested_at);
+  if (requestedMs === null) return null;
+  const answeredMs = Math.max(timestampMs(row.last_success_at) ?? -Infinity, timestampMs(row.last_checked_at) ?? -Infinity);
+  return requestedMs > answeredMs ? requestedMs : null;
+}
+
+/**
  * ทำทีละรอบ (single-flight) — คำขอที่เข้ามาระหว่างกำลังซิงค์ ยุบเหลือ "ทำซ้ำอีก 1 รอบ" หลังรอบนี้จบ
  * ทำให้ MSSQL ไม่โดน query ซ้อนกัน แม้หลายเครื่องเปิดหน้าพร้อมกัน
  */
@@ -408,7 +419,7 @@ export async function pushSnapshot(client, docs, { force = false } = {}) {
 
 // ─── log ──────────────────────────────────────────────────
 // เขียนซ้ำลงไฟล์ด้วย เพราะตอน Task Scheduler รันแบบไม่มีคนล็อกอิน จะไม่มีหน้าจอให้ดู
-// เช็คขนาดไฟล์ทุก 200 บรรทัดด้วย — Agent รันค้างได้เป็นเดือน (ตรวจทุก 5 นาที = log วันละ ~300 บรรทัดขึ้นไป)
+// เช็คขนาดไฟล์ทุก 200 บรรทัดด้วย — Agent รันค้างได้เป็นเดือน (1 บรรทัดต่อคำขอจากหน้าเว็บ + ตอน realtime หลุด/ต่อใหม่)
 // ถ้าหมุนแค่ตอนเริ่มโปรแกรม ไฟล์จะโตไม่หยุดจนกว่าจะมีคนรีสตาร์ท
 let linesSinceRotateCheck = 0;
 function log(message) {
@@ -589,9 +600,7 @@ export async function main(argv = process.argv.slice(2)) {
     if (error) log(`⚠️ บันทึก error ลง Supabase ไม่สำเร็จ: ${error.message}`);
   };
 
-  let lastCheckStartedMs = 0;
   const syncOnce = async (reason, { force = false } = {}) => {
-    lastCheckStartedMs = Date.now();
     try {
       const { docs, skipped, seconds } = await fetchPendingDocs(source);
       const { changed } = await pushSnapshot(supabase, docs, { force });
@@ -615,14 +624,16 @@ export async function main(argv = process.argv.slice(2)) {
   }
 
   const runner = createSyncRunner(syncOnce);
-  // ตรวจทันทีไม่รอ realtime — ถ้า websocket โดนบล็อก หน้าเว็บยังได้ข้อมูลจากรอบนี้ + รอบตรวจทุก 5 นาที
-  void runner.request('เริ่มทำงาน');
-  // จำเวลาคำขอล่าสุดตอนเริ่มไว้ — ไม่งั้น event แรกที่เกิดจาก Agent บันทึกผลเองจะถูกนับเป็นคำขอใหม่
-  let lastRequestMs = timestampMs(syncRow.refresh_requested_at);
+  // จำคำขอล่าสุดที่ตอบไปแล้วไว้ — ไม่งั้น event แรกที่เกิดจาก Agent บันทึกผลเองจะถูกนับเป็นคำขอใหม่
+  // ยกเว้นคำขอที่ยังไม่มีใครตอบ (คนเปิดหน้าตอน Agent ปิด/รีสตาร์ท) → ปล่อยให้ onRequestSeen ข้างล่างตรวจทันที
+  const pendingAtStart = unansweredRequestMs(syncRow);
+  let lastRequestMs = pendingAtStart === null ? timestampMs(syncRow.refresh_requested_at) : null;
   let realtimeOk = false;
   let realtimeDownSince = Date.now();
+  let requestPollFailing = false;
 
   // แถว pending_docs_sync เปลี่ยนจากหลายทาง (Agent เองตอนบันทึกผล/error ด้วย) — ตรวจเฉพาะตอนเว็บตั้งคำขอใหม่กว่าเดิม
+  // นี่คือทางเดียวที่ Agent ไปถาม MSSQL (นอกจาก --once / --dry-run)
   const onRequestSeen = (requestedAt, reason) => {
     const requestedMs = timestampMs(requestedAt);
     if (requestedMs !== null && (lastRequestMs === null || requestedMs > lastRequestMs)) {
@@ -631,16 +642,30 @@ export async function main(argv = process.argv.slice(2)) {
     }
   };
 
-  // เก็บตกคำขอที่เข้ามาตอน realtime ยังไม่ติด — ดูแถวสถานะใน Supabase ก่อน มีคำขอใหม่จริงค่อยไปถาม MSSQL
-  // (เดิมตรวจ MSSQL ทุกครั้งที่ต่อติด รวมตอนเริ่มทำงานที่เพิ่งตรวจไปเมื่อวินาทีก่อน = ถามซ้ำเปล่าๆ)
-  const catchUpMissedRequest = async () => {
-    const { data, error } = await supabase
-      .from('pending_docs_sync')
-      .select('refresh_requested_at')
-      .eq('id', 1)
-      .maybeSingle();
-    if (error || !data) void runner.request('เพิ่งต่อ Realtime (อ่านสถานะไม่ได้ ตรวจเผื่อไว้)');
-    else onRequestSeen(data.refresh_requested_at, 'เพิ่งต่อ Realtime (เก็บตกคำขอที่หลุดไป)');
+  if (pendingAtStart !== null) onRequestSeen(syncRow.refresh_requested_at, 'มีคำขอค้างตั้งแต่ก่อน Agent เริ่มทำงาน');
+  else log('💤 ยังไม่มีคำขอ — จะถาม MSSQL เมื่อมีคนเปิดหน้า Pending / กด 🔄');
+
+  // เก็บตกคำขอที่ realtime ไม่ได้ส่งมา — อ่านแถวสถานะใน Supabase 1 แถว มีคำขอใหม่จริงค่อยไปถาม MSSQL
+  // อ่านไม่ได้ = ไม่ถาม MSSQL "เผื่อไว้" (ไม่งั้นตอน Supabase ล่ม จะถาม MSSQL ทุก 30 วิ) · log เฉพาะตอนสถานะเปลี่ยน กัน log บวม
+  const catchUpMissedRequest = async reason => {
+    let result;
+    try {
+      result = await supabase
+        .from('pending_docs_sync')
+        .select('refresh_requested_at')
+        .eq('id', 1)
+        .maybeSingle();
+    } catch (err) {
+      result = { data: null, error: err };
+    }
+    if (result.error || !result.data) {
+      if (!requestPollFailing) log(`⚠️ อ่านคำขอจาก Supabase ไม่ได้ — ${result.error?.message ?? 'ไม่พบแถว id = 1'} (ลองใหม่ทุก 30 วิ)`);
+      requestPollFailing = true;
+      return;
+    }
+    if (requestPollFailing) log('✓ อ่านคำขอจาก Supabase ได้อีกครั้ง');
+    requestPollFailing = false;
+    onRequestSeen(result.data.refresh_requested_at, reason);
   };
 
   const channel = supabase
@@ -652,19 +677,18 @@ export async function main(argv = process.argv.slice(2)) {
       if (status === 'SUBSCRIBED') {
         realtimeOk = true;
         log('🔌 ต่อ Supabase Realtime แล้ว — รอคำขอจากหน้าเว็บ');
-        void catchUpMissedRequest();
+        void catchUpMissedRequest('เพิ่งต่อ Realtime (เก็บตกคำขอที่หลุดไป)');
       } else {
         if (realtimeOk) realtimeDownSince = Date.now(); // นับจากตอนเริ่มหลุด ไม่นับใหม่ทุกครั้งที่สถานะเปลี่ยน
         realtimeOk = false;
-        log(`⚠️ Realtime ${status}${err ? `: ${err.message}` : ''} — ระหว่างนี้ยังตรวจตามรอบทุก 5 นาที`);
+        log(`⚠️ Realtime ${status}${err ? `: ${err.message}` : ''} — ระหว่างนี้ยังรับคำขอได้จากการเช็ค Supabase ทุก 30 วิ`);
       }
     });
 
-  // ตรวจตามรอบ: นับ 5 นาทีจากการตรวจครั้งล่าสุด (รวมรอบที่หน้าเว็บขอ) — คนเปิดหน้าบ่อยก็ไม่ถาม MSSQL ซ้อนเพิ่ม
-  // tick ถี่กว่ารอบเพื่อให้นับจากครั้งล่าสุดได้จริง (setInterval 5 นาทีตรงๆ ไม่รู้ว่าเพิ่งมีรอบที่หน้าเว็บขอ)
-  const checkTimer = setInterval(() => {
-    if (Date.now() - lastCheckStartedMs >= CHECK_INTERVAL_MS) void runner.request('ตรวจตามรอบทุก 5 นาที');
-  }, CHECK_TICK_MS);
+  const requestPoll = setInterval(
+    () => void catchUpMissedRequest('หน้าเว็บขอข้อมูลสด (เจอจากการเช็ค Supabase ทุก 30 วิ)'),
+    REQUEST_POLL_MS,
+  );
 
   // supabase-js ต่อใหม่เองเกือบทุกกรณี — ถ้าหลุดนานผิดปกติ ออกจากโปรแกรมให้ .bat เปิดใหม่ (ได้ connection สด)
   const watchdog = setInterval(() => {
@@ -676,7 +700,7 @@ export async function main(argv = process.argv.slice(2)) {
 
   const shutdown = async signal => {
     log(`⏹ ได้รับ ${signal} — ปิด Agent`);
-    clearInterval(checkTimer);
+    clearInterval(requestPoll);
     clearInterval(watchdog);
     await supabase.removeChannel(channel).catch(() => {});
     await source.close();
