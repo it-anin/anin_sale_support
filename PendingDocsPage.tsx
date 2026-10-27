@@ -46,7 +46,9 @@ const AGENT_TIMEOUT_MS = 15_000;
 const MANUAL_MIN_GAP_MS = 10_000;
 const ROW_LIMIT = 1000;
 const ALL_TAB = 'ทั้งหมด';
-const TAB_ORDER: readonly string[] = ['คลังสินค้า', ...STORE_BRANCH_CODES];
+// ไม่มีแท็บ "คลังสินค้า" โดยตั้งใจ — ใน ProMaxx คลังกับหน้าร้าน SRC เป็นสาขาเดียวกัน (SYSBRANCHID 0)
+// ใบของคลังจึงขึ้นเป็น SRC (BRANCH_ID_MAP ใน pending-docs-agent.mjs) แท็บคลังจะเป็น 0 ตลอดถ้าใส่ไว้
+const TAB_ORDER: readonly string[] = STORE_BRANCH_CODES;
 const SYNC_COLUMNS = 'refresh_requested_at, last_success_at, last_error, last_error_at, row_count';
 
 /** เวลาจาก Supabase → มิลลิวินาที (realtime อาจส่งรูปแบบ "YYYY-MM-DD HH:MM:SS.ffffff+00" มา ไม่ใช่ ISO เป๊ะ) */

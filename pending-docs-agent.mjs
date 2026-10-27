@@ -36,21 +36,17 @@ const LOG_FILE = new URL('./pending-docs-agent.log', import.meta.url);
 const LOG_MAX_BYTES = 5 * 1024 * 1024;
 
 // SYSBRANCHID ของ ProMaxx → รหัสในแอป (ต้องตรงกับ Profile.branch ใน auth.ts ไม่งั้นสาขาจะไม่เห็นใบของตัวเอง)
-// ⚠️ เติมเลขจริงจากผล `SELECT SYSBRANCHID, NAME FROM BRANCH` ใน SSMS (คู่มือขั้นที่ 1) แล้วลบ // ออก
-//    ระหว่างที่ยังว่าง จะลองจับคู่จากชื่อสาขาใน BRANCH_NAME_MAP แทน
+// จากตาราง BRANCH จริง (ผู้ใช้ยืนยัน 2569-10-27):
+//   0 อนิน สาขาแยกชากค้อ — หน้าร้าน SRC กับคลังสินค้าใช้สาขาเดียวกันใน ProMaxx → ให้ SRC เห็น (คลัง/จัดซื้อเห็นทุกใบอยู่แล้ว)
+//   4 อนิน สาขาเก้ากิโล → KKL · 5 อนิน สาขาสวนเสือศรีราชา → SSS
+//   1 ออนนุช / 2 ตลาดเวิลด์มาร์เก็ต / 3 กรุงเทพกรีฑา — ไม่มีโปรไฟล์ในเว็บ ผู้ใช้สั่งไม่ต้องแสดงใบที่โอนออกจากสาขาพวกนี้
+// ⚠️ ต้นทางที่ไม่อยู่ใน map = ข้ามทั้งใบ (log ✅ บอกจำนวน) · ปลายทางที่ไม่อยู่ใน map = แสดงชื่อดิบจาก BRANCH.NAME
+//    มีสาขาใหม่ใน ProMaxx ต้องเพิ่มที่นี่ + โปรไฟล์ใน auth.ts ไม่งั้นใบของสาขานั้นไม่ขึ้นเลย
+// ⚠️ ชื่อในตาราง BRANCH เป็นภาษาไทย ไม่ใช่ชื่อชุด Warehouse / Front Store ของไฟล์สต๊อค — จับคู่ด้วยเลขเท่านั้น
 export const BRANCH_ID_MAP = {
-  // 0: 'คลังสินค้า',
-  // 1: 'SRC',
-  // 2: 'KKL',
-  // 3: 'SSS',
-};
-
-// ชื่อสาขาใน ProMaxx ชุดเดียวกับที่ไฟล์สต๊อคใช้ (BRANCH_MAP ใน upload-stock.mjs) — เทียบแบบไม่สนตัวพิมพ์
-export const BRANCH_NAME_MAP = {
-  'warehouse':   'คลังสินค้า',
-  'front store': 'SRC',
-  'main kkl':    'KKL',
-  'main sss':    'SSS',
+  0: 'SRC',
+  4: 'KKL',
+  5: 'SSS',
 };
 
 // ใบโอนสินค้าออก (VOUCHERTYPE 'TB' + VOUCHERINOUT 'O') ที่ยังไม่มีใบแจ้งโอน = สาขายังไม่กด "ส่ง"
@@ -195,31 +191,35 @@ export function normalizeDate(raw) {
   return /^\d{4}-\d{2}-\d{2}$/.test(text) ? text : null;
 }
 
-/** แปลงสาขา ProMaxx → รหัสในแอป · `known: false` = map ไม่ได้ (ใบยังอยู่ครบ แต่สาขาจะไม่เห็นใบของตัวเอง) */
-export function resolveBranch(id, name, idMap = BRANCH_ID_MAP, nameMap = BRANCH_NAME_MAP) {
+/** แปลงสาขา ProMaxx → รหัสในแอป · `known: false` = ไม่อยู่ใน BRANCH_ID_MAP (ได้ชื่อดิบจาก BRANCH.NAME แทน) */
+export function resolveBranch(id, name, idMap = BRANCH_ID_MAP) {
   if (id !== null && id !== undefined && Object.hasOwn(idMap, String(id))) {
     return { code: idMap[String(id)], known: true };
   }
   const label = cleanText(name);
-  const byName = nameMap[label.toLowerCase()];
-  if (byName) return { code: byName, known: true };
   return { code: label || (id !== null && id !== undefined ? `สาขา #${id}` : ''), known: false };
 }
 
-/** แถวจาก SQL (1 แถว = 1 รายการสินค้า) → ใบโอน 1 ใบต่อ SYSTRANNO พร้อม items สำหรับ popup */
-export function groupTransferRows(rows, branchOf = resolveBranch) {
+/**
+ * แถวจาก SQL (1 แถว = 1 รายการสินค้า) → ใบโอน 1 ใบต่อ SYSTRANNO พร้อม items สำหรับ popup
+ * ใบที่ต้นทางไม่อยู่ใน BRANCH_ID_MAP ถูกข้าม (ผู้ใช้สั่งไม่แสดง) — นับไว้ใน `skipped` ให้ log เห็น
+ * ⚠️ กรองตรงนี้ ไม่ใช่ใน SQL โดยตั้งใจ: SQL ต้องเหมือนชุดที่ผู้ใช้ตรวจกับ R16.150 ใน SSMS แล้ว (คู่มือขั้น 1.4)
+ */
+export function groupTransferRows(rows, idMap = BRANCH_ID_MAP) {
   const docs = new Map();
-  const unknownBranches = new Map();
-
-  const branch = (id, name) => {
-    const result = branchOf(id, name);
-    if (!result.known) unknownBranches.set(`${id}|${cleanText(name)}`, { id, name: cleanText(name) });
-    return result.code;
-  };
+  const skipped = new Map();
 
   for (const row of rows) {
     const key = cleanText(row.sys_tran_no);
     if (!key) continue;
+
+    const from = resolveBranch(row.from_branch_id, row.from_branch_name, idMap);
+    if (!from.known) {
+      const skipKey = `${row.from_branch_id}|${from.code}`;
+      if (!skipped.has(skipKey)) skipped.set(skipKey, { id: row.from_branch_id, name: from.code, docKeys: new Set() });
+      skipped.get(skipKey).docKeys.add(key);
+      continue;
+    }
 
     let doc = docs.get(key);
     if (!doc) {
@@ -227,8 +227,8 @@ export function groupTransferRows(rows, branchOf = resolveBranch) {
         sys_tran_no: row.sys_tran_no,
         doc_no: cleanText(row.doc_no),
         doc_date: normalizeDate(row.doc_date),
-        from_branch: branch(row.from_branch_id, row.from_branch_name),
-        to_branch: branch(row.to_branch_id, row.to_branch_name),
+        from_branch: from.code,
+        to_branch: resolveBranch(row.to_branch_id, row.to_branch_name, idMap).code,
         item_count: 0,
         items: [],
       };
@@ -253,7 +253,10 @@ export function groupTransferRows(rows, branchOf = resolveBranch) {
     doc.item_count = doc.items.length;
   }
 
-  return { docs: [...docs.values()], unknownBranches: [...unknownBranches.values()] };
+  return {
+    docs: [...docs.values()],
+    skipped: [...skipped.values()].map(({ id, name, docKeys }) => ({ id, name, docs: docKeys.size })),
+  };
 }
 
 /**
@@ -319,9 +322,16 @@ export function createSyncRunner(syncOnce) {
 
 // ─── log ──────────────────────────────────────────────────
 // เขียนซ้ำลงไฟล์ด้วย เพราะตอน Task Scheduler รันแบบไม่มีคนล็อกอิน จะไม่มีหน้าจอให้ดู
+// เช็คขนาดไฟล์ทุก 200 บรรทัดด้วย — Agent รันค้างได้เป็นเดือน (เปิดหน้าค้าง = log นาทีละบรรทัด)
+// ถ้าหมุนแค่ตอนเริ่มโปรแกรม ไฟล์จะโตไม่หยุดจนกว่าจะมีคนรีสตาร์ท
+let linesSinceRotateCheck = 0;
 function log(message) {
   const line = `[${new Date().toLocaleString('th-TH')}] ${message}`;
   console.log(line);
+  if (++linesSinceRotateCheck >= 200) {
+    linesSinceRotateCheck = 0;
+    rotateLogIfLarge();
+  }
   try {
     appendFileSync(LOG_FILE, `${line}\n`);
   } catch {
@@ -388,17 +398,13 @@ function createMssqlSource(config) {
 async function fetchPendingDocs(source) {
   const started = Date.now();
   const rows = await source.fetchRows();
-  const { docs, unknownBranches } = groupTransferRows(rows);
-  return { rows, docs, unknownBranches, seconds: (Date.now() - started) / 1000 };
+  const { docs, skipped } = groupTransferRows(rows);
+  return { rows, docs, skipped, seconds: (Date.now() - started) / 1000 };
 }
 
-function warnUnknownBranches(unknownBranches) {
-  if (!unknownBranches.length) return;
-  const list = unknownBranches.map(b => `#${b.id ?? '?'} "${b.name}"`).join(', ');
-  log(`⚠️ สาขาที่ map ไม่ได้: ${list} — ใบเหล่านี้คลังสินค้า/จัดซื้อยังเห็น แต่สาขาจะไม่เห็น · เติม BRANCH_ID_MAP ในไฟล์นี้`);
-}
+const skippedDocCount = skipped => skipped.reduce((sum, b) => sum + b.docs, 0);
 
-function printDryRun(config, { rows, docs, unknownBranches, seconds }) {
+function printDryRun(config, { rows, docs, skipped, seconds }) {
   const byBranch = new Map();
   for (const doc of docs) byBranch.set(doc.from_branch, (byBranch.get(doc.from_branch) ?? 0) + 1);
 
@@ -406,18 +412,22 @@ function printDryRun(config, { rows, docs, unknownBranches, seconds }) {
   for (const row of rows) {
     for (const [id, name] of [[row.from_branch_id, row.from_branch_name], [row.to_branch_id, row.to_branch_name]]) {
       const key = `${id}|${cleanText(name)}`;
-      if (!branchesSeen.has(key)) branchesSeen.set(key, { id, name: cleanText(name), code: resolveBranch(id, name).code });
+      if (!branchesSeen.has(key)) branchesSeen.set(key, { id, name: cleanText(name), ...resolveBranch(id, name) });
     }
   }
 
   console.log('');
   console.log('── สรุป dry-run (อ่าน MSSQL อย่างเดียว ไม่ได้เขียน Supabase) ──');
   console.log(`   ย้อนหลัง ${config.days} วัน · query ใช้เวลา ${seconds.toFixed(2)} วิ`);
-  console.log(`   รายการสินค้า ${rows.length.toLocaleString()} แถว → ใบโอนค้างส่ง ${docs.length.toLocaleString()} ใบ`);
+  console.log(`   รายการสินค้า ${rows.length.toLocaleString()} แถว → ใบโอนค้างส่งที่แสดงบนเว็บ ${docs.length.toLocaleString()} ใบ`);
   console.log(`   แยกตามต้นทาง: ${[...byBranch].map(([b, n]) => `${b} ${n}`).join(' · ') || '-'}`);
-  console.log('   สาขาที่พบ (SYSBRANCHID → ชื่อใน ProMaxx → รหัสในเว็บ):');
-  for (const b of branchesSeen.values()) console.log(`     ${b.id ?? '?'} → "${b.name}" → ${b.code}`);
-  if (unknownBranches.length) console.log('   ⚠️ มีสาขาที่ map ไม่ได้ — เติม BRANCH_ID_MAP ด้านบนของไฟล์นี้');
+  if (skipped.length) {
+    console.log(`   ไม่แสดง (ต้นทางไม่อยู่ใน BRANCH_ID_MAP): ${skipped.map(b => `${b.name} ${b.docs} ใบ`).join(' · ')}`);
+  }
+  console.log('   สาขาที่พบ (SYSBRANCHID → ชื่อใน ProMaxx → บนเว็บ):');
+  for (const b of branchesSeen.values()) {
+    console.log(`     ${b.id ?? '?'} → "${b.name}" → ${b.known ? b.code : 'ไม่อยู่ใน map (ต้นทาง = ไม่แสดง · ปลายทาง = ชื่อเดิม)'}`);
+  }
   console.log('   ตัวอย่าง 3 ใบแรก:');
   for (const doc of docs.slice(0, 3)) {
     const first = doc.items[0];
@@ -469,15 +479,15 @@ export async function main(argv = process.argv.slice(2)) {
 
   const syncOnce = async reason => {
     try {
-      const { docs, unknownBranches, seconds } = await fetchPendingDocs(source);
-      warnUnknownBranches(unknownBranches);
+      const { docs, skipped, seconds } = await fetchPendingDocs(source);
       const { error } = await supabase.rpc('replace_pending_transfers', { p_rows: docs });
       if (error) {
         const supabaseError = new Error(error.message);
         supabaseError.name = 'SupabaseError';
         throw supabaseError;
       }
-      log(`✅ ${reason} — ใบโอนค้างส่ง ${docs.length} ใบ (query ${seconds.toFixed(2)} วิ)`);
+      const hidden = skippedDocCount(skipped);
+      log(`✅ ${reason} — ใบโอนค้างส่ง ${docs.length} ใบ${hidden ? ` · ไม่แสดงสาขานอก BRANCH_ID_MAP ${hidden} ใบ` : ''} (query ${seconds.toFixed(2)} วิ)`);
       return true;
     } catch (err) {
       log(`❌ ${reason} — ${err.name ?? 'Error'}${err.code ? ` ${err.code}` : ''}: ${err.message}`);
