@@ -14,13 +14,18 @@ import {
   loadConfig,
   normalizeDate,
   publicErrorMessage,
+  pushSnapshot,
   readEnvValue,
   resolveDestination,
   resolveWarehouse,
+  snapshotHash,
   sqlForSsms,
   timestampMs,
+  unansweredRequestMs,
   warehouseKey,
 } from './pending-docs-agent.mjs';
+
+const setupSql = readFileSync(new URL('./pending-docs-setup.sql', import.meta.url), 'utf8');
 
 // ชื่อสาขา/คลังตามตาราง BRANCH + WAREHOUSE จริงของ ProMaxx (ผู้ใช้ส่งมา 2569-10-27)
 // ค่าเริ่มต้น = ใบจาก Main KKL (4:0) โอนเข้า Warehouse (0:0) ตามกฎ "KKL/SSS โอนเข้า Warehouse เท่านั้น"
@@ -263,6 +268,119 @@ test('createSyncRunner รอบที่ error ไม่ทำให้รอ�
   await assert.rejects(runner.request('รอบแรก'));
   await runner.request('รอบสอง');
   assert.equal(n, 2);
+});
+
+test('snapshotHash ชุดเดิมได้ค่าเดิม แม้ SQL ส่งใบมาคนละลำดับ', () => {
+  const { docs } = groupTransferRows([
+    sqlRow({ sys_tran_no: 101 }),
+    sqlRow({ sys_tran_no: 202, doc_no: 'TB6810-0002' }),
+  ]);
+  assert.match(snapshotHash(docs), /^[0-9a-f]{64}$/);
+  assert.equal(snapshotHash(docs), snapshotHash([...docs].reverse()));
+  assert.equal(snapshotHash(docs), snapshotHash(groupTransferRows([sqlRow({ sys_tran_no: 101 }), sqlRow({ sys_tran_no: 202, doc_no: 'TB6810-0002' })]).docs));
+});
+
+// ทุกอย่างที่หน้าเว็บแสดงต้องอยู่ในลายนิ้วมือ — หลุดไปช่องเดียว = ข้อมูลเปลี่ยนแต่ Agent คิดว่าเหมือนเดิม หน้าเว็บค้างของเก่า
+test('snapshotHash เปลี่ยนทุกครั้งที่สิ่งที่หน้าเว็บแสดงเปลี่ยน', () => {
+  const base = snapshotHash(groupTransferRows([sqlRow()]).docs);
+  const changed = {
+    'แก้จำนวน': [sqlRow({ qty: 3 })],
+    'เพิ่มรายการ': [sqlRow(), sqlRow({ line_no: 2, item_code: '222' })],
+    'แก้ชื่อสินค้า': [sqlRow({ item_name: 'พาราเซตามอล 650 มก.' })],
+    'ใส่ serial': [sqlRow({ serial_no: 'LOT-9' })],
+    'แก้วันที่': [sqlRow({ doc_date: '2026-10-21' })],
+    'เปลี่ยนปลายทาง': [sqlRow({ to_warehouse_id: 1, to_warehouse_name: 'Front Store' })],
+    'มีใบใหม่': [sqlRow(), sqlRow({ sys_tran_no: 202, doc_no: 'TB6810-0002' })],
+    'สาขากด "ส่ง" ครบแล้ว ไม่มีใบค้าง': [],
+  };
+  for (const [what, rows] of Object.entries(changed)) {
+    assert.notEqual(snapshotHash(groupTransferRows(rows).docs), base, what);
+  }
+});
+
+function fakeSupabase(results = {}) {
+  const calls = [];
+  return {
+    calls,
+    async rpc(name, args) {
+      calls.push([name, args]);
+      return results[name] ?? { data: null, error: null };
+    },
+  };
+}
+
+test('pushSnapshot ข้อมูลเหมือนเดิม → บันทึกแค่เวลาที่ตรวจ ไม่ส่งชุดใบโอนซ้ำ', async () => {
+  const { docs } = groupTransferRows([sqlRow()]);
+  const client = fakeSupabase({ mark_pending_docs_unchanged: { data: true, error: null } });
+  assert.deepEqual(await pushSnapshot(client, docs), { changed: false, hash: snapshotHash(docs) });
+  assert.deepEqual(client.calls, [['mark_pending_docs_unchanged', { p_hash: snapshotHash(docs) }]]);
+});
+
+test('pushSnapshot ข้อมูลเปลี่ยน → แทนที่ทั้งชุดพร้อมลายนิ้วมือใหม่', async () => {
+  const { docs } = groupTransferRows([sqlRow()]);
+  const client = fakeSupabase({ mark_pending_docs_unchanged: { data: false, error: null } });
+  assert.deepEqual(await pushSnapshot(client, docs), { changed: true, hash: snapshotHash(docs) });
+  assert.deepEqual(client.calls.map(([name]) => name), ['mark_pending_docs_unchanged', 'replace_pending_transfers']);
+  assert.deepEqual(client.calls[1][1], { p_rows: docs, p_hash: snapshotHash(docs) });
+});
+
+test('pushSnapshot force (--once) ส่งทั้งชุดเลยไม่ต้องเทียบ', async () => {
+  const client = fakeSupabase();
+  assert.equal((await pushSnapshot(client, [], { force: true })).changed, true);
+  assert.deepEqual(client.calls.map(([name]) => name), ['replace_pending_transfers']);
+});
+
+test('pushSnapshot error จาก Supabase → หน้าเว็บได้ข้อความสั้น และไม่ส่งชุดใบโอนต่อ', async () => {
+  const client = fakeSupabase({ mark_pending_docs_unchanged: { data: null, error: { message: 'Could not find the function public.mark_pending_docs_unchanged(p_hash)' } } });
+  await assert.rejects(pushSnapshot(client, []), err => {
+    assert.equal(err.name, 'SupabaseError');
+    assert.equal(publicErrorMessage(err), 'ส่งข้อมูลขึ้น Supabase ไม่สำเร็จ');
+    return true;
+  });
+  assert.equal(client.calls.length, 1);
+
+  const replaceFails = fakeSupabase({ replace_pending_transfers: { data: null, error: { message: 'timeout' } } });
+  await assert.rejects(pushSnapshot(replaceFails, []), { name: 'SupabaseError' });
+});
+
+// 🚨 RPC ที่ Agent ใช้เขียนต้องเรียกได้ด้วย service_role เท่านั้น — Supabase แจก execute ให้ anon อัตโนมัติ
+// replace: ใครก็ลบ snapshot ได้ · mark_unchanged: data_hash อ่านได้สาธารณะ ใครก็ทำให้เว็บเชื่อว่าเครื่องในร้านยังตรวจอยู่
+test('pending-docs-setup.sql ถอนสิทธิ์ anon จาก RPC ฝั่ง Agent ทุกตัว', () => {
+  for (const fn of ['replace_pending_transfers(jsonb, text)', 'mark_pending_docs_unchanged(text)']) {
+    assert.ok(setupSql.includes(`revoke all on function public.${fn} from public, anon, authenticated;`), fn);
+    assert.ok(setupSql.includes(`grant execute on function public.${fn} to service_role;`), fn);
+  }
+  // ตัวรุ่นก่อน (รับแค่ p_rows) ต้องถูกลบ ไม่งั้นมี 2 ตัวชื่อซ้ำ PostgREST เลือกไม่ได้ว่าจะเรียกตัวไหน
+  assert.ok(setupSql.includes('drop function if exists public.replace_pending_transfers(jsonb);'));
+});
+
+// คำขออัตโนมัติ = สลับกลับมาที่แท็บ · เกณฑ์ต่ำเกินไป สลับหน้าต่างไปมาก็กลายเป็นถาม MSSQL ถี่ๆ ซึ่งผู้ใช้ไม่เอา
+test('คำขอตอนกลับมาที่แท็บผ่านเฉพาะตอนข้อมูลเก่ากว่าอย่างน้อย 1 นาที', () => {
+  const m = setupSql.match(/when p_auto then[\s\S]*?interval '(\d+) (minutes?|seconds?)'/);
+  assert.ok(m, 'ไม่พบเกณฑ์ interval ของคำขออัตโนมัติใน request_pending_docs_refresh');
+  const ms = Number(m[1]) * (m[2].startsWith('minute') ? 60_000 : 1000);
+  assert.ok(ms >= 60_000, `${m[1]} ${m[2]}`);
+});
+
+// Agent ไม่ถาม MSSQL ตามรอบแล้ว — ตอนเริ่มทำงานจะถามก็ต่อเมื่อมีคนเปิดหน้าค้างไว้ระหว่าง Agent ปิด/รีสตาร์ท
+test('unansweredRequestMs บอกคำขอที่ยังไม่มีใครตอบ', () => {
+  const t = iso => Date.parse(iso);
+  assert.equal(unansweredRequestMs({ refresh_requested_at: null }), null, 'ยังไม่เคยมีใครขอ');
+  assert.equal(unansweredRequestMs({
+    refresh_requested_at: '2026-10-27T08:00:00Z', last_success_at: '2026-10-27T08:00:02Z', last_checked_at: null,
+  }), null, 'ส่งชุดใหม่ไปแล้ว');
+  assert.equal(unansweredRequestMs({
+    refresh_requested_at: '2026-10-27T08:00:00Z', last_success_at: '2026-10-27T07:00:00Z', last_checked_at: '2026-10-27T08:00:03Z',
+  }), null, 'ตรวจแล้วเหมือนเดิม');
+  assert.equal(unansweredRequestMs({
+    refresh_requested_at: '2026-10-27T08:00:00Z', last_success_at: '2026-10-27T07:00:00Z', last_checked_at: '2026-10-27T07:00:00Z',
+  }), t('2026-10-27T08:00:00Z'), 'ขอแล้วยังไม่มีคำตอบ');
+  assert.equal(unansweredRequestMs({
+    refresh_requested_at: '2026-10-27T08:00:00Z', last_success_at: null, last_checked_at: null,
+    last_error_at: '2026-10-27T08:00:05Z',
+  }), t('2026-10-27T08:00:00Z'), 'จบด้วย error → รีสตาร์ทแล้วลองใหม่ได้');
+  // ตารางรุ่นก่อนไม่มี last_checked_at
+  assert.equal(unansweredRequestMs({ refresh_requested_at: '2026-10-27T08:00:00Z', last_success_at: '2026-10-27T08:00:01Z' }), null);
 });
 
 test('publicErrorMessage ไม่ส่งข้อความดิบของ driver (มีชื่อเครื่อง/IP ใน LAN) ขึ้น Supabase', () => {
