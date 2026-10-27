@@ -386,7 +386,7 @@ export function PendingDocsPage({
   const owner = canSeeAll ? '' : ` ของ ${branchText(userBranch ?? null)}`;
   const headerText = !rowsLoaded
     ? 'กำลังโหลด…'
-    : `เอกสารที่ยังไม่กด "ส่ง" ใน PROMAXX${owner} — ${visibleRows.length.toLocaleString()} ใบ${rows.length === ROW_LIMIT ? ` (แสดงสูงสุด ${ROW_LIMIT.toLocaleString()} ใบ)` : ''}`;
+    : `เอกสารที่ยังไม่กด "ส่ง" ใน PROMAXX${owner} — ${visibleRows.length.toLocaleString()} เอกสาร${rows.length === ROW_LIMIT ? ` (แสดงสูงสุด ${ROW_LIMIT.toLocaleString()} เอกสาร)` : ''}`;
   const hasSerial = Boolean(openDoc?.items.some(item => item.serial));
   const openDocDays = openDoc ? daysPending(openDoc.doc_date, today) : null;
 
