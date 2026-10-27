@@ -31,7 +31,13 @@
 
 ## ขั้นที่ 1 — สำรวจฐานข้อมูลใน SSMS (อ่านอย่างเดียว ไม่เปลี่ยนอะไร)
 
-ล็อกอิน SSMS ด้วย login เดิมที่ SeniorSoft ให้มา แล้วเปิดฐานข้อมูลของ ProMaxx
+> ขั้นนี้ใช้แค่ SSMS ทำได้ทันที — **ยังไม่ต้องใช้ git / npm / node** (ติดตั้ง Agent ทีหลังในขั้นที่ 4)
+
+เปิด SSMS → Connect:
+- **Server name:** ตัวเดียวกับที่ ProMaxx ใช้ (เช่น `ชื่อเครื่อง\SQLEXPRESS`)
+- **Authentication:** SQL Server Authentication → ใส่ login/รหัสเดิมที่ SeniorSoft ให้มา
+
+ทุกคำสั่งในขั้นนี้รันแบบเดียวกัน: แถบซ้าย **Databases** → คลิกขวาฐานข้อมูลของ ProMaxx → **New Query** → วางคำสั่ง → กด **F5**
 
 **1.1 รุ่นของ SQL Server**
 ```sql
@@ -53,12 +59,49 @@ WHERE TABLE_NAME IN ('TRANDETAILITEM', 'ITEMS')
 ORDER BY TABLE_NAME, ORDINAL_POSITION;
 ```
 
-**1.4 ทดลอง SQL ตัวจริง + จับเวลา** — ให้ Agent พิมพ์ SQL ออกมา แล้วก๊อปไปวางใน SSMS:
+**1.4 ทดลอง SQL ตัวจริง + จับเวลา** — SQL ตัวเดียวกับที่ Agent จะใช้ ก๊อปไปวางได้เลย:
+
+<!-- sql-for-ssms: ต้องตรงกับ sqlForSsms(90) ใน pending-docs-agent.mjs ทุกตัวอักษร (npm run test:pending-docs เช็คให้) -->
+```sql
+SET STATISTICS TIME ON;
+DECLARE @days int = 90;
+SELECT TRANS.SYSTRANNO AS sys_tran_no,
+       TRANS.TRANNO AS doc_no,
+       CONVERT(char(10), TRANS.TRANDATE, 23) AS doc_date,
+       TRANS.SYSBRANCHID AS from_branch_id,
+       BRANCH.NAME AS from_branch_name,
+       TRANEXTRAINFO.REFTRANFERSYSBRANCH AS to_branch_id,
+       DEST.NAME AS to_branch_name,
+       TRANDETAILITEM.ORDINARY AS line_no,
+       TRANDETAILITEM.SCANCODE AS item_code,
+       TRANDETAILITEM.ITEMNAME AS item_name,
+       TRANDETAILITEM.SERIALNO AS serial_no,
+       TRANDETAILITEM.QUANTITY AS qty
+FROM TRANS
+JOIN VOUCHER ON VOUCHER.SYSVOUCHERID = TRANS.SYSVOUCHERID
+JOIN TRANEXTRAINFO ON TRANEXTRAINFO.SYSTRANNO = TRANS.SYSTRANNO
+JOIN BRANCH ON BRANCH.SYSBRANCHID = TRANS.SYSBRANCHID
+JOIN TRANDETAILITEM ON TRANDETAILITEM.SYSTRANNO = TRANS.SYSTRANNO
+JOIN ITEMS ON ITEMS.SYSITEMID = TRANDETAILITEM.SYSITEMID
+LEFT JOIN BRANCH DEST ON DEST.SYSBRANCHID = TRANEXTRAINFO.REFTRANFERSYSBRANCH
+WHERE VOUCHER.VOUCHERTYPE = 'TB'
+  AND VOUCHER.VOUCHERINOUT = 'O'
+  AND TRANS.FCANCEL = 0
+  AND TRANS.TRANDATE >= DATEADD(day, -@days, CAST(GETDATE() AS date))
+  AND NOT EXISTS (SELECT 1 FROM TRANS REF WHERE REF.SYSTRANNO = TRANEXTRAINFO.SYSREFERENCETRANNO)
+ORDER BY TRANS.TRANDATE, TRANS.TRANNO, TRANDETAILITEM.ORDINARY
 ```
-node pending-docs-agent.mjs --print-sql
-```
-- เทียบกับ R16.150 ใน ProMaxx: ใบที่ช่อง "ใบแจ้งโอน" ว่าง ต้องตรงกับผลนี้
-- ดูแท็บ **Messages** → `elapsed time` ควรไม่เกิน ~1000 ms ถ้าช้ากว่านี้ให้ลด `PENDING_TRANSFER_DAYS`
+> อ่านอย่างเดียว — `SET STATISTICS TIME ON` แค่สั่งให้ SSMS บอกเวลา · `DECLARE @days` แค่ตั้งตัวแปร "ย้อนหลัง 90 วัน" ไม่มีอะไรถูกเขียนลงฐานข้อมูล
+
+ดูผล 2 แท็บ:
+- **Results** = ใบที่ยังไม่กด "ส่ง" · ⚠️ 1 ใบมีได้หลายแถว (1 แถว = สินค้า 1 รายการ) ดูเลขที่ใบที่คอลัมน์ `doc_no`
+- **Messages** = เวลา บรรทัด `elapsed time = … ms` ควรไม่เกิน ~1000 ms ถ้าช้ากว่านี้ให้ลด `PENDING_TRANSFER_DAYS`
+
+เทียบกับ R16.150 ใน ProMaxx (เลือกช่วงวันที่ให้ครอบคลุม 90 วันล่าสุด) แบบสุ่มตรวจ:
+- ใบที่ช่อง **"ใบแจ้งโอน" ว่าง** 2-3 ใบ → ต้อง**เจอ**ในผล SQL
+- ใบที่ช่อง "ใบแจ้งโอน" **มีเลขแล้ว** (เช่น ITFB…) 1-2 ใบ → ต้อง**ไม่เจอ**ในผล SQL
+
+> หลังทำขั้นที่ 4 แล้ว จะให้ Agent พิมพ์ SQL ชุดนี้ออกมาเองก็ได้: `node pending-docs-agent.mjs --print-sql` (ตัวเดียวกันทุกตัวอักษร)
 
 **1.5 หาชื่อ instance / พอร์ต** — SQL Server Configuration Manager → SQL Server Network Configuration →
 Protocols for `SQLEXPRESS` → TCP/IP → แท็บ IP Addresses → **IPAll** (หรือดูจากการตั้งค่าเชื่อมต่อของ ProMaxx)

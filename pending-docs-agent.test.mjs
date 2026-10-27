@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 
 import {
   TRANSFER_SQL,
@@ -261,4 +262,15 @@ test('sqlForSsms ให้ SQL ตัวเดียวกับที่ Agent 
   const text = sqlForSsms(30);
   assert.match(text, /^SET STATISTICS TIME ON;\nDECLARE @days int = 30;\nSELECT /);
   assert.ok(text.includes(TRANSFER_SQL.trim()));
+});
+
+// คู่มือขั้น 1.4 มี SQL ให้ก๊อปไปวาง SSMS ได้ก่อนติดตั้งอะไร (ผู้ใช้ทำขั้นนั้นก่อนมีโค้ดในเครื่อง)
+// แก้ TRANSFER_SQL แล้วลืมแก้คู่มือ = ผู้ใช้ไปทดสอบ SQL คนละตัวกับที่ Agent ใช้จริง
+test('SQL ในคู่มือขั้น 1.4 ตรงกับ sqlForSsms(90) ทุกตัวอักษร', () => {
+  const guide = readFileSync(new URL('./วิธีติดตั้ง-agent-เอกสารค้าง.md', import.meta.url), 'utf8');
+  const marker = guide.indexOf('<!-- sql-for-ssms');
+  assert.notEqual(marker, -1, 'ไม่พบ marker <!-- sql-for-ssms --> ในคู่มือ');
+  const block = guide.slice(marker).match(/```sql\r?\n([\s\S]*?)\r?\n```/);
+  assert.ok(block, 'ไม่พบบล็อก ```sql หลัง marker');
+  assert.equal(block[1].trim(), sqlForSsms(90).trim());
 });
