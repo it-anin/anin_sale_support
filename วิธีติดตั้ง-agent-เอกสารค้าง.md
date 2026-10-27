@@ -151,13 +151,18 @@ PENDING_TRANSFER_DAYS=90
 
 ```
 cd <โฟลเดอร์ repo>
+git status
 git pull origin master
-npm install
+npm ci
 node pending-docs-agent.mjs --dry-run
 ```
 
+- `git status` ต้องไม่มีไฟล์ `modified` — เครื่อง Agent ห้ามมีไฟล์ที่แก้เอง ไม่งั้น `git pull` ติด · ถ้าเจอ `package-lock.json` ค้าง (มักมาจาก `npm install` / `npm audit fix` รอบก่อน) คืนค่าด้วย `git checkout -- package-lock.json`
+- ใช้ **`npm ci` ไม่ใช่ `npm install`** — `npm ci` ติดตั้งตาม `package-lock.json` เป๊ะและไม่แก้ไฟล์นั้น ส่วน `npm install` อาจเขียน `package-lock.json` ใหม่ตามรุ่น npm ของเครื่อง แล้ว `git pull` รอบหน้าจะติด
+- `--dry-run` ใช้แค่ค่า `MSSQL_*` ใน `.env` (ยังไม่ต้องมี `SUPABASE_SERVICE_KEY`)
+
 `--dry-run` อ่าน MSSQL อย่างเดียว **ไม่เขียน Supabase** แล้วสรุปให้ดู — เช็ค 4 อย่าง:
-1. จำนวนใบโอนค้างส่ง ตรงกับขั้นที่ 1.4
+1. `รายการสินค้า N แถว` เท่ากับจำนวนแถวที่ SSMS ได้ในขั้นที่ 1.4 (บรรทัด `(N rows affected)` ในแท็บ Messages หรือมุมขวาล่าง `N rows`) — SQL ชุดเดียวกันจึงต้องเท่ากันเป๊ะ · ตัวเลขขยับได้ถ้ารันห่างกันแล้วสาขากด "ส่ง" ไปบางใบ ให้รันใน SSMS ซ้ำแล้วเทียบใหม่
 2. ชื่อสินค้าภาษาไทยอ่านออก ไม่เป็น `???` หรือตัวอักษรเพี้ยน
 3. วันที่ถูกต้อง ไม่เลื่อนวัน
 4. ตาราง "สาขาที่พบ" — `0 → SRC` · `4 → KKL` · `5 → SSS` · สาขา 1-3 ขึ้นว่าไม่อยู่ใน map (ใบที่โอนออกจากสาขาพวกนี้ไม่แสดง ตามตั้งใจ)
@@ -269,7 +274,8 @@ update app_page_settings set visible = true, updated_at = now() where page_id = 
 | หน้าเว็บขึ้น "เครื่องในร้านไม่ตอบ" ตลอด | Agent ไม่ได้รัน หรือเน็ตร้านหลุด | ดูสถานะใน Task Scheduler + `pending-docs-agent.log` |
 | log ขึ้น `⚠️ Realtime ...` / `🔁 ... ปิดตัวเอง` ซ้ำๆ | firewall/proxy ของร้านบล็อก websocket (`wss://` พอร์ต 443) ไป `*.supabase.co` | อนุญาต websocket ไป Supabase · ระหว่างนี้ข้อมูลยังอัปเดตจากรอบสำรองทุก 5 นาที แต่กด 🔄 แล้วจะไม่สดทันที |
 | ใบของสาขาใหม่ไม่ขึ้นบนเว็บเลย | สาขานั้นไม่อยู่ใน `BRANCH_ID_MAP` (log ✅ บอก `ไม่แสดงสาขานอก BRANCH_ID_MAP N ใบ`) | เพิ่มเลขสาขาใน `BRANCH_ID_MAP` + โปรไฟล์ใน `auth.ts` (ขั้นที่ 1.2) |
-| `Cannot find package 'mssql'` | ยังไม่ได้ `npm install` หลัง `git pull` | `npm install` |
+| `Cannot find package 'mssql'` | ยังไม่ได้ติดตั้งแพ็กเกจหลัง `git pull` | `npm ci` (ขั้นที่ 4) |
+| `git pull` ขึ้น `Your local changes … would be overwritten` | มีไฟล์ในเครื่อง Agent ถูกแก้ (มักเป็น `package-lock.json` จาก `npm install`) | `git checkout -- package-lock.json` แล้ว `git pull` ใหม่ · ต่อไปใช้ `npm ci` |
 
 ### หมายเหตุ `npm audit`
 `npm audit` จะแจ้งช่องโหว่ระดับ high ใน `@azure/msal-node` ซึ่งติดมากับ `tedious` (ตัวขับ MSSQL ของ `mssql`)
