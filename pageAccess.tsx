@@ -85,7 +85,7 @@ export const PAGE_NAV: PageNavDef[] = [
   { id: 'customerhistory', icon: IconCard,  label: 'Customer', title: 'ประวัติลูกค้า' },
   { id: 'outbound',        icon: IconTruck, label: 'Outbound', title: 'เบิกสินค้าด่วน' },
   { id: 'salesupport',     icon: IconBell,  label: 'Support',  title: 'SaleSupport' },
-  { id: 'pendingdocs',     icon: IconDocClock, label: 'Pending', title: 'ตรวจสอบเอกสารค้าง' },
+  { id: 'pendingdocs',     icon: IconDocClock, label: 'Pending', title: 'เอกสารที่ยังไม่กดส่ง' },
 ];
 
 export type PageVisibility = Record<PageId, boolean>;
