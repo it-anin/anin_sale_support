@@ -46,6 +46,8 @@ const AGENT_TIMEOUT_MS = 15_000;
 const MANUAL_MIN_GAP_MS = 10_000;
 const ROW_LIMIT = 1000;
 const ALL_TAB = 'ทั้งหมด';
+// "คลังสินค้า" = คลัง Warehouse ของสาขาแยกชากค้อ · SRC = คลัง Front Store สาขาเดียวกัน
+// Agent แยกจากคลังต้นทางของใบ (WAREHOUSE_MAP ใน pending-docs-agent.mjs) — ชื่อแท็บต้องตรงกับค่าใน map เป๊ะ
 const TAB_ORDER: readonly string[] = ['คลังสินค้า', ...STORE_BRANCH_CODES];
 const SYNC_COLUMNS = 'refresh_requested_at, last_success_at, last_error, last_error_at, row_count';
 

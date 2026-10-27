@@ -3,7 +3,9 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 import {
+  DEST_BRANCH_FALLBACK,
   TRANSFER_SQL,
+  WAREHOUSE_MAP,
   assertReadOnlySql,
   buildMssqlConfig,
   cleanText,
@@ -13,24 +15,28 @@ import {
   normalizeDate,
   publicErrorMessage,
   readEnvValue,
-  resolveBranch,
+  resolveDestination,
+  resolveWarehouse,
   sqlForSsms,
   timestampMs,
+  warehouseKey,
 } from './pending-docs-agent.mjs';
 
-const ID_MAP = { 0: 'คลังสินค้า', 1: 'SRC' };
-const NAME_MAP = { 'main kkl': 'KKL' };
-const branchOf = (id, name) => resolveBranch(id, name, ID_MAP, NAME_MAP);
-
+// ชื่อสาขา/คลังตามตาราง BRANCH + WAREHOUSE จริงของ ProMaxx (ผู้ใช้ส่งมา 2569-10-27)
+// ค่าเริ่มต้น = ใบจาก Main KKL (4:0) โอนเข้า Warehouse (0:0) ตามกฎ "KKL/SSS โอนเข้า Warehouse เท่านั้น"
 function sqlRow(overrides = {}) {
   return {
     sys_tran_no: 101,
     doc_no: 'TB6810-0001      ',
     doc_date: '2026-10-20',
-    from_branch_id: 1,
-    from_branch_name: 'Front Store   ',
+    from_branch_id: 4,
+    from_branch_name: 'อนิน สาขาเก้ากิโล   ',
+    from_warehouse_id: 0,
+    from_warehouse_name: 'Main KKL',
     to_branch_id: 0,
-    to_branch_name: 'Warehouse',
+    to_branch_name: 'อนิน สาขาแยกชากค้อ',
+    to_warehouse_id: 0,
+    to_warehouse_name: 'Warehouse',
     line_no: 1,
     item_code: '123456   ',
     item_name: 'พาราเซตามอล  500 มก.   ',
@@ -85,38 +91,70 @@ test('normalizeDate รับเฉพาะ YYYY-MM-DD และแปลง Da
   assert.equal(normalizeDate(new Date('invalid')), null);
 });
 
-test('resolveBranch ใช้ SYSBRANCHID ก่อน แล้วค่อยใช้ชื่อสาขา', () => {
-  assert.deepEqual(branchOf(1, 'ชื่ออะไรก็ได้'), { code: 'SRC', known: true });
-  assert.deepEqual(branchOf(0, null), { code: 'คลังสินค้า', known: true });
-  assert.deepEqual(branchOf(9, '  Main KKL  '), { code: 'KKL', known: true });
+test('WAREHOUSE_MAP ตรงกับตาราง WAREHOUSE ที่ผู้ใช้ส่งมา · สาขา 1-3 ไม่แสดง', () => {
+  assert.deepEqual(WAREHOUSE_MAP, { '0:0': 'คลังสินค้า', '0:1': 'SRC', '4:0': 'KKL', '5:0': 'SSS' });
+  assert.deepEqual(DEST_BRANCH_FALLBACK, { 0: 'คลังสินค้า', 4: 'KKL', 5: 'SSS' });
+  // ต้องเป็นรหัสที่หน้าเว็บรู้จัก (STORE_BRANCH_CODES ใน auth.ts + แท็บคลังสินค้า) ไม่งั้นได้ 0 แถวเงียบๆ
+  const webCodes = ['คลังสินค้า', 'SRC', 'KKL', 'SSS'];
+  for (const code of [...Object.values(WAREHOUSE_MAP), ...Object.values(DEST_BRANCH_FALLBACK)]) {
+    assert.ok(webCodes.includes(code), code);
+  }
 });
 
-test('resolveBranch สาขาที่ไม่รู้จักเก็บชื่อดิบไว้ ไม่ทิ้งใบ', () => {
-  assert.deepEqual(branchOf(7, ' สาขาใหม่ '), { code: 'สาขาใหม่', known: false });
-  assert.deepEqual(branchOf(7, ''), { code: 'สาขา #7', known: false });
-  assert.deepEqual(branchOf(null, null), { code: '', known: false });
+test('warehouseKey ต้องมีทั้งเลขสาขาและเลขคลัง · เลข 0 ใช้ได้ปกติ', () => {
+  assert.equal(warehouseKey(0, 0), '0:0');
+  assert.equal(warehouseKey('4', 0), '4:0'); // driver อาจให้เลขมาเป็นข้อความ
+  assert.equal(warehouseKey(0, null), null);
+  assert.equal(warehouseKey(null, 1), null);
 });
 
-test('resolveBranch ค่าเริ่มต้นจับคู่ชื่อสาขาชุดเดียวกับไฟล์สต๊อค', () => {
-  assert.equal(resolveBranch(99, 'Front Store').code, 'SRC');
-  assert.equal(resolveBranch(99, 'WAREHOUSE').code, 'คลังสินค้า');
-  assert.equal(resolveBranch(99, 'Main SSS').code, 'SSS');
+test('resolveWarehouse แยก Warehouse กับ Front Store ของสาขา 0 · นอก map ได้ชื่อดิบ', () => {
+  assert.deepEqual(resolveWarehouse(0, 0, { warehouse: 'Warehouse' }), { code: 'คลังสินค้า', known: true });
+  assert.deepEqual(resolveWarehouse(0, 1, { warehouse: 'Front Store' }), { code: 'SRC', known: true });
+  assert.deepEqual(resolveWarehouse(1, 0, { branch: ' ออนนุช ', warehouse: 'Main ONN' }), { code: 'ออนนุช', known: false });
+  assert.deepEqual(resolveWarehouse(0, 9, { warehouse: 'คลังใหม่' }), { code: 'คลังใหม่', known: false });
+  assert.deepEqual(resolveWarehouse(7, null), { code: 'สาขา #7', known: false });
+  assert.deepEqual(resolveWarehouse(null, null), { code: '', known: false });
+});
+
+// 🚨 เลขคลังซ้ำข้ามสาขา — ถ้าเผลอจับคู่ด้วยเลขคลังอย่างเดียว ใบของออนนุช (1:0) จะกลายเป็นคลังสินค้า (0:0)
+test('เลขคลังเดียวกันคนละสาขาเป็นคนละคลัง', () => {
+  assert.equal(resolveWarehouse(0, 0).code, 'คลังสินค้า');
+  assert.equal(resolveWarehouse(4, 0).code, 'KKL');
+  assert.equal(resolveWarehouse(1, 0).known, false);
+});
+
+test('TRANSFER_SQL JOIN ตาราง WAREHOUSE ด้วยสาขา+คลังทั้งคู่ และเป็น LEFT JOIN', () => {
+  const text = TRANSFER_SQL.replace(/\s+/g, ' ');
+  // LEFT = ใบที่ไม่มีคลังยังอยู่ · คีย์ 2 คอลัมน์ = ไม่มีแถวคูณ → จำนวนแถวเท่ารายงาน R16.150 เดิม
+  assert.match(text, /LEFT JOIN WAREHOUSE SRCWH ON SRCWH\.SYSBRANCHID = TRANS\.SYSBRANCHID AND SRCWH\.SYSWAREHOUSEID = TRANS\.SYSWAREHOUSEID /);
+  assert.match(text, /LEFT JOIN WAREHOUSE DESTWH ON DESTWH\.SYSBRANCHID = TRANEXTRAINFO\.REFTRANFERSYSBRANCH AND DESTWH\.SYSWAREHOUSEID = TRANEXTRAINFO\.REFTRANFERSYSWAREHOUSE /);
+});
+
+test('resolveDestination ใช้คลังปลายทางจริงก่อน ไม่มีค่อยดูจากสาขา', () => {
+  assert.equal(resolveDestination(sqlRow()), 'คลังสินค้า');
+  assert.equal(resolveDestination(sqlRow({ to_warehouse_id: 1, to_warehouse_name: 'Front Store' })), 'SRC'); // ผิดกฎแต่แสดงตามจริง
+  // ใบที่ไม่ระบุคลังปลายทาง: สาขา 0 = คลังสินค้า ตามกฎ KKL/SSS โอนเข้า Warehouse เท่านั้น
+  assert.equal(resolveDestination(sqlRow({ to_warehouse_id: null, to_warehouse_name: null })), 'คลังสินค้า');
+  assert.equal(resolveDestination(sqlRow({ to_branch_id: 4, to_warehouse_id: null, to_warehouse_name: null })), 'KKL');
+  // สาขานอก map ได้ชื่อสาขาดิบ
+  assert.equal(resolveDestination(sqlRow({ to_branch_id: 2, to_branch_name: 'ตลาดเวิลด์มาร์เก็ต ', to_warehouse_name: 'Main WRD' })), 'ตลาดเวิลด์มาร์เก็ต');
 });
 
 test('groupTransferRows รวมรายการสินค้าเป็นใบโอน 1 ใบต่อ SYSTRANNO', () => {
-  const { docs, unknownBranches } = groupTransferRows([
+  const { docs, skipped } = groupTransferRows([
     sqlRow({ line_no: 2, item_code: '222', item_name: 'สินค้า B', qty: 5 }),
     sqlRow({ line_no: 1 }),
-    sqlRow({ sys_tran_no: 202, doc_no: 'TB6810-0002', from_branch_id: 9, from_branch_name: 'Main KKL', line_no: 1, serial_no: 'LOT-7 ' }),
-  ], branchOf);
+    sqlRow({ sys_tran_no: 202, doc_no: 'TB6810-0002', from_branch_id: 5, from_branch_name: 'อนิน สาขาสวนเสือศรีราชา', from_warehouse_name: 'Main SSS', line_no: 1, serial_no: 'LOT-7 ' }),
+  ]);
 
   assert.equal(docs.length, 2);
-  assert.deepEqual(unknownBranches, []);
+  assert.deepEqual(skipped, []);
 
   const first = docs[0];
   assert.equal(first.doc_no, 'TB6810-0001');
   assert.equal(first.doc_date, '2026-10-20');
-  assert.equal(first.from_branch, 'SRC');
+  assert.equal(first.from_branch, 'KKL');
   assert.equal(first.to_branch, 'คลังสินค้า');
   assert.equal(first.item_count, 2);
   assert.deepEqual(first.items, [
@@ -125,18 +163,53 @@ test('groupTransferRows รวมรายการสินค้าเป็�
   ]);
 
   const second = docs[1];
-  assert.equal(second.from_branch, 'KKL');
+  assert.equal(second.from_branch, 'SSS');
   assert.equal(second.items[0].serial, 'LOT-7');
 });
 
-test('groupTransferRows รายงานสาขาที่ map ไม่ได้ครั้งเดียวต่อสาขา', () => {
-  const { docs, unknownBranches } = groupTransferRows([
-    sqlRow({ sys_tran_no: 1, to_branch_id: 5, to_branch_name: 'สาขาใหม่' }),
-    sqlRow({ sys_tran_no: 2, to_branch_id: 5, to_branch_name: 'สาขาใหม่ ' }),
-  ], branchOf);
-  assert.equal(docs.length, 2);
-  assert.equal(docs[0].to_branch, 'สาขาใหม่');
-  assert.deepEqual(unknownBranches, [{ id: 5, name: 'สาขาใหม่' }]);
+test('groupTransferRows แยกใบของสาขา 0 ตามคลังต้นทาง: Warehouse = คลังสินค้า · Front Store = SRC', () => {
+  const branch0 = { from_branch_id: 0, from_branch_name: 'อนิน สาขาแยกชากค้อ', to_branch_id: 4, to_branch_name: 'อนิน สาขาเก้ากิโล', to_warehouse_name: 'Main KKL' };
+  const { docs } = groupTransferRows([
+    sqlRow({ ...branch0, sys_tran_no: 1, from_warehouse_id: 0, from_warehouse_name: 'Warehouse' }),
+    sqlRow({ ...branch0, sys_tran_no: 2, from_warehouse_id: 1, from_warehouse_name: 'Front Store' }),
+  ]);
+  assert.deepEqual(docs.map(d => [d.from_branch, d.to_branch]), [['คลังสินค้า', 'KKL'], ['SRC', 'KKL']]);
+});
+
+test('groupTransferRows ไม่แสดงใบที่คลังต้นทางอยู่นอก map และนับเป็นใบ ไม่ใช่แถว', () => {
+  const onnut = { from_branch_id: 1, from_branch_name: 'ออนนุช', from_warehouse_name: 'Main ONN' };
+  const { docs, skipped } = groupTransferRows([
+    sqlRow({ ...onnut, sys_tran_no: 1, line_no: 1 }),
+    sqlRow({ ...onnut, sys_tran_no: 1, line_no: 2 }),
+    sqlRow({ ...onnut, sys_tran_no: 2 }),
+    sqlRow({ sys_tran_no: 3, from_branch_id: 3, from_branch_name: 'กรุงเทพกรีฑา', from_warehouse_name: 'Main KTK' }),
+    // สาขา 0 ที่ไม่มีเลขคลัง — เดาไม่ได้ว่า Warehouse หรือ Front Store จึงไม่แสดง (ดีกว่าโชว์ผิดคน)
+    sqlRow({ sys_tran_no: 5, from_branch_id: 0, from_branch_name: 'อนิน สาขาแยกชากค้อ', from_warehouse_id: null, from_warehouse_name: null }),
+    sqlRow({ sys_tran_no: 4 }),
+  ]);
+  assert.deepEqual(docs.map(d => d.sys_tran_no), [4]);
+  assert.deepEqual(skipped, [
+    { key: '1:0', name: 'ออนนุช', docs: 2 },
+    { key: '3:0', name: 'กรุงเทพกรีฑา', docs: 1 },
+    { key: '0:?', name: 'อนิน สาขาแยกชากค้อ', docs: 1 },
+  ]);
+});
+
+test('groupTransferRows ปลายทางนอก map ยังแสดง ด้วยชื่อสาขาเดิมจาก ProMaxx', () => {
+  const { docs } = groupTransferRows([sqlRow({ to_branch_id: 2, to_branch_name: 'ตลาดเวิลด์มาร์เก็ต ', to_warehouse_name: 'Main WRD' })]);
+  assert.equal(docs.length, 1);
+  assert.equal(docs[0].to_branch, 'ตลาดเวิลด์มาร์เก็ต');
+});
+
+test('groupTransferRows ใช้ map ที่ส่งเข้ามาแทนค่าเริ่มต้นได้', () => {
+  const { docs, skipped } = groupTransferRows(
+    [sqlRow({ from_branch_id: 9, from_branch_name: 'สาขาใหม่', from_warehouse_name: 'Main NEW' })],
+    { '9:0': 'SRC' },
+    {},
+  );
+  assert.equal(docs[0].from_branch, 'SRC');
+  assert.equal(docs[0].to_branch, 'อนิน สาขาแยกชากค้อ'); // 0:0 ไม่อยู่ใน map ที่ส่งมา และไม่มี fallback → ชื่อสาขาดิบ
+  assert.deepEqual(skipped, []);
 });
 
 test('groupTransferRows ข้ามแถวที่ไม่มี SYSTRANNO และจำนวนที่อ่านไม่ออกเป็น null', () => {
@@ -144,7 +217,7 @@ test('groupTransferRows ข้ามแถวที่ไม่มี SYSTRANNO 
     sqlRow({ sys_tran_no: null }),
     sqlRow({ sys_tran_no: '  ' }),
     sqlRow({ sys_tran_no: '3000000000', qty: null }),
-  ], branchOf);
+  ]);
   assert.equal(docs.length, 1);
   assert.equal(docs[0].sys_tran_no, '3000000000'); // bigint จาก driver มาเป็นข้อความ — ส่งต่อแบบเดิม
   assert.equal(docs[0].items[0].qty, null);

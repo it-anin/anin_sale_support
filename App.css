@@ -3196,7 +3196,8 @@ body.pulse-b .cart-inline-btn.in-cart {
 
 /* popup รายการสินค้าในใบ — ตารางธรรมดา (auto layout) ไม่ใช้ .product-table จึงไม่ติดกับดัก fixed layout */
 .pd-items-modal { max-width: 720px; }
-.pd-items-header { padding: 1.25rem 1.5rem; align-items: flex-start; gap: 1rem; }
+/* หัว popup ติดด้านบนตอนเลื่อน — ใบจริงมีได้ถึง 162 รายการ และปิดได้ทาง ✕/Esc เท่านั้น ✕ จึงต้องไม่เลื่อนหายไปกับรายการ */
+.pd-items-header { padding: 1.25rem 1.5rem; align-items: flex-start; gap: 1rem; position: sticky; top: 0; z-index: 1; background: #fff; }
 .pd-items-header h2 { font-size: 20px; margin: 0; }
 .pd-items-meta { margin: .4rem 0 0; color: #5a7fa6; font-size: 13px; }
 .pd-items-meta .pd-days { min-width: 0; font-size: 12px; }

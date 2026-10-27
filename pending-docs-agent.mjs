@@ -35,22 +35,30 @@ const REALTIME_DOWN_RESTART_MS = 10 * 60_000;
 const LOG_FILE = new URL('./pending-docs-agent.log', import.meta.url);
 const LOG_MAX_BYTES = 5 * 1024 * 1024;
 
-// SYSBRANCHID ของ ProMaxx → รหัสในแอป (ต้องตรงกับ Profile.branch ใน auth.ts ไม่งั้นสาขาจะไม่เห็นใบของตัวเอง)
-// ⚠️ เติมเลขจริงจากผล `SELECT SYSBRANCHID, NAME FROM BRANCH` ใน SSMS (คู่มือขั้นที่ 1) แล้วลบ // ออก
-//    ระหว่างที่ยังว่าง จะลองจับคู่จากชื่อสาขาใน BRANCH_NAME_MAP แทน
-export const BRANCH_ID_MAP = {
-  // 0: 'คลังสินค้า',
-  // 1: 'SRC',
-  // 2: 'KKL',
-  // 3: 'SSS',
+// คลังของ ProMaxx → รหัสในแอป (ต้องตรงกับ Profile.branch ใน auth.ts / แท็บ "คลังสินค้า" ใน PendingDocsPage.tsx
+// ไม่งั้นไม่มีใครเห็นใบ) · คีย์ = `SYSBRANCHID:SYSWAREHOUSEID` ตามตาราง WAREHOUSE จริง (ผู้ใช้ส่งมา 2569-10-27):
+//   0:0 Warehouse   ┐ อนิน สาขาแยกชากค้อ — สาขาเดียวกันใน ProMaxx แต่คนละคลัง คนละคนกด "ส่ง"
+//   0:1 Front Store ┘ (ล็อกอิน SRC จึงเห็นเฉพาะใบที่ออกจาก Front Store)
+//   4:0 Main KKL (อนิน สาขาเก้ากิโล) · 5:0 Main SSS (อนิน สาขาสวนเสือศรีราชา)
+//   1:0 Main ONN / 2:0 Main WRD / 3:0 Main KTK — ไม่มีโปรไฟล์ในเว็บ ผู้ใช้สั่งไม่ต้องแสดงใบที่โอนออกจากคลังพวกนี้
+// 🚨 SYSWAREHOUSEID ซ้ำข้ามสาขา (ทุกสาขามีคลังเลข 0) ต้องใช้คู่กับ SYSBRANCHID เสมอ ทั้งคีย์ที่นี่และ JOIN WAREHOUSE ใน SQL
+//    JOIN ด้วยเลขคลังอย่างเดียว = แถวที่คลังเลข 0 ไปจับได้ 6 คลัง → แถวคูณ 6 เท่า + ได้ชื่อคลังผิด
+// ⚠️ ต้นทางที่ไม่อยู่ใน map = ข้ามทั้งใบ (log ✅ บอกจำนวน) — มีคลัง/สาขาใหม่ใน ProMaxx ต้องเพิ่มที่นี่ ไม่งั้นใบของคลังนั้นไม่ขึ้นเลย
+// ชื่อคลังชุดนี้คือชื่อเดียวกับคอลัมน์ D ของไฟล์สต๊อค (BRANCH_MAP ใน upload-stock.mjs) แต่จับคู่ด้วยเลข เผื่อมีคนเปลี่ยนชื่อ
+export const WAREHOUSE_MAP = {
+  '0:0': 'คลังสินค้า',
+  '0:1': 'SRC',
+  '4:0': 'KKL',
+  '5:0': 'SSS',
 };
 
-// ชื่อสาขาใน ProMaxx ชุดเดียวกับที่ไฟล์สต๊อคใช้ (BRANCH_MAP ใน upload-stock.mjs) — เทียบแบบไม่สนตัวพิมพ์
-export const BRANCH_NAME_MAP = {
-  'warehouse':   'คลังสินค้า',
-  'front store': 'SRC',
-  'main kkl':    'KKL',
-  'main sss':    'SSS',
+// ปลายทางที่ไม่ตรงคลังใน WAREHOUSE_MAP (เช่น ใบที่ยังไม่ระบุคลังปลายทาง) → ดูจากสาขาปลายทางแทน
+// สาขา 0 = คลังสินค้า ตามกฎที่ผู้ใช้ยืนยัน: KKL / SSS ต้องโอนเข้า Warehouse เท่านั้น
+// ใบที่โอนผิดกฎ (เช่น KKL → SSS) แสดงตามข้อมูลจริง ไม่มีป้ายเตือน — ผู้ใช้เลือกแบบนี้
+export const DEST_BRANCH_FALLBACK = {
+  0: 'คลังสินค้า',
+  4: 'KKL',
+  5: 'SSS',
 };
 
 // ใบโอนสินค้าออก (VOUCHERTYPE 'TB' + VOUCHERINOUT 'O') ที่ยังไม่มีใบแจ้งโอน = สาขายังไม่กด "ส่ง"
@@ -60,14 +68,21 @@ export const BRANCH_NAME_MAP = {
 //   - จำกัดวันที่ใน SQL — รายงานเดิมดึงใบโอนทุกใบตั้งแต่เริ่มระบบแล้วค่อยกรองใน ProMaxx
 //     ซึ่งหนักเกินไปสำหรับ SQL Server Express ที่ใช้ทรัพยากรร่วมกับ POS ทุกสาขา
 //   - วันที่ส่งเป็นข้อความ YYYY-MM-DD (style 23) กัน driver ตีความ datetime เป็น UTC แล้วเลื่อน 7 ชม.
+//   - เพิ่มคลังต้นทาง/ปลายทาง (TRANS.SYSWAREHOUSEID / TRANEXTRAINFO.REFTRANFERSYSWAREHOUSE) ที่รายงานเดิมไม่มี
+//     ไว้แยก Warehouse กับ Front Store ของสาขา 0 · คลังอยู่ที่หัวใบ (TRANDETAILITEM ไม่มีคอลัมน์คลัง) = 1 ใบ 1 คลัง
+//     LEFT JOIN ด้วยคีย์ 2 คอลัมน์ของ WAREHOUSE (SYSBRANCHID + SYSWAREHOUSEID) → จำนวนแถวเท่ารายงานเดิมทุกแถว
 export const TRANSFER_SQL = `
 SELECT TRANS.SYSTRANNO AS sys_tran_no,
        TRANS.TRANNO AS doc_no,
        CONVERT(char(10), TRANS.TRANDATE, 23) AS doc_date,
        TRANS.SYSBRANCHID AS from_branch_id,
        BRANCH.NAME AS from_branch_name,
+       TRANS.SYSWAREHOUSEID AS from_warehouse_id,
+       SRCWH.NAME AS from_warehouse_name,
        TRANEXTRAINFO.REFTRANFERSYSBRANCH AS to_branch_id,
        DEST.NAME AS to_branch_name,
+       TRANEXTRAINFO.REFTRANFERSYSWAREHOUSE AS to_warehouse_id,
+       DESTWH.NAME AS to_warehouse_name,
        TRANDETAILITEM.ORDINARY AS line_no,
        TRANDETAILITEM.SCANCODE AS item_code,
        TRANDETAILITEM.ITEMNAME AS item_name,
@@ -80,6 +95,10 @@ JOIN BRANCH ON BRANCH.SYSBRANCHID = TRANS.SYSBRANCHID
 JOIN TRANDETAILITEM ON TRANDETAILITEM.SYSTRANNO = TRANS.SYSTRANNO
 JOIN ITEMS ON ITEMS.SYSITEMID = TRANDETAILITEM.SYSITEMID
 LEFT JOIN BRANCH DEST ON DEST.SYSBRANCHID = TRANEXTRAINFO.REFTRANFERSYSBRANCH
+LEFT JOIN WAREHOUSE SRCWH ON SRCWH.SYSBRANCHID = TRANS.SYSBRANCHID
+                         AND SRCWH.SYSWAREHOUSEID = TRANS.SYSWAREHOUSEID
+LEFT JOIN WAREHOUSE DESTWH ON DESTWH.SYSBRANCHID = TRANEXTRAINFO.REFTRANFERSYSBRANCH
+                          AND DESTWH.SYSWAREHOUSEID = TRANEXTRAINFO.REFTRANFERSYSWAREHOUSE
 WHERE VOUCHER.VOUCHERTYPE = 'TB'
   AND VOUCHER.VOUCHERINOUT = 'O'
   AND TRANS.FCANCEL = 0
@@ -195,31 +214,55 @@ export function normalizeDate(raw) {
   return /^\d{4}-\d{2}-\d{2}$/.test(text) ? text : null;
 }
 
-/** แปลงสาขา ProMaxx → รหัสในแอป · `known: false` = map ไม่ได้ (ใบยังอยู่ครบ แต่สาขาจะไม่เห็นใบของตัวเอง) */
-export function resolveBranch(id, name, idMap = BRANCH_ID_MAP, nameMap = BRANCH_NAME_MAP) {
-  if (id !== null && id !== undefined && Object.hasOwn(idMap, String(id))) {
-    return { code: idMap[String(id)], known: true };
-  }
-  const label = cleanText(name);
-  const byName = nameMap[label.toLowerCase()];
-  if (byName) return { code: byName, known: true };
-  return { code: label || (id !== null && id !== undefined ? `สาขา #${id}` : ''), known: false };
+/** คีย์ของคลังใน WAREHOUSE_MAP (`สาขา:คลัง`) — `null` ถ้าขาดเลขใดเลขหนึ่ง (เลข 0 ใช้ได้ปกติ) */
+export function warehouseKey(branchId, warehouseId) {
+  const branch = cleanText(branchId);
+  const warehouse = cleanText(warehouseId);
+  return branch && warehouse ? `${branch}:${warehouse}` : null;
 }
 
-/** แถวจาก SQL (1 แถว = 1 รายการสินค้า) → ใบโอน 1 ใบต่อ SYSTRANNO พร้อม items สำหรับ popup */
-export function groupTransferRows(rows, branchOf = resolveBranch) {
-  const docs = new Map();
-  const unknownBranches = new Map();
+/**
+ * แปลงสาขา+คลังของ ProMaxx → รหัสในแอป
+ * `known: false` = ไม่อยู่ใน map → ได้ชื่อดิบแทน (ชื่อสาขา → ชื่อคลัง → "สาขา #เลข") ไว้แสดงเป็นปลายทาง/นับใน log
+ */
+export function resolveWarehouse(branchId, warehouseId, names = {}, map = WAREHOUSE_MAP) {
+  const key = warehouseKey(branchId, warehouseId);
+  if (key && Object.hasOwn(map, key)) return { code: map[key], known: true };
+  const branch = cleanText(branchId);
+  const label = cleanText(names.branch) || cleanText(names.warehouse);
+  return { code: label || (branch ? `สาขา #${branch}` : ''), known: false };
+}
 
-  const branch = (id, name) => {
-    const result = branchOf(id, name);
-    if (!result.known) unknownBranches.set(`${id}|${cleanText(name)}`, { id, name: cleanText(name) });
-    return result.code;
-  };
+/** ปลายทาง: คลังตรง map ก่อน → ไม่ตรงใช้สาขาปลายทาง (DEST_BRANCH_FALLBACK) → ไม่รู้จักเลยได้ชื่อสาขาดิบ */
+export function resolveDestination(row, map = WAREHOUSE_MAP, branchFallback = DEST_BRANCH_FALLBACK) {
+  const exact = resolveWarehouse(row.to_branch_id, row.to_warehouse_id,
+    { branch: row.to_branch_name, warehouse: row.to_warehouse_name }, map);
+  if (exact.known) return exact.code;
+  const branch = cleanText(row.to_branch_id);
+  return branch && Object.hasOwn(branchFallback, branch) ? branchFallback[branch] : exact.code;
+}
+
+/**
+ * แถวจาก SQL (1 แถว = 1 รายการสินค้า) → ใบโอน 1 ใบต่อ SYSTRANNO พร้อม items สำหรับ popup
+ * ใบที่คลังต้นทางไม่อยู่ใน WAREHOUSE_MAP ถูกข้าม (ผู้ใช้สั่งไม่แสดง) — นับไว้ใน `skipped` ให้ log เห็น
+ * ⚠️ กรองตรงนี้ ไม่ใช่ใน SQL โดยตั้งใจ: SQL ต้องเหมือนชุดที่ผู้ใช้ตรวจกับ R16.150 ใน SSMS แล้ว (คู่มือขั้น 1.4)
+ */
+export function groupTransferRows(rows, map = WAREHOUSE_MAP, destFallback = DEST_BRANCH_FALLBACK) {
+  const docs = new Map();
+  const skipped = new Map();
 
   for (const row of rows) {
     const key = cleanText(row.sys_tran_no);
     if (!key) continue;
+
+    const from = resolveWarehouse(row.from_branch_id, row.from_warehouse_id,
+      { branch: row.from_branch_name, warehouse: row.from_warehouse_name }, map);
+    if (!from.known) {
+      const skipKey = warehouseKey(row.from_branch_id, row.from_warehouse_id) ?? `${cleanText(row.from_branch_id) || '?'}:?`;
+      if (!skipped.has(skipKey)) skipped.set(skipKey, { key: skipKey, name: from.code, docKeys: new Set() });
+      skipped.get(skipKey).docKeys.add(key);
+      continue;
+    }
 
     let doc = docs.get(key);
     if (!doc) {
@@ -227,8 +270,8 @@ export function groupTransferRows(rows, branchOf = resolveBranch) {
         sys_tran_no: row.sys_tran_no,
         doc_no: cleanText(row.doc_no),
         doc_date: normalizeDate(row.doc_date),
-        from_branch: branch(row.from_branch_id, row.from_branch_name),
-        to_branch: branch(row.to_branch_id, row.to_branch_name),
+        from_branch: from.code,
+        to_branch: resolveDestination(row, map, destFallback),
         item_count: 0,
         items: [],
       };
@@ -253,7 +296,10 @@ export function groupTransferRows(rows, branchOf = resolveBranch) {
     doc.item_count = doc.items.length;
   }
 
-  return { docs: [...docs.values()], unknownBranches: [...unknownBranches.values()] };
+  return {
+    docs: [...docs.values()],
+    skipped: [...skipped.values()].map(({ key, name, docKeys }) => ({ key, name, docs: docKeys.size })),
+  };
 }
 
 /**
@@ -319,9 +365,16 @@ export function createSyncRunner(syncOnce) {
 
 // ─── log ──────────────────────────────────────────────────
 // เขียนซ้ำลงไฟล์ด้วย เพราะตอน Task Scheduler รันแบบไม่มีคนล็อกอิน จะไม่มีหน้าจอให้ดู
+// เช็คขนาดไฟล์ทุก 200 บรรทัดด้วย — Agent รันค้างได้เป็นเดือน (เปิดหน้าค้าง = log นาทีละบรรทัด)
+// ถ้าหมุนแค่ตอนเริ่มโปรแกรม ไฟล์จะโตไม่หยุดจนกว่าจะมีคนรีสตาร์ท
+let linesSinceRotateCheck = 0;
 function log(message) {
   const line = `[${new Date().toLocaleString('th-TH')}] ${message}`;
   console.log(line);
+  if (++linesSinceRotateCheck >= 200) {
+    linesSinceRotateCheck = 0;
+    rotateLogIfLarge();
+  }
   try {
     appendFileSync(LOG_FILE, `${line}\n`);
   } catch {
@@ -388,36 +441,46 @@ function createMssqlSource(config) {
 async function fetchPendingDocs(source) {
   const started = Date.now();
   const rows = await source.fetchRows();
-  const { docs, unknownBranches } = groupTransferRows(rows);
-  return { rows, docs, unknownBranches, seconds: (Date.now() - started) / 1000 };
+  const { docs, skipped } = groupTransferRows(rows);
+  return { rows, docs, skipped, seconds: (Date.now() - started) / 1000 };
 }
 
-function warnUnknownBranches(unknownBranches) {
-  if (!unknownBranches.length) return;
-  const list = unknownBranches.map(b => `#${b.id ?? '?'} "${b.name}"`).join(', ');
-  log(`⚠️ สาขาที่ map ไม่ได้: ${list} — ใบเหล่านี้คลังสินค้า/จัดซื้อยังเห็น แต่สาขาจะไม่เห็น · เติม BRANCH_ID_MAP ในไฟล์นี้`);
+const skippedDocCount = skipped => skipped.reduce((sum, b) => sum + b.docs, 0);
+
+function countBy(values) {
+  const counts = new Map();
+  for (const value of values) counts.set(value, (counts.get(value) ?? 0) + 1);
+  return [...counts].map(([value, n]) => `${value} ${n}`).join(' · ') || '-';
 }
 
-function printDryRun(config, { rows, docs, unknownBranches, seconds }) {
-  const byBranch = new Map();
-  for (const doc of docs) byBranch.set(doc.from_branch, (byBranch.get(doc.from_branch) ?? 0) + 1);
-
-  const branchesSeen = new Map();
+function printDryRun(config, { rows, docs, skipped, seconds }) {
+  const warehousesSeen = new Map();
   for (const row of rows) {
-    for (const [id, name] of [[row.from_branch_id, row.from_branch_name], [row.to_branch_id, row.to_branch_name]]) {
-      const key = `${id}|${cleanText(name)}`;
-      if (!branchesSeen.has(key)) branchesSeen.set(key, { id, name: cleanText(name), code: resolveBranch(id, name).code });
+    for (const side of ['from', 'to']) {
+      const branchId = row[`${side}_branch_id`];
+      const warehouseId = row[`${side}_warehouse_id`];
+      const key = warehouseKey(branchId, warehouseId) ?? `${cleanText(branchId) || '?'}:?`;
+      if (warehousesSeen.has(key)) continue;
+      const names = { branch: row[`${side}_branch_name`], warehouse: row[`${side}_warehouse_name`] };
+      warehousesSeen.set(key, { key, names, ...resolveWarehouse(branchId, warehouseId, names) });
     }
   }
+  const seenSorted = [...warehousesSeen.values()].sort((a, b) => a.key.localeCompare(b.key, 'en', { numeric: true }));
 
   console.log('');
   console.log('── สรุป dry-run (อ่าน MSSQL อย่างเดียว ไม่ได้เขียน Supabase) ──');
   console.log(`   ย้อนหลัง ${config.days} วัน · query ใช้เวลา ${seconds.toFixed(2)} วิ`);
-  console.log(`   รายการสินค้า ${rows.length.toLocaleString()} แถว → ใบโอนค้างส่ง ${docs.length.toLocaleString()} ใบ`);
-  console.log(`   แยกตามต้นทาง: ${[...byBranch].map(([b, n]) => `${b} ${n}`).join(' · ') || '-'}`);
-  console.log('   สาขาที่พบ (SYSBRANCHID → ชื่อใน ProMaxx → รหัสในเว็บ):');
-  for (const b of branchesSeen.values()) console.log(`     ${b.id ?? '?'} → "${b.name}" → ${b.code}`);
-  if (unknownBranches.length) console.log('   ⚠️ มีสาขาที่ map ไม่ได้ — เติม BRANCH_ID_MAP ด้านบนของไฟล์นี้');
+  console.log(`   รายการสินค้า ${rows.length.toLocaleString()} แถว → ใบโอนค้างส่งที่แสดงบนเว็บ ${docs.length.toLocaleString()} ใบ`);
+  console.log(`   แยกตามต้นทาง: ${countBy(docs.map(doc => doc.from_branch))}`);
+  console.log(`   เส้นทาง: ${countBy(docs.map(doc => `${doc.from_branch} → ${doc.to_branch}`))}`);
+  if (skipped.length) {
+    console.log(`   ไม่แสดง (คลังต้นทางไม่อยู่ใน WAREHOUSE_MAP): ${skipped.map(s => `${s.name} [${s.key}] ${s.docs} ใบ`).join(' · ')}`);
+  }
+  console.log('   คลังที่พบ (สาขา:คลัง → ชื่อคลัง / ชื่อสาขาใน ProMaxx → บนเว็บ):');
+  for (const w of seenSorted) {
+    const label = `"${cleanText(w.names.warehouse) || '-'}" / "${cleanText(w.names.branch) || '-'}"`;
+    console.log(`     ${w.key} → ${label} → ${w.known ? w.code : 'ไม่อยู่ใน map (ต้นทาง = ไม่แสดง · ปลายทาง = ดูจากสาขา)'}`);
+  }
   console.log('   ตัวอย่าง 3 ใบแรก:');
   for (const doc of docs.slice(0, 3)) {
     const first = doc.items[0];
@@ -469,15 +532,15 @@ export async function main(argv = process.argv.slice(2)) {
 
   const syncOnce = async reason => {
     try {
-      const { docs, unknownBranches, seconds } = await fetchPendingDocs(source);
-      warnUnknownBranches(unknownBranches);
+      const { docs, skipped, seconds } = await fetchPendingDocs(source);
       const { error } = await supabase.rpc('replace_pending_transfers', { p_rows: docs });
       if (error) {
         const supabaseError = new Error(error.message);
         supabaseError.name = 'SupabaseError';
         throw supabaseError;
       }
-      log(`✅ ${reason} — ใบโอนค้างส่ง ${docs.length} ใบ (query ${seconds.toFixed(2)} วิ)`);
+      const hidden = skippedDocCount(skipped);
+      log(`✅ ${reason} — ใบโอนค้างส่ง ${docs.length} ใบ${hidden ? ` · ไม่แสดงคลังนอก WAREHOUSE_MAP ${hidden} ใบ` : ''} (query ${seconds.toFixed(2)} วิ)`);
       return true;
     } catch (err) {
       log(`❌ ${reason} — ${err.name ?? 'Error'}${err.code ? ` ${err.code}` : ''}: ${err.message}`);

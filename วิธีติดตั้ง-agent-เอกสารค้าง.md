@@ -45,11 +45,22 @@ SELECT @@VERSION;
 ```
 ถ้าเป็น 2008 / 2012 ให้จดไว้ — อาจต้องตั้ง `MSSQL_ENCRYPT=false` (ดูตารางแก้ปัญหา)
 
-**1.2 รหัสสาขา** — เอาไปเติม `BRANCH_ID_MAP` ใน `pending-docs-agent.mjs` (หรือส่งผลให้ Claude เติมให้)
+**1.2 รหัสสาขา + คลัง** — เติมไว้ใน `WAREHOUSE_MAP` (`pending-docs-agent.mjs`) แล้ว ใช้ query นี้เช็คซ้ำเมื่อมีสาขา/คลังใหม่ใน ProMaxx
 ```sql
-SELECT SYSBRANCHID, NAME FROM BRANCH ORDER BY SYSBRANCHID;
+SELECT SYSBRANCHID, SYSWAREHOUSEID, NAME FROM WAREHOUSE ORDER BY SYSBRANCHID, SYSWAREHOUSEID;
 ```
-ระหว่างที่ยังไม่ได้เติม Agent จะลองจับคู่จากชื่อสาขา (`Warehouse` / `Front Store` / `Main KKL` / `Main SSS` ชุดเดียวกับไฟล์สต๊อค) ให้ก่อน
+| สาขา : คลัง | คลังใน ProMaxx | สาขาใน ProMaxx | บนเว็บ |
+|---|---|---|---|
+| 0 : 0 | Warehouse | อนิน สาขาแยกชากค้อ | **คลังสินค้า** |
+| 0 : 1 | Front Store | อนิน สาขาแยกชากค้อ | **SRC** |
+| 4 : 0 | Main KKL | อนิน สาขาเก้ากิโล | **KKL** |
+| 5 : 0 | Main SSS | อนิน สาขาสวนเสือศรีราชา | **SSS** |
+| 1 : 0 / 2 : 0 / 3 : 0 | Main ONN / Main WRD / Main KTK | ออนนุช / ตลาดเวิลด์มาร์เก็ต / กรุงเทพกรีฑา | ไม่แสดงใบที่โอนออกจากคลังเหล่านี้ (ถ้าเป็นปลายทาง แสดงชื่อสาขา) |
+
+> 🚨 **เลขคลังซ้ำข้ามสาขา** (ทุกสาขามีคลังเลข 0) — ต้องดู `SYSBRANCHID` คู่กับ `SYSWAREHOUSEID` เสมอ
+> ต้นทางแยกจากคลังที่ตัดสต๊อค (`TRANS.SYSWAREHOUSEID`) — ล็อกอิน SRC เห็นเฉพาะใบที่ออกจาก Front Store
+> ปลายทางดูจากคลังปลายทางของใบ (`REFTRANFERSYSWAREHOUSE`) ถ้าใบไม่ระบุ ใช้สาขาแทน: สาขาแยกชากค้อ = **คลังสินค้า** (KKL/SSS โอนเข้า Warehouse เท่านั้น) · ใบที่โอนผิดกฎแสดงตามจริง ไม่มีป้ายเตือน
+> มีสาขา/คลังใหม่ → เพิ่มใน `WAREHOUSE_MAP` + โปรไฟล์ใน `auth.ts` (แก้ใน repo แล้ว `git pull` ห้ามแก้ไฟล์ในเครื่อง Agent ตรงๆ)
 
 **1.3 หาคอลัมน์หน่วยสินค้า** (รายงาน R16.150 ไม่มีหน่วย — ถ้าเจอคอลัมน์ที่ใช่ ส่งชื่อให้ Claude เพิ่มใน popup)
 ```sql
@@ -70,8 +81,12 @@ SELECT TRANS.SYSTRANNO AS sys_tran_no,
        CONVERT(char(10), TRANS.TRANDATE, 23) AS doc_date,
        TRANS.SYSBRANCHID AS from_branch_id,
        BRANCH.NAME AS from_branch_name,
+       TRANS.SYSWAREHOUSEID AS from_warehouse_id,
+       SRCWH.NAME AS from_warehouse_name,
        TRANEXTRAINFO.REFTRANFERSYSBRANCH AS to_branch_id,
        DEST.NAME AS to_branch_name,
+       TRANEXTRAINFO.REFTRANFERSYSWAREHOUSE AS to_warehouse_id,
+       DESTWH.NAME AS to_warehouse_name,
        TRANDETAILITEM.ORDINARY AS line_no,
        TRANDETAILITEM.SCANCODE AS item_code,
        TRANDETAILITEM.ITEMNAME AS item_name,
@@ -84,6 +99,10 @@ JOIN BRANCH ON BRANCH.SYSBRANCHID = TRANS.SYSBRANCHID
 JOIN TRANDETAILITEM ON TRANDETAILITEM.SYSTRANNO = TRANS.SYSTRANNO
 JOIN ITEMS ON ITEMS.SYSITEMID = TRANDETAILITEM.SYSITEMID
 LEFT JOIN BRANCH DEST ON DEST.SYSBRANCHID = TRANEXTRAINFO.REFTRANFERSYSBRANCH
+LEFT JOIN WAREHOUSE SRCWH ON SRCWH.SYSBRANCHID = TRANS.SYSBRANCHID
+                         AND SRCWH.SYSWAREHOUSEID = TRANS.SYSWAREHOUSEID
+LEFT JOIN WAREHOUSE DESTWH ON DESTWH.SYSBRANCHID = TRANEXTRAINFO.REFTRANFERSYSBRANCH
+                          AND DESTWH.SYSWAREHOUSEID = TRANEXTRAINFO.REFTRANFERSYSWAREHOUSE
 WHERE VOUCHER.VOUCHERTYPE = 'TB'
   AND VOUCHER.VOUCHERINOUT = 'O'
   AND TRANS.FCANCEL = 0
@@ -100,6 +119,8 @@ ORDER BY TRANS.TRANDATE, TRANS.TRANNO, TRANDETAILITEM.ORDINARY
 เทียบกับ R16.150 ใน ProMaxx (เลือกช่วงวันที่ให้ครอบคลุม 90 วันล่าสุด) แบบสุ่มตรวจ:
 - ใบที่ช่อง **"ใบแจ้งโอน" ว่าง** 2-3 ใบ → ต้อง**เจอ**ในผล SQL
 - ใบที่ช่อง "ใบแจ้งโอน" **มีเลขแล้ว** (เช่น ITFB…) 1-2 ใบ → ต้อง**ไม่เจอ**ในผล SQL
+- ใบที่รู้ว่า **Front Store** เป็นคนทำ 1 ใบ → คอลัมน์ `from_warehouse_name` ต้องขึ้น `Front Store` (ใบของคลังต้องขึ้น `Warehouse`)
+- `from_warehouse_name` ว่าง (NULL) = ใบนั้นไม่มีคลังต้นทาง → เว็บจะไม่แสดง ถ้าเจอให้แจ้ง Claude
 
 > หลังทำขั้นที่ 4 แล้ว จะให้ Agent พิมพ์ SQL ชุดนี้ออกมาเองก็ได้: `node pending-docs-agent.mjs --print-sql` (ตัวเดียวกันทุกตัวอักษร)
 
@@ -143,23 +164,28 @@ PENDING_TRANSFER_DAYS=90
 
 ```
 cd <โฟลเดอร์ repo>
+git status
 git pull origin master
-npm install
+npm ci
 node pending-docs-agent.mjs --dry-run
 ```
 
+- `git status` ต้องไม่มีไฟล์ `modified` — เครื่อง Agent ห้ามมีไฟล์ที่แก้เอง ไม่งั้น `git pull` ติด · ถ้าเจอ `package-lock.json` ค้าง (มักมาจาก `npm install` / `npm audit fix` รอบก่อน) คืนค่าด้วย `git checkout -- package-lock.json`
+- ใช้ **`npm ci` ไม่ใช่ `npm install`** — `npm ci` ติดตั้งตาม `package-lock.json` เป๊ะและไม่แก้ไฟล์นั้น ส่วน `npm install` อาจเขียน `package-lock.json` ใหม่ตามรุ่น npm ของเครื่อง แล้ว `git pull` รอบหน้าจะติด
+- `--dry-run` ใช้แค่ค่า `MSSQL_*` ใน `.env` (ยังไม่ต้องมี `SUPABASE_SERVICE_KEY`)
+
 `--dry-run` อ่าน MSSQL อย่างเดียว **ไม่เขียน Supabase** แล้วสรุปให้ดู — เช็ค 4 อย่าง:
-1. จำนวนใบโอนค้างส่ง ตรงกับขั้นที่ 1.4
+1. `รายการสินค้า N แถว` เท่ากับจำนวนแถวที่ SSMS ได้ในขั้นที่ 1.4 (บรรทัด `(N rows affected)` ในแท็บ Messages หรือมุมขวาล่าง `N rows`) — SQL ชุดเดียวกันจึงต้องเท่ากันเป๊ะ · ตัวเลขขยับได้ถ้ารันห่างกันแล้วสาขากด "ส่ง" ไปบางใบ ให้รันใน SSMS ซ้ำแล้วเทียบใหม่
 2. ชื่อสินค้าภาษาไทยอ่านออก ไม่เป็น `???` หรือตัวอักษรเพี้ยน
 3. วันที่ถูกต้อง ไม่เลื่อนวัน
-4. ตาราง "สาขาที่พบ" — ทุกสาขาต้อง map เป็น `คลังสินค้า` / `SRC` / `KKL` / `SSS` (ถ้ามี ⚠️ ให้เติม `BRANCH_ID_MAP`)
+4. ตาราง "คลังที่พบ" — `0:0 → คลังสินค้า` · `0:1 → SRC` · `4:0 → KKL` · `5:0 → SSS` · คลังของสาขา 1-3 ขึ้นว่าไม่อยู่ใน map (ใบที่โอนออกจากคลังพวกนี้ไม่แสดง ตามตั้งใจ) · บรรทัด "เส้นทาง" ต้องดูสมเหตุสมผล เช่น `KKL → คลังสินค้า` · ถ้าเจอคีย์ `0:?` = ใบของสาขาแยกชากค้อที่ไม่มีคลัง ให้แจ้ง Claude
 
 ---
 
 ## ขั้นที่ 5 — สลับเป็น login อ่านอย่างเดียว (ทำก่อนตั้งให้รันค้าง 24 ชม.)
 
 ทำไมต้องสลับ: login เดิมจาก SeniorSoft มักแก้ข้อมูลได้ ถ้ารหัสใน `.env` หลุดไป คนที่ได้รหัสจะแก้ข้อมูล POS ได้
-login ใหม่นี้ **อ่านได้แค่ 6 ตารางที่ R16.150 ใช้** ฐานข้อมูลบล็อกการเขียนให้เองแม้โค้ดมีบั๊ก
+login ใหม่นี้ **อ่านได้แค่ 7 ตารางที่ Agent ใช้** (6 ตารางของ R16.150 + `WAREHOUSE` ไว้แยกคลัง) ฐานข้อมูลบล็อกการเขียนให้เองแม้โค้ดมีบั๊ก
 และเป็นการเพิ่ม "ผู้ใช้" เท่านั้น ไม่ได้แตะตารางหรือข้อมูลของ ProMaxx (ถ้าไม่อยากทำเอง ขอ SeniorSoft ว่า "ขอ user อ่านอย่างเดียวสำหรับทำรายงาน")
 
 รันใน SSMS ด้วยสิทธิ์ admin (login เดิมของ SeniorSoft มักทำได้):
@@ -175,6 +201,7 @@ GRANT SELECT ON dbo.TRANEXTRAINFO  TO web_readonly;
 GRANT SELECT ON dbo.TRANDETAILITEM TO web_readonly;
 GRANT SELECT ON dbo.BRANCH         TO web_readonly;
 GRANT SELECT ON dbo.ITEMS          TO web_readonly;
+GRANT SELECT ON dbo.WAREHOUSE      TO web_readonly;
 ```
 > ตารางไม่ได้อยู่ใน schema `dbo` → เช็คด้วย `SELECT TABLE_SCHEMA, TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'TRANS';` แล้วเปลี่ยน `dbo.` ตามนั้น
 
@@ -238,7 +265,7 @@ update app_page_settings set visible = true, updated_at = now() where page_id = 
 - [ ] เปิดหน้า Pending → ป้าย `กำลังดึงข้อมูลล่าสุด…` → ภายใน 2-3 วิ เปลี่ยนเป็น `ข้อมูล ณ ...`
 - [ ] กด "ส่ง" ใบหนึ่งใน ProMaxx → เปิดหน้าใหม่/กด 🔄 → ใบนั้นหายภายใน 2-3 วิ
 - [ ] เปิดหน้าค้างไว้ไม่แตะอะไร → สาขากด "ส่ง" อีกใบ → ใบนั้นหายเองภายใน ~1 นาที
-- [ ] ล็อกอิน SRC เห็นเฉพาะใบของ SRC · คลังสินค้า/จัดซื้อเห็นทุกสาขา · Sale Admin เห็นข้อความว่าใช้ไม่ได้
+- [ ] ล็อกอิน SRC เห็นเฉพาะใบที่ออกจาก Front Store · KKL/SSS เห็นเฉพาะของตัวเอง · คลังสินค้า/จัดซื้อเห็นทุกใบ (แท็บ คลังสินค้า / SRC / KKL / SSS) · Sale Admin เห็นข้อความว่าใช้ไม่ได้
 - [ ] หยุด Task ใน Task Scheduler → ภายใน 15 วิ ป้ายขึ้น `⚠️ เครื่องในร้านไม่ตอบ` แต่ตารางเดิมยังอยู่ (เสร็จแล้วอย่าลืม Run กลับ)
 
 ---
@@ -253,15 +280,16 @@ update app_page_settings set visible = true, updated_at = now() where page_id = 
 | `หา instance ของ SQL Server ไม่เจอ` | service SQL Server Browser ปิด หรือ UDP 1434 โดน firewall | เปิด SQL Server Browser หรือเลิกใช้ `MSSQL_INSTANCE` แล้วใส่ `MSSQL_PORT` จาก IPAll |
 | `MSSQL ปฏิเสธการล็อกอิน` | ชื่อผู้ใช้/รหัสใน `.env` ผิด | เช็คการสะกด / เครื่องหมายคำพูดครอบรหัส |
 | log มีคำว่า `ssl`, `tls`, `wrong version number` | SQL Server รุ่นเก่ารองรับแค่ TLS 1.0 | ใส่ `MSSQL_ENCRYPT=false` · ถ้าเป็น 2008 แล้วยังไม่ได้ ใส่ `MSSQL_TDS_VERSION=7_3_B` เพิ่ม |
-| `login นี้ไม่มีสิทธิ์อ่านตารางที่ต้องใช้` | `GRANT SELECT` ไม่ครบ 6 ตาราง | GRANT ให้ครบตามขั้นที่ 5 |
+| `login นี้ไม่มีสิทธิ์อ่านตารางที่ต้องใช้` | `GRANT SELECT` ไม่ครบ 7 ตาราง (ที่ลืมบ่อยคือ `WAREHOUSE`) | GRANT ให้ครบตามขั้นที่ 5 |
 | `คำสั่ง SQL ผิดพลาด` + log มี `Invalid object name` | ชื่อฐานข้อมูลหรือ schema ไม่ตรง | เช็ค `MSSQL_DATABASE` / schema (ขั้นที่ 5) |
 | ชื่อสินค้าเป็น `???` หรือตัวอักษรเพี้ยน | collation ของคอลัมน์ไม่ใช่ภาษาไทย | ส่งตัวอย่างให้ Claude แก้ใน SQL ฝั่ง Agent (ไม่แตะฐานข้อมูล) |
 | `อ่านตาราง pending_docs_sync ไม่ได้` | ยังไม่ได้รัน `pending-docs-setup.sql` หรือเน็ตยังไม่พร้อม | ทำขั้นที่ 2 · ถ้าเป็นตอนเปิดเครื่อง .bat จะลองใหม่เองทุก 10 วิ |
 | query ช้ากว่า 1 วิ (`--dry-run` เตือน) | ใบเยอะ / Express ทรัพยากรจำกัด | ลด `PENDING_TRANSFER_DAYS` เช่น 30 |
 | หน้าเว็บขึ้น "เครื่องในร้านไม่ตอบ" ตลอด | Agent ไม่ได้รัน หรือเน็ตร้านหลุด | ดูสถานะใน Task Scheduler + `pending-docs-agent.log` |
 | log ขึ้น `⚠️ Realtime ...` / `🔁 ... ปิดตัวเอง` ซ้ำๆ | firewall/proxy ของร้านบล็อก websocket (`wss://` พอร์ต 443) ไป `*.supabase.co` | อนุญาต websocket ไป Supabase · ระหว่างนี้ข้อมูลยังอัปเดตจากรอบสำรองทุก 5 นาที แต่กด 🔄 แล้วจะไม่สดทันที |
-| คลังเห็นใบ แต่สาขาไม่เห็นใบของตัวเอง | map สาขาไม่ได้ (log ขึ้น `สาขาที่ map ไม่ได้`) | เติม `BRANCH_ID_MAP` (ขั้นที่ 1.2) |
-| `Cannot find package 'mssql'` | ยังไม่ได้ `npm install` หลัง `git pull` | `npm install` |
+| ใบของสาขา/คลังใหม่ไม่ขึ้นบนเว็บเลย | คลังนั้นไม่อยู่ใน `WAREHOUSE_MAP` (log ✅ บอก `ไม่แสดงคลังนอก WAREHOUSE_MAP N ใบ`) | เพิ่ม `สาขา:คลัง` ใน `WAREHOUSE_MAP` + โปรไฟล์ใน `auth.ts` (ขั้นที่ 1.2) |
+| `Cannot find package 'mssql'` | ยังไม่ได้ติดตั้งแพ็กเกจหลัง `git pull` | `npm ci` (ขั้นที่ 4) |
+| `git pull` ขึ้น `Your local changes … would be overwritten` | มีไฟล์ในเครื่อง Agent ถูกแก้ (มักเป็น `package-lock.json` จาก `npm install`) | `git checkout -- package-lock.json` แล้ว `git pull` ใหม่ · ต่อไปใช้ `npm ci` |
 
 ### หมายเหตุ `npm audit`
 `npm audit` จะแจ้งช่องโหว่ระดับ high ใน `@azure/msal-node` ซึ่งติดมากับ `tedious` (ตัวขับ MSSQL ของ `mssql`)
