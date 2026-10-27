@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "test:customer-upload": "node --test upload-customer-history.test.mjs"
+    "test:customer-upload": "node --test upload-customer-history.test.mjs",
+    "test:pending-docs": "node --test pending-docs-agent.test.mjs"
   },
   "dependencies": {
     "@fontsource/inter": "^5.2.8",
@@ -16,6 +17,7 @@
     "@supabase/supabase-js": "^2.103.0",
     "@types/qrcode": "^1.5.6",
     "jsbarcode": "^3.11.6",
+    "mssql": "12.7.4",
     "qrcode": "^1.5.4",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",

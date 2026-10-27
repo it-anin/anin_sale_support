@@ -23,9 +23,10 @@ interface Props {
   onGoCustomerHistory: () => void;
   onGoOutbound: () => void;
   onGoSaleSupport: () => void;
+  onGoPendingDocs: () => void;
 }
 
-export function CustomerHistoryPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGoCustomerHistory, onGoOutbound, onGoSaleSupport }: Props) {
+export function CustomerHistoryPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGoCustomerHistory, onGoOutbound, onGoSaleSupport, onGoPendingDocs }: Props) {
   const [results,       setResults]       = useState<CustomerRecord[]>([]);
   const [search,        setSearch]        = useState('');
   const [searching,     setSearching]     = useState(false);
@@ -119,7 +120,7 @@ export function CustomerHistoryPage({ onGoPriceTag, onGoDrugLabel, onGoStockChec
               : <span className="updated-badge updated-badge--loading">Loading...</span>
             }
           </div>
-          <PageNavRow current="customerhistory" handlers={{ pricetag: onGoPriceTag, druglabel: onGoDrugLabel, stockcheck: onGoStockCheck, customerhistory: onGoCustomerHistory, outbound: onGoOutbound, salesupport: onGoSaleSupport }} />
+          <PageNavRow current="customerhistory" handlers={{ pricetag: onGoPriceTag, druglabel: onGoDrugLabel, stockcheck: onGoStockCheck, customerhistory: onGoCustomerHistory, outbound: onGoOutbound, salesupport: onGoSaleSupport, pendingdocs: onGoPendingDocs }} />
         </div>
       </div>
 

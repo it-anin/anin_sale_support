@@ -46,6 +46,11 @@ export const PROFILES: Profile[] = [
  *     (Sale Admin จึงยังถูกกันออกจากหน้าเบิกด่วน — ดู branchNotSupported ใน OutboundPage.tsx) */
 export const BRANCH_PROFILE_CODES = ['SRC', 'KKL', 'SSS', 'SALE_ADMIN'] as const;
 
+/** สาขาหน้าร้าน 3 แห่ง **ไม่รวม Sale Admin** — ใช้กับสิทธิ์ที่ผู้ใช้ระบุมาเฉพาะ "รหัส SRC/KKL/SSS"
+ *  (ปุ่มยกเลิก Order / ดูอย่างเดียวในเมนู Products ของ SaleSupportPage · หน้าเอกสารค้าง PendingDocsPage)
+ *  ⚠️ คนละลิสต์กับ BRANCH_PROFILE_CODES (รวม SALE_ADMIN) — ผู้ใช้แยก 2 กลุ่มนี้ชัดเจนในคำสั่งเสมอ อย่ายุบรวม */
+export const STORE_BRANCH_CODES = ['SRC', 'KKL', 'SSS'] as const;
+
 /** แปลงรหัสในฐานข้อมูลเป็นชื่อที่แสดงให้ผู้ใช้เห็น (SALE_ADMIN → "Sale Admin")
  *  อ่านจาก PROFILES.label โดยตรงจึงไม่มี map ซ้ำให้หลุด sync · ค่าที่ไม่รู้จักคืนค่าเดิม
  *  (WAREHOUSE/PURCHASING มี branch: null จึงไม่ match โดยบังเอิญ) */

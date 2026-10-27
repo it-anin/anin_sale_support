@@ -3160,6 +3160,52 @@ body.pulse-b .cart-inline-btn.in-cart {
 .stock-table .cust-col-sku     { width: 13%; white-space: nowrap; }
 .stock-table .cust-col-product { width: 43%; white-space: normal; word-break: break-word; line-height: 1.4; }
 
+/* ===== Pending Docs (ตรวจสอบเอกสารค้าง) — PendingDocsPage.tsx ===== */
+/* ⚠️ .stock-table เป็น table-layout: fixed — ความกว้างเป็นค่าบังคับ ผลรวมต้อง 100% พอดี (22+14+28+10+12+14)
+   เพิ่มปุ่ม/ข้อความในคอลัมน์ไหน ต้องขยายคอลัมน์นั้นแล้วหั่นจากคอลัมน์อื่น (CLAUDE.md "UI — Table Layout") */
+.stock-table .pd-col-doc   { width: 22%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stock-table .pd-col-date  { width: 14%; white-space: nowrap; }
+.stock-table .pd-col-route { width: 28%; white-space: normal; word-break: break-word; line-height: 1.4; }
+.stock-table .pd-col-items { width: 10%; text-align: center; white-space: nowrap; }
+.stock-table .pd-col-days  { width: 12%; text-align: center; white-space: nowrap; }
+.stock-table .pd-col-view  { width: 14%; text-align: center; white-space: nowrap; }
+.pd-table .pd-row { cursor: pointer; }
+.pd-table .pd-row:hover td { background: #eaf3fc; }
+.pd-arrow { color: #5a7fa6; margin: 0 2px; }
+.pd-empty { text-align: center; padding: 2rem 1rem !important; color: #5a7fa6; font-size: 13px; }
+.pd-load-error { margin: 0; padding: .6rem 1rem; background: #fde8e8; color: #c62828; font-size: 12px; }
+
+/* ค้างกี่วัน — ฟ้า = วันนี้ · ส้ม ≥ 1 วัน · แดง ≥ 3 วัน (WARN_DAYS / ALERT_DAYS ใน PendingDocsPage.tsx) */
+.pd-days { display: inline-block; min-width: 46px; padding: 2px 8px; border-radius: 999px; font-weight: 700; background: #eaf3fc; color: #2d6cad; }
+.pd-days--warn  { background: #fff1d6; color: #a35f00; }
+.pd-days--alert { background: #fde8e8; color: #c62828; }
+
+.pd-view-btn { border: 1px solid #b8d3ee; background: #fff; color: #2d6cad; border-radius: 999px; padding: 3px 10px; font: inherit; font-weight: 600; cursor: pointer; transition: background .15s ease, color .15s ease, border-color .15s ease; }
+.pd-view-btn:hover { background: #2d6cad; border-color: #2d6cad; color: #fff; }
+
+/* ป้ายสถานะ + ปุ่มดึงข้อมูลบน hero น้ำเงิน — ต่อยอดจาก .updated-badge (สว่างบนพื้นเข้ม) แบบ .price-change-badge */
+.pd-sync-badge--busy  { background: rgba(255, 255, 255, 0.2); }
+.pd-sync-badge--warn  { background: rgba(255, 193, 7, 0.24); border-color: rgba(255, 214, 102, 0.75); }
+.pd-sync-badge--error { background: rgba(227, 63, 79, 0.32); border-color: rgba(255, 168, 168, 0.75); }
+.pd-spin { display: inline-block; animation: pdSpin 1.2s linear infinite; }
+@keyframes pdSpin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .pd-spin { animation: none; } }
+.pd-refresh-btn { cursor: pointer; font-family: inherit; transition: background 0.16s ease, border-color 0.16s ease, transform 0.16s ease; }
+.pd-refresh-btn:hover:not(:disabled) { background: rgba(255, 255, 255, 0.22); border-color: rgba(255, 255, 255, 0.45); transform: translateY(-1px); }
+.pd-refresh-btn:disabled { opacity: 0.5; cursor: default; }
+
+/* popup รายการสินค้าในใบ — ตารางธรรมดา (auto layout) ไม่ใช้ .product-table จึงไม่ติดกับดัก fixed layout */
+.pd-items-modal { max-width: 720px; }
+.pd-items-header { padding: 1.25rem 1.5rem; align-items: flex-start; gap: 1rem; }
+.pd-items-header h2 { font-size: 20px; margin: 0; }
+.pd-items-meta { margin: .4rem 0 0; color: #5a7fa6; font-size: 13px; }
+.pd-items-meta .pd-days { min-width: 0; font-size: 12px; }
+.pd-items-body { padding: 1rem 1.5rem 1.5rem; overflow-x: auto; }
+.pd-items-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.pd-items-table th, .pd-items-table td { padding: 6px 8px; border-bottom: 1px solid #e3edf8; text-align: left; vertical-align: top; }
+.pd-items-table th { background: #eaf3fc; color: #2d6cad; font-weight: 700; white-space: nowrap; }
+.pd-items-table .pd-num { text-align: right; white-space: nowrap; }
+
 /* ===== Outbound Page (เบิกสินค้าด่วน) ===== */
 .outbound-table-wrap {
   max-width: 1300px;

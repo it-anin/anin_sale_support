@@ -22,8 +22,8 @@ npx vercel --prod # Deploy to Vercel (ปกติไม่ต้องรัน
 
 ## Architecture
 
-Six-page React app sharing the same `App.css` and Supabase project.  
-`currentPage` state in `App.tsx`: `'pricetag' | 'druglabel' | 'stockcheck' | 'customerhistory' | 'outbound' | 'salesupport'`
+Seven-page React app sharing the same `App.css` and Supabase project.  
+`currentPage` state in `App.tsx`: `'pricetag' | 'druglabel' | 'stockcheck' | 'customerhistory' | 'outbound' | 'salesupport' | 'pendingdocs'`
 
 **Key files — ป้ายราคา (Price Tag):**
 - `App.tsx` — entire price-tag app: types, state, Supabase fetch, search, QR generation, print logic, JSX + page switcher
@@ -84,6 +84,15 @@ Six-page React app sharing the same `App.css` and Supabase project.
 
 > **อ่าน [`docs/salesupport.md`](docs/salesupport.md) ก่อนแก้ `SaleSupportPage.tsx` เสมอ** — รายละเอียด schema/notification system/hazard ทั้งหมดอยู่ที่นั่น
 
+**Key files — ตรวจสอบเอกสารค้าง (Pending Docs, เพิ่ม 2569-10-27):**
+- `PendingDocsPage.tsx` — ใบโอนสินค้าออกที่สาขายังไม่กด "ส่ง" ใน ProMaxx: ตาราง + popup รายการสินค้า, ป้ายสถานะการซิงค์, ปุ่ม 🔄
+- `pending-docs-agent.mjs` — **Agent รันค้างในเครื่องที่ร้าน** อ่าน MSSQL ของ ProMaxx (SELECT อย่างเดียว) → Supabase · `--dry-run` / `--once` / `--print-sql`
+- `pending-docs-agent.test.mjs` — unit tests (`npm run test:pending-docs`) · `run-pending-docs-agent.bat` — wrapper วนเปิดใหม่ให้ Task Scheduler (ต้องเป็น CRLF)
+- `pending-docs-setup.sql` — ตาราง `pending_transfers` + `pending_docs_sync` + RPC 2 ตัว + realtime + แถว `app_page_settings` แบบซ่อน
+- `วิธีติดตั้ง-agent-เอกสารค้าง.md` — คู่มือติดตั้งทีละขั้น (SSMS → Supabase → `.env` → login อ่านอย่างเดียว → Task Scheduler)
+
+> รายละเอียด/hazard ดูหัวข้อ "Pending Docs — ตรวจสอบเอกสารค้าง" ด้านล่าง
+
 **Design galleries (public/*.html):** ไฟล์ HTML เลือกดีไซน์ (เปิดผ่าน dev server เช่น `/outbound-btn-designs.html`) — ใช้เทียบแบบก่อนใส่จริง ไม่ได้ import เข้าแอป
 
 ## Login / Auth (ล็อกอินแยกแผนก)
@@ -91,6 +100,7 @@ Six-page React app sharing the same `App.css` and Supabase project.
 - Gate หน้าแรก: `App.tsx` ถ้ายังไม่ล็อกอิน (`authProfile == null`) → `return <LoginPage />` ก่อนถึง render หลัก (early-return อยู่หลัง hooks ทั้งหมด — อย่าย้ายขึ้นไปก่อน hooks)
 - `auth.ts` — เก็บ `PROFILES` (id, label, group, password, icon, **branch**) + helper `loadAuthProfile` / `saveAuthProfile` / `clearAuthProfile` (persist ผ่าน localStorage key `authProfileId`)
 - ⚠️ `Profile.branch` ทำ **3 หน้าที่**: (1) ค่าที่เขียนลงคอลัมน์ `branch` ใน DB (`ss_orders` ฯลฯ) และเป็น `actor_code` ของตารางแจ้งเตือน (2) สาขาของปุ่ม "เลือกตามหมวด" ซึ่งใช้ได้เฉพาะค่าที่อยู่ใน `CATEGORY_BRANCHES` (`App.tsx`) + `product_category.branch` ด้วย (3) สาขา+เภสัชกรบนฉลากยา (2569-10-13) จับคู่กับ `BRANCH_PROFILES[].code` ใน `DrugLabelPage.tsx` — `SRC`/`KKL`/`SSS` ผ่านทั้ง 3 · `SALE_ADMIN` ผ่านแค่ (1) ปุ่มหมวดถูกซ่อนและฉลากยาไม่แสดง/พิมพ์ไม่ได้ **โดยตั้งใจ ไม่ error** · **`WAREHOUSE`/`PURCHASING` เป็น `null`** = ไม่ผ่านทั้งหมด
+- `STORE_BRANCH_CODES` (ใน `auth.ts`, ย้ายมาจาก `SaleSupportPage.tsx` 2569-10-27) = สาขาหน้าร้าน `SRC/KKL/SSS` **ไม่รวม Sale Admin** — ใช้กับสิทธิ์ที่ผู้ใช้ระบุ "เฉพาะรหัส SRC/KKL/SSS" (ยกเลิก Order, Products ดูอย่างเดียว, หน้าเอกสารค้าง) · คนละลิสต์กับ `BRANCH_PROFILE_CODES` อย่ายุบรวม
 - `BRANCH_PROFILE_CODES` (ใน `auth.ts`) = รายชื่อรหัสที่ "ลงข้อมูลเป็นผู้ขอ" ได้ = `SRC/KKL/SSS/SALE_ADMIN` — **import ไปใช้แทน hardcode ทุกที่** (`App.tsx` `notificationSource`+`profileBranch`, `SaleSupportPage.tsx` `isBranchUser`+`NOTIFIED_BRANCHES`) เดิมรายชื่อนี้ถูก hardcode ซ้ำ 5 จุดคนละไฟล์ เพิ่มโปรไฟล์ทีต้องไล่แก้ทุกจุด
 - `branchCodeLabel(code)` (ใน `auth.ts`) = แปลงรหัส DB → ชื่อที่ผู้ใช้เห็น (`SALE_ADMIN` → `Sale Admin`) อ่านจาก `PROFILES.label` โดยตรงจึงไม่มี map ซ้ำให้หลุด sync · เรียกที่ `formatCell` (ครอบทุกตาราง+popup ที่มีคอลัมน์ `branch`), option ของ dropdown สาขา, ป้ายสาขาที่ล็อกในฟอร์ม และ `notificationRecipientLabel`
 - `LoginPage.tsx` — ใส่รหัสผ่านช่องเดียว → กด "เข้าสู่ระบบ" (หรือ Enter) → ระบบจับคู่รหัสกับ `PROFILES` อัตโนมัติ ไม่ต้องเลือกแผนกก่อน (ไม่มีการ์ดเลือกโปรไฟล์แล้ว)
@@ -106,7 +116,7 @@ Six-page React app sharing the same `App.css` and Supabase project.
 - แถบผู้ใช้ + ปุ่มออกจากระบบ: `.app-userbar` fixed มุมขวาบน แสดงทุกหน้า (render ใน `App.tsx`)
 - ⚠️ รหัสอยู่ฝั่ง client (เหมือน `VITE_ADMIN_PASSWORD`) — เป็น gate ใช้งานภายใน ไม่ใช่ security จริง
 - ส่วนใหญ่ยังเป็น **gate เข้าใช้งาน** — ยังไม่จำกัดหน้าตามแผนก (การเปิด/ปิดหน้าใช้ `app_page_settings` ไม่ใช่โปรไฟล์)
-- **ข้อยกเว้นที่ผูกกับโปรไฟล์จริง มี 2 จุด:** (1) ปุ่ม "เลือกตามหมวด" หน้าป้ายราคา — ล็อกสาขาตาม `Profile.branch` และซ่อนทั้งปุ่มถ้า `branch === null` (2) **หน้าฉลากยา (2569-10-13)** — สาขา/ชื่อร้าน/เบอร์/**เภสัชกรท้ายฉลาก**ตามรหัสที่ล็อกอิน (SRC/KKL/SSS) ไม่มีปุ่มเลือกสาขาแล้ว · รหัสอื่น (Sale Admin / คลังสินค้า / จัดซื้อ) ดู/พิมพ์ฉลากไม่ได้ แต่ยังค้นหา/เพิ่ม/แก้ไขข้อมูลยาได้ — ดู [`druglabel/CLAUDE.md`](druglabel/CLAUDE.md) หัวข้อ "Branches"
+- **ข้อยกเว้นที่ผูกกับโปรไฟล์จริง มี 3 จุด:** (1) ปุ่ม "เลือกตามหมวด" หน้าป้ายราคา — ล็อกสาขาตาม `Profile.branch` และซ่อนทั้งปุ่มถ้า `branch === null` (2) **หน้าฉลากยา (2569-10-13)** — สาขา/ชื่อร้าน/เบอร์/**เภสัชกรท้ายฉลาก**ตามรหัสที่ล็อกอิน (SRC/KKL/SSS) ไม่มีปุ่มเลือกสาขาแล้ว · รหัสอื่น (Sale Admin / คลังสินค้า / จัดซื้อ) ดู/พิมพ์ฉลากไม่ได้ แต่ยังค้นหา/เพิ่ม/แก้ไขข้อมูลยาได้ — ดู [`druglabel/CLAUDE.md`](druglabel/CLAUDE.md) หัวข้อ "Branches" (3) **หน้าเอกสารค้าง (2569-10-27)** — SRC/KKL/SSS เห็นเฉพาะใบที่ตัวเองเป็นต้นทาง · คลังสินค้า/จัดซื้อเห็นทุกสาขา · Sale Admin เข้าไม่ได้ (ข้อความแทนตาราง)
 
 ## Database (Supabase)
 
@@ -121,6 +131,8 @@ Six-page React app sharing the same `App.css` and Supabase project.
 | `stock` (id, branch, sku, name, qty, unit, price, uploaded_at) | read-only (ไม่มี public write) | อัปโหลดผ่าน `upload-stock.mjs` + service_role key เท่านั้น ไม่มีเว็บ UI |
 | `outbound_requests` (branch, sku, barcode, name, unit, qty, requested/requested_at, approved/approved_at, out_of_stock, request_date, document_no, location, entered_at) | public read + write | สาขา/คลังสินค้า/จัดซื้อใช้ร่วมกัน (ดูหัวข้อ "Quick Outbound" ด้านล่าง) — `stock_qty` **ไม่เก็บในตาราง** ดึงสดจาก `stock` แบบเดียวกับ BackOrder |
 | `customer_history` (id, purchase_date, phone, first_name, last_name, sku, product_name, dedupe_key, uploaded_at) | read-only (ไม่มี public write) | มี PII (เบอร์โทร/ชื่อลูกค้า) · upload เป็น incremental ผ่าน `upload-customer-history.mjs` |
+| `pending_transfers` (sys_tran_no pk, doc_no, doc_date, from_branch, to_branch, item_count, items jsonb, synced_at) | **anon read-only** | snapshot ใบโอนค้างส่ง — เขียนผ่าน RPC `replace_pending_transfers()` (**service_role เท่านั้น**, 1 transaction) จาก Agent · ไม่ publish realtime |
+| `pending_docs_sync` (1 แถว `id=1`: refresh_requested_at, last_success_at, last_error, last_error_at, row_count) | **anon read-only** | ตัวกลางเว็บ↔Agent · เว็บขอข้อมูลสดผ่าน RPC `request_pending_docs_refresh(p_auto)` (anon, throttle 10/60 วิ) · publish realtime **ตารางนี้ตารางเดียว** |
 | SaleSupport tables (`ss_orders`, `ss_backorders`, `ss_request_items`, `ss_new_products`, `ss_tickets`, `product_master`, `ss_suppliers`) | anon `for all` | ดูรายละเอียดที่ [`docs/salesupport.md`](docs/salesupport.md) |
 
 ### 🚨 `void supabase.from(...)` = คำสั่งไม่เคยถูกส่ง (บั๊กจริง 2569-08-18)
@@ -351,7 +363,7 @@ Cart and scan history survive browser close / power loss — no need to re-scan 
 
 - **โทนสีหลักเปลี่ยนจากทองเป็นฟ้าแล้ว**: hero header พื้น `#4891db` + คลื่น SVG ด้านล่าง, น้ำเงินเข้ม `#2d6cad`, ฟ้าอ่อน `#eaf3fc`
 - โลโก้ทุกหน้าใช้ `<AnimatedLogoText text="..." />` (font Lilita One) — ตัวอักษรทยอย blur-in ทีละตัว
-- ปุ่มนำทางระหว่างหน้า: `.page-nav-card` การ์ดโปร่งขาว 72×66px มีไอคอน+ป้ายชื่อ อยู่ใน hero ของทุกหน้า (6 ปุ่ม: ป้ายราคา / ฉลากยา / สต๊อค / ประวัติ / เบิกด่วน / ซัพพอร์ต) — หน้าปัจจุบันใส่ `.page-nav-card--active`
+- ปุ่มนำทางระหว่างหน้า: `.page-nav-card` การ์ดโปร่งขาว 72×66px มีไอคอน+ป้ายชื่อ อยู่ใน hero ของทุกหน้า (7 ปุ่ม: ป้ายราคา / ฉลากยา / สต๊อค / ประวัติ / เบิกด่วน / ซัพพอร์ต / เอกสารค้าง) — หน้าปัจจุบันใส่ `.page-nav-card--active`
 - **ไอคอนปุ่มนำทางเป็น inline SVG แบบเส้น ไม่ใช่ emoji แล้ว** (2026-07-28, ดีไซน์ "Line Regular" จาก `public/nav-icon-designs.html`) — `PAGE_NAV[].icon` เป็น `ReactNode` (JSX `<svg>`) ไม่ใช่ string · สไตล์คุมจาก `.page-nav-icon svg` ใน App.css: `stroke: currentColor` + `stroke-width: 1.75` + 21×21px → **ไอคอนเปลี่ยนสีตามปุ่มเอง** (ขาวบนพื้นฟ้า → `#2d6cad` ตอน hover/active) ไม่ต้องเขียน CSS แยกต่อสถานะ
 - ~~ไอคอนชุดเดียวกันถูกใช้ซ้ำใน modal ตั้งค่าเปิด/ปิดหน้า (`.page-toggle-icon svg`)~~ — modal นั้นถูกถอดออก 2569-09-25 ไอคอน `PAGE_NAV[].icon` เหลือใช้ที่ปุ่มนำทางจุดเดียว
 - เปลี่ยนหน้า → panel เล่นอนิเมชั่น fadeIn
@@ -414,6 +426,26 @@ Each panel has a close (✕) button and includes product name in subheader.
 
 > **อ่าน [`docs/salesupport.md`](docs/salesupport.md) ก่อนแก้ `SaleSupportPage.tsx` เสมอ** — มี schema ตาราง SaleSupport ทั้งหมด, รายละเอียดระบบแจ้งเตือน, ดีไซน์ตาราง Order, และ hazard ที่บันทึกไว้จากบั๊กจริงที่เคยเกิด (ห้ามข้าม — มีจุดที่พังซ้ำได้ง่ายถ้าไม่รู้ guard ที่มีอยู่)
 
+## Pending Docs — ตรวจสอบเอกสารค้าง (เพิ่ม 2569-10-27)
+
+ใบโอนสินค้าออกระหว่างสาขาที่สาขายังไม่กด **"ส่ง"** ใน ProMaxx = รายงาน R16.150 (`d_16150_h20190121` ของ SeniorSoft) ตรงแถวที่ `CF_SYSREFERENCETRANNO` (ใบแจ้งโอน) ยังว่าง · ทุกสาขาใช้ MSSQL กลางตัวเดียว (SQL Server **Express**) สาขากดส่งปุ๊บข้อมูลเปลี่ยนทันที
+
+**ทางเดินข้อมูล:** เปิดหน้า → RPC `request_pending_docs_refresh` → Agent ในร้านได้ยินทาง realtime (`pending_docs_sync`) → SELECT MSSQL → RPC `replace_pending_transfers` → เว็บได้ realtime แล้วโหลดตารางใหม่ (~2-3 วิ) · เปิดค้างไว้ขอข้อมูลสดเองทุก 1 นาที (เฉพาะแท็บที่มองเห็น) · Agent ซิงค์สำรองเองทุก 5 นาที
+
+- 🚨 **MSSQL ของ ProMaxx: SELECT เท่านั้น ห้ามเพิ่ม/แก้ไข/สร้างอะไรเด็ดขาด** (ผู้ใช้สั่ง — ข้อมูลต้องเปลี่ยนผ่าน ProMaxx ที่เป็น POS หลักเท่านั้น) · ไม่สร้าง view/index/procedure/ตารางพักใน MSSQL · ทุกอย่างที่ต้อง "เก็บ" อยู่ฝั่ง Supabase · `assertReadOnlySql()` ปฏิเสธ SQL ที่ไม่ใช่ SELECT คำสั่งเดียว · ตอนรันจริงใช้ login `web_readonly` (GRANT SELECT 6 ตาราง) — ทดสอบสิทธิ์ด้วย `fn_my_permissions` **ห้ามลองเขียนจริง**
+- 🚨 **ห้ามให้เบราว์เซอร์ต่อ MSSQL / เปิดพอร์ต 1433 ออกอินเทอร์เน็ต / ทำ API ในร้านแล้วเปิด tunnel** — ผู้ใช้เลือกแบบ Agent ต่อออกอย่างเดียว (ไม่มีช่องเข้าร้าน) แล้ว · MSSQL แจ้งตอนข้อมูลเปลี่ยนเองไม่ได้ถ้าไม่เปิด Change Tracking/Trigger ซึ่งผิดกฎข้อบน จึงใช้วิธี "ไปถาม"
+- ⚠️ **Express ใช้ทรัพยากรร่วมกับ POS ทุกสาขา** (CPU ≤ 4 core, RAM cache ~1.4 GB) — throttle ใน `request_pending_docs_refresh` คือด่านจริงด่านเดียว (anon key สาธารณะ ใครก็เรียกได้): คนกด 10 วิ · อัตโนมัติ 60 วิ เทียบทั้งคำขอและผลล่าสุด (`greatest()`) → รวมทุกเครื่องถาม MSSQL อัตโนมัติ ≤ 1 ครั้ง/นาที · SQL จำกัด `PENDING_TRANSFER_DAYS` (90) และกรองใน SQL เอง — รายงาน R16.150 ตัวจริงดึงใบโอนทุกใบตั้งแต่เริ่มระบบแล้วค่อยกรองใน ProMaxx ห้ามลอกไปตรงๆ
+- ⚠️ realtime publish **เฉพาะ `pending_docs_sync`** (1 แถว) ไม่ใช่ `pending_transfers` — replace ทีละหลายร้อยแถว = realtime หลายร้อยข้อความ (บทเรียนเดียวกับ `price_change_seen`)
+- ⚠️ `replace_pending_transfers` แทนที่ทั้งชุดใน 1 transaction (ไม่ใช่ delete-all แล้ว insert ทีละก้อนแบบ `upload-stock.mjs`) · grant **service_role เท่านั้น** (Supabase แจก execute ให้ anon อัตโนมัติ ต้อง revoke เอง) · ชุดว่าง = ไม่มีใบค้างจริง ไม่มี guard ปฏิเสธโดยตั้งใจ (ใบที่ส่งแล้วแต่ยังโชว์ว่าค้าง หลอกผู้ใช้ร้ายกว่า)
+- ⚠️ `pending_docs_sync.last_error` อ่านได้ด้วย anon (สาธารณะ) — Agent เขียนแค่ข้อความสั้นจาก `publicErrorMessage()` **ห้ามใส่ข้อความดิบของ driver** (มีชื่อเครื่อง/IP ใน LAN) รายละเอียดเต็มอยู่ใน `pending-docs-agent.log` ที่เครื่อง Agent
+- ⚠️ วันที่จาก MSSQL ส่งเป็นข้อความ `CONVERT(char(10), …, 23)` — ถ้าส่งเป็น datetime ตรงๆ driver จะตีความเป็น UTC แล้ววันเลื่อน 7 ชม.
+- สาขา: `BRANCH_ID_MAP` (ตาม `SYSBRANCHID` — เติมเลขจริงจาก SSMS) ก่อน แล้วค่อย `BRANCH_NAME_MAP` (ชื่อชุดเดียวกับ `upload-stock.mjs`) · map ไม่ได้ = เก็บชื่อดิบ + warn ห้ามทิ้งใบ (คลัง/จัดซื้อยังเห็น แต่สาขาจะไม่เห็นใบของตัวเอง) · ค่าที่ได้ต้องตรงกับ `Profile.branch` เป๊ะ ไม่งั้น `.eq('from_branch', userBranch)` ได้ 0 แถวเงียบๆ
+- ⚠️ ค่าใน `.env` ของ Agent (`MSSQL_*`, `SUPABASE_SERVICE_KEY`) **ห้ามขึ้นต้น `VITE_`** — Vite ฝังลง JS สาธารณะ · Task Scheduler ต้อง**เอาติ๊ก "Stop the task if it runs longer than 3 days" ออก** · ตั้ง Task เครื่องเดียวพอ
+- ⚠️ `.bat` ใช้ `ping` หน่วงเวลา ไม่ใช้ `timeout` (ใช้ไม่ได้ตอนไม่มีหน้าจอ แล้ววนเปิดใหม่รัวๆ) และต้องเป็น CRLF (label/goto ในไฟล์ LF พังได้)
+- ⚠️ `npm audit` แจ้ง high ใน `@azure/msal-node` ผ่าน `tedious` — ใช้เฉพาะล็อกอินแบบ Azure AD ซึ่ง Agent ไม่ได้ใช้ · **ห้าม `npm audit fix --force`** (อัปเกรด vite ข้าม major และไม่ได้แก้ข้อนี้)
+- หน้าเว็บ: ป้าย `กำลังดึงข้อมูลล่าสุด…` → `ข้อมูล ณ …` · รอเกิน 15 วิ (นับด้วยนาฬิกาเครื่องเอง ไม่นับใหม่ตอนคำขอซ้ำระหว่างรอ) → `⚠️ เครื่องในร้านไม่ตอบ` · ค้าง ≥ 1 วันสีส้ม ≥ 3 วันสีแดง (`WARN_DAYS`/`ALERT_DAYS`) · popup ปิดด้วย ✕/Esc เท่านั้น · ตาราง `table-layout: fixed` ผลรวม `.pd-col-*` = 100%
+- ยังไม่มีคอลัมน์ "หน่วย" ใน popup — R16.150 ไม่มี ต้องหาจาก `INFORMATION_SCHEMA.COLUMNS` ก่อน (คู่มือขั้นที่ 1.3)
+
 ## Stock Check — Search Behavior
 
 - Search-first: ไม่โหลดข้อมูลทั้งหมดตอน mount — query Supabase เมื่อพิมพ์เท่านั้น
@@ -428,13 +460,13 @@ Each panel has a close (✕) button and includes product name in subheader.
 ## Page Navigation
 
 - ปุ่มนำทางทุกหน้าใช้ component กลาง `<PageNavRow current=... handlers=... />` จาก `pageAccess.tsx` (เดิม hardcode 6 ปุ่ม `.page-nav-card` ซ้ำทุกไฟล์ — ย้ายมารวมที่ `PAGE_NAV` config)
-- ทุกหน้ารับ props ครบชุด: `onGoPriceTag`, `onGoDrugLabel`, `onGoStockCheck`, `onGoCustomerHistory`, `onGoOutbound`, `onGoSaleSupport` → ประกอบเป็น object `handlers` ส่งให้ `PageNavRow`
+- ทุกหน้ารับ props ครบชุด: `onGoPriceTag`, `onGoDrugLabel`, `onGoStockCheck`, `onGoCustomerHistory`, `onGoOutbound`, `onGoSaleSupport`, `onGoPendingDocs` → ประกอบเป็น object `handlers` ส่งให้ `PageNavRow`
 - `PageId` union + `currentPage` type import จาก `pageAccess.tsx` (ไม่ inline ใน App.tsx แล้ว)
 - เพิ่มหน้าใหม่: เพิ่มใน `PageId` union + `PAGE_NAV` array (`pageAccess.tsx` — `icon` ต้องเป็น JSX `<svg>` ห่อด้วย `<Svg>` helper ไม่ใช่ emoji), เพิ่ม prop `onGoXxx` + ส่งใน `handlers` ทุกหน้า, เพิ่ม row ใน `app_page_settings` (SQL), และเพิ่มการ render หน้าใน `App.tsx`
 
 ## Page Visibility — เปิด/ปิดปุ่มแต่ละหน้า (ตั้งผ่าน SQL)
 
-- 🔧 **หน้าจอสลับเปิด/ปิดถูกถอดออกแล้ว (2569-09-25 ตามคำขอผู้ใช้)** — เดิมอยู่ใน modal ปุ่มเฟือง ⚙️ ตอนนี้ modal นั้นเหลือแค่ `📤 Upload R05.106` (ดู Key files) · ตอนถอด ทั้ง 6 หน้าเป็น `visible=true` (เช็คจาก DB แล้ว) · ระบบ**ยังอ่าน**ค่าจากตารางตามเดิม เปลี่ยนค่าต้องใช้ SQL เช่น `update app_page_settings set visible = false, updated_at = now() where page_id = 'outbound';` · โค้ดหน้าจอเดิม (`togglePageVisible` + CSS `.page-toggle-*`) ดูได้จาก git history
+- 🔧 **หน้าจอสลับเปิด/ปิดถูกถอดออกแล้ว (2569-09-25 ตามคำขอผู้ใช้)** — เดิมอยู่ใน modal ปุ่มเฟือง ⚙️ ตอนนี้ modal นั้นเหลือแค่ `📤 Upload R05.106` (ดู Key files) · ตอนถอด ทั้ง 6 หน้าเป็น `visible=true` (เช็คจาก DB แล้ว) · หน้าที่ 7 `pendingdocs` (2569-10-27) เริ่มแบบ `visible=false` จาก `pending-docs-setup.sql` — เปิดหลัง Agent ในร้านใช้ได้จริง · ระบบ**ยังอ่าน**ค่าจากตารางตามเดิม เปลี่ยนค่าต้องใช้ SQL เช่น `update app_page_settings set visible = false, updated_at = now() where page_id = 'outbound';` · โค้ดหน้าจอเดิม (`togglePageVisible` + CSS `.page-toggle-*`) ดูได้จาก git history
 - เก็บสถานะใน Supabase ตาราง **`app_page_settings`** (`page_id` pk, `visible` bool) — ซิงค์ทุกเครื่อง · สร้างด้วย `page-settings-setup.sql`
 - `App.tsx`: fetch ตอน mount → `pageVisibility` state → `PageVisibilityContext.Provider` ครอบทั้งแอป (เว็บอ่านอย่างเดียว ไม่มีจุดเขียนตารางนี้แล้ว)
 - `PageNavRow` อ่าน `usePageVisibility()` → ซ่อนปุ่มหน้าที่ `visible=false` **ยกเว้นหน้าปัจจุบัน** (`|| p.id === current` กันปุ่ม active หาย)
