@@ -16,7 +16,7 @@ create table if not exists public.pending_transfers (
   sys_tran_no  bigint      primary key,                   -- TRANS.SYSTRANNO (รหัสภายใน ProMaxx ไม่ซ้ำ)
   doc_no       text        not null,                      -- TRANS.TRANNO (เลขที่ใบโอน)
   doc_date     date,                                      -- TRANS.TRANDATE (ตัดเวลาทิ้งแล้ว)
-  from_branch  text,                                      -- SRC/KKL/SSS (BRANCH_ID_MAP ใน pending-docs-agent.mjs — ต้นทางนอก map ไม่ถูกส่งมา)
+  from_branch  text,                                      -- คลังสินค้า/SRC/KKL/SSS ตามคลังต้นทาง (WAREHOUSE_MAP ใน pending-docs-agent.mjs — คลังนอก map ไม่ถูกส่งมา)
   to_branch    text,                                      -- รหัสในแอป หรือชื่อดิบจาก BRANCH.NAME ถ้าปลายทางอยู่นอก map
   item_count   integer     not null default 0,
   items        jsonb       not null default '[]'::jsonb,  -- [{line_no, code, name, qty, serial}]
