@@ -386,7 +386,7 @@ export function PendingDocsPage({
   const owner = canSeeAll ? '' : ` ของ ${branchText(userBranch ?? null)}`;
   const headerText = !rowsLoaded
     ? 'กำลังโหลด…'
-    : `ใบโอนที่ยังไม่กด "ส่ง"${owner} — ${visibleRows.length.toLocaleString()} ใบ${rows.length === ROW_LIMIT ? ` (แสดงสูงสุด ${ROW_LIMIT.toLocaleString()} ใบ)` : ''}`;
+    : `เอกสารที่ยังไม่กด "ส่ง"${owner} — ${visibleRows.length.toLocaleString()} ใบ${rows.length === ROW_LIMIT ? ` (แสดงสูงสุด ${ROW_LIMIT.toLocaleString()} ใบ)` : ''}`;
   const hasSerial = Boolean(openDoc?.items.some(item => item.serial));
   const openDocDays = openDoc ? daysPending(openDoc.doc_date, today) : null;
 
