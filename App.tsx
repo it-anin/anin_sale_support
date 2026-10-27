@@ -8,6 +8,7 @@ import { StockCheckPage } from './StockCheckPage';
 import { CustomerHistoryPage } from './CustomerHistoryPage';
 import { OutboundPage } from './OutboundPage';
 import { SaleSupportPage } from './SaleSupportPage';
+import { PendingDocsPage } from './PendingDocsPage';
 import { AnimatedLogoText } from './AnimatedLogo';
 import { SearchIcon } from './SearchIcon';
 import { LoginPage } from './LoginPage';
@@ -1552,6 +1553,7 @@ ${sheetsHtml}
     customerhistory: () => setCurrentPage('customerhistory'),
     outbound: () => setCurrentPage('outbound'),
     salesupport: () => setCurrentPage('salesupport'),
+    pendingdocs: () => setCurrentPage('pendingdocs'),
   };
 
   return (
@@ -2105,6 +2107,7 @@ ${sheetsHtml}
           onGoCustomerHistory={() => setCurrentPage('customerhistory')}
           onGoOutbound={() => setCurrentPage('outbound')}
           onGoSaleSupport={() => setCurrentPage('salesupport')}
+          onGoPendingDocs={() => setCurrentPage('pendingdocs')}
           userBranch={authProfile.branch ?? undefined}
         />
       )}
@@ -2118,6 +2121,7 @@ ${sheetsHtml}
           onGoCustomerHistory={() => setCurrentPage('customerhistory')}
           onGoOutbound={() => setCurrentPage('outbound')}
           onGoSaleSupport={() => setCurrentPage('salesupport')}
+          onGoPendingDocs={() => setCurrentPage('pendingdocs')}
         />
       )}
 
@@ -2130,6 +2134,7 @@ ${sheetsHtml}
           onGoCustomerHistory={() => setCurrentPage('customerhistory')}
           onGoOutbound={() => setCurrentPage('outbound')}
           onGoSaleSupport={() => setCurrentPage('salesupport')}
+          onGoPendingDocs={() => setCurrentPage('pendingdocs')}
         />
       )}
 
@@ -2142,6 +2147,7 @@ ${sheetsHtml}
           onGoCustomerHistory={() => setCurrentPage('customerhistory')}
           onGoOutbound={() => setCurrentPage('outbound')}
           onGoSaleSupport={() => setCurrentPage('salesupport')}
+          onGoPendingDocs={() => setCurrentPage('pendingdocs')}
           isWarehouse={authProfile.group === 'คลังสินค้า'}
           isPurchasing={authProfile.id === 'PURCHASING'}
           userBranch={authProfile.group === 'สาขา' ? authProfile.id : undefined}
@@ -2157,10 +2163,26 @@ ${sheetsHtml}
           onGoCustomerHistory={() => setCurrentPage('customerhistory')}
           onGoOutbound={() => setCurrentPage('outbound')}
           onGoSaleSupport={() => setCurrentPage('salesupport')}
+          onGoPendingDocs={() => setCurrentPage('pendingdocs')}
           isPurchasing={authProfile.id === 'PURCHASING'}
           isWarehouse={authProfile.group === 'คลังสินค้า'}
           userBranch={authProfile.branch ?? undefined}
           warehouseUpdateUnreadCount={warehouseUpdateUnreadCount}
+        />
+      )}
+
+      {/* Pending Docs Page (ตรวจสอบเอกสารค้าง) */}
+      {currentPage === 'pendingdocs' && (
+        <PendingDocsPage
+          onGoPriceTag={() => setCurrentPage('pricetag')}
+          onGoDrugLabel={() => setCurrentPage('druglabel')}
+          onGoStockCheck={() => setCurrentPage('stockcheck')}
+          onGoCustomerHistory={() => setCurrentPage('customerhistory')}
+          onGoOutbound={() => setCurrentPage('outbound')}
+          onGoSaleSupport={() => setCurrentPage('salesupport')}
+          onGoPendingDocs={() => setCurrentPage('pendingdocs')}
+          userBranch={authProfile.branch ?? undefined}
+          canSeeAll={authProfile.group === 'คลังสินค้า' || authProfile.id === 'PURCHASING'}
         />
       )}
 

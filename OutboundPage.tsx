@@ -129,12 +129,13 @@ interface Props {
   onGoCustomerHistory: () => void;
   onGoOutbound: () => void;
   onGoSaleSupport: () => void;
+  onGoPendingDocs: () => void;
   isWarehouse: boolean;
   isPurchasing: boolean;
   userBranch?: string;
 }
 
-export function OutboundPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGoCustomerHistory, onGoOutbound, onGoSaleSupport, isWarehouse, isPurchasing, userBranch }: Props) {
+export function OutboundPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGoCustomerHistory, onGoOutbound, onGoSaleSupport, onGoPendingDocs, isWarehouse, isPurchasing, userBranch }: Props) {
   const canSwitchBranches = isWarehouse || isPurchasing;
   // โปรไฟล์ที่ลงข้อมูลได้แต่ไม่ใช่สาขาหน้าร้าน (Sale Admin) — หน้านี้ไม่รองรับ
   // ⚠️ ห้ามปล่อยผ่าน: `activeBranch` ด้านล่างจะ fallback เป็น 'SRC' แล้ว effect เติมแถวร่าง
@@ -549,7 +550,7 @@ export function OutboundPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGo
               ⚠️ 🔐 ในหัว modal ใส่รหัสผ่านด้านล่างเป็นคนละจุด ไม่ได้เอาออก */}
           <span className="updated-badge">เบิกสินค้าด่วน{unlocked && ' 🔓'}</span>
         </div>
-        <PageNavRow current="outbound" handlers={{ pricetag: onGoPriceTag, druglabel: onGoDrugLabel, stockcheck: onGoStockCheck, customerhistory: onGoCustomerHistory, outbound: onGoOutbound, salesupport: onGoSaleSupport }} />
+        <PageNavRow current="outbound" handlers={{ pricetag: onGoPriceTag, druglabel: onGoDrugLabel, stockcheck: onGoStockCheck, customerhistory: onGoCustomerHistory, outbound: onGoOutbound, salesupport: onGoSaleSupport, pendingdocs: onGoPendingDocs }} />
       </div>
     </div>
   );

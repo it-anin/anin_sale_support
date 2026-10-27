@@ -5,7 +5,7 @@
 -- ============================================================
 
 create table if not exists app_page_settings (
-  page_id     text primary key,          -- 'pricetag' | 'druglabel' | 'stockcheck' | 'customerhistory' | 'outbound' | 'salesupport'
+  page_id     text primary key,          -- 'pricetag' | 'druglabel' | 'stockcheck' | 'customerhistory' | 'outbound' | 'salesupport' | 'pendingdocs'
   visible     boolean not null default true,
   updated_at  timestamptz default now()
 );
@@ -22,14 +22,16 @@ drop policy if exists "public write page settings" on app_page_settings;
 create policy "public write page settings" on app_page_settings
   for all using (true) with check (true);
 
--- seed 6 หน้า (เปิดทั้งหมดเป็นค่าเริ่มต้น) — ไม่ทับค่าที่ตั้งไว้แล้ว
+-- seed 7 หน้า — ไม่ทับค่าที่ตั้งไว้แล้ว
+-- pendingdocs เริ่มแบบซ่อน: ต้องมี Agent ในร้านก่อนถึงมีข้อมูล (ดู pending-docs-setup.sql)
 insert into app_page_settings (page_id, visible) values
   ('pricetag', true),
   ('druglabel', true),
   ('stockcheck', true),
   ('customerhistory', true),
   ('outbound', true),
-  ('salesupport', true)
+  ('salesupport', true),
+  ('pendingdocs', false)
 on conflict (page_id) do nothing;
 
 notify pgrst, 'reload schema';

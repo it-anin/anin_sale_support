@@ -121,12 +121,13 @@ interface Props {
   onGoCustomerHistory: () => void;
   onGoOutbound: () => void;
   onGoSaleSupport: () => void;
+  onGoPendingDocs: () => void;
   /** รหัสสาขาของโปรไฟล์ที่ล็อกอิน (`Profile.branch` ใน auth.ts) — เป็นตัวกำหนดสาขา/เภสัชกรบนฉลาก
    *  ไม่ใช่ SRC/KKL/SSS (Sale Admin / คลังสินค้า / จัดซื้อ) = undefined → ดู/พิมพ์ฉลากไม่ได้ */
   userBranch?: string;
 }
 
-export function DrugLabelPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGoCustomerHistory, onGoOutbound, onGoSaleSupport, userBranch }: Props) {
+export function DrugLabelPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGoCustomerHistory, onGoOutbound, onGoSaleSupport, onGoPendingDocs, userBranch }: Props) {
   const [settings,       setSettings]       = useState<ShopSettings | null>(null);
   const [lang,           setLang]           = useState<Lang>('th');
   const [searchInput,    setSearchInput]    = useState('');
@@ -782,7 +783,7 @@ export function DrugLabelPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onG
               ? <span className="dl-branch-chip" title="สาขาตามรหัสที่ล็อกอิน">{branch.shop_name_th}</span>
               : <span className="dl-branch-chip dl-branch-chip--none">ไม่ใช่รหัสสาขา — พิมพ์ฉลากไม่ได้</span>}
           </div>
-          <PageNavRow current="druglabel" handlers={{ pricetag: onGoPriceTag, druglabel: onGoDrugLabel, stockcheck: onGoStockCheck, customerhistory: onGoCustomerHistory, outbound: onGoOutbound, salesupport: onGoSaleSupport }} />
+          <PageNavRow current="druglabel" handlers={{ pricetag: onGoPriceTag, druglabel: onGoDrugLabel, stockcheck: onGoStockCheck, customerhistory: onGoCustomerHistory, outbound: onGoOutbound, salesupport: onGoSaleSupport, pendingdocs: onGoPendingDocs }} />
         </div>
       </div>
 

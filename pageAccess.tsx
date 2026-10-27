@@ -7,7 +7,8 @@ export type PageId =
   | 'stockcheck'
   | 'customerhistory'
   | 'outbound'
-  | 'salesupport';
+  | 'salesupport'
+  | 'pendingdocs';
 
 export interface PageNavDef {
   id: PageId;
@@ -66,6 +67,15 @@ const IconBell = (
     <path d="M13.7 21a2 2 0 0 1-3.4 0" />
   </Svg>
 );
+// เอกสาร + นาฬิกา = เอกสารที่ค้างอยู่
+const IconDocClock = (
+  <Svg>
+    <path d="M12 21H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h8l5 5v3" />
+    <path d="M14 3v5h5" />
+    <circle cx="17" cy="17" r="4" />
+    <path d="M17 15.2V17l1.3 1" />
+  </Svg>
+);
 
 // ลำดับ + ไอคอน + ป้ายชื่อ ของปุ่มนำทาง (เดิม hardcode ซ้ำทุกหน้า — ย้ายมารวมที่นี่)
 export const PAGE_NAV: PageNavDef[] = [
@@ -75,6 +85,7 @@ export const PAGE_NAV: PageNavDef[] = [
   { id: 'customerhistory', icon: IconCard,  label: 'Customer', title: 'ประวัติลูกค้า' },
   { id: 'outbound',        icon: IconTruck, label: 'Outbound', title: 'เบิกสินค้าด่วน' },
   { id: 'salesupport',     icon: IconBell,  label: 'Support',  title: 'SaleSupport' },
+  { id: 'pendingdocs',     icon: IconDocClock, label: 'Pending', title: 'ตรวจสอบเอกสารค้าง' },
 ];
 
 export type PageVisibility = Record<PageId, boolean>;
@@ -87,6 +98,7 @@ export const DEFAULT_VISIBILITY: PageVisibility = {
   customerhistory: true,
   outbound: true,
   salesupport: true,
+  pendingdocs: true,
 };
 
 export const PageVisibilityContext = createContext<PageVisibility>(DEFAULT_VISIBILITY);

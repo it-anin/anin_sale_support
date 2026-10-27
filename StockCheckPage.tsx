@@ -22,9 +22,10 @@ interface Props {
   onGoCustomerHistory: () => void;
   onGoOutbound: () => void;
   onGoSaleSupport: () => void;
+  onGoPendingDocs: () => void;
 }
 
-export function StockCheckPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGoCustomerHistory, onGoOutbound, onGoSaleSupport }: Props) {
+export function StockCheckPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGoCustomerHistory, onGoOutbound, onGoSaleSupport, onGoPendingDocs }: Props) {
   const [results,      setResults]      = useState<StockItem[]>([]);
   const [activeTab,    setActiveTab]    = useState<string>('คลังสินค้า');
   const [search,       setSearch]       = useState('');
@@ -95,7 +96,7 @@ export function StockCheckPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, on
               : <span className="updated-badge updated-badge--loading">Loading...</span>
             }
           </div>
-          <PageNavRow current="stockcheck" handlers={{ pricetag: onGoPriceTag, druglabel: onGoDrugLabel, stockcheck: onGoStockCheck, customerhistory: onGoCustomerHistory, outbound: onGoOutbound, salesupport: onGoSaleSupport }} />
+          <PageNavRow current="stockcheck" handlers={{ pricetag: onGoPriceTag, druglabel: onGoDrugLabel, stockcheck: onGoStockCheck, customerhistory: onGoCustomerHistory, outbound: onGoOutbound, salesupport: onGoSaleSupport, pendingdocs: onGoPendingDocs }} />
         </div>
       </div>
 

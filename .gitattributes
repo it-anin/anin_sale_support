@@ -1,0 +1,3 @@
+# .bat ที่มี label/goto ต้องเป็น CRLF เสมอ — cmd.exe หา label ในไฟล์ LF พลาดได้ (วนเปิดใหม่ของ Agent จะพัง)
+# ระบุทีละไฟล์โดยตั้งใจ: ถ้าใส่ *.bat ไฟล์ .bat เดิมจะขึ้นว่าถูกแก้บนเครื่อง Windows หลัง git pull
+run-pending-docs-agent.bat text eol=crlf

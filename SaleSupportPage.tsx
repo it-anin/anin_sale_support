@@ -3,15 +3,13 @@ import * as XLSX from 'xlsx';
 import { supabase } from './supabase';
 import { AnimatedLogoText } from './AnimatedLogo';
 import { PageNavRow, usePageNotifications } from './pageAccess';
-import { BRANCH_PROFILE_CODES, branchCodeLabel } from './auth';
+import { BRANCH_PROFILE_CODES, STORE_BRANCH_CODES, branchCodeLabel } from './auth';
 
 const ORDER_BRANCHES = ['SRC', 'KKL', 'SSS', 'SALE_ADMIN', 'Warehouse'] as const;
 /** ผู้ลงรายการ BackOrder — ต้องตรงกับ CHECK ของ ss_backorders.branch เป๊ะ ๆ
  *  ⚠️ ไม่มี Warehouse (คลังเป็นผู้รับงาน ไม่ใช่ผู้ขอ) — ต่างจาก ORDER_BRANCHES ที่มี */
 const BACKORDER_BRANCHES = ['SRC', 'KKL', 'SSS', 'SALE_ADMIN'] as const;
-/** สาขาหน้าร้าน 3 แห่ง **ไม่รวม Sale Admin** — ใช้กับสิทธิ์ที่ผู้ใช้ระบุมาเฉพาะ "รหัส SRC/KKL/SSS"
- *  ⚠️ คนละลิสต์กับ BRANCH_PROFILE_CODES (รวม SALE_ADMIN) — ผู้ใช้แยก 2 กลุ่มนี้ชัดเจนในคำสั่งเสมอ อย่ายุบรวม */
-const STORE_BRANCH_CODES = ['SRC', 'KKL', 'SSS'] as const;
+// STORE_BRANCH_CODES (สาขาหน้าร้าน 3 แห่ง ไม่รวม Sale Admin) ย้ายไป auth.ts แล้ว — ใช้ร่วมกับหน้าเอกสารค้าง
 /** โปรไฟล์ที่กดตรา "ยกเลิก" ใน popup Order ได้ — สาขาหน้าร้านเท่านั้น (ผู้ใช้สั่ง 2569-10-12 "เฉพาะรหัส SRC,KKL,SSS")
  *  ⚠️ จงใจไม่ใช้ BRANCH_PROFILE_CODES — ตัวนั้นรวม SALE_ADMIN ด้วย · Sale Admin ยังกดตรา 3 ขั้นของ Order ได้ตามปกติ
  *     แค่กดยกเลิกไม่ได้ · ปุ่มยกเลิกของ BackOrder ไม่เกี่ยวกับลิสต์นี้ (ยังใช้ isBranchUser ซึ่งรวม Sale Admin) */
@@ -1392,6 +1390,7 @@ interface Props {
   onGoCustomerHistory: () => void;
   onGoOutbound: () => void;
   onGoSaleSupport: () => void;
+  onGoPendingDocs: () => void;
   isPurchasing: boolean;
   isWarehouse: boolean;
   userBranch?: string;
@@ -1488,7 +1487,7 @@ function loadColumnWidths(): Record<string, number> {
   }
 }
 
-export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGoCustomerHistory, onGoOutbound, onGoSaleSupport, isPurchasing, isWarehouse, userBranch, warehouseUpdateUnreadCount = 0 }: Props) {
+export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, onGoCustomerHistory, onGoOutbound, onGoSaleSupport, onGoPendingDocs, isPurchasing, isWarehouse, userBranch, warehouseUpdateUnreadCount = 0 }: Props) {
   const [activeMenu, setActiveMenu] = useState<MenuId>('products');
   /** ความกว้างคอลัมน์ที่ผู้ใช้ลากปรับเอง — key = `${menuId}:${colKey}` ค่าเป็น px
    *  ไม่มี key = ใช้ `min` จาก MENUS ตามเดิม · โหลดครั้งเดียวตอน mount เหมือน cart ของหน้าป้ายราคา */
@@ -3431,7 +3430,7 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
           <div className="tagline-row">
             <span className="updated-badge">ศูนย์รวมงานซัพพอร์ตการขาย</span>
           </div>
-          <PageNavRow current="salesupport" handlers={{ pricetag: onGoPriceTag, druglabel: onGoDrugLabel, stockcheck: onGoStockCheck, customerhistory: onGoCustomerHistory, outbound: onGoOutbound, salesupport: onGoSaleSupport }} />
+          <PageNavRow current="salesupport" handlers={{ pricetag: onGoPriceTag, druglabel: onGoDrugLabel, stockcheck: onGoStockCheck, customerhistory: onGoCustomerHistory, outbound: onGoOutbound, salesupport: onGoSaleSupport, pendingdocs: onGoPendingDocs }} />
         </div>
       </div>
 
