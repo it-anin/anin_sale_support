@@ -1,0 +1,1851 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ดีไซน์หน้า Pending ใหม่ 20 แบบ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Mali:wght@400;600;700&family=Mitr:wght@400;500;600&family=Noto+Sans+Thai:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   หน้า Pending (ตรวจสอบเอกสารค้าง) — แกลเลอรีเลือกดีไซน์ 20 แบบ
+   ไม่ได้ import เข้าแอป · เปิดผ่าน dev server: /pending-designs.html
+   โครงกลาง: ข้อมูลตัวอย่างชุดเดียว + ตัวช่วย (G) + ระบบ render/ event
+   แต่ละแบบอยู่ในบล็อก style + script ของตัวเอง ใช้ class ขึ้นต้นด้วย .dN
+   ============================================================ */
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0; padding: 26px 20px 90px; background: #eef3f9;
+  font-family: 'Noto Sans Thai', system-ui, sans-serif; color: #2c3e50;
+}
+code {
+  background: #fff; border: 1px solid #cfe0f2; border-radius: 4px;
+  padding: 1px 5px; font-family: 'Outfit', monospace; font-size: 12px; color: #2d6cad;
+}
+.g-head { max-width: 1180px; margin: 0 auto 16px; }
+.g-head h1 { margin: 0 0 6px; font-family: 'Outfit', 'Noto Sans Thai', sans-serif; font-size: 27px; font-weight: 800; color: #2d6cad; letter-spacing: -0.4px; }
+.g-head p { margin: 0 0 4px; font-size: 13px; color: #5b7590; line-height: 1.75; font-weight: 300; }
+.g-rule {
+  max-width: 1180px; margin: 0 auto 16px; padding: 13px 17px;
+  background: #eaf3fc; border: 1px solid #b8d3ee; border-left: 4px solid #4891db;
+  border-radius: 9px; font-size: 13px; line-height: 1.9; color: #2d5c8a;
+}
+.g-rule b { color: #1e4b7a; }
+.g-guide { max-width: 1180px; margin: 0 auto 16px; padding: 12px 16px 6px; background: #fff; border: 1px solid #cfe0f2; border-radius: 11px; }
+.g-gt { font-weight: 700; font-size: 13.5px; color: #1f3f66; margin-bottom: 6px; }
+.g-gt small { font-weight: 300; color: #8194a8; margin-left: 6px; }
+.g-grow { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; padding: 7px 0; border-top: 1px dashed #dbe6f2; font-size: 12.5px; color: #6d88a6; }
+.g-grow b { color: #2d5c8a; font-size: 13px; min-width: 200px; }
+.g-grow span { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.g-grow a { padding: 3px 11px; border-radius: 999px; background: #eaf3fc; color: #2d6cad; font-weight: 600; text-decoration: none; transition: all .15s; }
+.g-grow a:hover { background: #2d6cad; color: #fff; }
+.g-ctrl {
+  position: sticky; top: 0; z-index: 40; max-width: 1180px; margin: 0 auto 24px; padding: 10px 14px;
+  background: #fff; border: 1px solid #cfe0f2; border-radius: 11px; box-shadow: 0 3px 14px rgba(45, 108, 173, 0.12);
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px;
+}
+.g-ctrl .lab { font-size: 12.5px; color: #2d5c8a; font-weight: 600; }
+.g-ctrl .sep { width: 1px; height: 22px; background: #e3e8ee; }
+.g-seg { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+.g-seg button {
+  font: 600 12.5px 'Noto Sans Thai', sans-serif; padding: 6px 12px; border-radius: 8px; cursor: pointer;
+  border: 1px solid #b8d3ee; background: #fff; color: #2d6cad; transition: all .18s ease;
+}
+.g-seg button small { font-weight: 400; opacity: .75; margin-left: 4px; }
+.g-seg button:hover { background: #eaf3fc; }
+.g-seg button.on { background: linear-gradient(135deg, #2d6cad, #4891db); border-color: #a9d0f5; color: #fff; }
+.g-jump { display: flex; gap: 4px; flex-wrap: wrap; }
+.g-jump a {
+  display: inline-flex; align-items: center; justify-content: center; min-width: 26px; height: 26px; padding: 0 4px;
+  border-radius: 7px; background: #eaf3fc; color: #2d6cad; font: 700 12px 'Outfit', sans-serif; text-decoration: none;
+}
+.g-jump a:hover { background: #2d6cad; color: #fff; }
+
+.g-card {
+  max-width: 1180px; margin: 0 auto 30px; background: #fff; border: 1px solid #cfe0f2; border-radius: 16px;
+  box-shadow: 0 4px 22px rgba(45, 108, 173, .09); overflow: hidden; scroll-margin-top: 124px;
+}
+.g-cardhead { display: flex; align-items: center; gap: 12px; padding: 12px 18px; border-bottom: 1px solid #e3ecf6; flex-wrap: wrap; }
+.g-num {
+  display: inline-flex; align-items: center; justify-content: center; min-width: 30px; height: 30px; padding: 0 6px; border-radius: 50%;
+  background: #2d6cad; color: #fff; font: 800 14px 'Outfit', sans-serif; flex-shrink: 0;
+}
+.g-num.ref { background: #8194a8; border-radius: 9px; font: 700 11px 'Noto Sans Thai', sans-serif; }
+.g-ttl { flex: 1 1 280px; min-width: 0; }
+.g-name { font-weight: 700; font-size: 15.5px; color: #1f3f66; }
+.g-name small { font: 500 12px 'Outfit', sans-serif; color: #8194a8; margin-left: 6px; }
+.g-desc { color: #6d88a6; font-size: 12.5px; font-weight: 300; margin-top: 1px; }
+.g-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+.g-tag { font-size: 11px; background: #eaf3fc; color: #2d6cad; border-radius: 999px; padding: 2px 10px; white-space: nowrap; }
+.g-tag b { color: #1e4b7a; font-weight: 600; }
+
+/* ───── พื้นที่แสดงดีไซน์ + ค่าพื้นฐานที่ทุกแบบใช้ร่วม ───── */
+.stage {
+  position: relative; overflow-x: auto; font-family: 'Noto Sans Thai', system-ui, sans-serif; font-size: 14px; line-height: 1.45;
+  color: #2c3e50; background: #faf8f5;
+}
+.stage *, .stage *::before, .stage *::after { box-sizing: border-box; }
+.stage button { font: inherit; color: inherit; cursor: pointer; border: 0; background: none; padding: 0; }
+.stage input, .stage select { font: inherit; color: inherit; }
+.stage h1, .stage h2, .stage h3, .stage h4, .stage p, .stage ul { margin: 0; padding: 0; }
+.stage ul { list-style: none; }
+.stage [data-act], .stage [data-change] { cursor: pointer; }
+.stage .no { font-family: 'Outfit', 'Noto Sans Thai', sans-serif; font-weight: 600; letter-spacing: .2px; }
+.stage .mono { font-family: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace; }
+
+/* โทนความเร่งด่วน — ฟ้า = วันนี้ · ส้ม ≥ 1 วัน · แดง ≥ 3 วัน (WARN_DAYS / ALERT_DAYS ในหน้าจริง) */
+.stage .t-ok    { --tc: #4891db; --tb: #eaf3fc; --tt: #2d6cad; }
+.stage .t-warn  { --tc: #f0a22c; --tb: #fff1d6; --tt: #a35f00; }
+.stage .t-alert { --tc: #e24b43; --tb: #fde8e8; --tt: #c62828; }
+.stage .dy { display: inline-block; min-width: 46px; padding: 2px 9px; border-radius: 999px; font: 700 12px 'Outfit', 'Noto Sans Thai', sans-serif; text-align: center; background: var(--tb); color: var(--tt); white-space: nowrap; }
+.stage .bc { display: inline-block; padding: 1px 8px; border-radius: 7px; background: color-mix(in srgb, var(--c) 13%, #fff); color: var(--c); font-weight: 700; font-size: .92em; white-space: nowrap; }
+
+/* ช่องค้นหาพื้นฐาน */
+.stage .sb { display: flex; align-items: center; gap: 10px; background: #fff; border: 1.5px solid #cadcee; border-radius: 12px; padding: 0 14px; color: #7c9bb8; transition: border-color .2s, box-shadow .2s; }
+.stage .sb:focus-within { border-color: #4891db; box-shadow: 0 0 0 3px rgba(72, 145, 219, .15); }
+.stage .sb input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; padding: 12px 0; font-size: 14px; color: #2c3e50; }
+.stage .sb input::placeholder { color: #8aa4bf; }
+
+/* สถานะว่าง (ไม่มีเอกสาร / ค้นหาไม่เจอ) — แต่ละแบบปรับสไตล์ทับเอง */
+.stage .em { text-align: center; padding: 54px 20px; color: #5a7fa6; }
+.stage .em-i { font-size: 44px; line-height: 1; margin-bottom: 10px; }
+.stage .em-t { font-weight: 700; font-size: 16px; color: #2d6cad; }
+.stage .em-s { font-size: 12.5px; margin-top: 4px; opacity: .85; }
+
+/* popup รายการสินค้าแบบมาตรฐาน (.gm-*) — แบบที่ไม่ได้ทำ popup ของตัวเองใช้อันนี้ */
+.stage .gm-ov { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 24px; background: rgba(15, 30, 50, .55); animation: gmFade .15s ease-out; }
+.stage .gm { background: #fff; border-radius: 18px; width: 100%; max-width: 720px; max-height: 88vh; display: flex; flex-direction: column; box-shadow: 0 24px 70px rgba(0, 0, 0, .35); overflow: hidden; animation: gmPop .18s ease-out; color: #2c3e50; }
+.stage .gm-h { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; padding: 18px 22px; border-bottom: 1px solid #e3edf8; }
+.stage .gm-h h2 { font-size: 19px; }
+.stage .gm-h p { margin-top: 6px; color: #5a7fa6; font-size: 13px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.stage .gm-x { flex-shrink: 0; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: #6b6559; transition: background .15s; }
+.stage .gm-x:hover { background: #f0f0f0; }
+.stage .gm-b { padding: 4px 22px 8px; overflow: auto; }
+.stage .gm-f { padding: 12px 22px; border-top: 1px solid #e3edf8; color: #5a7fa6; font-size: 13px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.stage .it { width: 100%; border-collapse: collapse; font-size: 13px; }
+.stage .it th, .stage .it td { padding: 7px 8px; border-bottom: 1px solid #e3edf8; text-align: left; vertical-align: top; }
+.stage .it th { position: sticky; top: 0; background: #eaf3fc; color: #2d6cad; font-weight: 700; white-space: nowrap; }
+.stage .it .n { text-align: right; white-space: nowrap; font-family: 'Outfit', sans-serif; font-weight: 600; }
+@keyframes gmFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes gmPop { from { opacity: 0; transform: translateY(10px) scale(.98); } to { opacity: 1; transform: none; } }
+@keyframes gPulse { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--tc, #4891db) 45%, transparent); } 50% { box-shadow: 0 0 0 7px transparent; } }
+@media (prefers-reduced-motion: reduce) { .stage *, .stage *::before, .stage *::after { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="g-head">
+  <h1>ดีไซน์หน้า Pending ใหม่ 20 แบบ</h1>
+  <p>หน้า "ตรวจสอบเอกสารค้าง" = เอกสารโอนสินค้าออกที่สาขายังไม่กด "ส่ง" ใน ProMaxx · ทุกแบบใช้ข้อมูลชุดเดียวกัน แต่โครงหน้า/วิธีกรอง/วิธีดูสินค้าต่างกันหมด<br>บอกเลขแบบที่ชอบ (เช่น "แบบที่ 7") เพื่อนำไปทำแทนหน้า Pending จริง · จะผสมข้อดีของหลายแบบก็ได้</p>
+</div>
+<div class="g-rule">
+  <b>วิธีดู:</b> ทุกแบบ <b>ใช้งานได้จริง</b> — พิมพ์ค้นหา (เลขที่เอกสาร / รหัส / ชื่อสินค้า) · กดแท็บ/ตัวกรอง · กด "ดูสินค้า" · ปิด popup ด้วย ✕ หรือ Esc (ตามกฎเดิม: ไม่ปิดเมื่อคลิกพื้นหลัง)<br>
+  <b>ส่วน hero สีฟ้าด้านบนไม่เปลี่ยน</b> (โลโก้ + "ข้อมูล ณ" + ปุ่มดึงข้อมูล + ปุ่มนำทาง) — แกลเลอรีนี้ออกแบบเฉพาะส่วนเนื้อหาที่อยู่ใต้ hero<br>
+  <b>สลับ "ข้อมูลตัวอย่าง" ที่แถบด้านล่างนี้</b> เพื่อดูแต่ละแบบตอนมี 12 เอกสาร / 1 เอกสาร (เหมือนภาพที่ส่งมา) / ไม่มีเอกสารเลย (ล็อกอิน SRC เห็นหน้าว่างเป็นเรื่องปกติ)<br>
+  <b>ล็อกอินสาขา (SRC / KKL / SSS)</b> เห็นเฉพาะเอกสารของตัวเอง → แท็บ/ตัวกรองสาขาจะซ่อน (เหมือนหน้าปัจจุบัน) ที่เหลือหน้าตาเหมือนกัน
+</div>
+<div class="g-guide">
+  <div class="g-gt">จัดกลุ่มให้เลือกง่าย <small>(กดเลขเพื่อกระโดดไปดู)</small></div>
+  <div class="g-grow"><b>📋 ตาราง / รายการ</b> ใกล้ของเดิมที่สุด<span><a href="#d6">6 แถวพับ–ขยาย</a><a href="#d17">17 ตัวกรองซ้าย</a><a href="#d18">18 สเปรดชีต</a><a href="#d11">11 คอนโซล</a><a href="#d5">5 ซ้าย–ขวา</a></span></div>
+  <div class="g-grow"><b>🗂️ การ์ด / บอร์ด</b> แต่ละเอกสารเป็นกล่อง<span><a href="#d1">1 การ์ด</a><a href="#d2">2 คัมบัง</a><a href="#d9">9 ตั๋ว</a><a href="#d12">12 โน้ตกาว</a><a href="#d15">15 เบนโต</a><a href="#d10">10 เลนสาขา</a></span></div>
+  <div class="g-grow"><b>📊 ภาพรวม / แผนภาพ</b> ดูภาพใหญ่ก่อน<span><a href="#d4">4 แผนผังเส้นทาง</a><a href="#d7">7 แดชบอร์ด</a><a href="#d8">8 แถบความเก่า</a><a href="#d13">13 ปฏิทิน</a></span></div>
+  <div class="g-grow"><b>🧭 เล่าเรื่อง / ติดตามสถานะ</b> เน้นความหมายของ "ค้าง"<span><a href="#d3">3 ไทม์ไลน์</a><a href="#d16">16 ตัวติดตาม</a><a href="#d19">19 โฟกัสด่วน</a><a href="#d20">20 แฟ้มเอกสาร</a></span></div>
+  <div class="g-grow"><b>📱 มือถือ / แท็บเล็ต</b> ออกแบบจอเล็กก่อน<span><a href="#d14">14 ฟีดมือถือ</a></span></div>
+</div>
+<div class="g-ctrl">
+  <span class="lab">ข้อมูลตัวอย่าง</span>
+  <div class="g-seg" id="g-data"></div>
+  <span class="sep"></span>
+  <span class="lab">ไปที่แบบ</span>
+  <div class="g-jump" id="g-jump"></div>
+</div>
+<div id="g-list"></div>
+
+<script>
+'use strict';
+/* ============================================================
+   ข้อมูลตัวอย่าง (จำลอง — ไม่ได้ดึงจาก Supabase)
+   วันนี้ในแกลเลอรี = 28/10/2569 · เอกสารจริงในภาพที่ส่งมา = OTFB261000207 (27/10/2569 · คลังสินค้า → SSS · ค้าง 1 วัน)
+   ============================================================ */
+const ALL = 'ทั้งหมด';
+const BRANCHES = ['คลังสินค้า', 'SRC', 'KKL', 'SSS'];
+const TODAY = '2026-10-28';
+const POOL = [
+  'พาราเซตามอล 500 มก. 10 เม็ด', 'วิตามินซี 1000 มก. 30 เม็ด', 'ยาแก้ไอ น้ำมะนาว 60 มล.', 'เกลือแร่ ORS รสส้ม 25 กรัม',
+  'แอลกอฮอล์ 70% 450 มล.', 'ผ้าก๊อซปิดแผล 3x3 นิ้ว', 'โพวิโดนไอโอดีน 10% 15 มล.', 'ยาหม่องน้ำ 3 มล.',
+  'หน้ากากอนามัย 3 ชั้น 50 ชิ้น', 'น้ำเกลือล้างจมูก 100 มล.', 'ยาธาตุน้ำขาว 180 มล.', 'แคลเซียม 600 มก. 60 เม็ด',
+  'ครีมกันแดด SPF50 PA+++ 50 กรัม', 'สบู่เหลวล้างมือ 500 มล.', 'ปรอทวัดไข้ดิจิทัล', 'พลาสเตอร์ปิดแผล 100 ชิ้น',
+  'ยาหยอดตา 10 มล.', 'โอเมก้า 3 1000 มก. 30 แคปซูล', 'ถุงมือยาง ไซซ์ M 100 ชิ้น', 'เจลล้างมือ 100 มล.',
+  'ยาลดกรด แบบเม็ดเคี้ยว', 'ซิงค์ 15 มก. 30 เม็ด', 'ผ้าอนามัย กลางวัน 8 ชิ้น', 'แป้งเย็น 150 กรัม',
+  'ยาดมสมุนไพร', 'น้ำยาบ้วนปาก 250 มล.', 'ไหมขัดฟัน 50 เมตร', 'แปรงสีฟัน ขนนุ่ม',
+  'ยาสีฟัน 160 กรัม', 'แชมพูขจัดรังแค 200 มล.', 'ครีมทาผื่นผ้าอ้อม 50 กรัม', 'นมผง สูตร 1 400 กรัม',
+  'ผ้าอ้อมเด็ก ไซซ์ L 52 ชิ้น', 'สำลีแผ่น 100 กรัม', 'ไม้พันสำลี 200 ก้าน', 'เทปกาวผ้า 1 นิ้ว',
+  'ยาแก้แพ้ ลอราทาดีน 10 มก.', 'ยาลดไข้เด็ก ชนิดน้ำ 60 มล.', 'ครีมทาแก้ยุงกัด 30 กรัม', 'สเปรย์พ่นคอ 15 มล.',
+  'เครื่องวัดความดัน ข้อมือ', 'ชุดตรวจ ATK 1 ชุด', 'ถุงมือผ่าตัด ปลอดเชื้อ', 'เข็มฉีดยา 3 มล.',
+  'กระเป๋าน้ำร้อน 2 ลิตร', 'สายรัดข้อมือ ซัพพอร์ต', 'ลูกยางแดง เบอร์ 3', 'ผ้ายืดพันเคล็ด 3 นิ้ว',
+];
+const mkItems = (n, seed) => Array.from({ length: n }, (_, i) => {
+  const k = (seed * 5 + i) % POOL.length;
+  return { line: i + 1, code: String(100234 + (k * 211) % 8000), name: POOL[k], qty: ((seed * 13 + i * 7) % 24) + 1 };
+});
+const shift = (iso, back) => new Date(Date.parse(iso) - back * 864e5).toISOString().slice(0, 10);
+//   เลขที่เอกสาร · ค้างกี่วัน · ต้นทาง · ปลายทาง · จำนวนรายการ
+const SPEC = [
+  ['OTFB260900188', 30, 'KKL', 'คลังสินค้า', 7],
+  ['OTFB261000121', 15, 'คลังสินค้า', 'KKL', 48],
+  ['OTFB261000158', 9, 'SSS', 'คลังสินค้า', 3],
+  ['OTFB261000176', 5, 'คลังสินค้า', 'SSS', 22],
+  ['OTFB261000189', 3, 'SRC', 'คลังสินค้า', 5],
+  ['OTFB261000195', 3, 'KKL', 'คลังสินค้า', 12],
+  ['OTFB261000198', 2, 'คลังสินค้า', 'KKL', 9],
+  ['OTFB261000201', 2, 'SSS', 'คลังสินค้า', 2],
+  ['OTFB261000203', 1, 'คลังสินค้า', 'SSS', 31],
+  ['OTFB261000205', 1, 'KKL', 'คลังสินค้า', 4],
+  ['OTFB261000207', 1, 'คลังสินค้า', 'SSS', 1],
+  ['OTFB261000209', 0, 'คลังสินค้า', 'KKL', 16],
+];
+const MANY = SPEC.map(([no, back, from, to, n], i) => ({ id: i + 1, no, date: shift(TODAY, back), from, to, n, items: mkItems(n, i + 3) }));
+const DATASETS = {
+  many: { label: 'ตัวอย่างเยอะ', sub: MANY.length + ' เอกสาร', docs: MANY },
+  real: { label: 'ตามจริงตอนนี้', sub: '1 เอกสาร', docs: [MANY[10]] },
+  none: { label: 'ไม่มีเอกสาร', sub: '0 เอกสาร', docs: [] },
+};
+
+/* ============================================================
+   ตัวช่วยกลาง (G)
+   ============================================================ */
+const ic = (p, s = 16) => `<svg viewBox="0 0 24 24" width="${s}" height="${s}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
+const G = {
+  docs: [], designs: [], dsKey: 'many',
+  BC: { 'คลังสินค้า': '#2d6cad', SRC: '#1f9d8b', KKL: '#7a5ad8', SSS: '#c0539f' },
+  CODE: { 'คลังสินค้า': 'WH', SRC: 'SRC', KKL: 'KKL', SSS: 'SSS' },
+  ico: {
+    search: ic('<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>', 18),
+    box: ic('<path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="m3 8 9 5 9-5M12 13v8"/>'),
+    cal: ic('<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/>'),
+    arrow: ic('<path d="M5 12h14M13 6l6 6-6 6"/>'),
+    x: ic('<path d="M18 6 6 18M6 6l12 12"/>', 18),
+    chev: ic('<path d="m9 6 6 6-6 6"/>'),
+    clock: ic('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'),
+    refresh: ic('<path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/>'),
+    check: ic('<path d="m5 12 5 5L20 7"/>'),
+    copy: ic('<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/>'),
+    alert: ic('<path d="M12 3 2 21h20z"/><path d="M12 10v5M12 18h.01"/>'),
+    filter: ic('<path d="M3 5h18l-7 8v6l-4-2v-4z"/>'),
+  },
+  esc: s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])),
+  fmtDate: iso => { const [y, m, d] = iso.split('-'); return `${d}/${m}/${+y + 543}`; },
+  back: doc => Math.round((Date.parse(TODAY) - Date.parse(doc.date)) / 864e5),
+  tone: n => (n >= 3 ? 'alert' : n >= 1 ? 'warn' : 'ok'),
+  dayTxt: n => (n === 0 ? 'วันนี้' : n + ' วัน'),
+  qty: n => n.toLocaleString('en-US'),
+  total: doc => doc.items.reduce((s, i) => s + i.qty, 0),
+  tabs: docs => [{ key: ALL, count: docs.length }, ...BRANCHES.map(b => ({ key: b, count: docs.filter(d => d.from === b).length }))],
+  match: (doc, q) => {
+    q = (q || '').trim().toLowerCase();
+    return !q || doc.no.toLowerCase().includes(q) || doc.items.some(i => i.code.includes(q) || i.name.toLowerCase().includes(q));
+  },
+  vis: (docs, st) => docs.filter(d => (!st.tab || st.tab === ALL || d.from === st.tab) && G.match(d, st.q)),
+  find: (docs, id) => docs.find(d => d.id === id),
+  oldest: docs => docs.reduce((a, b) => (!a || G.back(b) > G.back(a) ? b : a), null),
+  emptyKind: (docs, vis) => (docs.length === 0 ? 'none' : vis.length === 0 ? 'nomatch' : null),
+  bc: b => `<b class="bc" style="--c:${G.BC[b] || '#5a7fa6'}">${b}</b>`,
+  dy: (doc, cls = '') => { const n = G.back(doc); return `<span class="dy t-${G.tone(n)} ${cls}">${G.dayTxt(n)}</span>`; },
+  searchBox: (st, ph) => `<label class="sb">${G.ico.search}<input type="text" data-input="q" data-keep="q" autocomplete="off" placeholder="${ph || 'ค้นหาเลขที่เอกสาร รหัส หรือชื่อสินค้า...'}" value="${G.esc(st.q || '')}"></label>`,
+  empty: (kind, cls = 'em') => {
+    const none = kind === 'none';
+    return `<div class="${cls}"><div class="em-i">${none ? '🎉' : '🔍'}</div><div class="em-t">${none ? 'ไม่มีเอกสารค้างส่ง' : 'ไม่พบเอกสารที่ตรงกับคำค้นหา'}</div><div class="em-s">${none ? 'ทุกเอกสารถูกกด “ส่ง” ใน ProMaxx เรียบร้อยแล้ว' : 'ลองเปลี่ยนคำค้น หรือเลือกแท็บอื่น'}</div></div>`;
+  },
+  itemsTable: (doc, cls = 'it') => `<table class="${cls}"><thead><tr><th>#</th><th>รหัสสินค้า</th><th>ชื่อสินค้า</th><th class="n">จำนวน</th></tr></thead><tbody>${doc.items.map(i => `<tr><td>${i.line}</td><td>${i.code}</td><td>${i.name}</td><td class="n">${G.qty(i.qty)}</td></tr>`).join('')}</tbody></table>`,
+  modal: doc => `<div class="gm-ov"><div class="gm" role="dialog" aria-modal="true">
+    <div class="gm-h"><div><h2>เอกสาร ${doc.no}</h2><p>${G.fmtDate(doc.date)} · ${G.bc(doc.from)} → ${G.bc(doc.to)} · ค้าง ${G.dy(doc)}</p></div><button class="gm-x" data-act="close" aria-label="ปิด">${G.ico.x}</button></div>
+    <div class="gm-b">${G.itemsTable(doc)}</div>
+    <div class="gm-f"><span>รวม ${doc.n} รายการ</span><span>จำนวนรวม ${G.qty(G.total(doc))}</span></div></div></div>`,
+  baseAct: {
+    q: (st, v) => { st.q = v; },
+    tab: (st, ds) => { st.tab = ds.v; },
+    open: (st, ds) => { st.open = +ds.id; },
+    close: st => { st.open = null; },
+  },
+};
+
+/* ───── ระบบ render: เก็บ state ต่อแบบ · event delegation · รักษา focus/scroll ตอน render ใหม่ ───── */
+G.add = def => { def.act = Object.assign({}, G.baseAct, def.act); G.designs.push(def); };
+function render(d) {
+  const stage = d.stage;
+  const a = document.activeElement;
+  const wasIn = !!(a && stage.contains(a));
+  const keep = wasIn && a.dataset && a.dataset.keep ? { key: a.dataset.keep, s: a.selectionStart, e: a.selectionEnd } : null;
+  const scrolls = {};
+  stage.querySelectorAll('[data-scroll]').forEach(el => { scrolls[el.dataset.scroll] = [el.scrollLeft, el.scrollTop]; });
+  try {
+    stage.innerHTML = d.view(d.st, G.docs, G);
+  } catch (err) {
+    console.error('design ' + d.id, err);
+    stage.innerHTML = '<pre style="padding:16px;color:#c62828;white-space:pre-wrap">' + G.esc(err.stack || err) + '</pre>';
+    return;
+  }
+  stage.querySelectorAll('[data-scroll]').forEach(el => { const s = scrolls[el.dataset.scroll]; if (s) { el.scrollLeft = s[0]; el.scrollTop = s[1]; } });
+  if (keep) {
+    const el = stage.querySelector('[data-keep="' + keep.key + '"]');
+    if (el) { el.focus({ preventScroll: true }); try { el.setSelectionRange(keep.s, keep.e); } catch (_) { /* ไม่ใช่ช่องข้อความ */ } }
+  } else if (wasIn && d.focus) {
+    const el = stage.querySelector(d.focus); // แบบที่รับคีย์ลัด: กดปุ่มแล้วโฟกัสต้องไม่หลุด
+    if (el) el.focus({ preventScroll: true });
+  }
+}
+function bind(d) {
+  const stage = d.stage;
+  stage.addEventListener('click', e => {
+    const el = e.target.closest('[data-act]');
+    if (!el || !stage.contains(el)) return;
+    const fn = d.act[el.dataset.act];
+    if (!fn) return;
+    if (el.tagName === 'A') e.preventDefault();
+    if (fn(d.st, el.dataset, e, el) !== false) render(d);
+  });
+  stage.addEventListener('input', e => {
+    const el = e.target.closest('[data-input]');
+    if (!el) return;
+    d.act[el.dataset.input](d.st, el.value, e, el);
+    render(d);
+  });
+  stage.addEventListener('change', e => {
+    const el = e.target.closest('[data-change]');
+    if (!el) return;
+    const fn = d.act[el.dataset.change];
+    if (fn && fn(d.st, el.type === 'checkbox' ? el.checked : el.value, e, el, el.dataset) !== false) render(d);
+  });
+  if (d.keys) {
+    stage.addEventListener('keydown', e => {
+      if (e.target.tagName === 'INPUT' && e.key.length === 1) return; // กำลังพิมพ์ในช่องค้นหา
+      if (d.keys(d.st, e, G.docs) !== false) render(d);
+    });
+  }
+}
+G.setData = key => {
+  G.dsKey = key;
+  G.docs = DATASETS[key].docs;
+  G.designs.forEach(d => { d.st = d.init(); render(d); });
+  document.querySelectorAll('#g-data button').forEach(b => b.classList.toggle('on', b.dataset.k === key));
+};
+G.boot = () => {
+  const list = document.getElementById('g-list');
+  G.designs.forEach(d => {
+    const sec = document.createElement('section');
+    sec.className = 'g-card';
+    sec.id = d.id === 0 ? 'd0' : 'd' + d.id;
+    sec.innerHTML = `<header class="g-cardhead"><span class="g-num${d.id === 0 ? ' ref' : ''}">${d.id === 0 ? 'เดิม' : d.id}</span>
+      <div class="g-ttl"><div class="g-name">${d.name}<small>${d.en}</small></div><div class="g-desc">${d.desc}</div></div>
+      <div class="g-tags"><span class="g-tag">กรองสาขา: <b>${d.nav}</b></span><span class="g-tag">ดูสินค้า: <b>${d.detail}</b></span></div></header>
+      <div class="stage d${d.id}"></div>`;
+    list.appendChild(sec);
+    d.stage = sec.querySelector('.stage');
+    bind(d);
+  });
+  document.getElementById('g-data').innerHTML = Object.entries(DATASETS).map(([k, v]) => `<button data-k="${k}">${v.label}<small>${v.sub}</small></button>`).join('');
+  document.getElementById('g-data').addEventListener('click', e => { const b = e.target.closest('button'); if (b) G.setData(b.dataset.k); });
+  document.getElementById('g-jump').innerHTML = G.designs.filter(d => d.id > 0).map(d => `<a href="#d${d.id}" title="${d.name}">${d.id}</a>`).join('');
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    G.designs.forEach(d => {
+      let hit = false;
+      (d.esc || []).forEach(k => { if (d.st[k]) { d.st[k] = null; hit = true; } });
+      if (hit) render(d);
+    });
+  });
+  G.setData('many');
+};
+</script>
+
+<!-- ═══ แบบที่ 0 · ของเดิม (อ้างอิง — คัดลอกจากหน้า Pending ปัจจุบัน) ═══ -->
+<style>
+.d0 { padding: 34px 28px 40px; }
+.d0 .in { max-width: 800px; }
+.d0 .sb { max-width: 800px; margin-bottom: 18px; border-radius: 12px; }
+.d0 .sb input { font-size: 15px; font-family: 'Outfit', 'Noto Sans Thai', sans-serif; }
+.d0 .tabs { display: inline-flex; gap: 2px; align-items: center; background: #e8eff7; border-radius: 999px; padding: 4px; margin: 0 0 14px; }
+.d0 .tab { padding: .5rem 1.4rem; border-radius: 999px; color: #5b7fa3; font: 600 .86rem 'Outfit', 'Noto Sans Thai', sans-serif; display: flex; align-items: center; gap: .45rem; transition: all .2s; }
+.d0 .tab:hover { color: #2d6cad; }
+.d0 .tab.on { background: #fff; color: #2d6cad; box-shadow: 0 2px 8px rgba(45, 108, 173, .2); }
+.d0 .tab b { background: rgba(45, 108, 173, .12); border-radius: 99px; font-size: .72rem; padding: 1px 7px; font-weight: 700; }
+.d0 .wrap { background: #fff; border-radius: 16px; box-shadow: 0 4px 20px rgba(0, 0, 0, .08); overflow: hidden; }
+.d0 .hd { padding: 14px 20px; background: linear-gradient(135deg, #7bb5e4, #f2f9ff); color: #fff; font: 500 13px 'Mitr', 'Noto Sans Thai', sans-serif; }
+.d0 table { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 11px; }
+.d0 th { background: #f7f7f7; color: #004896; padding: 5px 8px; text-align: left; font: 400 13px 'Mitr', 'Noto Sans Thai', sans-serif; border-right: 1px solid rgb(217 212 231 / 46%); }
+.d0 th:last-child { border-right: 0; }
+.d0 td { padding: 8px 14px; border-bottom: 1px solid #f0ece5; font: 12px 'Outfit', 'Noto Sans Thai', sans-serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.d0 tbody tr { cursor: pointer; }
+.d0 tbody tr:hover td { background: #eaf3fc; }
+.d0 .c1 { width: 22%; } .d0 .c2 { width: 14%; } .d0 .c3 { width: 28%; } .d0 .c4 { width: 10%; text-align: center; } .d0 .c5 { width: 12%; text-align: center; } .d0 .c6 { width: 14%; text-align: center; }
+.d0 .vb { border: 1px solid #b8d3ee; background: #fff; color: #2d6cad; border-radius: 999px; padding: 3px 10px; font-weight: 600; transition: all .15s; }
+.d0 .vb:hover { background: #2d6cad; border-color: #2d6cad; color: #fff; }
+.d0 .wrap { overflow-x: auto; } .d0 table { min-width: 700px; }
+@media (max-width: 560px) { .d0 { padding: 18px 12px 24px; } .d0 .tabs { flex-wrap: wrap; border-radius: 22px; } }
+.d0 .em { padding: 2rem 1rem; }
+.d0 .em-i { display: none; } .d0 .em-t { font: 400 13px 'Noto Sans Thai', sans-serif; color: #5a7fa6; } .d0 .em-s { display: none; }
+</style>
+<script>
+G.add({
+  id: 0, name: 'หน้าปัจจุบัน', en: 'อ้างอิง', desc: 'แท็บพิลล์ + ตารางหัวไล่เฉด + ปุ่ม "ดูสินค้า" (ตามภาพที่ส่งมา) — ไว้เทียบกับ 20 แบบด้านล่าง', nav: 'แท็บพิลล์', detail: 'popup',
+  esc: ['open'],
+  init: () => ({ tab: ALL, q: '', open: null }),
+  view(st, docs, G) {
+    const vis = G.vis(docs, st), kind = G.emptyKind(docs, vis);
+    const modal = st.open ? G.modal(G.find(docs, st.open)) : '';
+    return `<div class="in">${G.searchBox(st)}
+      <div class="tabs">${G.tabs(docs).map(t => `<button class="tab${st.tab === t.key ? ' on' : ''}" data-act="tab" data-v="${t.key}">${t.key}<b>${t.count}</b></button>`).join('')}</div>
+      <div class="wrap"><div class="hd">เอกสารที่ยังไม่กด "ส่ง" ใน PROMAXX — ${vis.length} เอกสาร</div>
+      <table><thead><tr><th class="c1">เลขที่เอกสาร</th><th class="c2">วันที่</th><th class="c3">ต้นทาง → ปลายทาง</th><th class="c4">รายการ</th><th class="c5">ค้าง</th><th class="c6"></th></tr></thead>
+      <tbody>${kind ? `<tr><td colspan="6">${G.empty(kind)}</td></tr>` : vis.map(d => `<tr data-act="open" data-id="${d.id}"><td class="c1">${d.no}</td><td class="c2">${G.fmtDate(d.date)}</td><td class="c3">${d.from} → ${d.to}</td><td class="c4">${d.n}</td><td class="c5">${G.dy(d)}</td><td class="c6"><button class="vb" data-act="open" data-id="${d.id}">ดูสินค้า</button></td></tr>`).join('')}</tbody></table></div></div>${modal}`;
+  },
+});
+</script>
+
+<!-- ═══ แบบที่ 1 · การ์ดเอกสาร (Card Grid) ═══ -->
+<style>
+.d1 { background: #f3f8fe; padding: 26px 28px 32px; }
+.d1 .top { display: flex; gap: 14px 18px; align-items: center; flex-wrap: wrap; margin-bottom: 20px; }
+.d1 .top .sb { flex: 1 1 320px; max-width: 460px; }
+.d1 .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.d1 .chip { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border: 1.5px solid #cadcee; background: #fff; border-radius: 11px; color: #4a6d91; font-weight: 600; font-size: 13px; transition: all .15s; }
+.d1 .chip:hover { border-color: #4891db; color: #2d6cad; }
+.d1 .chip b { background: #eaf3fc; color: #2d6cad; border-radius: 99px; padding: 0 8px; font: 700 11.5px/19px 'Outfit', sans-serif; }
+.d1 .chip.on { background: linear-gradient(135deg, #4891db, #2d6cad); border-color: #2d6cad; color: #fff; box-shadow: 0 5px 14px rgba(45, 108, 173, .28); }
+.d1 .chip.on b { background: rgba(255, 255, 255, .24); color: #fff; }
+.d1 .head { display: flex; align-items: baseline; gap: 10px; margin: 0 2px 14px; flex-wrap: wrap; }
+.d1 .head h3 { font-size: 17px; color: #1f3f66; }
+.d1 .head span { color: #6d88a6; font-size: 13px; }
+.d1 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(262px, 1fr)); gap: 16px; }
+.d1 .cd { position: relative; background: #fff; border: 1px solid #dde9f5; border-radius: 16px; padding: 16px 16px 14px 21px; box-shadow: 0 2px 10px rgba(45, 108, 173, .07); transition: transform .16s, box-shadow .16s, border-color .16s; overflow: hidden; }
+.d1 .cd::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 6px; background: var(--tc); }
+.d1 .cd:hover { transform: translateY(-3px); box-shadow: 0 12px 26px rgba(45, 108, 173, .16); border-color: #b8d3ee; }
+.d1 .cd-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 12px; }
+.d1 .cd-top .no { font-size: 15px; color: #1f3f66; }
+.d1 .rt { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; font-size: 14px; }
+.d1 .rt i { color: #98b3cf; display: grid; }
+.d1 .meta { display: flex; gap: 14px; color: #5a7fa6; font-size: 12.5px; margin-bottom: 14px; }
+.d1 .meta span { display: inline-flex; align-items: center; gap: 5px; }
+.d1 .go { width: 100%; padding: 8px; border-radius: 10px; border: 1.5px solid #b8d3ee; color: #2d6cad; font-weight: 700; font-size: 13px; transition: all .15s; }
+.d1 .cd:hover .go { background: #2d6cad; border-color: #2d6cad; color: #fff; }
+</style>
+<script>
+G.add({
+  id: 1, name: 'การ์ดเอกสาร', en: 'Card Grid', desc: 'การ์ดต่อ 1 เอกสาร — แถบสีซ้ายบอกความเร่งด่วน · เส้นทางเป็นป้ายสีสาขา · แท็บเป็นชิปเหลี่ยมมนมีตัวเลข', nav: 'ชิปมีตัวเลข', detail: 'popup กลางจอ',
+  esc: ['open'],
+  init: () => ({ tab: ALL, q: '', open: null }),
+  view(st, docs, G) {
+    const vis = G.vis(docs, st), kind = G.emptyKind(docs, vis);
+    return `<div class="top">${G.searchBox(st)}<div class="chips">${G.tabs(docs).map(t => `<button class="chip${st.tab === t.key ? ' on' : ''}" data-act="tab" data-v="${t.key}">${t.key}<b>${t.count}</b></button>`).join('')}</div></div>
+    <div class="head"><h3>เอกสารที่ยังไม่กด "ส่ง" ใน PROMAXX</h3><span>${vis.length} เอกสาร · เก่าสุดอยู่ก่อน</span></div>
+    ${kind ? G.empty(kind) : `<div class="grid">${vis.map(d => `<article class="cd t-${G.tone(G.back(d))}" data-act="open" data-id="${d.id}">
+      <div class="cd-top"><span class="no">${d.no}</span>${G.dy(d)}</div>
+      <div class="rt">${G.bc(d.from)}<i>${G.ico.arrow}</i>${G.bc(d.to)}</div>
+      <div class="meta"><span>${G.ico.box} ${d.n} รายการ</span><span>${G.ico.cal} ${G.fmtDate(d.date)}</span></div>
+      <button class="go" data-act="open" data-id="${d.id}">ดูสินค้า</button></article>`).join('')}</div>`}
+    ${st.open ? G.modal(G.find(docs, st.open)) : ''}`;
+  },
+});
+</script>
+
+<!-- ═══ แบบที่ 2 · บอร์ดตามอายุที่ค้าง (Kanban) ═══ -->
+<style>
+.d2 { background: #eef3f9; padding: 24px 24px 28px; }
+.d2 .bar { display: flex; gap: 12px 18px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
+.d2 .bar .sb { flex: 1 1 280px; max-width: 420px; }
+.d2 .fl { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; color: #5a7fa6; font-size: 12.5px; }
+.d2 .fb { padding: 5px 12px; border-radius: 8px; background: #fff; border: 1px solid #cfe0f2; color: #4a6d91; font-weight: 600; font-size: 12.5px; transition: all .13s; }
+.d2 .fb:hover { border-color: #4891db; }
+.d2 .fb.on { background: #1f3f66; border-color: #1f3f66; color: #fff; }
+.d2 .fb b { margin-left: 5px; opacity: .7; font-weight: 600; }
+.d2 .board { display: grid; grid-template-columns: repeat(4, minmax(215px, 1fr)); gap: 14px; align-items: start; }
+.d2 .col { background: #e1e9f3; border-radius: 14px; padding: 10px 10px 12px; min-height: 130px; border-top: 4px solid var(--tc); }
+.d2 .ch { display: flex; align-items: center; gap: 8px; padding: 4px 4px 10px; }
+.d2 .ch h3 { font-size: 14px; color: #1f3f66; line-height: 1.25; }
+.d2 .ch small { display: block; color: #6d88a6; font-size: 11px; font-weight: 400; }
+.d2 .ch b { margin-left: auto; min-width: 26px; height: 26px; border-radius: 13px; display: grid; place-items: center; background: #fff; color: var(--tt); font: 800 12.5px 'Outfit', sans-serif; }
+.d2 .cards { display: flex; flex-direction: column; gap: 9px; max-height: 440px; overflow-y: auto; padding: 2px; }
+.d2 .kc { background: #fff; border-radius: 11px; padding: 11px 12px; box-shadow: 0 1px 4px rgba(31, 63, 102, .12); transition: transform .13s, box-shadow .13s; }
+.d2 .kc:hover { transform: translateY(-2px); box-shadow: 0 7px 16px rgba(31, 63, 102, .18); }
+.d2 .kc .no { font-size: 13.5px; color: #1f3f66; display: block; margin-bottom: 7px; }
+.d2 .kc .rt { display: flex; align-items: center; gap: 6px; font-size: 12.5px; margin-bottom: 9px; }
+.d2 .kc .rt em { font-style: normal; color: #98b3cf; }
+.d2 .kc .ft { display: flex; justify-content: space-between; font-size: 11.5px; color: #6d88a6; }
+.d2 .none { border: 2px dashed #c3d4e8; border-radius: 10px; padding: 20px 8px; text-align: center; color: #8aa4bf; font-size: 12px; }
+@media (max-width: 1000px) { .d2 .board { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .d2 .board { grid-template-columns: 1fr; } }
+</style>
+<script>
+(() => {
+  const COLS = [
+    { title: 'วันนี้', sub: 'ยังไม่เกิน 1 วัน', t: 'ok', test: n => n < 1 },
+    { title: 'ค้าง 1–2 วัน', sub: 'ควรกดส่งแล้ว', t: 'warn', test: n => n >= 1 && n < 3 },
+    { title: 'ค้าง 3–6 วัน', sub: 'เกินกำหนด', t: 'alert', test: n => n >= 3 && n < 7 },
+    { title: 'ค้างนาน 7 วันขึ้นไป', sub: 'ต้องตามด่วน', t: 'alert', test: n => n >= 7 },
+  ];
+  G.add({
+    id: 2, name: 'บอร์ดตามอายุที่ค้าง', en: 'Kanban', desc: 'แบ่งเป็น 4 คอลัมน์ตามจำนวนวันที่ค้าง — เห็นทันทีว่ากองไหนต้องรีบ · คอลัมน์ขวา = ด่วนสุด', nav: 'ปุ่มเล็กมีตัวเลข', detail: 'popup กลางจอ',
+    esc: ['open'],
+    init: () => ({ tab: ALL, q: '', open: null }),
+    view(st, docs, G) {
+      const vis = G.vis(docs, st), kind = G.emptyKind(docs, vis);
+      const body = kind ? G.empty(kind) : `<div class="board">${COLS.map(c => {
+        const list = vis.filter(d => c.test(G.back(d)));
+        return `<section class="col t-${c.t}"><div class="ch"><div><h3>${c.title}</h3><small>${c.sub}</small></div><b>${list.length}</b></div>
+          <div class="cards" data-scroll="c${c.title}">${list.length ? list.map(d => `<article class="kc" data-act="open" data-id="${d.id}"><span class="no">${d.no}</span>
+          <div class="rt">${G.bc(d.from)}<em>→</em>${G.bc(d.to)}</div><div class="ft"><span>${G.ico.box} ${d.n} รายการ</span><span>${G.fmtDate(d.date)}</span></div></article>`).join('') : '<div class="none">— ไม่มี —</div>'}</div></section>`;
+      }).join('')}</div>`;
+      return `<div class="bar">${G.searchBox(st)}<div class="fl">ต้นทาง:${G.tabs(docs).map(t => `<button class="fb${st.tab === t.key ? ' on' : ''}" data-act="tab" data-v="${t.key}">${t.key}<b>${t.count}</b></button>`).join('')}</div></div>${body}${st.open ? G.modal(G.find(docs, st.open)) : ''}`;
+    },
+  });
+})();
+</script>
+
+<!-- ═══ แบบที่ 3 · ไทม์ไลน์ตามวันที่ (Timeline) ═══ -->
+<style>
+.d3 { background: #fff; padding: 26px 34px 36px; }
+.d3 .top { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px 20px; flex-wrap: wrap; border-bottom: 1px solid #e1e9f2; margin-bottom: 24px; }
+.d3 .ut { display: flex; gap: 2px; flex-wrap: wrap; }
+.d3 .u { padding: 10px 14px; color: #8aa0b8; font-weight: 600; font-size: 13.5px; border-bottom: 3px solid transparent; margin-bottom: -1px; transition: color .13s; }
+.d3 .u:hover { color: #2d6cad; }
+.d3 .u.on { color: #1f3f66; border-bottom-color: #4891db; }
+.d3 .u sup { font: 700 10.5px 'Outfit', sans-serif; color: #8aa0b8; margin-left: 3px; }
+.d3 .sbw { width: 300px; max-width: 100%; margin-bottom: 8px; }
+.d3 .sb { border-radius: 999px; border-width: 1px; background: #f6f9fd; }
+.d3 .line { position: relative; margin-left: 10px; padding-left: 40px; border-left: 2px solid #d6e4f3; }
+.d3 .g { position: relative; padding-bottom: 26px; }
+.d3 .g:last-child { padding-bottom: 4px; }
+.d3 .dot { position: absolute; left: -51px; top: 1px; width: 20px; height: 20px; border-radius: 50%; background: #fff; border: 4px solid var(--tc); box-shadow: 0 0 0 4px #fff; }
+.d3 .g header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+.d3 .g header b { font: 700 16px 'Outfit', sans-serif; color: #1f3f66; }
+.d3 .g header em { font-style: normal; color: #8aa0b8; font-size: 12.5px; }
+.d3 .r { display: grid; grid-template-columns: 160px minmax(150px, 1fr) 100px auto; gap: 14px; align-items: center; padding: 9px 12px; border-radius: 10px; transition: background .13s; }
+.d3 .r:hover { background: #f1f7fe; }
+.d3 .r .no { color: #1f3f66; font-size: 14px; }
+.d3 .r .rt { display: flex; align-items: center; gap: 7px; font-size: 13px; flex-wrap: wrap; }
+.d3 .r .rt i { color: #98b3cf; display: grid; }
+.d3 .r .ct { color: #6d88a6; font-size: 12.5px; white-space: nowrap; }
+.d3 .r .vw { color: #2d6cad; font-weight: 600; font-size: 13px; white-space: nowrap; }
+.d3 .r:hover .vw { text-decoration: underline; }
+.d3 .dr-ov { position: fixed; inset: 0; z-index: 1000; background: rgba(15, 30, 50, .45); display: flex; justify-content: flex-end; animation: gmFade .15s; }
+.d3 .dr { width: min(440px, 92vw); height: 100%; background: #fff; display: flex; flex-direction: column; box-shadow: -18px 0 50px rgba(0, 0, 0, .25); animation: d3In .22s ease-out; }
+@keyframes d3In { from { transform: translateX(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+.d3 .dr-h { padding: 22px 24px 16px; border-bottom: 1px solid #e3edf8; position: relative; }
+.d3 .dr-h .k { color: #8aa0b8; font-size: 12px; letter-spacing: .4px; }
+.d3 .dr-h h2 { font: 700 21px 'Outfit', sans-serif; color: #1f3f66; margin: 2px 0 10px; }
+.d3 .dr-h .meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 13px; color: #5a7fa6; }
+.d3 .dr-h .x { position: absolute; right: 14px; top: 14px; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: #6b7c8f; }
+.d3 .dr-h .x:hover { background: #eef3f9; }
+.d3 .dr-b { flex: 1; overflow: auto; padding: 4px 24px 20px; }
+.d3 .li { display: grid; grid-template-columns: 1fr auto; gap: 1px 14px; padding: 11px 0; border-bottom: 1px solid #eef3f9; align-items: center; }
+.d3 .li small { color: #8aa0b8; font: 12px 'Outfit', sans-serif; }
+.d3 .li span { font-size: 13.5px; }
+.d3 .li b { font: 700 16px 'Outfit', sans-serif; color: #2d6cad; grid-row: span 2; }
+.d3 .dr-f { padding: 12px 24px; border-top: 1px solid #e3edf8; color: #5a7fa6; font-size: 13px; display: flex; justify-content: space-between; }
+@media (max-width: 640px) { .d3 { padding: 20px 16px 28px; } .d3 .line { padding-left: 30px; } .d3 .dot { left: -41px; } .d3 .r { grid-template-columns: 1fr auto; gap: 4px 10px; } .d3 .r .rt { grid-column: 1 / -1; grid-row: 2; } .d3 .r .ct { text-align: right; } }
+</style>
+<script>
+G.add({
+  id: 3, name: 'ไทม์ไลน์ตามวันที่', en: 'Timeline', desc: 'เรียงตามวันที่ออกเอกสาร มีเส้นแกนกลางและจุดสีตามความเร่งด่วน — อ่านเหมือนบันทึกเหตุการณ์ · เก่าสุดอยู่บน', nav: 'แท็บขีดเส้นใต้', detail: 'ลิ้นชักด้านขวา',
+  esc: ['open'],
+  init: () => ({ tab: ALL, q: '', open: null }),
+  view(st, docs, G) {
+    const vis = G.vis(docs, st), kind = G.emptyKind(docs, vis);
+    const days = [...new Set(vis.map(d => d.date))].sort();
+    const dr = st.open ? G.find(docs, st.open) : null;
+    return `<div class="top"><div class="ut">${G.tabs(docs).map(t => `<button class="u${st.tab === t.key ? ' on' : ''}" data-act="tab" data-v="${t.key}">${t.key}<sup>${t.count}</sup></button>`).join('')}</div><div class="sbw">${G.searchBox(st, 'ค้นหาเลขที่เอกสาร รหัส ชื่อสินค้า...')}</div></div>
+    ${kind ? G.empty(kind) : `<div class="line">${days.map(day => {
+      const list = vis.filter(d => d.date === day), n = G.back(list[0]);
+      return `<section class="g t-${G.tone(n)}"><span class="dot"></span><header><b>${G.fmtDate(day)}</b>${G.dy(list[0])}<em>${list.length} เอกสาร</em></header>
+        ${list.map(d => `<div class="r" data-act="open" data-id="${d.id}"><span class="no">${d.no}</span><span class="rt">${G.bc(d.from)}<i>${G.ico.arrow}</i>${G.bc(d.to)}</span><span class="ct">${d.n} รายการ</span><span class="vw">ดูสินค้า ›</span></div>`).join('')}</section>`;
+    }).join('')}</div>`}
+    ${dr ? `<div class="dr-ov"><aside class="dr" role="dialog" aria-modal="true"><div class="dr-h"><div class="k">เอกสาร</div><h2>${dr.no}</h2><div class="meta">${G.fmtDate(dr.date)} · ${G.bc(dr.from)} → ${G.bc(dr.to)} · ${G.dy(dr)}</div><button class="x" data-act="close" aria-label="ปิด">${G.ico.x}</button></div>
+      <div class="dr-b">${dr.items.map(i => `<div class="li"><span>${i.name}</span><b>×${G.qty(i.qty)}</b><small>#${i.line} · ${i.code}</small></div>`).join('')}</div><div class="dr-f"><span>รวม ${dr.n} รายการ</span><span>จำนวนรวม ${G.qty(G.total(dr))}</span></div></aside></div>` : ''}`;
+  },
+});
+</script>
+
+<!-- ═══ แบบที่ 4 · แผนผังเส้นทางโอน (Route Map · ธีมมืดแบบพิมพ์เขียว) ═══ -->
+<style>
+.d4 { background: radial-gradient(1100px 420px at 15% -8%, #1a3b68 0%, transparent 62%), #0c1f3a; color: #d7e6fb; padding: 24px 28px 30px; }
+.d4 .top { display: flex; gap: 12px 18px; align-items: center; flex-wrap: wrap; }
+.d4 .sb { background: rgba(255, 255, 255, .07); border-color: rgba(168, 204, 245, .28); color: #8db3df; max-width: 430px; flex: 1 1 300px; }
+.d4 .sb input { color: #e6f1ff; }
+.d4 .sb input::placeholder { color: #7f9fc7; }
+.d4 .sb:focus-within { border-color: #6fb5ff; box-shadow: 0 0 0 3px rgba(111, 181, 255, .2); }
+.d4 .hint { color: #8db3df; font-size: 12.5px; }
+.d4 .map { width: 100%; max-width: 940px; height: auto; display: block; margin: 6px auto 4px; overflow: visible; }
+.d4 .map text { font-family: 'Outfit', 'Noto Sans Thai', sans-serif; }
+.d4 .edge { fill: none; transition: opacity .15s; }
+.d4 .badge { cursor: pointer; }
+.d4 .badge circle { transition: r .15s; }
+.d4 .badge:hover circle.bg { r: 18; }
+.d4 .node { cursor: pointer; }
+.d4 .node:hover .core { fill: #1a3f73; }
+.d4 .lg { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; font-size: 12px; color: #8db3df; margin-bottom: 14px; }
+.d4 .lg i { display: inline-block; width: 18px; height: 3px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
+.d4 .plist { background: rgba(255, 255, 255, .05); border: 1px solid rgba(168, 204, 245, .22); border-radius: 14px; overflow: hidden; }
+.d4 .ph { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 11px 16px; background: rgba(255, 255, 255, .06); font-weight: 700; font-size: 13.5px; color: #eaf3ff; }
+.d4 .ph .clr { color: #8fc3ff; font-weight: 600; font-size: 12.5px; }
+.d4 .ph .clr:hover { text-decoration: underline; }
+.d4 .rows { max-height: 300px; overflow: auto; }
+.d4 .r { display: grid; grid-template-columns: 150px minmax(190px, 1fr) 96px 96px 78px auto; gap: 12px; align-items: center; padding: 9px 16px; border-top: 1px solid rgba(168, 204, 245, .13); font-size: 13px; transition: background .12s; }
+.d4 .r:hover { background: rgba(111, 181, 255, .1); }
+.d4 .r .no { color: #fff; }
+.d4 .r .rt { display: flex; gap: 7px; align-items: center; color: #6f93c0; }
+.d4 .r .bc { background: color-mix(in srgb, var(--c) 22%, #0c1f3a); }
+.d4 .r .mut { color: #8db3df; font-size: 12.5px; }
+.d4 .r .dy { background: color-mix(in srgb, var(--tc) 22%, #0c1f3a); color: color-mix(in srgb, var(--tc) 60%, #fff); }
+.d4 .vb { border: 1px solid rgba(143, 195, 255, .5); color: #9fd0ff; border-radius: 999px; padding: 3px 12px; font-weight: 600; font-size: 12.5px; transition: all .13s; }
+.d4 .vb:hover { background: #6fb5ff; color: #0c1f3a; }
+.d4 .em { color: #8db3df; padding: 30px 20px; } .d4 .em-t { color: #d7e6fb; }
+.d4 .gm { background: #0f2747; color: #dce9fb; border: 1px solid #2a4a78; }
+.d4 .gm-h { border-bottom-color: #23406a; } .d4 .gm-h p { color: #8db3df; } .d4 .gm-x { color: #b8d3ee; } .d4 .gm-x:hover { background: #1b3b66; }
+.d4 .gm .it th { background: #163459; color: #9fd0ff; } .d4 .gm .it td { border-bottom-color: #1d3a63; } .d4 .gm-f { border-top-color: #23406a; color: #8db3df; }
+.d4 .gm .bc { background: color-mix(in srgb, var(--c) 24%, #0f2747); }
+.d4 .gm .dy { background: color-mix(in srgb, var(--tc) 22%, #0f2747); color: color-mix(in srgb, var(--tc) 60%, #fff); }
+@media (max-width: 760px) { .d4 { padding: 18px 14px 24px; } .d4 .r { grid-template-columns: 1fr auto; gap: 4px 10px; } .d4 .r .rt, .d4 .r .mut { grid-column: 1 / -1; } .d4 .r .vb { grid-column: 2; grid-row: 1; } .d4 .r .no { grid-column: 1; } }
+</style>
+<script>
+(() => {
+  const POS = { 'คลังสินค้า': [450, 185], SRC: [110, 185], KKL: [800, 70], SSS: [800, 300] };
+  const RAD = { 'คลังสินค้า': 58, SRC: 44, KKL: 44, SSS: 44 };
+  const DC = { 'คลังสินค้า': '#6fb5ff', SRC: '#4fd8c2', KKL: '#a99bff', SSS: '#ff8fd0' };
+  const TC = { ok: '#5cb0ff', warn: '#ffb84d', alert: '#ff6b6b', none: '#3ddc97' };
+  const SPOKES = ['SRC', 'KKL', 'SSS'];
+  const edge = (from, to, off) => {
+    const [x1, y1] = POS[from], [x2, y2] = POS[to];
+    const dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy), ux = dx / L, uy = dy / L, nx = -uy, ny = ux;
+    const a = { x: x1 + ux * (RAD[from] + 5) + nx * off, y: y1 + uy * (RAD[from] + 5) + ny * off };
+    const b = { x: x2 - ux * (RAD[to] + 9) + nx * off, y: y2 - uy * (RAD[to] + 9) + ny * off };
+    return { a, b, m: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 } };
+  };
+  const worst = list => (list.length ? G.tone(Math.max(...list.map(G.back))) : 'none');
+  G.add({
+    id: 4, name: 'แผนผังเส้นทางโอน', en: 'Route Map', desc: 'เห็นภาพว่าเอกสารค้าง "เส้นทางไหน" — คลังสินค้าอยู่กลาง เส้นหนา/สีบอกจำนวนและความเร่งด่วน · กดตัวเลขบนเส้นเพื่อดูเอกสารของเส้นทางนั้น', nav: 'กดเส้นทาง/สาขาบนแผนผัง', detail: 'popup กลางจอ (ธีมมืด)',
+    esc: ['open'],
+    init: () => ({ q: '', route: null, node: null, open: null }),
+    act: {
+      route: (st, ds) => { st.route = st.route === ds.r ? null : ds.r; st.node = null; },
+      node: (st, ds) => { st.node = st.node === ds.n ? null : ds.n; st.route = null; },
+      clear: st => { st.route = null; st.node = null; },
+    },
+    view(st, docs, G) {
+      const base = docs.filter(d => G.match(d, st.q));
+      const routeDocs = (f, t) => base.filter(d => d.from === f && d.to === t);
+      let shown = base;
+      let title = `เอกสารทั้งหมด (${base.length})`;
+      if (st.route) { const [f, t] = st.route.split('>'); shown = routeDocs(f, t); title = `เส้นทาง ${f} → ${t} (${shown.length})`; }
+      else if (st.node) { shown = base.filter(d => d.from === st.node || d.to === st.node); title = `เอกสารที่เกี่ยวกับ ${st.node} (${shown.length})`; }
+      const kind = G.emptyKind(docs, shown);
+      let edges = '', badges = '';
+      SPOKES.forEach(s => {
+        [['คลังสินค้า', s, 14], [s, 'คลังสินค้า', 14]].forEach(([f, t, off]) => {
+          const list = routeDocs(f, t), n = list.length, tone = worst(list), color = TC[tone === 'none' ? 'ok' : tone];
+          const e = edge(f, t, off), key = f + '>' + t, on = st.route === key;
+          edges += `<path class="edge" d="M${e.a.x.toFixed(1)} ${e.a.y.toFixed(1)} L${e.b.x.toFixed(1)} ${e.b.y.toFixed(1)}" stroke="${n ? color : '#5d7ea8'}" stroke-width="${n ? 2.5 + Math.min(n, 6) * 0.6 : 1.5}" ${n ? '' : 'stroke-dasharray="5 6"'} opacity="${n ? (on || !st.route ? 1 : .35) : .45}" marker-end="url(#d4m-${n ? tone : 'none'})"/>`;
+          badges += n
+            ? `<g class="badge" data-act="route" data-r="${key}"><circle class="bg" cx="${e.m.x.toFixed(1)}" cy="${e.m.y.toFixed(1)}" r="${on ? 18 : 15}" fill="#0c1f3a" stroke="${color}" stroke-width="${on ? 3.5 : 2.5}"/><text x="${e.m.x.toFixed(1)}" y="${(e.m.y + 5).toFixed(1)}" text-anchor="middle" font-size="14" font-weight="800" fill="#fff">${n}</text></g>`
+            : `<g opacity=".5"><circle cx="${e.m.x.toFixed(1)}" cy="${e.m.y.toFixed(1)}" r="11" fill="#0c1f3a" stroke="#5d7ea8" stroke-width="1.5"/><text x="${e.m.x.toFixed(1)}" y="${(e.m.y + 4).toFixed(1)}" text-anchor="middle" font-size="11" fill="#8db3df">0</text></g>`;
+        });
+      });
+      const nodes = BRANCHES.map(b => {
+        const [x, y] = POS[b], r = RAD[b], from = base.filter(d => d.from === b), tone = worst(from), ring = TC[tone], on = st.node === b;
+        return `<g class="node" data-act="node" data-n="${b}">
+          <circle cx="${x}" cy="${y}" r="${r + 9}" fill="none" stroke="${ring}" stroke-width="${on ? 4 : 2.5}" opacity="${on ? 1 : .8}" ${tone === 'none' ? 'stroke-dasharray="3 5"' : ''}/>
+          <circle class="core" cx="${x}" cy="${y}" r="${r}" fill="#12305a" stroke="${DC[b]}" stroke-width="2.5"/>
+          <text x="${x}" y="${y + 6}" text-anchor="middle" font-size="${b === 'คลังสินค้า' ? 22 : 19}" font-weight="800" fill="${DC[b]}">${G.CODE[b]}</text>
+          <text x="${x}" y="${y + r + 30}" text-anchor="middle" font-size="12.5" fill="#d7e6fb" font-family="'Noto Sans Thai'">${b === 'คลังสินค้า' ? 'คลังสินค้า' : 'สาขา ' + b}</text>
+          <text x="${x}" y="${y + r + 47}" text-anchor="middle" font-size="12" font-weight="700" fill="${ring}" font-family="'Noto Sans Thai'">${from.length ? 'ค้างที่นี่ ' + from.length : 'เคลียร์แล้ว ✓'}</text></g>`;
+      }).join('');
+      const marker = (id, c) => `<marker id="d4m-${id}" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="13" markerHeight="13" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="${c}"/></marker>`;
+      return `<div class="top">${G.searchBox(st)}<span class="hint">กดตัวเลขบนเส้น = เลือกเส้นทาง · กดวงกลมสาขา = ดูทุกเอกสารที่เกี่ยวกับสาขานั้น</span></div>
+        <svg class="map" viewBox="0 0 910 390" role="img" aria-label="แผนผังเส้นทางโอนสินค้า"><defs>${marker('ok', TC.ok)}${marker('warn', TC.warn)}${marker('alert', TC.alert)}${marker('none', '#5d7ea8')}</defs>${edges}${badges}${nodes}</svg>
+        <div class="lg"><span><i style="background:${TC.ok}"></i>ไม่เกิน 1 วัน</span><span><i style="background:${TC.warn}"></i>ค้าง 1–2 วัน</span><span><i style="background:${TC.alert}"></i>ค้าง 3 วันขึ้นไป</span><span><i style="background:#5d7ea8"></i>ไม่มีเอกสารค้าง</span></div>
+        <div class="plist"><div class="ph"><span>${title}</span>${st.route || st.node ? '<button class="clr" data-act="clear">ล้างตัวกรอง ✕</button>' : ''}</div>
+        ${kind ? G.empty(kind) : `<div class="rows" data-scroll="rows">${shown.map(d => `<div class="r t-${G.tone(G.back(d))}"><span class="no">${d.no}</span><span class="rt">${G.bc(d.from)}→${G.bc(d.to)}</span><span class="mut">${G.fmtDate(d.date)}</span><span class="mut">${d.n} รายการ</span>${G.dy(d)}<button class="vb" data-act="open" data-id="${d.id}">ดูสินค้า</button></div>`).join('')}</div>`}</div>
+        ${st.open ? G.modal(G.find(docs, st.open)) : ''}`;
+    },
+  });
+})();
+</script>
+
+<!-- ═══ แบบที่ 5 · รายการซ้าย + รายละเอียดขวา (Master–Detail) ═══ -->
+<style>
+.d5 { padding: 22px 24px 26px; background: #eaf0f7; }
+.d5 .shell { display: grid; grid-template-columns: 330px minmax(0, 1fr); height: 600px; min-width: 760px; background: #fff; border: 1px solid #cfdbea; border-radius: 14px; overflow: hidden; box-shadow: 0 8px 28px rgba(31, 63, 102, .12); }
+.d5 .side { border-right: 1px solid #dde7f2; display: flex; flex-direction: column; background: #f6f9fd; min-height: 0; }
+.d5 .side-h { padding: 12px; border-bottom: 1px solid #e1e9f3; display: flex; flex-direction: column; gap: 10px; }
+.d5 .sb { border-radius: 9px; }
+.d5 .sb input { padding: 9px 0; font-size: 13px; }
+.d5 .seg { display: flex; background: #e3ebf5; border-radius: 8px; padding: 3px; gap: 2px; }
+.d5 .seg button { flex: 1; padding: 5px 0; border-radius: 6px; font-size: 12px; font-weight: 600; color: #5b7fa3; white-space: nowrap; }
+.d5 .seg button.on { background: #fff; color: #2d6cad; box-shadow: 0 1px 4px rgba(45, 108, 173, .25); }
+.d5 .seg button small { font: 700 10.5px 'Outfit', sans-serif; opacity: .7; margin-left: 4px; }
+.d5 .list { flex: 1; overflow: auto; }
+.d5 .li { display: grid; grid-template-columns: 5px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 0 14px 0 0; border-bottom: 1px solid #e4ecf5; transition: background .12s; }
+.d5 .li:hover { background: #edf4fc; }
+.d5 .li.on { background: #fff; box-shadow: inset -3px 0 0 #4891db; }
+.d5 .li .bar { align-self: stretch; background: var(--tc); }
+.d5 .li .mid { padding: 11px 0; min-width: 0; }
+.d5 .li .no { display: block; font-size: 14px; color: #1f3f66; }
+.d5 .li .sub { font-size: 12px; color: #6d88a6; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.d5 .li .rt { text-align: right; display: flex; flex-direction: column; gap: 3px; align-items: flex-end; }
+.d5 .li .rt small { color: #8aa0b8; font-size: 11px; }
+.d5 .pane { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.d5 .ph { padding: 20px 26px 16px; border-bottom: 1px solid #e3ebf4; }
+.d5 .ph .k { font-size: 11.5px; color: #8aa0b8; letter-spacing: .5px; }
+.d5 .ph h2 { font: 800 25px 'Outfit', sans-serif; color: #1f3f66; margin: 2px 0 14px; }
+.d5 .flow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+.d5 .fn { padding: 7px 16px; border: 2px solid var(--c); border-radius: 10px; background: color-mix(in srgb, var(--c) 9%, #fff); color: var(--c); font-weight: 800; }
+.d5 .fn small { display: block; font-weight: 500; font-size: 10.5px; opacity: .75; }
+.d5 .ln { flex: 0 0 56px; height: 2px; background: linear-gradient(90deg, #b8cfe8, #4891db); position: relative; }
+.d5 .ln::after { content: ''; position: absolute; right: -1px; top: -4px; border: 5px solid transparent; border-left: 8px solid #4891db; }
+.d5 .pills { display: flex; gap: 8px; flex-wrap: wrap; }
+.d5 .pill { padding: 4px 12px; background: #eef4fb; border-radius: 999px; color: #4a6d91; font-size: 12.5px; }
+.d5 .pill b { color: #1f3f66; }
+.d5 .tb { flex: 1; overflow: auto; padding: 0 26px; }
+.d5 .it th { background: #fff; border-bottom: 2px solid #d6e4f3; }
+.d5 .tf { padding: 11px 26px; border-top: 1px solid #e3ebf4; display: flex; justify-content: space-between; color: #5a7fa6; font-size: 13px; background: #f9fbfe; }
+.d5 .none { flex: 1; display: grid; place-items: center; color: #8aa0b8; }
+.d5 .em { padding: 28px 12px; } .d5 .em-i { font-size: 32px; }
+@media (max-width: 820px) { .d5 { padding: 14px; } .d5 .shell { grid-template-columns: 1fr; height: auto; min-width: 0; } .d5 .side { border-right: 0; border-bottom: 1px solid #dde7f2; } .d5 .list { max-height: 260px; } .d5 .tb { max-height: 360px; } }
+</style>
+<script>
+G.add({
+  id: 5, name: 'รายการซ้าย + รายละเอียดขวา', en: 'Master–Detail', desc: 'แบบกล่องจดหมาย — เลือกเอกสารทางซ้าย สินค้าในเอกสารขึ้นทางขวาทันที ไม่ต้องเปิด popup · เหมาะกับคนที่ต้องไล่เช็คทีละเอกสาร', nav: 'แท็บเล็กในแถบซ้าย', detail: 'แผงขวา (ไม่มี popup)',
+  init: () => ({ tab: ALL, q: '', sel: null }),
+  act: { sel: (st, ds) => { st.sel = +ds.id; } },
+  view(st, docs, G) {
+    const vis = G.vis(docs, st), kind = G.emptyKind(docs, vis);
+    const cur = vis.find(d => d.id === st.sel) || vis[0] || null;
+    const list = kind ? G.empty(kind) : vis.map(d => `<div class="li t-${G.tone(G.back(d))}${cur && cur.id === d.id ? ' on' : ''}" data-act="sel" data-id="${d.id}"><span class="bar"></span><div class="mid"><span class="no">${d.no}</span><div class="sub">${G.CODE[d.from]} → ${G.CODE[d.to]} · ${d.n} รายการ</div></div><div class="rt">${G.dy(d)}<small>${G.fmtDate(d.date).slice(0, 5)}</small></div></div>`).join('');
+    const pane = cur ? `<div class="ph"><div class="k">เอกสาร</div><h2>${cur.no}</h2><div class="flow"><span class="fn" style="--c:${G.BC[cur.from]}"><small>ต้นทาง</small>${cur.from}</span><span class="ln"></span><span class="fn" style="--c:${G.BC[cur.to]}"><small>ปลายทาง</small>${cur.to}</span></div>
+      <div class="pills"><span class="pill">วันที่ <b>${G.fmtDate(cur.date)}</b></span><span class="pill">ค้าง ${G.dy(cur)}</span><span class="pill"><b>${cur.n}</b> รายการ</span></div></div>
+      <div class="tb" data-scroll="tb">${G.itemsTable(cur)}</div><div class="tf"><span>รวม ${cur.n} รายการ</span><span>จำนวนรวม ${G.qty(G.total(cur))}</span></div>`
+      : `<div class="none">${kind === 'none' ? '🎉 ไม่มีเอกสารค้างส่ง — ทุกเอกสารถูกกด “ส่ง” แล้ว' : 'ไม่มีเอกสารให้แสดง'}</div>`;
+    return `<div class="shell"><aside class="side"><div class="side-h">${G.searchBox(st, 'ค้นหาเอกสาร / สินค้า...')}<div class="seg">${G.tabs(docs).map(t => `<button class="${st.tab === t.key ? 'on' : ''}" data-act="tab" data-v="${t.key}">${t.key === ALL ? 'ทั้งหมด' : t.key}<small>${t.count}</small></button>`).join('')}</div></div><div class="list" data-scroll="list">${list}</div></aside><section class="pane">${pane}</section></div>`;
+  },
+});
+</script>
+
+<!-- ═══ แบบที่ 6 · แถวพับ–ขยาย (Accordion · สไตล์ลิสต์แอปมือถือ) ═══ -->
+<style>
+.d6 { background: #f0f2f7; padding: 26px 28px 32px; }
+.d6 .card { max-width: 920px; margin: 0 auto; background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 1px 3px rgba(20, 40, 70, .1), 0 8px 24px rgba(20, 40, 70, .05); }
+.d6 .hd { padding: 18px 22px 0; display: flex; align-items: center; justify-content: space-between; gap: 10px 14px; flex-wrap: wrap; }
+.d6 .hd h2 { font-size: 18px; color: #1c2b3a; }
+.d6 .hd h2 small { font-weight: 400; color: #8a94a3; font-size: 13px; margin-left: 8px; }
+.d6 .lnk { color: #2d6cad; font-size: 13px; font-weight: 600; margin-left: 12px; }
+.d6 .lnk:hover { text-decoration: underline; }
+.d6 .srow { padding: 12px 22px 0; }
+.d6 .sb { background: #eef1f6; border-color: transparent; border-radius: 10px; }
+.d6 .ut { display: flex; gap: 24px; padding: 4px 22px 0; border-bottom: 1px solid #e6e9ef; margin-top: 8px; overflow-x: auto; }
+.d6 .u { padding: 10px 2px; color: #8a94a3; font-weight: 600; border-bottom: 2px solid transparent; margin-bottom: -1px; font-size: 13.5px; white-space: nowrap; transition: color .13s; }
+.d6 .u:hover { color: #2d6cad; }
+.d6 .u.on { color: #2d6cad; border-bottom-color: #2d6cad; }
+.d6 .u b { margin-left: 5px; padding: 0 7px; border-radius: 9px; background: #eef1f6; color: #6a7686; font: 700 11px/18px 'Outfit', sans-serif; display: inline-block; }
+.d6 .u.on b { background: #e1edfa; color: #2d6cad; }
+.d6 .row { border-bottom: 1px solid #eef0f4; }
+.d6 .row:last-child { border-bottom: 0; }
+.d6 .rh { display: grid; grid-template-columns: 20px minmax(140px, 1.1fr) minmax(170px, 1fr) 86px 74px; gap: 14px; align-items: center; padding: 13px 22px; transition: background .12s; }
+.d6 .rh:hover { background: #f6f9fe; }
+.d6 .rh .no { font-size: 14.5px; color: #1c2b3a; display: block; }
+.d6 .rh .sub { font-size: 11.5px; color: #8a94a3; }
+.d6 .rh .rt { display: flex; align-items: center; gap: 7px; font-size: 13px; color: #98a3b3; flex-wrap: wrap; }
+.d6 .rh .ct { color: #5a6676; font-size: 12.5px; text-align: right; white-space: nowrap; }
+.d6 .chev { color: #a0aab8; transition: transform .18s; display: grid; }
+.d6 .row.open .chev { transform: rotate(90deg); color: #2d6cad; }
+.d6 .row.open .rh { background: #f6f9fe; }
+.d6 .pn { padding: 6px 22px 18px 56px; background: #fbfcfe; border-top: 1px dashed #e3e8ef; }
+.d6 .pn-h { display: flex; justify-content: space-between; color: #6a7686; font-size: 12px; padding: 8px 0 4px; }
+.d6 .pn .it th { background: #fbfcfe; border-bottom: 1.5px solid #dfe6ef; color: #5a6676; }
+.d6 .pn .it td { border-bottom-color: #edf0f5; }
+.d6 .em { padding: 40px 20px; }
+@media (max-width: 700px) { .d6 { padding: 16px 10px 22px; } .d6 .rh { grid-template-columns: 18px minmax(0, 1fr) auto; gap: 4px 10px; padding: 12px 14px; } .d6 .rh .rt { grid-column: 2 / -1; grid-row: 2; } .d6 .rh .ct { display: none; } .d6 .pn { padding-left: 14px; padding-right: 14px; } .d6 .hd, .d6 .srow, .d6 .ut { padding-left: 14px; padding-right: 14px; } }
+</style>
+<script>
+G.add({
+  id: 6, name: 'แถวพับ–ขยาย', en: 'Accordion', desc: 'ลิสต์กระชับแบบแอปมือถือ — แตะแถวเพื่อกางรายการสินค้าในที่เดิม · ขยาย/ย่อทั้งหมดได้ · แท็บเส้นใต้พร้อมตัวเลข', nav: 'แท็บเส้นใต้', detail: 'กางในแถว',
+  init: () => ({ tab: ALL, q: '', exp: G.docs[0] ? { [G.docs[0].id]: true } : {} }),
+  act: {
+    toggle: (st, ds) => { const id = +ds.id; st.exp[id] = !st.exp[id]; },
+    all: (st, ds, e, el) => { G.vis(G.docs, st).forEach(d => { st.exp[d.id] = true; }); },
+    none: st => { st.exp = {}; },
+  },
+  view(st, docs, G) {
+    const vis = G.vis(docs, st), kind = G.emptyKind(docs, vis);
+    const rows = vis.map(d => {
+      const open = !!st.exp[d.id];
+      return `<div class="row t-${G.tone(G.back(d))}${open ? ' open' : ''}"><div class="rh" data-act="toggle" data-id="${d.id}"><span class="chev">${G.ico.chev}</span><div><span class="no">${d.no}</span><span class="sub">${G.fmtDate(d.date)}</span></div><div class="rt">${G.bc(d.from)}${G.ico.arrow}${G.bc(d.to)}</div><span class="ct">${d.n} รายการ</span>${G.dy(d)}</div>
+        ${open ? `<div class="pn"><div class="pn-h"><span>รายการสินค้าในเอกสาร ${d.no}</span><span>รวม ${d.n} รายการ · จำนวนรวม ${G.qty(G.total(d))}</span></div>${G.itemsTable(d)}</div>` : ''}</div>`;
+    }).join('');
+    return `<div class="card"><div class="hd"><h2>เอกสารค้างส่ง<small>${vis.length} เอกสาร</small></h2><div><button class="lnk" data-act="all">ขยายทั้งหมด</button><button class="lnk" data-act="none">ย่อทั้งหมด</button></div></div>
+      <div class="srow">${G.searchBox(st)}</div><div class="ut">${G.tabs(docs).map(t => `<button class="u${st.tab === t.key ? ' on' : ''}" data-act="tab" data-v="${t.key}">${t.key}<b>${t.count}</b></button>`).join('')}</div>
+      ${kind ? G.empty(kind) : `<div>${rows}</div>`}</div>`;
+  },
+});
+</script>
+
+<!-- ═══ แบบที่ 7 · แดชบอร์ดสรุป (KPI + กราฟ + ตาราง) ═══ -->
+<style>
+.d7 { background: #f3f6fb; padding: 24px 28px 30px; }
+.d7 .kpis { display: grid; grid-template-columns: repeat(4, minmax(180px, 1fr)); gap: 14px; margin-bottom: 14px; }
+.d7 .kpi { --kb: #eaf3fc; --kc: #2d6cad; background: #fff; border: 1px solid #e5ecf6; border-radius: 16px; padding: 16px 18px; box-shadow: 0 1px 3px rgba(31, 63, 102, .07), 0 8px 20px rgba(31, 63, 102, .04); text-align: left; transition: transform .14s, box-shadow .14s; display: block; width: 100%; }
+.d7 button.kpi:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(31, 63, 102, .14); }
+.d7 .kpi .ic { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: var(--kb); color: var(--kc); margin-bottom: 10px; }
+.d7 .kpi small { display: block; color: #7b8ca3; font-size: 12.5px; }
+.d7 .kpi b { display: block; font: 800 34px/1.1 'Outfit', sans-serif; color: #1f3f66; margin: 3px 0 4px; }
+.d7 .kpi b em { font: 600 14px 'Noto Sans Thai', sans-serif; color: #7b8ca3; margin-left: 5px; }
+.d7 .kpi .sub { font-size: 12px; color: #7b8ca3; }
+.d7 .kpi.hot { --kb: #fde8e8; --kc: #c62828; border-color: #f5d3d3; }
+.d7 .kpi.hot b { color: #c62828; }
+.d7 .kpi.amb { --kb: #fff1d6; --kc: #a35f00; }
+.d7 .row2 { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 14px; margin-bottom: 14px; }
+.d7 .pn { background: #fff; border: 1px solid #e5ecf6; border-radius: 16px; padding: 16px 18px 16px; box-shadow: 0 1px 3px rgba(31, 63, 102, .07), 0 8px 20px rgba(31, 63, 102, .04); }
+.d7 .pn h3 { font-size: 14px; color: #1f3f66; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: baseline; }
+.d7 .pn h3 small { color: #8ea0b5; font-weight: 400; font-size: 11.5px; }
+.d7 .br { display: grid; grid-template-columns: 96px 1fr 34px; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 9px; width: 100%; text-align: left; transition: background .12s; }
+.d7 .br:hover { background: #f3f8fe; }
+.d7 .br.on { background: #eaf3fc; box-shadow: inset 0 0 0 1.5px #b8d3ee; }
+.d7 .br .trk { height: 12px; background: #eef2f8; border-radius: 6px; overflow: hidden; }
+.d7 .br .fill { height: 100%; border-radius: 6px; background: var(--c); min-width: 0; }
+.d7 .br b { font: 800 14px 'Outfit', sans-serif; text-align: right; color: #1f3f66; }
+.d7 .ages { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; height: 150px; }
+.d7 .ag { display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 6px; padding: 6px 2px; border-radius: 12px; transition: background .12s; }
+.d7 .ag:hover { background: #f3f8fe; }
+.d7 .ag.on { background: #eaf3fc; box-shadow: inset 0 0 0 1.5px #b8d3ee; }
+.d7 .ag .col { width: 100%; max-width: 44px; border-radius: 8px 8px 3px 3px; background: var(--tc); min-height: 4px; }
+.d7 .ag b { font: 800 15px 'Outfit', sans-serif; color: var(--tt); }
+.d7 .ag small { font-size: 11px; color: #7b8ca3; text-align: center; line-height: 1.2; }
+.d7 .tbl { background: #fff; border: 1px solid #e5ecf6; border-radius: 16px; overflow: hidden; box-shadow: 0 1px 3px rgba(31, 63, 102, .07), 0 8px 20px rgba(31, 63, 102, .04); }
+.d7 .tbar { display: flex; gap: 10px 12px; align-items: center; flex-wrap: wrap; padding: 12px 16px; border-bottom: 1px solid #edf1f7; }
+.d7 .tbar .sb { flex: 1 1 280px; max-width: 380px; border-radius: 10px; }
+.d7 .tbar .sb input { padding: 9px 0; font-size: 13px; }
+.d7 .fchip { padding: 4px 6px 4px 12px; border-radius: 999px; background: #eaf3fc; color: #2d6cad; font-size: 12px; font-weight: 600; display: inline-flex; gap: 4px; align-items: center; }
+.d7 .fchip button { width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; color: #2d6cad; }
+.d7 .fchip button:hover { background: #cfe3f8; }
+.d7 .fchip svg { width: 12px; height: 12px; }
+.d7 .cnt { margin-left: auto; color: #7b8ca3; font-size: 12.5px; }
+.d7 .tbl table { width: 100%; border-collapse: collapse; }
+.d7 .tbl th { text-align: left; padding: 10px 16px; font-size: 12px; color: #7b8ca3; background: #f9fbfe; font-weight: 600; white-space: nowrap; }
+.d7 .tbl td { padding: 10px 16px; border-top: 1px solid #f0f3f8; font-size: 13px; }
+.d7 .tbl tr.rw { cursor: pointer; transition: background .12s; }
+.d7 .tbl tr.rw:hover td { background: #f6faff; }
+.d7 .tbl .c { text-align: center; } .d7 .tbl .r { text-align: right; }
+.d7 .go { color: #2d6cad; font-weight: 600; font-size: 12.5px; }
+.d7 .em { padding: 40px 20px; }
+@media (max-width: 900px) { .d7 .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 760px) { .d7 { padding: 14px 12px 22px; } .d7 .row2 { grid-template-columns: 1fr; } .d7 .tbl { overflow-x: auto; } .d7 .tbl table { min-width: 620px; } }
+</style>
+<script>
+(() => {
+  const AGES = [
+    { k: 'a0', label: 'วันนี้', t: 'ok', test: n => n < 1 },
+    { k: 'a1', label: '1–2 วัน', t: 'warn', test: n => n >= 1 && n < 3 },
+    { k: 'a2', label: '3–6 วัน', t: 'alert', test: n => n >= 3 && n < 7 },
+    { k: 'a3', label: '7 วัน+', t: 'alert', test: n => n >= 7 },
+  ];
+  G.add({
+    id: 7, name: 'แดชบอร์ดสรุป', en: 'KPI Dashboard', desc: 'ตัวเลขสรุปด้านบน (ทั้งหมด / เกินกำหนด / สินค้าที่ค้าง / นานสุด) + กราฟตามสาขาและอายุที่ค้าง — กดกราฟเพื่อกรองตารางด้านล่าง', nav: 'กดแท่งกราฟ', detail: 'popup กลางจอ',
+    esc: ['open'],
+    init: () => ({ tab: ALL, age: null, q: '', open: null }),
+    act: {
+      pickTab: (st, ds) => { st.tab = st.tab === ds.v ? ALL : ds.v; },
+      pickAge: (st, ds) => { st.age = st.age === ds.v ? null : ds.v; },
+      alertOnly: st => { st.age = st.age === 'a2+' ? null : 'a2+'; },
+      clrTab: st => { st.tab = ALL; },
+      clrAge: st => { st.age = null; },
+    },
+    view(st, docs, G) {
+      const ageOf = d => G.back(d);
+      const ageTest = st.age === 'a2+' ? (n => n >= 3) : st.age ? AGES.find(a => a.k === st.age).test : null;
+      const vis = G.vis(docs, st).filter(d => !ageTest || ageTest(ageOf(d))), kind = G.emptyKind(docs, vis);
+      const total = docs.length, items = docs.reduce((s, d) => s + d.n, 0), late = docs.filter(d => ageOf(d) >= 3).length, old = G.oldest(docs);
+      const maxB = Math.max(1, ...BRANCHES.map(b => docs.filter(d => d.from === b).length));
+      const maxA = Math.max(1, ...AGES.map(a => docs.filter(d => a.test(ageOf(d))).length));
+      const filters = [st.tab !== ALL ? `<span class="fchip">ต้นทาง: ${st.tab}<button data-act="clrTab" aria-label="ล้าง">${G.ico.x}</button></span>` : '', st.age ? `<span class="fchip">อายุ: ${st.age === 'a2+' ? 'เกินกำหนด (3 วัน+)' : AGES.find(a => a.k === st.age).label}<button data-act="clrAge" aria-label="ล้าง">${G.ico.x}</button></span>` : ''].join('');
+      return `<div class="kpis">
+        <div class="kpi"><span class="ic">${G.ico.box}</span><small>เอกสารค้างทั้งหมด</small><b>${total}<em>เอกสาร</em></b><span class="sub">${total ? 'จาก ' + new Set(docs.map(d => d.from)).size + ' ต้นทาง' : 'ไม่มีเอกสารค้างส่ง'}</span></div>
+        <button class="kpi hot" data-act="alertOnly"><span class="ic">${G.ico.alert}</span><small>เกินกำหนด (ค้าง 3 วันขึ้นไป)</small><b>${late}<em>เอกสาร</em></b><span class="sub">${late ? 'กดเพื่อกรองเฉพาะกลุ่มนี้' : 'ไม่มีเอกสารเกินกำหนด 👍'}</span></button>
+        <div class="kpi amb"><span class="ic">${G.ico.copy}</span><small>สินค้าที่ค้างอยู่</small><b>${items.toLocaleString()}<em>รายการ</em></b><span class="sub">รวมจากทุกเอกสารที่ยังไม่ส่ง</span></div>
+        ${old ? `<button class="kpi" data-act="open" data-id="${old.id}"><span class="ic">${G.ico.clock}</span><small>ค้างนานที่สุด</small><b>${G.back(old)}<em>วัน</em></b><span class="sub">${old.no} · ${G.CODE[old.from]} → ${G.CODE[old.to]}</span></button>` : `<div class="kpi"><span class="ic">${G.ico.clock}</span><small>ค้างนานที่สุด</small><b>—</b><span class="sub">ยังไม่มีเอกสารค้าง</span></div>`}</div>
+      <div class="row2"><div class="pn"><h3>ตามสาขาต้นทาง<small>กดเพื่อกรอง</small></h3>${BRANCHES.map(b => { const n = docs.filter(d => d.from === b).length; return `<button class="br${st.tab === b ? ' on' : ''}" data-act="pickTab" data-v="${b}"><span>${G.bc(b)}</span><span class="trk"><span class="fill" style="display:block;width:${n / maxB * 100}%;--c:${G.BC[b]}"></span></span><b>${n}</b></button>`; }).join('')}</div>
+      <div class="pn"><h3>อายุที่ค้าง<small>กดเพื่อกรอง</small></h3><div class="ages">${AGES.map(a => { const n = docs.filter(d => a.test(ageOf(d))).length; return `<button class="ag t-${a.t}${st.age === a.k ? ' on' : ''}" data-act="pickAge" data-v="${a.k}"><b>${n}</b><span class="col" style="height:${n / maxA * 78}px"></span><small>${a.label}</small></button>`; }).join('')}</div></div></div>
+      <div class="tbl"><div class="tbar">${G.searchBox(st)}${filters}<span class="cnt">แสดง ${vis.length} จาก ${total} เอกสาร</span></div>
+      ${kind ? G.empty(kind) : `<table><thead><tr><th>เลขที่เอกสาร</th><th>วันที่</th><th>ต้นทาง → ปลายทาง</th><th class="c">รายการ</th><th class="c">ค้าง</th><th></th></tr></thead><tbody>${vis.map(d => `<tr class="rw" data-act="open" data-id="${d.id}"><td class="no">${d.no}</td><td>${G.fmtDate(d.date)}</td><td>${G.bc(d.from)} → ${G.bc(d.to)}</td><td class="c">${d.n}</td><td class="c">${G.dy(d)}</td><td class="r"><span class="go">ดูสินค้า ›</span></td></tr>`).join('')}</tbody></table>`}</div>
+      ${st.open ? G.modal(G.find(docs, st.open)) : ''}`;
+    },
+  });
+})();
+</script>
+
+<!-- ═══ แบบที่ 8 · แถบความเก่า (Aging Bars · แบบแกนเวลา) ═══ -->
+<style>
+.d8 { background: #fff; padding: 24px 28px 30px; }
+.d8 .bar { display: flex; gap: 12px 16px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
+.d8 .bar .sb { flex: 1 1 280px; max-width: 400px; }
+.d8 .sel { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: #5a7fa6; }
+.d8 .sel select { appearance: none; border: 1.5px solid #cadcee; border-radius: 10px; padding: 9px 34px 9px 14px; font-weight: 600; color: #2d6cad; background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%232d6cad' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 12px center; cursor: pointer; }
+.d8 .sel select:focus { outline: 0; border-color: #4891db; box-shadow: 0 0 0 3px rgba(72, 145, 219, .15); }
+.d8 .lg { display: flex; gap: 14px; margin-left: auto; font-size: 12px; color: #6d88a6; flex-wrap: wrap; }
+.d8 .lg i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+.d8 .chart { min-width: 760px; }
+.d8 .rowx { display: grid; grid-template-columns: 220px minmax(300px, 1fr) 84px 92px; gap: 14px; align-items: center; }
+.d8 .axis { color: #8aa0b8; font-size: 11.5px; margin-bottom: 4px; }
+.d8 .axis .ticks { position: relative; height: 18px; }
+.d8 .axis .ticks span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+.d8 .axis .ticks span:first-child { transform: none; } .d8 .axis .ticks span:last-child { transform: translateX(-100%); }
+.d8 .rw { padding: 7px 8px; border-radius: 10px; transition: background .12s; }
+.d8 .rw:hover { background: #f4f9ff; }
+.d8 .info .no { font-size: 13.5px; color: #1f3f66; display: block; }
+.d8 .info .sub { font-size: 11.5px; color: #7b93ad; display: flex; gap: 5px; align-items: center; }
+.d8 .trk { position: relative; height: 26px; border-radius: 7px; overflow: hidden; background: #f1f5fa; }
+.d8 .zone { position: absolute; top: 0; bottom: 0; }
+.d8 .zone.ok { background: #e6f1fc; } .d8 .zone.warn { background: #fff4de; } .d8 .zone.alert { background: #fdeaea; }
+.d8 .tk { position: absolute; top: 0; bottom: 0; width: 1px; background: rgba(90, 127, 166, .22); }
+.d8 .fill { position: absolute; left: 0; top: 4px; bottom: 4px; border-radius: 0 7px 7px 0; background: linear-gradient(90deg, color-mix(in srgb, var(--tc) 55%, #fff), var(--tc)); min-width: 8px; display: flex; align-items: center; justify-content: flex-end; padding-right: 8px; color: #fff; font: 800 11.5px 'Outfit', 'Noto Sans Thai', sans-serif; }
+.d8 .fill.out { overflow: visible; color: var(--tt); justify-content: flex-start; }
+.d8 .fill.out span { position: absolute; left: calc(100% + 7px); white-space: nowrap; }
+.d8 .cnt { color: #5a7fa6; font-size: 12.5px; text-align: right; }
+.d8 .vb { border: 1.5px solid #b8d3ee; color: #2d6cad; border-radius: 999px; padding: 4px 0; font-weight: 600; font-size: 12.5px; transition: all .13s; text-align: center; }
+.d8 .vb:hover { background: #2d6cad; border-color: #2d6cad; color: #fff; }
+.d8 .sh-ov { position: fixed; inset: 0; z-index: 1000; background: rgba(15, 30, 50, .5); display: flex; align-items: flex-end; justify-content: center; animation: gmFade .15s; }
+.d8 .sh { width: min(980px, 100%); max-height: 74vh; background: #fff; border-radius: 22px 22px 0 0; box-shadow: 0 -16px 50px rgba(0, 0, 0, .3); display: flex; flex-direction: column; animation: d8Up .24s ease-out; }
+@keyframes d8Up { from { transform: translateY(60px); opacity: .4; } to { transform: none; opacity: 1; } }
+.d8 .grip { width: 44px; height: 5px; border-radius: 3px; background: #cfdbe9; margin: 9px auto 2px; }
+.d8 .sh-h { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; padding: 10px 24px 12px; border-bottom: 1px solid #e3edf8; }
+.d8 .sh-h h2 { font: 800 20px 'Outfit', sans-serif; color: #1f3f66; }
+.d8 .sh-h p { margin-top: 5px; color: #5a7fa6; font-size: 13px; display: flex; gap: 7px; align-items: center; flex-wrap: wrap; }
+.d8 .sh-x { padding: 7px 16px; border-radius: 999px; background: #eef3f9; color: #4a6d91; font-weight: 600; font-size: 13px; }
+.d8 .sh-x:hover { background: #dce8f5; }
+.d8 .sh-b { overflow: auto; padding: 0 24px 6px; }
+.d8 .sh-f { padding: 12px 24px; border-top: 1px solid #e3edf8; color: #5a7fa6; font-size: 13px; display: flex; justify-content: space-between; }
+@media (max-width: 700px) { .d8 { padding: 16px 12px 22px; } .d8 .lg { margin-left: 0; } }
+</style>
+<script>
+(() => {
+  const TICKS = [0, 1, 3, 7, 14, 30];
+  const pos = d => {
+    if (d >= 30) return 100;
+    for (let i = 0; i < TICKS.length - 1; i++) if (d < TICKS[i + 1]) return ((i + (d - TICKS[i]) / (TICKS[i + 1] - TICKS[i])) / (TICKS.length - 1)) * 100;
+    return 100;
+  };
+  G.add({
+    id: 8, name: 'แถบความเก่า', en: 'Aging Bars', desc: 'แต่ละเอกสารเป็นแท่งยาวตามจำนวนวันที่ค้าง บนแกนที่มีโซนสี ฟ้า/ส้ม/แดง ตามกฎเดิม (1 วัน / 3 วัน) — มองปราดเดียวรู้ว่าเอกสารไหนเก่าสุด', nav: 'ดรอปดาวน์เลือกต้นทาง', detail: 'แผ่นเลื่อนขึ้นจากด้านล่าง',
+    esc: ['open'],
+    init: () => ({ tab: ALL, q: '', open: null }),
+    act: { pick: (st, v) => { st.tab = v; } },
+    view(st, docs, G) {
+      const vis = G.vis(docs, st), kind = G.emptyKind(docs, vis);
+      const tabs = G.tabs(docs), dr = st.open ? G.find(docs, st.open) : null;
+      const z1 = pos(1), z3 = pos(3);
+      const rows = vis.map(d => {
+        const n = G.back(d), p = Math.max(pos(n), 2), out = p < 20;
+        return `<div class="rowx rw t-${G.tone(n)}"><div class="info"><span class="no">${d.no}</span><span class="sub">${G.bc(d.from)}→${G.bc(d.to)}</span></div>
+          <div class="trk"><i class="zone ok" style="left:0;width:${z1}%"></i><i class="zone warn" style="left:${z1}%;width:${z3 - z1}%"></i><i class="zone alert" style="left:${z3}%;right:0"></i>${[20, 40, 60, 80].map(x => `<i class="tk" style="left:${x}%"></i>`).join('')}<div class="fill${out ? ' out' : ''}" style="width:${p}%"><span>${G.dayTxt(n)}</span></div></div>
+          <span class="cnt">${d.n} รายการ</span><button class="vb" data-act="open" data-id="${d.id}">ดูสินค้า</button></div>`;
+      }).join('');
+      return `<div class="bar">${G.searchBox(st)}<label class="sel">ต้นทาง<select data-change="pick">${tabs.map(t => `<option value="${t.key}"${st.tab === t.key ? ' selected' : ''}>${t.key} (${t.count})</option>`).join('')}</select></label>
+        <div class="lg"><span><i style="background:#cfe3f8"></i>ไม่เกิน 1 วัน</span><span><i style="background:#ffe0a8"></i>1–2 วัน</span><span><i style="background:#f8c6c6"></i>3 วันขึ้นไป</span></div></div>
+        ${kind ? G.empty(kind) : `<div style="overflow-x:auto"><div class="chart"><div class="rowx axis"><span></span><div class="ticks">${TICKS.map((t, i) => `<span style="left:${i * 20}%">${i === TICKS.length - 1 ? '30 วัน+' : t === 0 ? 'วันนี้' : t + ' วัน'}</span>`).join('')}</div><span></span><span></span></div>${rows}</div></div>`}
+        ${dr ? `<div class="sh-ov"><div class="sh" role="dialog" aria-modal="true"><div class="grip"></div><div class="sh-h"><div><h2>${dr.no}</h2><p>${G.fmtDate(dr.date)} · ${G.bc(dr.from)} → ${G.bc(dr.to)} · ค้าง ${G.dy(dr)}</p></div><button class="sh-x" data-act="close">ปิด ✕</button></div><div class="sh-b">${G.itemsTable(dr)}</div><div class="sh-f"><span>รวม ${dr.n} รายการ</span><span>จำนวนรวม ${G.qty(G.total(dr))}</span></div></div></div>` : ''}`;
+    },
+  });
+})();
+</script>
+
+<!-- ═══ แบบที่ 9 · ตั๋ว / สลิป (Ticket Stubs) ═══ -->
+<style>
+.d9 { background: #e9eff7; padding: 26px 28px 32px; }
+.d9 .top { display: flex; gap: 12px 18px; align-items: center; flex-wrap: wrap; margin-bottom: 20px; }
+.d9 .top .sb { flex: 1 1 300px; max-width: 420px; }
+.d9 .gates { display: flex; gap: 8px; flex-wrap: wrap; }
+.d9 .gate { display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px 7px 14px; border-radius: 6px; border: 1.5px dashed #8fa8c4; color: #35557c; font: 700 12.5px 'Outfit', 'Noto Sans Thai', sans-serif; letter-spacing: .3px; transition: all .14s; }
+.d9 .gate b { background: #35557c; color: #fff; border-radius: 4px; padding: 0 6px; font-size: 11px; line-height: 18px; }
+.d9 .gate:hover { border-color: #16325c; color: #16325c; }
+.d9 .gate.on { background: #16325c; border: 1.5px solid #16325c; color: #fff; box-shadow: 0 5px 14px rgba(22, 50, 92, .35); }
+.d9 .gate.on b { background: #fff; color: #16325c; }
+.d9 .tks { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(430px, 100%), 1fr)); gap: 18px 22px; }
+.d9 .tk { position: relative; display: flex; filter: drop-shadow(0 4px 8px rgba(22, 50, 92, .16)); transition: transform .15s; }
+.d9 .tk:hover { transform: translateY(-3px) rotate(-.3deg); }
+.d9 .main { flex: 1; min-width: 0; background: #fff; border-radius: 14px 0 0 14px; border-left: 9px solid var(--tc); padding: 14px 18px 14px 16px; }
+.d9 .lbl { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 10.5px; letter-spacing: 1px; color: #8aa0b8; text-transform: uppercase; margin-bottom: 8px; }
+.d9 .lbl .no { font-size: 13px; letter-spacing: .3px; color: #16325c; text-transform: none; }
+.d9 .fly { display: flex; align-items: center; gap: 12px; }
+.d9 .pt b { display: block; font: 800 30px/1 'Outfit', sans-serif; color: #16325c; letter-spacing: 1px; }
+.d9 .pt small { color: #6d88a6; font-size: 11.5px; }
+.d9 .pt.r { text-align: right; }
+.d9 .path { flex: 1; display: flex; align-items: center; color: #8fa8c4; }
+.d9 .path i { flex: 1; border-top: 2px dashed #b8cde3; } .d9 .path svg { margin: 0 3px; }
+.d9 .info { display: flex; gap: 22px; margin-top: 12px; font-size: 13px; color: #16325c; font-weight: 600; }
+.d9 .info small { display: block; font-weight: 400; color: #8aa0b8; font-size: 10.5px; letter-spacing: .5px; }
+.d9 .perf { position: relative; width: 0; border-left: 2px dashed #cddbea; margin: 9px 0; background: #fff; }
+.d9 .perf::before, .d9 .perf::after { content: ''; position: absolute; left: -10px; width: 18px; height: 18px; border-radius: 50%; background: #e9eff7; }
+.d9 .perf::before { top: -18px; } .d9 .perf::after { bottom: -18px; }
+.d9 .stub { width: 118px; flex: none; background: var(--tb); border-radius: 0 14px 14px 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 10px 8px; gap: 1px; }
+.d9 .stub small { font-size: 10.5px; letter-spacing: 1px; color: var(--tt); opacity: .8; }
+.d9 .stub b { font: 800 36px/1 'Outfit', sans-serif; color: var(--tt); }
+.d9 .stub span { font-size: 12px; color: var(--tt); font-weight: 600; margin-bottom: 6px; }
+.d9 .code { width: 84px; height: 20px; background: repeating-linear-gradient(90deg, var(--tt) 0 2px, transparent 2px 4px, var(--tt) 4px 5px, transparent 5px 8px, var(--tt) 8px 11px, transparent 11px 13px); opacity: .55; border-radius: 1px; }
+.d9 .em { grid-column: 1 / -1; padding: 48px 20px; }
+.d9 .rc-ov { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 28px 16px; background: rgba(15, 30, 50, .6); animation: gmFade .15s; }
+.d9 .rc { position: relative; width: min(380px, 100%); max-height: 88vh; background: #fff; color: #16325c; font-family: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace; font-size: 12.5px; padding: 26px 22px 20px; filter: drop-shadow(0 18px 34px rgba(0, 0, 0, .4)); display: flex; flex-direction: column; animation: gmPop .2s ease-out; }
+.d9 .rc::before, .d9 .rc::after { content: ''; position: absolute; left: 0; right: 0; height: 8px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='8' viewBox='0 0 16 8'%3E%3Cpath d='M0 0h16L8 8z' fill='%23fff'/%3E%3C/svg%3E") repeat-x; }
+.d9 .rc::after { bottom: -8px; } .d9 .rc::before { top: -8px; transform: scaleY(-1); }
+.d9 .rc-x { position: absolute; right: 8px; top: 8px; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; color: #6d88a6; }
+.d9 .rc-x:hover { background: #eef3f9; }
+.d9 .rc-t { text-align: center; font: 800 16px 'Noto Sans Thai', sans-serif; letter-spacing: .5px; }
+.d9 .rc-s { text-align: center; color: #8aa0b8; font-size: 10.5px; letter-spacing: 2px; margin-top: 1px; }
+.d9 .rc hr { border: 0; border-top: 1.5px dashed #b8cde3; margin: 12px 0; }
+.d9 .rc dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; }
+.d9 .rc dt { color: #8aa0b8; } .d9 .rc dd { margin: 0; text-align: right; font-weight: 700; }
+.d9 .rc-l { overflow: auto; min-height: 0; flex: 1; }
+.d9 .ln { display: grid; grid-template-columns: 22px 1fr auto; gap: 8px; padding: 3px 0; }
+.d9 .ln i { color: #8aa0b8; font-style: normal; } .d9 .ln small { display: block; color: #8aa0b8; font-size: 10.5px; }
+.d9 .ln b { align-self: center; }
+.d9 .rc-tot { display: flex; justify-content: space-between; font-weight: 800; font-size: 13.5px; }
+.d9 .rc-note { text-align: center; margin-top: 12px; font-size: 11px; letter-spacing: 1px; color: #c62828; font-weight: 700; }
+@media (max-width: 480px) { .d9 { padding: 16px 12px 24px; } .d9 .stub { width: 92px; } .d9 .pt b { font-size: 24px; } .d9 .info { gap: 14px; } .d9 .code { width: 64px; } }
+.d9 .rc-bar { height: 34px; margin-top: 12px; background: repeating-linear-gradient(90deg, #16325c 0 2px, transparent 2px 4px, #16325c 4px 5px, transparent 5px 8px, #16325c 8px 11px, transparent 11px 13px); opacity: .8; }
+</style>
+<script>
+G.add({
+  id: 9, name: 'ตั๋ว / สลิป', en: 'Ticket Stubs', desc: 'ทุกเอกสารเป็นตั๋วแบบบอร์ดดิ้งพาส — รหัสสาขาตัวใหญ่ซ้าย-ขวา · ตัวเลขวันที่ค้างอยู่บนก้านตั๋ว · กดดูสินค้าได้ใบเสร็จความร้อน', nav: 'ป้ายเกตเส้นประ', detail: 'popup ใบเสร็จ',
+  esc: ['open'],
+  init: () => ({ tab: ALL, q: '', open: null }),
+  view(st, docs, G) {
+    const vis = G.vis(docs, st), kind = G.emptyKind(docs, vis), dr = st.open ? G.find(docs, st.open) : null;
+    const tks = vis.map(d => { const n = G.back(d); return `<article class="tk t-${G.tone(n)}" data-act="open" data-id="${d.id}"><div class="main"><div class="lbl"><span>เอกสารโอนสินค้าออก · TRANSFER</span><span class="no">${d.no}</span></div>
+      <div class="fly"><div class="pt"><b>${G.CODE[d.from]}</b><small>${d.from}</small></div><div class="path"><i></i>${G.ico.arrow}<i></i></div><div class="pt r"><b>${G.CODE[d.to]}</b><small>${d.to}</small></div></div>
+      <div class="info"><div><small>วันที่</small>${G.fmtDate(d.date)}</div><div><small>รายการ</small>${d.n}</div><div><small>กดดู</small>ดูสินค้า ›</div></div></div>
+      <div class="perf"></div><div class="stub"><small>ค้าง</small><b>${n === 0 ? '0' : n}</b><span>${n === 0 ? 'วันนี้' : 'วัน'}</span><i class="code"></i></div></article>`; }).join('');
+    const rc = dr ? `<div class="rc-ov"><div class="rc" role="dialog" aria-modal="true"><button class="rc-x" data-act="close" aria-label="ปิด">${G.ico.x}</button><div class="rc-t">เอกสารโอนสินค้าออก</div><div class="rc-s">TRANSFER OUT · PENDING</div><hr>
+      <dl><dt>เลขที่</dt><dd>${dr.no}</dd><dt>วันที่</dt><dd>${G.fmtDate(dr.date)}</dd><dt>ต้นทาง</dt><dd>${dr.from}</dd><dt>ปลายทาง</dt><dd>${dr.to}</dd><dt>ค้าง</dt><dd>${G.dayTxt(G.back(dr))}</dd></dl><hr>
+      <div class="rc-l">${dr.items.map(i => `<div class="ln"><i>${String(i.line).padStart(2, '0')}</i><span>${i.name}<small>${i.code}</small></span><b>×${G.qty(i.qty)}</b></div>`).join('')}</div><hr>
+      <div class="rc-tot"><span>รวม ${dr.n} รายการ</span><span>จำนวน ${G.qty(G.total(dr))}</span></div><div class="rc-note">*** ยังไม่กด “ส่ง” ใน PROMAXX ***</div><div class="rc-bar"></div></div></div>` : '';
+    return `<div class="top">${G.searchBox(st)}<div class="gates">${G.tabs(docs).map(t => `<button class="gate${st.tab === t.key ? ' on' : ''}" data-act="tab" data-v="${t.key}">${t.key}<b>${t.count}</b></button>`).join('')}</div></div>
+      <div class="tks">${kind ? G.empty(kind) : tks}</div>${rc}`;
+  },
+});
+</script>
+
+<!-- ═══ แบบที่ 10 · เลนแยกตามสาขาต้นทาง (Swimlanes) ═══ -->
+<style>
+.d10 { background: #f2f6fb; padding: 22px 26px 26px; }
+.d10 .bar { display: flex; gap: 12px 18px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
+.d10 .bar .sb { flex: 1 1 300px; max-width: 420px; }
+.d10 .lg { margin-left: auto; display: flex; gap: 14px; font-size: 12px; color: #6d88a6; flex-wrap: wrap; }
+.d10 .lg i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 5px; background: var(--tc); }
+.d10 .lane { display: grid; grid-template-columns: 196px minmax(0, 1fr); background: #fff; border: 1px solid #dbe6f2; border-radius: 14px; margin-bottom: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(31, 63, 102, .05); }
+.d10 .lh { padding: 14px 16px; background: color-mix(in srgb, var(--c) 8%, #fff); border-right: 1px solid color-mix(in srgb, var(--c) 22%, #fff); border-left: 6px solid var(--c); display: flex; flex-direction: column; gap: 3px; text-align: left; width: 100%; transition: background .13s; }
+.d10 .lh:hover { background: color-mix(in srgb, var(--c) 14%, #fff); }
+.d10 .lh b { font-size: 16.5px; color: var(--c); display: flex; align-items: center; gap: 6px; }
+.d10 .lh b svg { transition: transform .18s; opacity: .7; }
+.d10 .lane:not(.fold) .lh b svg { transform: rotate(90deg); }
+.d10 .lh .cnt { display: flex; align-items: baseline; gap: 6px; color: #4a6d91; font-size: 12.5px; }
+.d10 .lh .cnt strong { font: 800 26px/1.1 'Outfit', sans-serif; color: #1f3f66; }
+.d10 .lh small { color: #6d88a6; font-size: 11.5px; }
+.d10 .lb { padding: 14px 16px; display: flex; flex-wrap: wrap; gap: 10px; align-content: flex-start; align-items: flex-start; min-height: 84px; }
+.d10 .lane.fold .lb { display: none; }
+.d10 .chip { display: inline-flex; align-items: center; gap: 9px; padding: 7px 12px 7px 11px; background: #fff; border: 1.5px solid #d6e3f1; border-radius: 11px; font-size: 13px; transition: all .13s; }
+.d10 .chip:hover { border-color: var(--tc); box-shadow: 0 6px 16px rgba(31, 63, 102, .16); transform: translateY(-1px); }
+.d10 .chip .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--tc); flex: none; }
+.d10 .chip .no { font-size: 13px; color: #1f3f66; }
+.d10 .chip .to { color: #6d88a6; font-size: 12px; white-space: nowrap; }
+.d10 .chip .to b { color: #1f3f66; }
+.d10 .chip .d { font: 800 11.5px/19px 'Outfit', 'Noto Sans Thai', sans-serif; color: var(--tt); background: var(--tb); border-radius: 999px; padding: 0 9px; white-space: nowrap; }
+.d10 .ok { display: flex; align-items: center; gap: 8px; color: #2f9e6b; font-weight: 600; font-size: 13px; align-self: center; }
+.d10 .ok.mut { color: #8aa0b8; font-weight: 400; }
+.d10 .ok span { width: 22px; height: 22px; border-radius: 50%; background: #dff5ea; display: grid; place-items: center; }
+@media (max-width: 700px) { .d10 { padding: 14px 10px 20px; } .d10 .lane { grid-template-columns: 1fr; } .d10 .lh { border-right: 0; flex-direction: row; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; } .d10 .lb { padding: 10px 12px; } }
+</style>
+<script>
+G.add({
+  id: 10, name: 'เลนแยกตามสาขาต้นทาง', en: 'Swimlanes', desc: 'หนึ่งสาขา = หนึ่งเลน เห็นทุกสาขาพร้อมกัน — ใครมีเอกสารค้างกี่เอกสาร เก่าสุดกี่วัน · เลนที่เคลียร์แล้วขึ้นเครื่องหมายถูก · กดชื่อสาขาเพื่อพับเลน', nav: 'ไม่ต้องมีแท็บ (ทุกสาขาเรียงเป็นเลน)', detail: 'popup กลางจอ',
+  esc: ['open'],
+  init: () => ({ q: '', fold: {}, open: null }),
+  act: { fold: (st, ds) => { st.fold[ds.b] = !st.fold[ds.b]; } },
+  view(st, docs, G) {
+    const base = docs.filter(d => G.match(d, st.q));
+    const lanes = BRANCHES.map(b => {
+      const list = base.filter(d => d.from === b), old = G.oldest(list), all = docs.filter(d => d.from === b).length;
+      const chips = list.map(d => `<button class="chip t-${G.tone(G.back(d))}" data-act="open" data-id="${d.id}"><span class="dot"></span><span class="no">${d.no}</span><span class="to">→ <b>${G.CODE[d.to]}</b> · ${d.n} รายการ</span><span class="d">${G.dayTxt(G.back(d))}</span></button>`).join('');
+      const note = !all ? `<div class="ok"><span>${G.ico.check}</span>เคลียร์แล้ว — ไม่มีเอกสารค้างส่ง</div>` : `<div class="ok mut">ไม่พบเอกสารที่ตรงกับคำค้นหาในสาขานี้</div>`;
+      return `<section class="lane${st.fold[b] ? ' fold' : ''}" style="--c:${G.BC[b]}"><button class="lh" data-act="fold" data-b="${b}"><b>${G.ico.chev}${b === 'คลังสินค้า' ? b : 'สาขา ' + b}</b><span class="cnt"><strong>${list.length}</strong>เอกสาร</span><small>${old ? 'เก่าสุด ' + G.dayTxt(G.back(old)) + ' · ' + old.no.slice(-5) : all ? '—' : 'ไม่มีค้าง'}</small></button><div class="lb">${list.length ? chips : note}</div></section>`;
+    }).join('');
+    return `<div class="bar">${G.searchBox(st)}<div class="lg"><span class="t-ok"><i></i>วันนี้</span><span class="t-warn"><i></i>ค้าง 1–2 วัน</span><span class="t-alert"><i></i>ค้าง 3 วันขึ้นไป</span></div></div>${lanes}${st.open ? G.modal(G.find(docs, st.open)) : ''}`;
+  },
+});
+</script>
+
+<!-- ═══ แบบที่ 11 · คอนโซลควบคุม (Ops Console · ธีมมืด + คีย์ลัด) ═══ -->
+<style>
+.d11 { background: #070d19; padding: 22px 24px 28px; }
+.d11 .term { max-width: 1060px; margin: 0 auto; background: #0d1526; border: 1px solid #1e2b47; border-radius: 12px; box-shadow: 0 14px 44px rgba(0, 0, 0, .5); overflow: hidden; font-family: 'JetBrains Mono', ui-monospace, 'Noto Sans Thai', Menlo, Consolas, monospace; font-size: 12.5px; color: #cfe0ff; outline: 0; }
+.d11 .term:focus-visible { border-color: #4fd1ff; }
+.d11 .tbr { display: flex; align-items: center; gap: 8px; padding: 9px 14px; background: #101a2f; border-bottom: 1px solid #1e2b47; color: #7f93b8; font-size: 11.5px; }
+.d11 .tbr i { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
+.d11 .tbr span { margin-left: 8px; }
+.d11 .live { margin-left: auto; color: #3ddc97; display: flex; align-items: center; gap: 6px; }
+.d11 .live::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: #3ddc97; box-shadow: 0 0 8px #3ddc97; animation: d11Blink 1.6s infinite; }
+@keyframes d11Blink { 50% { opacity: .3; } }
+.d11 .cmd { padding: 12px 16px 8px; display: flex; align-items: center; gap: 9px; color: #4fd1ff; flex-wrap: wrap; }
+.d11 .cmd input { flex: 1; min-width: 160px; background: none; border: 0; outline: 0; color: #e8f1ff; font: inherit; caret-color: #4fd1ff; }
+.d11 .cmd input::placeholder { color: #455a85; }
+.d11 .cmd em { font-style: normal; color: #6b80a8; }
+.d11 .keys { padding: 4px 16px 12px; display: flex; gap: 7px; flex-wrap: wrap; align-items: center; border-bottom: 1px solid #1a2744; }
+.d11 .key { padding: 3px 10px; border: 1px solid #28395e; border-radius: 6px; color: #8fa6d0; transition: all .12s; font: inherit; }
+.d11 .key kbd { color: #4fd1ff; margin-right: 6px; font: inherit; font-weight: 700; }
+.d11 .key:hover { border-color: #4fd1ff; color: #e8f1ff; }
+.d11 .key.on { background: #12304f; border-color: #4fd1ff; color: #fff; }
+.d11 .keys .tip { margin-left: auto; color: #455a85; font-size: 11px; }
+.d11 .hd, .d11 .ln { display: grid; grid-template-columns: 16px 140px 92px 130px 56px 118px 64px 66px; gap: 10px; padding: 7px 16px; align-items: center; }
+.d11 .hd { color: #566b94; text-transform: uppercase; font-size: 10.5px; letter-spacing: 1px; border-bottom: 1px solid #1a2744; }
+.d11 .ln { border-bottom: 1px solid #111b33; transition: background .1s; }
+.d11 .ln:hover { background: #132244; }
+.d11 .led { width: 9px; height: 9px; border-radius: 50%; background: var(--tc); box-shadow: 0 0 8px var(--tc); }
+.d11 .no { color: #fff; font-family: inherit; font-weight: 600; }
+.d11 .r { text-align: right; }
+.d11 .age { display: flex; gap: 2px; }
+.d11 .age i { width: 8px; height: 11px; background: #17233f; border-radius: 2px; }
+.d11 .age i.f { background: var(--tc); box-shadow: 0 0 6px color-mix(in srgb, var(--tc) 60%, transparent); }
+.d11 .dd { color: var(--tc); font-weight: 700; }
+.d11 .rt b { font-weight: 700; } .d11 .rt em { font-style: normal; color: #566b94; }
+.d11 .vw { color: #4fd1ff; text-align: right; }
+.d11 .ln:hover .vw { text-decoration: underline; }
+.d11 .t-ok { --tc: #4fd1ff; } .d11 .t-warn { --tc: #ffb347; } .d11 .t-alert { --tc: #ff5c70; }
+.d11 .ft { padding: 9px 16px; display: flex; gap: 20px; color: #566b94; font-size: 11.5px; background: #0a1121; flex-wrap: wrap; }
+.d11 .ft b { color: #9fb6e0; font-weight: 600; }
+.d11 .em { color: #6b80a8; padding: 34px 16px; text-align: left; } .d11 .em-i { display: none; } .d11 .em-t { color: #3ddc97; font-size: 13px; } .d11 .em-t::before { content: '$ '; color: #4fd1ff; } .d11 .em-s { color: #566b94; }
+.d11 .tm { width: min(720px, 100%); max-height: 86vh; display: flex; flex-direction: column; background: #0d1526; border: 1px solid #2a3b61; border-radius: 12px; box-shadow: 0 24px 70px rgba(0, 0, 0, .6); font-family: 'JetBrains Mono', ui-monospace, 'Noto Sans Thai', Menlo, Consolas, monospace; font-size: 12.5px; color: #cfe0ff; overflow: hidden; animation: gmPop .18s ease-out; }
+.d11 .tm .tbr button { margin-left: auto; color: #8fa6d0; border: 1px solid #28395e; border-radius: 5px; padding: 1px 8px; font: inherit; font-size: 11px; }
+.d11 .tm .tbr button:hover { border-color: #ff5c70; color: #ff5c70; }
+.d11 .tm .body { padding: 14px 18px 8px; overflow: auto; }
+.d11 .kv { display: grid; grid-template-columns: 92px 1fr; gap: 2px 14px; margin-bottom: 12px; }
+.d11 .kv dt { color: #566b94; } .d11 .kv dd { margin: 0; color: #fff; }
+.d11 .tm table { width: 100%; border-collapse: collapse; }
+.d11 .tm th { text-align: left; color: #566b94; font-weight: 500; font-size: 10.5px; text-transform: uppercase; letter-spacing: 1px; padding: 6px 6px; border-bottom: 1px solid #1f2f52; position: sticky; top: 0; background: #0d1526; }
+.d11 .tm td { padding: 5px 6px; border-bottom: 1px solid #111b33; }
+.d11 .tm .n { text-align: right; color: #4fd1ff; }
+.d11 .tm .foot { padding: 9px 18px; border-top: 1px solid #1a2744; color: #6b80a8; display: flex; justify-content: space-between; }
+@media (max-width: 900px) { .d11 .hd, .d11 .ln { grid-template-columns: 16px 128px 84px 100px 40px 52px 56px; gap: 8px; } .d11 .age, .d11 .hd span:nth-child(6) { display: none; } .d11 .hd span:nth-child(8), .d11 .vw { display: none; } }
+@media (max-width: 640px) { .d11 { padding: 12px 8px 18px; } .d11 .hd, .d11 .ln { grid-template-columns: 14px 1fr 78px 52px; } .d11 .hd span:nth-child(3), .d11 .ln > span:nth-child(3), .d11 .hd span:nth-child(5), .d11 .ln > span:nth-child(5) { display: none; } .d11 .keys .tip { display: none; } }
+</style>
+<script>
+const LC = { 'คลังสินค้า': '#6fb5ff', SRC: '#4fd8c2', KKL: '#a99bff', SSS: '#ff8fd0' }; // สีสาขาบนพื้นมืด
+G.add({
+  id: 11, name: 'คอนโซลควบคุม', en: 'Ops Console', desc: 'หน้าตาจอมอนิเตอร์ทีมไอที — แถวหนาแน่น ไฟ LED บอกสถานะ แถบความเก่า · กดเลข 1–5 สลับแท็บ กด / เพื่อค้นหา (คลิกที่คอนโซลก่อน)', nav: 'ปุ่มคีย์ลัด [1]–[5]', detail: 'popup แบบหน้าต่างเทอร์มินัล',
+  esc: ['open'], focus: '.term',
+  init: () => ({ tab: ALL, q: '', open: null }),
+  keys(st, e, docs) {
+    if (st.open) return false;
+    if (e.key === '/') { const el = document.querySelector('#d11 [data-keep="q"]'); if (el) { e.preventDefault(); el.focus(); } return false; }
+    const t = G.tabs(docs)[Number(e.key) - 1];
+    if (t) { st.tab = t.key; return true; }
+    return false;
+  },
+  view(st, docs, G) {
+    const vis = G.vis(docs, st), kind = G.emptyKind(docs, vis), dr = st.open ? G.find(docs, st.open) : null;
+    const cells = n => Math.min(10, 1 + Math.round(Math.log2(n + 1) * 2));
+    const lines = vis.map(d => { const n = G.back(d), c = cells(n); return `<div class="ln t-${G.tone(n)}" data-act="open" data-id="${d.id}"><span class="led"></span><span class="no">${d.no}</span><span>${G.fmtDate(d.date)}</span><span class="rt"><b style="color:${LC[d.from]}">${G.CODE[d.from]}</b> <em>→</em> <b style="color:${LC[d.to]}">${G.CODE[d.to]}</b></span><span class="r">${d.n}</span><span class="age">${Array.from({ length: 10 }, (_, i) => `<i${i < c ? ' class="f"' : ''}></i>`).join('')}</span><span class="dd r">${n === 0 ? 'today' : n + 'd'}</span><span class="vw">open ›</span></div>`; }).join('');
+    const items = vis.reduce((s, d) => s + d.n, 0), old = G.oldest(vis);
+    return `<div class="term" tabindex="0" data-keep="term"><div class="tbr"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><span>pending-docs — promaxx R16.150</span><span class="live">LIVE</span></div>
+      <div class="cmd">$ pending --from=${st.tab === ALL ? 'ALL' : G.CODE[st.tab]} --grep <input type="text" data-input="q" data-keep="q" autocomplete="off" placeholder="เลขที่เอกสาร / รหัส / ชื่อสินค้า" value="${G.esc(st.q)}"></div>
+      <div class="keys">${G.tabs(docs).map((t, i) => `<button class="key${st.tab === t.key ? ' on' : ''}" data-act="tab" data-v="${t.key}"><kbd>${i + 1}</kbd>${t.key === ALL ? 'ALL' : t.key}(${t.count})</button>`).join('')}<span class="tip">กดเลข 1–5 สลับแท็บ · / ค้นหา · Esc ปิด</span></div>
+      <div class="hd"><span></span><span>doc_no</span><span>date</span><span>route</span><span class="r">items</span><span>age</span><span class="r">days</span><span></span></div>
+      ${kind ? G.empty(kind) : lines}
+      <div class="ft"><span><b>${vis.length}</b> documents</span><span><b>${items}</b> items</span><span>oldest <b>${old ? G.back(old) + 'd' : '—'}</b></span><span>as of <b>28/10/2569 09:41:07</b></span></div></div>
+      ${dr ? `<div class="gm-ov"><div class="tm" role="dialog" aria-modal="true"><div class="tbr"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><span>cat ${dr.no}</span><button data-act="close">[esc] ปิด</button></div>
+        <div class="body"><dl class="kv"><dt>doc_no</dt><dd>${dr.no}</dd><dt>doc_date</dt><dd>${G.fmtDate(dr.date)}</dd><dt>route</dt><dd>${dr.from} → ${dr.to}</dd><dt>pending</dt><dd style="color:${{ ok: '#4fd1ff', warn: '#ffb347', alert: '#ff5c70' }[G.tone(G.back(dr))]}">${G.back(dr)} days</dd></dl>
+        <table><thead><tr><th>#</th><th>code</th><th>name</th><th class="n">qty</th></tr></thead><tbody>${dr.items.map(i => `<tr><td>${i.line}</td><td>${i.code}</td><td>${i.name}</td><td class="n">${G.qty(i.qty)}</td></tr>`).join('')}</tbody></table></div><div class="foot"><span>${dr.n} items</span><span>qty total ${G.qty(G.total(dr))}</span></div></div></div>` : ''}`;
+  },
+});
+</script>
+
+<!-- ═══ แบบที่ 12 · กระดานโน้ตกาวย่น (Sticky Notes) ═══ -->
+<style>
+.d12 { background: #e7eff9; background-image: radial-gradient(#bfd3ea 1.3px, transparent 1.3px); background-size: 22px 22px; padding: 24px 28px 36px; font-family: 'Mali', 'Noto Sans Thai', cursive; }
+.d12 .top { display: flex; gap: 14px 24px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 20px; }
+.d12 .sb { background: transparent; border: 0; border-bottom: 2.5px dashed #7ea3cf; border-radius: 0; padding: 0 4px; flex: 1 1 280px; max-width: 380px; color: #4a6d91; box-shadow: none !important; }
+.d12 .sb input { font-family: 'Mali', 'Noto Sans Thai', cursive; font-size: 15px; }
+.d12 .sb:focus-within { border-bottom: 2.5px solid #2d6cad; }
+.d12 .idx { display: flex; gap: 6px; align-items: flex-end; flex-wrap: wrap; }
+.d12 .itab { padding: 8px 14px 6px; border-radius: 10px 10px 0 0; background: var(--n); font-weight: 700; font-size: 13px; color: #2c3e50; box-shadow: 0 -2px 5px rgba(0, 0, 0, .08); transform: translateY(6px); transition: transform .13s, padding .13s; font-family: 'Mali', 'Noto Sans Thai', cursive; }
+.d12 .itab:hover { transform: translateY(2px); }
+.d12 .itab.on { transform: translateY(0); padding-bottom: 12px; box-shadow: 0 -4px 10px rgba(0, 0, 0, .15); }
+.d12 .itab b { margin-left: 6px; background: rgba(255, 255, 255, .72); border-radius: 99px; padding: 0 7px; font: 800 11px 'Outfit', sans-serif; }
+.d12 .board { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 30px 24px; align-items: start; padding: 16px 6px 4px; }
+.d12 .nt { position: relative; background: var(--n); padding: 26px 16px 18px; min-height: 176px; box-shadow: 0 9px 14px rgba(40, 60, 90, .2), inset 0 -22px 30px -24px rgba(0, 0, 0, .12); transform: rotate(var(--r)); transition: transform .15s, box-shadow .15s; display: flex; flex-direction: column; gap: 6px; text-align: left; border-radius: 3px 3px 24px 3px; width: 100%; font-family: 'Mali', 'Noto Sans Thai', cursive; }
+.d12 .nt:hover { transform: rotate(0) translateY(-5px) scale(1.04); box-shadow: 0 18px 28px rgba(40, 60, 90, .28); z-index: 2; }
+.d12 .nt::before { content: ''; position: absolute; top: -11px; left: 50%; width: 66px; height: 22px; margin-left: -33px; background: rgba(255, 255, 255, .66); box-shadow: 0 1px 3px rgba(0, 0, 0, .14); transform: rotate(-2deg); }
+.d12 .nt .no { font: 800 15.5px 'Outfit', sans-serif; color: #1f3f66; letter-spacing: .2px; }
+.d12 .nt .rt { font-size: 14.5px; font-weight: 700; color: #2c3e50; line-height: 1.35; }
+.d12 .nt .rt em { font-style: normal; color: #4a6d91; margin: 0 2px; }
+.d12 .nt .ln { font-size: 13px; color: #44566b; }
+.d12 .stamp { position: absolute; right: 12px; bottom: 12px; border: 2.5px solid var(--tc); color: var(--tt); background: rgba(255, 255, 255, .6); padding: 1px 9px; font: 800 13px 'Mali', 'Noto Sans Thai', cursive; transform: rotate(-8deg); border-radius: 7px; letter-spacing: .3px; }
+.d12 .em { background: rgba(255, 255, 255, .6); border: 2px dashed #9fbbda; border-radius: 16px; margin: 6px; font-family: 'Mali', 'Noto Sans Thai', cursive; }
+.d12 .pad-ov { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 24px 16px; background: rgba(15, 30, 50, .55); animation: gmFade .15s; }
+.d12 .pad { position: relative; width: min(580px, 100%); max-height: 88vh; background: #fbfdff; border-radius: 6px; box-shadow: 0 22px 60px rgba(0, 0, 0, .4); padding: 26px 26px 18px 76px; font-family: 'Mali', 'Noto Sans Thai', cursive; display: flex; flex-direction: column; overflow: hidden; animation: gmPop .2s ease-out; }
+.d12 .pad::before { content: ''; position: absolute; left: 58px; top: 0; bottom: 0; width: 2px; background: #f19a9a; }
+.d12 .pad::after { content: ''; position: absolute; left: 16px; top: 0; bottom: 0; width: 24px; background: radial-gradient(circle at 12px 14px, #cbd9ea 8px, transparent 9px) 0 0 / 24px 74px repeat-y; }
+.d12 .pad-x { position: absolute; right: 10px; top: 10px; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: #6b7c8f; z-index: 2; }
+.d12 .pad-x:hover { background: #e9f0f8; }
+.d12 .pad h2 { font: 800 21px 'Outfit', 'Mali', sans-serif; color: #1f3f66; line-height: 32px; }
+.d12 .pad .sub { line-height: 32px; font-size: 14px; color: #4a6d91; margin-bottom: 4px; }
+.d12 .pad .sub .stamp { position: static; display: inline-block; margin-left: 8px; transform: rotate(-4deg); }
+.d12 .lines { overflow: auto; background: repeating-linear-gradient(transparent 0 31px, #cddff2 31px 32px); background-attachment: local; min-height: 0; flex: 1; }
+.d12 .lines li { line-height: 32px; height: 32px; display: flex; gap: 10px; font-size: 14px; white-space: nowrap; }
+.d12 .lines li i { font-style: normal; color: #8aa0b8; width: 22px; flex: none; text-align: right; }
+.d12 .lines li span { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+.d12 .lines li b { font: 800 15px/32px 'Outfit', sans-serif; color: #2d6cad; }
+.d12 .pad .tot { line-height: 32px; margin-top: 6px; display: flex; justify-content: space-between; color: #4a6d91; font-size: 13.5px; border-top: 2px solid #cddff2; }
+</style>
+<script>
+(() => {
+  const NOTE = { 'คลังสินค้า': '#bfe0ff', SRC: '#bdf0df', KKL: '#dcd2ff', SSS: '#ffcfe5' };
+  const ROT = [-2.2, 1.6, -1.1, 2.1, -1.7, 0.9, 1.9, -0.8];
+  G.add({
+    id: 12, name: 'กระดานโน้ตกาวย่น', en: 'Sticky Notes', desc: 'แต่ละเอกสารเป็นกระดาษโน้ตติดบอร์ด สีตามสาขาต้นทาง + ตราประทับ "ค้าง N วัน" · แท็บเป็นสติกเกอร์ดัชนี · กดโน้ตแล้วเปิดสมุดมีเส้นบรรทัด', nav: 'แท็บสติกเกอร์ดัชนี', detail: 'popup สมุดมีเส้น',
+    esc: ['open'],
+    init: () => ({ tab: ALL, q: '', open: null }),
+    view(st, docs, G) {
+      const vis = G.vis(docs, st), kind = G.emptyKind(docs, vis), dr = st.open ? G.find(docs, st.open) : null;
+      const stampTxt = d => (G.back(d) === 0 ? 'วันนี้' : 'ค้าง ' + G.dayTxt(G.back(d)));
+      return `<div class="top">${G.searchBox(st, 'ค้นหาเลขที่เอกสาร / สินค้า...')}<div class="idx">${G.tabs(docs).map(t => `<button class="itab${st.tab === t.key ? ' on' : ''}" style="--n:${NOTE[t.key] || '#e4edf8'}" data-act="tab" data-v="${t.key}">${t.key}<b>${t.count}</b></button>`).join('')}</div></div>
+        ${kind ? G.empty(kind) : `<div class="board">${vis.map((d, i) => `<button class="nt t-${G.tone(G.back(d))}" style="--n:${NOTE[d.from]};--r:${ROT[i % ROT.length]}deg" data-act="open" data-id="${d.id}"><span class="no">${d.no}</span><span class="rt">${d.from}<em>➜</em>${d.to}</span><span class="ln">✎ ${d.n} รายการ</span><span class="ln">📅 ${G.fmtDate(d.date)}</span><span class="stamp">${stampTxt(d)}</span></button>`).join('')}</div>`}
+        ${dr ? `<div class="pad-ov"><div class="pad t-${G.tone(G.back(dr))}" role="dialog" aria-modal="true"><button class="pad-x" data-act="close" aria-label="ปิด">${G.ico.x}</button><h2>${dr.no}</h2><div class="sub">${dr.from} ➜ ${dr.to} · ${G.fmtDate(dr.date)}<span class="stamp">${stampTxt(dr)}</span></div>
+        <ul class="lines">${dr.items.map(i => `<li><i>${i.line}.</i><span>${i.name}</span><b>×${G.qty(i.qty)}</b></li>`).join('')}</ul><div class="tot"><span>รวม ${dr.n} รายการ</span><span>จำนวนรวม ${G.qty(G.total(dr))}</span></div></div></div>` : ''}`;
+    },
+  });
+})();
+</script>
+
+<!-- ═══ แบบที่ 13 · ปฏิทินรายเดือน (Calendar) ═══ -->
+<style>
+.d13 { background: #fff; padding: 22px 26px 28px; }
+.d13 .bar { display: flex; gap: 12px 18px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+.d13 .bar .sb { flex: 1 1 280px; max-width: 380px; }
+.d13 .seg { display: inline-flex; background: #e8eff7; border-radius: 9px; padding: 3px; gap: 2px; flex-wrap: wrap; }
+.d13 .seg button { padding: 5px 11px; border-radius: 7px; font-size: 12.5px; font-weight: 600; color: #5b7fa3; white-space: nowrap; }
+.d13 .seg button.on { background: #fff; color: #2d6cad; box-shadow: 0 1px 4px rgba(45, 108, 173, .25); }
+.d13 .seg button small { font: 700 10.5px 'Outfit', sans-serif; opacity: .7; margin-left: 4px; }
+.d13 .jumps { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; padding: 9px 12px; background: #fff7e8; border: 1px solid #f3dcab; border-radius: 10px; color: #8a5a00; font-size: 12.5px; }
+.d13 .jumps button { padding: 3px 11px; border-radius: 999px; background: #fff; border: 1px solid #e8c77a; color: #8a5a00; font-weight: 700; font-size: 12.5px; }
+.d13 .jumps button b { margin-left: 5px; background: #e24b43; color: #fff; border-radius: 9px; padding: 0 6px; font: 800 10.5px/17px 'Outfit', sans-serif; display: inline-block; }
+.d13 .wrap { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 20px; align-items: start; }
+.d13 .mh { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.d13 .mh h3 { font-size: 20px; color: #1f3f66; margin-right: auto; }
+.d13 .mh h3 small { font: 500 13px 'Outfit', sans-serif; color: #8aa0b8; margin-left: 6px; }
+.d13 .nv { width: 34px; height: 34px; border-radius: 10px; border: 1.5px solid #cadcee; display: grid; place-items: center; color: #2d6cad; transition: all .13s; }
+.d13 .nv:hover { background: #2d6cad; border-color: #2d6cad; color: #fff; }
+.d13 .nv.pv svg { transform: rotate(180deg); }
+.d13 .td { padding: 0 14px; height: 34px; border-radius: 10px; border: 1.5px solid #cadcee; font-weight: 600; font-size: 13px; color: #2d6cad; }
+.d13 .td:hover { background: #eaf3fc; }
+.d13 .cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+.d13 .wd { text-align: center; font-size: 12px; font-weight: 700; color: #8aa0b8; padding: 4px 0; }
+.d13 .wd:first-child { color: #e24b43; }
+.d13 .cell { position: relative; min-height: 82px; border-radius: 12px; background: #f5f8fc; padding: 7px 8px; display: flex; flex-direction: column; justify-content: space-between; text-align: left; border: 1.5px solid transparent; }
+.d13 .cell.blank { background: none; }
+.d13 .cell .dn { font: 700 13px 'Outfit', sans-serif; color: #7b93ad; }
+.d13 .cell.has { background: var(--tb); border-color: color-mix(in srgb, var(--tc) 45%, #fff); transition: transform .13s, box-shadow .13s; }
+.d13 .cell.has:hover { transform: translateY(-2px); box-shadow: 0 8px 18px rgba(31, 63, 102, .16); }
+.d13 .cell.has .dn { color: var(--tt); }
+.d13 .cell .ct { font-size: 11px; color: var(--tt); }
+.d13 .cell .ct b { display: inline-grid; place-items: center; min-width: 24px; height: 24px; border-radius: 12px; background: var(--tc); color: #fff; font: 800 13px 'Outfit', sans-serif; margin-right: 3px; }
+.d13 .cell.today .dn { background: #4891db; color: #fff; border-radius: 50%; width: 24px; height: 24px; display: grid; place-items: center; }
+.d13 .cell em { position: absolute; right: 7px; top: 8px; font-style: normal; font-size: 10px; color: #4891db; font-weight: 700; }
+.d13 .cell.sel { box-shadow: 0 0 0 3px #1f3f66; }
+.d13 .side { background: #f7faff; border: 1px solid #dde9f5; border-radius: 16px; padding: 16px; min-height: 280px; }
+.d13 .side h3 { font-size: 15px; color: #1f3f66; margin-bottom: 4px; }
+.d13 .side .sub { display: flex; align-items: center; gap: 8px; color: #6d88a6; font-size: 12.5px; margin-bottom: 12px; }
+.d13 .dc { background: #fff; border: 1px solid #dde9f5; border-radius: 12px; padding: 11px 12px; margin-bottom: 9px; }
+.d13 .dc .no { font-size: 14px; color: #1f3f66; display: block; margin-bottom: 6px; }
+.d13 .dc .rt { display: flex; gap: 6px; align-items: center; font-size: 12.5px; margin-bottom: 8px; color: #98b3cf; }
+.d13 .dc .ft { display: flex; justify-content: space-between; align-items: center; color: #6d88a6; font-size: 12.5px; }
+.d13 .vb { border: 1.5px solid #b8d3ee; color: #2d6cad; border-radius: 999px; padding: 3px 13px; font-weight: 600; font-size: 12.5px; background: #fff; transition: all .13s; }
+.d13 .vb:hover { background: #2d6cad; border-color: #2d6cad; color: #fff; }
+.d13 .none { color: #8aa0b8; text-align: center; padding: 34px 8px; font-size: 13px; line-height: 1.7; }
+.d13 .em { padding: 30px 8px; } .d13 .em-i { font-size: 34px; }
+@media (max-width: 860px) { .d13 .wrap { grid-template-columns: 1fr; } }
+</style>
+<script>
+(() => {
+  const MN = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+  const WD = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'];
+  const iso = (y, m, d) => `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  G.add({
+    id: 13, name: 'ปฏิทินรายเดือน', en: 'Calendar', desc: 'ดูว่าเอกสารค้างจาก "วันไหน" — ช่องวันที่ถูกย้อมสีตามความเก่า มีตัวเลขจำนวนเอกสาร · กดวันเพื่อดูรายการทางขวา · ถ้ามีเอกสารค้างข้ามเดือนจะมีแถบเตือนให้กดข้ามไป', nav: 'ปุ่มเล็กบนหัวปฏิทิน', detail: 'popup กลางจอ',
+    esc: ['open'],
+    init: () => ({ tab: ALL, q: '', y: 2026, m: 9, day: null, open: null }),
+    act: {
+      prev: st => { st.m--; if (st.m < 0) { st.m = 11; st.y--; } st.day = null; },
+      next: st => { st.m++; if (st.m > 11) { st.m = 0; st.y++; } st.day = null; },
+      today: st => { st.y = 2026; st.m = 9; st.day = null; },
+      jump: (st, ds) => { const [y, m] = ds.ym.split('-'); st.y = +y; st.m = +m - 1; st.day = null; },
+      day: (st, ds) => { st.day = ds.d; },
+    },
+    view(st, docs, G) {
+      const vis = G.vis(docs, st), kind = G.emptyKind(docs, vis);
+      const key = `${st.y}-${String(st.m + 1).padStart(2, '0')}`;
+      const byDay = {}, others = {};
+      vis.forEach(d => { if (d.date.slice(0, 7) === key) (byDay[d.date] = byDay[d.date] || []).push(d); else others[d.date.slice(0, 7)] = (others[d.date.slice(0, 7)] || 0) + 1; });
+      const selDay = st.day && byDay[st.day] ? st.day : Object.keys(byDay).sort()[0] || null;
+      const first = new Date(Date.UTC(st.y, st.m, 1)).getUTCDay(), dim = new Date(Date.UTC(st.y, st.m + 1, 0)).getUTCDate();
+      let cells = '';
+      for (let i = 0; i < first; i++) cells += '<div class="cell blank"></div>';
+      for (let d = 1; d <= dim; d++) {
+        const id = iso(st.y, st.m, d), list = byDay[id] || [], today = id === TODAY;
+        const cls = `cell${list.length ? ' has t-' + G.tone(G.back(list[0])) : ''}${today ? ' today' : ''}${selDay === id ? ' sel' : ''}`;
+        const inner = `<span class="dn">${d}</span>${list.length ? `<span class="ct"><b>${list.length}</b>เอกสาร</span>` : ''}${today ? '<em>วันนี้</em>' : ''}`;
+        cells += list.length ? `<button class="${cls}" data-act="day" data-d="${id}">${inner}</button>` : `<div class="${cls}">${inner}</div>`;
+      }
+      const jumps = Object.keys(others).sort().map(k => `<button data-act="jump" data-ym="${k}">${MN[+k.slice(5) - 1]} ${+k.slice(0, 4) + 543}<b>${others[k]}</b></button>`).join('');
+      const list = selDay ? byDay[selDay] : [];
+      const side = kind ? G.empty(kind) : selDay ? `<h3>เอกสารวันที่ ${G.fmtDate(selDay)}</h3><div class="sub">${list.length} เอกสาร · ค้าง ${G.dy(list[0])}</div>${list.map(d => `<div class="dc"><span class="no">${d.no}</span><div class="rt">${G.bc(d.from)}${G.ico.arrow}${G.bc(d.to)}</div><div class="ft"><span>${d.n} รายการ</span><button class="vb" data-act="open" data-id="${d.id}">ดูสินค้า</button></div></div>`).join('')}`
+        : `<div class="none">เดือนนี้ไม่มีเอกสารค้าง<br>${jumps ? 'กดแถบสีส้มด้านบนเพื่อข้ามไปเดือนที่มีเอกสาร' : ''}</div>`;
+      return `<div class="bar">${G.searchBox(st)}<div class="seg">${G.tabs(docs).map(t => `<button class="${st.tab === t.key ? 'on' : ''}" data-act="tab" data-v="${t.key}">${t.key}<small>${t.count}</small></button>`).join('')}</div></div>
+        ${jumps ? `<div class="jumps">⚠️ ยังมีเอกสารค้างในเดือนอื่นอีก — กดเพื่อข้ามไป: ${jumps}</div>` : ''}
+        <div class="wrap"><div><div class="mh"><h3>${MN[st.m]}<small>${st.y + 543}</small></h3><button class="td" data-act="today">เดือนนี้</button><button class="nv pv" data-act="prev" aria-label="เดือนก่อน">${G.ico.chev}</button><button class="nv" data-act="next" aria-label="เดือนถัดไป">${G.ico.chev}</button></div>
+        <div class="cal">${WD.map(w => `<div class="wd">${w}</div>`).join('')}${cells}</div></div><aside class="side">${side}</aside></div>${st.open ? G.modal(G.find(docs, st.open)) : ''}`;
+    },
+  });
+})();
+</script>
+
+<!-- ═══ แบบที่ 14 · ฟีดบนมือถือ (Mobile Feed + Bottom Sheet) ═══ -->
+<style>
+.d14 { background: linear-gradient(135deg, #dce8f6, #f5f9fe); padding: 30px 28px; display: flex; justify-content: center; align-items: center; gap: 48px; flex-wrap: wrap; }
+.d14 .cap { max-width: 320px; color: #4a6d91; font-size: 13.5px; line-height: 1.75; }
+.d14 .cap h3 { font-size: 18px; color: #1f3f66; margin-bottom: 10px; }
+.d14 .cap li { display: flex; gap: 9px; margin-bottom: 8px; }
+.d14 .cap li span { flex: none; width: 20px; height: 20px; border-radius: 50%; background: #d8ebff; color: #2d6cad; display: grid; place-items: center; margin-top: 2px; }
+.d14 .cap li span svg { width: 12px; height: 12px; }
+.d14 .phone { position: relative; width: 372px; height: 740px; flex: none; background: #f4f7fb; border: 11px solid #131a27; border-radius: 48px; box-shadow: 0 30px 60px rgba(20, 40, 80, .32), inset 0 0 0 2px #2a3446; overflow: hidden; display: flex; flex-direction: column; }
+.d14 .notch { position: absolute; top: 0; left: 50%; width: 118px; height: 25px; margin-left: -59px; background: #131a27; border-radius: 0 0 16px 16px; z-index: 5; }
+.d14 .sbar { height: 38px; padding: 12px 26px 0; display: flex; justify-content: space-between; font: 700 12px 'Outfit', sans-serif; color: #1f3f66; flex: none; }
+.d14 .appbar { padding: 8px 18px 10px; display: flex; align-items: center; justify-content: space-between; flex: none; }
+.d14 .appbar h2 { font-size: 21px; color: #1f3f66; line-height: 1.2; }
+.d14 .appbar small { color: #7b93ad; font-size: 12px; display: block; }
+.d14 .rf { width: 38px; height: 38px; border-radius: 50%; background: #fff; display: grid; place-items: center; color: #2d6cad; box-shadow: 0 1px 5px rgba(31, 63, 102, .18); }
+.d14 .sw { padding: 0 16px 10px; flex: none; }
+.d14 .sb { border-radius: 14px; border: 0; background: #e5edf6; padding: 0 12px; }
+.d14 .sb input { padding: 10px 0; font-size: 14px; }
+.d14 .feed { flex: 1; overflow: auto; padding: 4px 14px 12px; display: flex; flex-direction: column; gap: 9px; min-height: 0; }
+.d14 .row { display: flex; align-items: center; gap: 12px; background: #fff; border-radius: 16px; padding: 11px 12px; box-shadow: 0 1px 3px rgba(31, 63, 102, .1); width: 100%; text-align: left; flex: none; }
+.d14 .row:active { background: #eef5fd; }
+.d14 .av { width: 44px; height: 44px; border-radius: 50%; flex: none; display: grid; place-items: center; background: color-mix(in srgb, var(--c) 13%, #fff); color: var(--c); font: 800 12px 'Outfit', sans-serif; border: 2px solid color-mix(in srgb, var(--c) 38%, #fff); }
+.d14 .mid { flex: 1; min-width: 0; }
+.d14 .mid .no { font-size: 14.5px; color: #1f3f66; display: block; }
+.d14 .mid .sub { font-size: 12px; color: #6d88a6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.d14 .rt2 { text-align: right; display: flex; flex-direction: column; gap: 4px; align-items: flex-end; }
+.d14 .rt2 small { color: #8aa0b8; font-size: 11px; }
+.d14 .nav { flex: none; display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px; background: #fff; border-top: 1px solid #e1e9f3; padding: 8px 6px 22px; }
+.d14 .nv { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 7px 0 6px; border-radius: 14px; color: #8aa0b8; font-size: 10.5px; font-weight: 600; transition: background .12s; }
+.d14 .nv .num { font: 800 18px/1 'Outfit', sans-serif; color: #5b7fa3; }
+.d14 .nv.on { background: #e0edfb; color: #2d6cad; }
+.d14 .nv.on .num { color: #2d6cad; }
+.d14 .home { position: absolute; bottom: 7px; left: 50%; width: 112px; height: 4px; margin-left: -56px; border-radius: 2px; background: #131a27; opacity: .85; }
+.d14 .sov { position: absolute; inset: 0; background: rgba(10, 20, 40, .45); z-index: 6; display: flex; align-items: flex-end; animation: gmFade .15s; }
+.d14 .sheet { width: 100%; max-height: 84%; background: #fff; border-radius: 26px 26px 0 0; display: flex; flex-direction: column; animation: d14Up .25s ease-out; padding-bottom: 22px; }
+@keyframes d14Up { from { transform: translateY(70px); opacity: .5; } to { transform: none; opacity: 1; } }
+.d14 .grip { width: 42px; height: 5px; border-radius: 3px; background: #cfdbe9; margin: 9px auto 4px; flex: none; }
+.d14 .sh-h { padding: 8px 18px 12px; border-bottom: 1px solid #e8eff7; flex: none; }
+.d14 .sh-h h2 { font: 800 19px 'Outfit', sans-serif; color: #1f3f66; }
+.d14 .sh-h p { margin-top: 6px; font-size: 12.5px; color: #6d88a6; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.d14 .sh-b { overflow: auto; padding: 8px 16px; flex: 1; min-height: 0; }
+.d14 .li { display: flex; align-items: center; gap: 10px; padding: 9px 4px; border-bottom: 1px solid #eef3f9; }
+.d14 .li span { flex: 1; font-size: 13.5px; min-width: 0; }
+.d14 .li small { display: block; color: #8aa0b8; font: 11.5px 'Outfit', sans-serif; }
+.d14 .li b { font: 800 16px 'Outfit', sans-serif; color: #2d6cad; }
+.d14 .sh-f { padding: 10px 18px 0; display: flex; gap: 10px; align-items: center; flex: none; }
+.d14 .sh-f span { flex: 1; font-size: 12.5px; color: #6d88a6; }
+.d14 .cl { padding: 10px 22px; border-radius: 12px; background: #2d6cad; color: #fff; font-weight: 700; font-size: 14px; }
+.d14 .em { padding: 40px 14px; } .d14 .em-i { font-size: 38px; }
+@media (max-width: 440px) { .d14 { padding: 16px 6px; gap: 22px; } .d14 .phone { width: 100%; max-width: 372px; } }
+</style>
+<script>
+G.add({
+  id: 14, name: 'ฟีดบนมือถือ', en: 'Mobile Feed', desc: 'ออกแบบสำหรับมือถือ/แท็บเล็ตที่หน้าร้านก่อน — แท็บสาขาอยู่ล่างจอ (ตัวเลขใหญ่บอกจำนวน) · วงกลมสีบอกต้นทาง · แตะแถวเพื่อเลื่อนแผ่นสินค้าขึ้นมา', nav: 'แถบแท็บด้านล่างจอ', detail: 'แผ่นเลื่อนขึ้น (ในมือถือ)',
+  esc: ['open'],
+  init: () => ({ tab: ALL, q: '', open: null }),
+  view(st, docs, G) {
+    const vis = G.vis(docs, st), kind = G.emptyKind(docs, vis), dr = st.open ? G.find(docs, st.open) : null;
+    const feed = vis.map(d => `<button class="row t-${G.tone(G.back(d))}" data-act="open" data-id="${d.id}"><span class="av" style="--c:${G.BC[d.from]}">${G.CODE[d.from]}</span><span class="mid"><span class="no">${d.no}</span><span class="sub">→ ${d.to} · ${d.n} รายการ</span></span><span class="rt2">${G.dy(d)}<small>${G.fmtDate(d.date).slice(0, 5)}</small></span></button>`).join('');
+    const nav = G.tabs(docs).map(t => `<button class="nv${st.tab === t.key ? ' on' : ''}" data-act="tab" data-v="${t.key}"><b class="num">${t.count}</b>${t.key === 'คลังสินค้า' ? 'คลังสินค้า' : t.key}</button>`).join('');
+    const bullets = ['แท็บสาขาอยู่ล่างจอ กดด้วยนิ้วโป้งได้สะดวก', 'ตัวเลขบนแท็บ = จำนวนเอกสารที่ค้างของสาขานั้น', 'วงกลมซ้ายแถว = ต้นทาง (สี + รหัสสาขา)', 'แถวสูง ≥ 64px กดง่าย ตัวอักษรอ่านชัดบนจอเล็ก', 'แตะแถว → แผ่นรายการสินค้าเลื่อนขึ้นจากล่าง'];
+    return `<div class="cap"><h3>Mobile-first</h3><ul>${bullets.map(b => `<li><span>${G.ico.check}</span>${b}</li>`).join('')}</ul></div>
+      <div class="phone"><div class="notch"></div><div class="sbar"><span>9:41</span><span>5G ▮▮▮</span></div>
+      <div class="appbar"><div><h2>เอกสารค้างส่ง</h2><small>${vis.length} เอกสาร · ยังไม่กด “ส่ง” ใน ProMaxx</small></div><span class="rf">${G.ico.refresh}</span></div>
+      <div class="sw">${G.searchBox(st, 'ค้นหาเลขที่ / รหัส / สินค้า')}</div>
+      <div class="feed" data-scroll="feed">${kind ? G.empty(kind) : feed}</div><nav class="nav">${nav}</nav><div class="home"></div>
+      ${dr ? `<div class="sov"><div class="sheet" role="dialog" aria-modal="true"><div class="grip"></div><div class="sh-h"><h2>${dr.no}</h2><p>${G.bc(dr.from)}→${G.bc(dr.to)} · ${G.dy(dr)}</p></div><div class="sh-b">${dr.items.map(i => `<div class="li"><span>${i.name}<small>#${i.line} · ${i.code}</small></span><b>×${G.qty(i.qty)}</b></div>`).join('')}</div><div class="sh-f"><span>รวม ${dr.n} รายการ · ${G.qty(G.total(dr))} ชิ้น</span><button class="cl" data-act="close">ปิด</button></div></div></div>` : ''}</div>`;
+  },
+});
+</script>
+
+<!-- ═══ แบบที่ 15 · เบนโตกระจก (Bento · ขนาดการ์ด = จำนวนรายการ) ═══ -->
+<style>
+.d15 { padding: 26px 28px 32px; background: radial-gradient(520px 340px at 6% 0%, rgba(120, 180, 255, .8), transparent 70%), radial-gradient(480px 360px at 98% 10%, rgba(190, 160, 255, .65), transparent 70%), radial-gradient(560px 420px at 68% 100%, rgba(110, 225, 205, .6), transparent 70%), #e8f1ff; }
+.d15 .gl { background: rgba(255, 255, 255, .55); backdrop-filter: blur(14px) saturate(1.5); -webkit-backdrop-filter: blur(14px) saturate(1.5); border: 1px solid rgba(255, 255, 255, .8); border-radius: 22px; box-shadow: 0 8px 30px rgba(50, 80, 140, .12), inset 0 1px 0 rgba(255, 255, 255, .85); }
+.d15 .layout { display: grid; grid-template-columns: 224px minmax(0, 1fr); gap: 16px; align-items: start; }
+.d15 .side { padding: 16px 12px; display: flex; flex-direction: column; gap: 4px; }
+.d15 .side h3 { font-size: 12.5px; color: #4a6d91; font-weight: 600; padding: 0 8px 6px; }
+.d15 .meter { display: block; width: 100%; text-align: left; padding: 9px 10px; border-radius: 14px; border: 1.5px solid transparent; transition: all .13s; }
+.d15 .meter:hover { background: rgba(255, 255, 255, .65); }
+.d15 .meter.on { background: #fff; border-color: rgba(72, 145, 219, .5); box-shadow: 0 4px 14px rgba(72, 145, 219, .22); }
+.d15 .meter .l { display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; color: #1f3f66; }
+.d15 .meter .l b { font: 800 14px 'Outfit', sans-serif; }
+.d15 .meter .tk { height: 7px; border-radius: 4px; background: rgba(31, 63, 102, .1); margin-top: 7px; overflow: hidden; }
+.d15 .meter .tk i { display: block; height: 100%; border-radius: 4px; background: linear-gradient(90deg, #6fb5ff, #4891db); }
+.d15 .key { margin: 10px 8px 0; padding-top: 12px; border-top: 1px solid rgba(31, 63, 102, .12); font-size: 11.5px; color: #5a7fa6; line-height: 1.7; }
+.d15 .key i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; background: var(--tc); vertical-align: -1px; }
+.d15 .main { min-width: 0; }
+.d15 .head { display: flex; gap: 14px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
+.d15 .sb { background: rgba(255, 255, 255, .7); border-color: rgba(255, 255, 255, .9); border-radius: 16px; flex: 1 1 280px; max-width: 420px; }
+.d15 .head .hint { font-size: 12.5px; color: #4a6d91; }
+.d15 .bento { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-auto-rows: 122px; grid-auto-flow: dense; gap: 12px; }
+.d15 .tl { padding: 14px 15px; display: flex; flex-direction: column; justify-content: space-between; text-align: left; position: relative; overflow: hidden; transition: transform .15s, box-shadow .15s; }
+.d15 .tl:hover { transform: translateY(-3px); box-shadow: 0 16px 36px rgba(50, 80, 140, .24); }
+.d15 .tl { background: linear-gradient(135deg, color-mix(in srgb, var(--tc) 17%, rgba(255, 255, 255, .72)), rgba(255, 255, 255, .5) 70%); }
+.d15 .tl::before { content: ''; position: absolute; left: 0; top: 14px; bottom: 14px; width: 4px; border-radius: 0 4px 4px 0; background: var(--tc); }
+.d15 .tl.wide { grid-column: span 2; }
+.d15 .tl.big { grid-column: span 2; grid-row: span 2; }
+.d15 .tl .no { font: 800 13.5px 'Outfit', sans-serif; color: #1f3f66; }
+.d15 .tl.s .no { font-size: 12.5px; }
+.d15 .tl .rt { font-size: 12.5px; color: #4a6d91; margin-top: 2px; display: flex; gap: 5px; align-items: center; flex-wrap: wrap; }
+.d15 .tl .bt { display: flex; justify-content: space-between; align-items: flex-end; gap: 8px; }
+.d15 .tl .days { font: 800 27px/1 'Outfit', sans-serif; color: var(--tt); }
+.d15 .tl .days small { font: 700 12px 'Noto Sans Thai', sans-serif; margin-left: 3px; }
+.d15 .tl.big .days { font-size: 62px; }
+.d15 .tl .cn { font-size: 12px; color: #4a6d91; white-space: nowrap; }
+.d15 .tl .pv { margin: 8px 0 2px; display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: #3a5878; }
+.d15 .tl .pv div { display: flex; justify-content: space-between; gap: 10px; background: rgba(255, 255, 255, .55); border-radius: 8px; padding: 3px 9px; }
+.d15 .tl .pv span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.d15 .tl .pv b { font-family: 'Outfit', sans-serif; flex: none; }
+.d15 .tl .more { font-size: 12px; font-weight: 700; color: #2d6cad; }
+.d15 .em { padding: 54px 20px; border-radius: 22px; }
+.d15 .gm-ov { background: rgba(30, 40, 90, .45); }
+.d15 .gm { background: rgba(255, 255, 255, .9); backdrop-filter: blur(22px); border-radius: 28px; border: 1px solid rgba(255, 255, 255, .8); }
+@media (max-width: 860px) { .d15 .layout { grid-template-columns: 1fr; } .d15 .bento { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+</style>
+<script>
+G.add({
+  id: 15, name: 'เบนโตกระจก', en: 'Bento Glass', desc: 'ขนาดการ์ด = จำนวนรายการในเอกสาร (ใหญ่ = สินค้าเยอะ) สีกระจก = ความเร่งด่วน · การ์ดใหญ่โชว์สินค้าตัวอย่างให้เลย · สาขาเป็นมิเตอร์แนวตั้งฝั่งซ้าย', nav: 'มิเตอร์แนวตั้ง', detail: 'popup กระจก',
+  esc: ['open'],
+  init: () => ({ tab: ALL, q: '', open: null }),
+  view(st, docs, G) {
+    const vis = G.vis(docs, st), kind = G.emptyKind(docs, vis);
+    const tabs = G.tabs(docs), mx = Math.max(1, ...tabs.slice(1).map(t => t.count));
+    const tiles = vis.map(d => {
+      const n = G.back(d), size = d.n >= 30 ? 'big' : d.n >= 10 ? 'wide' : 's';
+      const route = `<span class="rt">${G.CODE[d.from]} → ${G.CODE[d.to]}${size !== 's' ? ' · ' + G.fmtDate(d.date) : ''}</span>`;
+      const days = `<span class="days">${n === 0 ? 'วันนี้' : n}${n === 0 ? '' : '<small>วัน</small>'}</span>`;
+      const pv = size === 'big' ? `<div class="pv">${d.items.slice(0, 3).map(i => `<div><span>${i.name}</span><b>×${i.qty}</b></div>`).join('')}</div>` : '';
+      return `<article class="tl gl ${size} t-${G.tone(n)}" data-act="open" data-id="${d.id}"><div><span class="no">${d.no}</span>${route}</div>${pv}<div class="bt">${days}<span class="cn">${size === 'big' ? '<span class="more">ดูทั้ง ' + d.n + ' รายการ ›</span>' : d.n + ' รายการ'}</span></div></article>`;
+    }).join('');
+    return `<div class="layout"><aside class="side gl"><h3>สาขาต้นทาง</h3>${tabs.map(t => `<button class="meter${st.tab === t.key ? ' on' : ''}" data-act="tab" data-v="${t.key}"><div class="l"><span>${t.key}</span><b>${t.count}</b></div><div class="tk"><i style="width:${t.key === ALL ? (t.count ? 100 : 0) : t.count / mx * 100}%"></i></div></button>`).join('')}
+      <div class="key"><span class="t-ok"><i></i>วันนี้</span><br><span class="t-warn"><i></i>ค้าง 1–2 วัน</span><br><span class="t-alert"><i></i>ค้าง 3 วันขึ้นไป</span><br>ขนาดการ์ด = จำนวนรายการ</div></aside>
+      <div class="main"><div class="head">${G.searchBox(st)}<span class="hint">${vis.length} เอกสาร · เรียงเก่าสุดก่อน</span></div>${kind ? `<div class="gl">${G.empty(kind)}</div>` : `<div class="bento">${tiles}</div>`}</div></div>${st.open ? G.modal(G.find(docs, st.open)) : ''}`;
+  },
+});
+</script>
+
+<!-- ═══ แบบที่ 16 · ตัวติดตามสถานะ + เจาะลึก (Tracker / Drill-down) ═══ -->
+<style>
+.d16 { background: #f1f5fa; padding: 24px 28px 32px; }
+.d16 .wrap { max-width: 940px; margin: 0 auto; }
+.d16 .bar { display: flex; gap: 12px 16px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; position: relative; }
+.d16 .bar .sb { flex: 1 1 280px; max-width: 400px; }
+.d16 .dd { position: relative; }
+.d16 .dd > button { display: inline-flex; align-items: center; gap: 8px; padding: 9px 14px; background: #fff; border: 1.5px solid #cadcee; border-radius: 12px; font-weight: 600; color: #2d6cad; font-size: 13.5px; }
+.d16 .dd > button small { color: #8aa0b8; font-weight: 500; }
+.d16 .dd > button svg { transform: rotate(90deg); }
+.d16 .menu { position: absolute; z-index: 12; top: calc(100% + 6px); left: 0; min-width: 210px; background: #fff; border: 1px solid #cfe0f2; border-radius: 12px; box-shadow: 0 14px 34px rgba(31, 63, 102, .22); padding: 6px; }
+.d16 .menu button { display: flex; width: 100%; justify-content: space-between; align-items: center; padding: 8px 12px; border-radius: 8px; font-size: 13.5px; color: #35557c; text-align: left; }
+.d16 .menu button:hover { background: #eef5fd; }
+.d16 .menu button.on { background: #e1edfa; color: #1f3f66; font-weight: 700; }
+.d16 .menu b { font: 700 12px 'Outfit', sans-serif; color: #7b93ad; }
+.d16 .catch { position: fixed; inset: 0; z-index: 11; }
+.d16 .cnt { margin-left: auto; color: #6d88a6; font-size: 13px; }
+.d16 .card { background: #fff; border: 1px solid #dfe8f3; border-radius: 16px; padding: 13px 18px 10px; margin-bottom: 10px; box-shadow: 0 2px 8px rgba(31, 63, 102, .05); width: 100%; text-align: left; display: block; transition: box-shadow .14s, transform .14s, border-color .14s; }
+.d16 .card:hover { box-shadow: 0 10px 24px rgba(31, 63, 102, .14); transform: translateY(-2px); border-color: #bcd3ec; }
+.d16 .ch { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+.d16 .ch .no { font-size: 15.5px; color: #1f3f66; }
+.d16 .ch .rt { display: flex; align-items: center; gap: 7px; font-size: 13px; color: #98b3cf; }
+.d16 .ch .sp { margin-left: auto; display: flex; gap: 12px; align-items: center; color: #6d88a6; font-size: 12.5px; }
+.d16 .ch .sp svg { color: #98b3cf; }
+.d16 .stp { display: grid; grid-template-columns: repeat(4, 1fr); position: relative; }
+.d16 .st { position: relative; text-align: center; font-size: 11.5px; color: #98a9bd; padding-top: 30px; line-height: 1.35; }
+.d16 .st::before { content: ''; position: absolute; top: 12px; left: -50%; width: 100%; height: 3px; border-radius: 2px; background: repeating-linear-gradient(90deg, #d3deea 0 6px, transparent 6px 10px); }
+.d16 .st:first-child::before { display: none; }
+.d16 .st.done::before, .d16 .st.cur::before { background: #4891db; }
+.d16 .dot { position: absolute; top: 3px; left: 50%; margin-left: -10px; width: 21px; height: 21px; border-radius: 50%; background: #fff; border: 2.5px solid #cbd8e6; display: grid; place-items: center; z-index: 1; }
+.d16 .st.done { color: #4a6d91; } .d16 .st.done .dot { background: #4891db; border-color: #4891db; color: #fff; }
+.d16 .dot svg { width: 12px; height: 12px; }
+.d16 .st.cur { color: var(--tt); font-weight: 700; }
+.d16 .st.cur .dot { border-color: var(--tc); background: var(--tb); color: var(--tt); animation: gPulse 1.8s infinite; }
+.d16 .st.cur .dot i { width: 7px; height: 7px; border-radius: 50%; background: var(--tc); }
+.d16 .back { display: inline-flex; align-items: center; gap: 6px; color: #2d6cad; font-weight: 700; font-size: 13.5px; margin-bottom: 14px; padding: 6px 12px 6px 8px; border-radius: 10px; }
+.d16 .back:hover { background: #e1edfa; }
+.d16 .back svg { transform: rotate(180deg); }
+.d16 .hero { background: #fff; border: 1px solid #dfe8f3; border-radius: 18px; padding: 20px 24px; margin-bottom: 14px; box-shadow: 0 2px 8px rgba(31, 63, 102, .05); }
+.d16 .hero h2 { font: 800 26px 'Outfit', sans-serif; color: #1f3f66; margin-bottom: 16px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.d16 .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-top: 22px; }
+.d16 .fact { background: #f5f9fe; border-radius: 12px; padding: 10px 14px; }
+.d16 .fact small { display: block; color: #8aa0b8; font-size: 11.5px; }
+.d16 .fact b { font: 700 15px 'Outfit', 'Noto Sans Thai', sans-serif; color: #1f3f66; }
+.d16 .tcard { background: #fff; border: 1px solid #dfe8f3; border-radius: 18px; padding: 8px 22px 14px; box-shadow: 0 2px 8px rgba(31, 63, 102, .05); }
+.d16 .em { padding: 40px 20px; }
+</style>
+<script>
+(() => {
+  const STEPS = ['สร้างเอกสารแล้ว', 'รอกด “ส่ง”', 'กำลังโอนไปปลายทาง', 'ปลายทางรับแล้ว'];
+  const stepper = d => `<div class="stp t-${G.tone(G.back(d))}">${STEPS.map((s, i) => `<div class="st ${i === 0 ? 'done' : i === 1 ? 'cur' : ''}"><span class="dot">${i === 0 ? G.ico.check : i === 1 ? '<i></i>' : ''}</span>${i === 1 ? s + '<br>ค้าง ' + G.dayTxt(G.back(d)) : s}</div>`).join('')}</div>`;
+  G.add({
+    id: 16, name: 'ตัวติดตามสถานะ', en: 'Tracker + Drill-down', desc: 'อธิบายความหมายของ "ค้าง" ด้วยภาพ — ทุกเอกสารหยุดอยู่ที่ขั้น "รอกดส่ง" เหมือนติดตามพัสดุ · กดเอกสารเพื่อเจาะเข้าหน้ารายละเอียดเต็มหน้า (ไม่ใช่ popup) มีปุ่มย้อนกลับ', nav: 'ดรอปดาวน์เมนู', detail: 'เปลี่ยนเป็นหน้ารายละเอียด',
+    esc: ['menu'],
+    init: () => ({ tab: ALL, q: '', view: null, menu: false }),
+    act: {
+      menu: st => { st.menu = !st.menu; },
+      pick: (st, ds) => { st.tab = ds.v; st.menu = false; },
+      view: (st, ds) => { st.view = +ds.id; st.menu = false; },
+      back: st => { st.view = null; },
+    },
+    view(st, docs, G) {
+      const cur = st.view ? G.find(docs, st.view) : null;
+      if (cur) {
+        return `<div class="wrap"><button class="back" data-act="back">${G.ico.chev}กลับไปรายการเอกสารค้าง</button>
+          <div class="hero t-${G.tone(G.back(cur))}"><h2>${cur.no}${G.dy(cur)}</h2>${stepper(cur)}
+          <div class="facts"><div class="fact"><small>วันที่ออกเอกสาร</small><b>${G.fmtDate(cur.date)}</b></div><div class="fact"><small>ต้นทาง</small><b>${G.bc(cur.from)}</b></div><div class="fact"><small>ปลายทาง</small><b>${G.bc(cur.to)}</b></div><div class="fact"><small>จำนวนรายการ</small><b>${cur.n}</b></div><div class="fact"><small>จำนวนรวม</small><b>${G.qty(G.total(cur))}</b></div></div></div>
+          <div class="tcard">${G.itemsTable(cur)}</div></div>`;
+      }
+      const vis = G.vis(docs, st), kind = G.emptyKind(docs, vis), tabs = G.tabs(docs), now = tabs.find(t => t.key === st.tab) || tabs[0];
+      const cards = vis.map(d => `<article class="card t-${G.tone(G.back(d))}" data-act="view" data-id="${d.id}"><div class="ch"><span class="no">${d.no}</span><span class="rt">${G.bc(d.from)}${G.ico.arrow}${G.bc(d.to)}</span><span class="sp"><span>${d.n} รายการ</span><span>${G.fmtDate(d.date)}</span>${G.ico.chev}</span></div>${stepper(d)}</article>`).join('');
+      return `<div class="wrap"><div class="bar">${G.searchBox(st)}<div class="dd"><button data-act="menu">ต้นทาง: ${now.key}<small>(${now.count})</small>${G.ico.chev}</button>${st.menu ? `<div class="catch" data-act="menu"></div><div class="menu">${tabs.map(t => `<button class="${st.tab === t.key ? 'on' : ''}" data-act="pick" data-v="${t.key}">${t.key}<b>${t.count}</b></button>`).join('')}</div>` : ''}</div><span class="cnt">${vis.length} เอกสาร</span></div>${kind ? G.empty(kind) : cards}</div>`;
+    },
+  });
+})();
+</script>
+
+<!-- ═══ แบบที่ 17 · ตัวกรองด้านซ้าย + ตารางผลลัพธ์ (Faceted Filters) ═══ -->
+<style>
+.d17 { background: #f3f5f8; padding: 22px 24px 28px; }
+.d17 .shell { display: grid; grid-template-columns: 236px minmax(0, 1fr); gap: 18px; align-items: start; }
+.d17 .rail { background: #fff; border: 1px solid #dde3ec; border-radius: 12px; padding: 14px 16px 6px; }
+.d17 .rh { display: flex; justify-content: space-between; align-items: center; padding-bottom: 10px; border-bottom: 1px solid #e8edf4; }
+.d17 .rh b { font-size: 14px; color: #1f3f66; display: flex; gap: 6px; align-items: center; }
+.d17 .rh button { color: #2d6cad; font-size: 12.5px; font-weight: 600; }
+.d17 .rh button:hover { text-decoration: underline; }
+.d17 .grp { padding: 12px 0 10px; border-bottom: 1px solid #eef2f7; }
+.d17 .grp:last-child { border-bottom: 0; }
+.d17 .grp h4 { font-size: 12px; color: #7b8ca3; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; margin-bottom: 7px; }
+.d17 .ck { display: flex; align-items: center; gap: 9px; padding: 5px 4px; border-radius: 7px; font-size: 13.5px; cursor: pointer; transition: background .12s; }
+.d17 .ck:hover { background: #f3f7fc; }
+.d17 .ck input { width: 16px; height: 16px; accent-color: #2d6cad; margin: 0; cursor: pointer; }
+.d17 .ck span { flex: 1; }
+.d17 .ck em { font: 700 11.5px 'Outfit', sans-serif; font-style: normal; color: #7b8ca3; background: #eef2f7; border-radius: 9px; padding: 0 7px; line-height: 18px; }
+.d17 .res { min-width: 0; }
+.d17 .rbar { display: flex; gap: 12px 16px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+.d17 .rbar .sb { flex: 1 1 260px; max-width: 400px; border-radius: 9px; border-width: 1px; }
+.d17 .rbar .sb input { padding: 9px 0; font-size: 13.5px; }
+.d17 .sort { display: flex; align-items: center; gap: 8px; margin-left: auto; font-size: 12.5px; color: #6d7f95; }
+.d17 .sort select { border: 1px solid #cdd7e3; border-radius: 8px; padding: 7px 10px; background: #fff; color: #2c3e50; font-size: 13px; cursor: pointer; }
+.d17 .chips { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 10px; min-height: 4px; }
+.d17 .fc { display: inline-flex; align-items: center; gap: 4px; padding: 3px 5px 3px 11px; background: #e3eefb; border-radius: 6px; color: #234f82; font-size: 12.5px; font-weight: 600; }
+.d17 .fc button { width: 18px; height: 18px; display: grid; place-items: center; border-radius: 4px; }
+.d17 .fc button:hover { background: #c5daf3; }
+.d17 .fc svg { width: 12px; height: 12px; }
+.d17 .tw { background: #fff; border: 1px solid #dde3ec; border-radius: 12px; overflow: hidden; }
+.d17 .th { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid #e8edf4; font-size: 13px; color: #5b6f86; flex-wrap: wrap; min-height: 46px; }
+.d17 .th b { color: #1f3f66; }
+.d17 .cp { padding: 5px 12px; border: 1px solid #2d6cad; border-radius: 7px; color: #2d6cad; font-weight: 600; font-size: 12.5px; display: inline-flex; gap: 6px; align-items: center; }
+.d17 .cp:hover { background: #2d6cad; color: #fff; }
+.d17 table { width: 100%; border-collapse: collapse; }
+.d17 th.h { text-align: left; padding: 9px 12px; font-size: 12px; color: #6d7f95; background: #f7f9fc; font-weight: 700; border-bottom: 1px solid #e8edf4; white-space: nowrap; }
+.d17 td { padding: 9px 12px; border-bottom: 1px solid #f0f3f7; font-size: 13px; }
+.d17 tr.rw:hover td { background: #f6faff; }
+.d17 tr.on td { background: #eef5fd; }
+.d17 .c { text-align: center; } .d17 .ck0 { width: 36px; padding-right: 0; }
+.d17 .ck0 input { width: 16px; height: 16px; accent-color: #2d6cad; cursor: pointer; margin: 0; }
+.d17 .lk { color: #2d6cad; font-weight: 700; cursor: pointer; }
+.d17 .lk:hover { text-decoration: underline; }
+.d17 .vb { color: #2d6cad; font-weight: 600; font-size: 12.5px; }
+.d17 .vb:hover { text-decoration: underline; }
+.d17 .toast { position: absolute; right: 24px; bottom: 18px; background: #1f3f66; color: #fff; padding: 9px 16px; border-radius: 9px; font-size: 13px; box-shadow: 0 8px 22px rgba(31, 63, 102, .35); }
+.d17 .em { padding: 40px 20px; }
+@media (max-width: 800px) { .d17 .shell { grid-template-columns: 1fr; } .d17 .tw { overflow-x: auto; } .d17 table { min-width: 640px; } }
+</style>
+<script>
+(() => {
+  const AGES = [
+    { k: 'all', label: 'ทั้งหมด', test: () => true },
+    { k: 'a0', label: 'วันนี้', test: n => n < 1 },
+    { k: 'a1', label: 'ค้าง 1–2 วัน', test: n => n >= 1 && n < 3 },
+    { k: 'a2', label: 'ค้าง 3–6 วัน', test: n => n >= 3 && n < 7 },
+    { k: 'a3', label: 'ค้าง 7 วันขึ้นไป', test: n => n >= 7 },
+  ];
+  const SORTS = { old: 'เก่าสุดก่อน', new: 'ใหม่สุดก่อน', items: 'จำนวนรายการมากสุด' };
+  G.add({
+    id: 17, name: 'ตัวกรองด้านซ้าย', en: 'Faceted Filters', desc: 'แบบระบบหลังบ้านองค์กร — เลือกหลายสาขาพร้อมกันได้ (ติ๊กหลายช่อง) กรองตามปลายทางและอายุที่ค้าง · มีชิปบอกตัวกรองที่ใช้อยู่ · ติ๊กเลือกหลายเอกสารแล้วคัดลอกเลขที่ได้', nav: 'ช่องติ๊กหลายสาขา', detail: 'popup กลางจอ',
+    esc: ['open'],
+    init: () => ({ q: '', src: {}, dst: {}, age: 'all', sort: 'old', sel: {}, open: null, toast: '' }),
+    act: {
+      src: (st, v, e, el, ds) => { st.src[ds.b] = v; },
+      dst: (st, v, e, el, ds) => { st.dst[ds.b] = v; },
+      age: (st, v) => { st.age = v; },
+      sort: (st, v) => { st.sort = v; },
+      pick: (st, v, e, el, ds) => { st.sel[ds.id] = v; },
+      pickAll: (st, v) => { (st.visIds || []).forEach(id => { st.sel[id] = v; }); },
+      reset: st => { st.src = {}; st.dst = {}; st.age = 'all'; },
+      drop: (st, ds) => { if (ds.k === 'src') delete st.src[ds.b]; else if (ds.k === 'dst') delete st.dst[ds.b]; else st.age = 'all'; },
+      copy: st => {
+        const nos = G.docs.filter(d => st.sel[d.id]).map(d => d.no);
+        const text = nos.join('\n');
+        const fallback = () => { // เบราว์เซอร์/กรอบที่ไม่ให้ใช้ Clipboard API → ใช้วิธีเก่า ถ้ายังไม่ได้ก็แค่แสดงข้อความ
+          try { const t = document.createElement('textarea'); t.value = text; t.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove(); } catch (_) { /* ไม่เป็นไร */ }
+        };
+        try { navigator.clipboard.writeText(text).catch(fallback); } catch (_) { fallback(); }
+        st.toast = `คัดลอก ${nos.length} เลขที่เอกสารแล้ว`;
+        setTimeout(() => { st.toast = ''; render(G.designs.find(x => x.id === 17)); }, 2200);
+      },
+    },
+    view(st, docs, G) {
+      const srcOn = BRANCHES.filter(b => st.src[b]), dstOn = BRANCHES.filter(b => st.dst[b]), ageDef = AGES.find(a => a.k === st.age);
+      let vis = docs.filter(d => G.match(d, st.q) && (!srcOn.length || srcOn.includes(d.from)) && (!dstOn.length || dstOn.includes(d.to)) && ageDef.test(G.back(d)));
+      vis = [...vis].sort((a, b) => (st.sort === 'new' ? G.back(a) - G.back(b) : st.sort === 'items' ? b.n - a.n : G.back(b) - G.back(a)));
+      const kind = G.emptyKind(docs, vis), picked = docs.filter(d => st.sel[d.id]).length;
+      st.visIds = vis.map(d => d.id); // ให้ "เลือกทั้งหมด" เลือกเฉพาะแถวที่เห็นอยู่
+      const chips = [...srcOn.map(b => ['src', b, 'ต้นทาง: ' + b]), ...dstOn.map(b => ['dst', b, 'ปลายทาง: ' + b]), ...(st.age !== 'all' ? [['age', '', 'อายุ: ' + ageDef.label]] : [])]
+        .map(([k, b, t]) => `<span class="fc">${t}<button data-act="drop" data-k="${k}" data-b="${b}" aria-label="เอาออก">${G.ico.x}</button></span>`).join('');
+      const facet = (key, map) => BRANCHES.map(b => `<label class="ck"><input type="checkbox" data-change="${key}" data-b="${b}"${map[b] ? ' checked' : ''}><span>${b}</span><em>${docs.filter(d => d[key === 'src' ? 'from' : 'to'] === b).length}</em></label>`).join('');
+      const rows = vis.map(d => `<tr class="rw${st.sel[d.id] ? ' on' : ''} t-${G.tone(G.back(d))}"><td class="ck0"><input type="checkbox" data-change="pick" data-id="${d.id}"${st.sel[d.id] ? ' checked' : ''} aria-label="เลือก ${d.no}"></td><td class="no lk" data-act="open" data-id="${d.id}">${d.no}</td><td>${G.fmtDate(d.date)}</td><td>${G.bc(d.from)}</td><td>${G.bc(d.to)}</td><td class="c">${d.n}</td><td class="c">${G.dy(d)}</td><td><button class="vb" data-act="open" data-id="${d.id}">ดูสินค้า ›</button></td></tr>`).join('');
+      return `<div class="shell"><aside class="rail"><div class="rh"><b>${G.ico.filter}ตัวกรอง</b><button data-act="reset">ล้างทั้งหมด</button></div>
+        <div class="grp"><h4>ต้นทาง</h4>${facet('src', st.src)}</div><div class="grp"><h4>ปลายทาง</h4>${facet('dst', st.dst)}</div>
+        <div class="grp"><h4>อายุที่ค้าง</h4>${AGES.map(a => `<label class="ck"><input type="radio" name="age" data-change="age" value="${a.k}"${st.age === a.k ? ' checked' : ''}><span>${a.label}</span><em>${docs.filter(d => a.test(G.back(d))).length}</em></label>`).join('')}</div></aside>
+        <div class="res"><div class="rbar">${G.searchBox(st)}<label class="sort">เรียงตาม<select data-change="sort">${Object.entries(SORTS).map(([k, v]) => `<option value="${k}"${st.sort === k ? ' selected' : ''}>${v}</option>`).join('')}</select></label></div>
+        <div class="chips">${chips}</div><div class="tw"><div class="th"><span>พบ <b>${vis.length}</b> จาก ${docs.length} เอกสาร</span>${picked ? `<span>เลือกแล้ว <b>${picked}</b> เอกสาร <button class="cp" data-act="copy">${G.ico.copy}คัดลอกเลขที่</button></span>` : ''}</div>
+        ${kind ? G.empty(kind) : `<table><thead><tr><th class="h ck0"><input type="checkbox" data-change="pickAll" aria-label="เลือกทั้งหมด"${vis.length && vis.every(d => st.sel[d.id]) ? ' checked' : ''}></th><th class="h">เลขที่เอกสาร</th><th class="h">วันที่</th><th class="h">ต้นทาง</th><th class="h">ปลายทาง</th><th class="h c">รายการ</th><th class="h c">ค้าง</th><th class="h"></th></tr></thead><tbody>${rows}</tbody></table>`}</div></div></div>
+        ${st.toast ? `<div class="toast">${G.ico.check} ${st.toast}</div>` : ''}${st.open ? G.modal(G.find(docs, st.open)) : ''}`;
+    },
+  });
+})();
+</script>
+
+<!-- ═══ แบบที่ 18 · กริดสไตล์สเปรดชีต (Spreadsheet) ═══ -->
+<style>
+.d18 { background: #e9edf2; padding: 20px 22px 26px; }
+.d18 .xl { max-width: 1020px; margin: 0 auto; background: #fff; border: 1px solid #c9d2de; border-radius: 10px; overflow: hidden; box-shadow: 0 8px 26px rgba(31, 63, 102, .14); }
+.d18 .rib { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 8px 12px; background: #f3f6fa; border-bottom: 1px solid #d5dde8; }
+.d18 .file { font-weight: 700; font-size: 13px; color: #1f3f66; display: flex; gap: 6px; align-items: center; }
+.d18 .file i { width: 18px; height: 18px; border-radius: 4px; background: #2d6cad; display: inline-grid; place-items: center; color: #fff; font: 800 11px 'Outfit', sans-serif; font-style: normal; }
+.d18 .find { display: flex; align-items: center; gap: 8px; background: #fff; border: 1px solid #c3cdd9; border-radius: 6px; padding: 0 10px; color: #7b8ca3; min-width: 280px; flex: 1; max-width: 400px; }
+.d18 .find:focus-within { border-color: #2d6cad; box-shadow: 0 0 0 2px rgba(45, 108, 173, .2); }
+.d18 .find input { flex: 1; border: 0; outline: 0; background: none; padding: 6px 0; font-size: 13px; min-width: 0; }
+.d18 .rib .tip { margin-left: auto; color: #8a99ad; font-size: 11.5px; }
+.d18 .fbar { display: flex; align-items: stretch; border-bottom: 1px solid #d5dde8; font-size: 13px; background: #fff; }
+.d18 .nb { width: 86px; padding: 5px 10px; border-right: 1px solid #d5dde8; font: 700 13px 'Outfit', sans-serif; color: #1f3f66; background: #fff; text-align: center; }
+.d18 .fx { padding: 5px 12px; color: #8a99ad; font: italic 700 13px 'Outfit', serif; border-right: 1px solid #e3e9f1; }
+.d18 .fv { padding: 5px 12px; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.d18 .gw { overflow: auto; max-height: 560px; }
+.d18 table.sheet { border-collapse: separate; border-spacing: 0; table-layout: fixed; width: 100%; min-width: 800px; font-size: 12.5px; }
+.d18 .sheet th, .d18 .sheet td { border-right: 1px solid #dfe5ec; border-bottom: 1px solid #dfe5ec; height: 27px; padding: 0 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.d18 .sheet thead th { position: sticky; top: 0; z-index: 2; background: #f1f4f8; color: #667a92; font-weight: 600; text-align: center; font-size: 12px; }
+.d18 .sheet th.rn { width: 42px; background: #f1f4f8; color: #667a92; font-weight: 600; text-align: center; font-size: 11.5px; position: sticky; left: 0; z-index: 1; }
+.d18 .sheet thead th.rn { z-index: 3; }
+.d18 .sheet th.hl { background: #dbe8f8; color: #1f3f66; }
+.d18 .sheet tr.hdr td { background: #e4edf8; font-weight: 700; color: #1f3f66; }
+.d18 .sheet td { cursor: cell; background: #fff; }
+.d18 .sheet td.num { text-align: right; font-family: 'Outfit', sans-serif; font-weight: 500; }
+.d18 .sheet td.sel { outline: 2px solid #2d6cad; outline-offset: -2px; z-index: 1; position: relative; }
+.d18 .sheet tr.t-ok td.cf { background: #eaf3fc; color: #2d6cad; } .d18 .sheet tr.t-warn td.cf { background: #fff1d6; color: #a35f00; } .d18 .sheet tr.t-alert td.cf { background: #fde8e8; color: #c62828; font-weight: 700; }
+.d18 .sheet td.lnk { color: #1a5fb4; text-decoration: underline; text-underline-offset: 2px; }
+.d18 .sheet tr:not(.hdr):hover td:not(.sel) { background-color: #f7fbff; }
+.d18 .sheet td.cf:not(.sel) { background-clip: padding-box; }
+.d18 .empty-in { padding: 30px 20px; text-align: center; color: #7b8ca3; background: #fff; }
+.d18 .em { padding: 18px 20px; } .d18 .em-i { font-size: 30px; }
+.d18 .tabs { display: flex; align-items: flex-end; gap: 2px; padding: 6px 10px 0; background: #eef2f7; border-top: 1px solid #d5dde8; overflow-x: auto; }
+.d18 .stab { flex: none; padding: 6px 16px 7px; border-radius: 0 0 8px 8px; font-size: 12.5px; font-weight: 600; color: #5a7186; border: 1px solid transparent; border-top: 0; }
+.d18 .stab:hover { background: #e2e9f2; }
+.d18 .stab.on { background: #fff; color: #1f3f66; border-color: #c9d2de; box-shadow: inset 0 -3px 0 #2d6cad; }
+.d18 .stab small { color: #8a99ad; margin-left: 4px; font: 600 11px 'Outfit', sans-serif; }
+.d18 .stat { display: flex; gap: 22px; flex-wrap: wrap; padding: 6px 14px; background: #f3f6fa; border-top: 1px solid #d5dde8; font-size: 12px; color: #5a7186; }
+.d18 .stat b { color: #1f3f66; font-family: 'Outfit', sans-serif; }
+</style>
+<script>
+(() => {
+  const COLS = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
+  G.add({
+    id: 18, name: 'กริดสไตล์สเปรดชีต', en: 'Spreadsheet', desc: 'หน้าตา Excel/Google Sheets — ช่องกริด แถบสูตร ชื่อชีต=แท็บสาขา แถบสถานะนับ/รวมให้อัตโนมัติ · ช่อง "ค้าง" มี Conditional Formatting ย้อมสีตามกฎ 1/3 วัน', nav: 'แท็บชีตด้านล่าง', detail: 'popup กลางจอ (กดลิงก์ในช่อง G)',
+    esc: ['open'],
+    init: () => ({ tab: ALL, q: '', cell: { r: 2, c: 'A' }, open: null }),
+    act: { cell: (st, ds) => { st.cell = { r: +ds.r, c: ds.c }; } },
+    view(st, docs, G) {
+      const vis = G.vis(docs, st), kind = G.emptyKind(docs, vis);
+      const val = (d, c) => ({ A: d.no, B: G.fmtDate(d.date), C: d.from, D: d.to, E: String(d.n), F: String(G.back(d)), G: 'ดูสินค้า ↗' }[c]);
+      const rowsMax = Math.max(vis.length + 1, 14);
+      let body = `<tr class="hdr"><th class="rn${st.cell.r === 1 ? ' hl' : ''}">1</th>${['เลขที่เอกสาร', 'วันที่', 'ต้นทาง', 'ปลายทาง', 'รายการ', 'ค้าง (วัน)', 'สินค้า'].map((h, i) => `<td data-act="cell" data-r="1" data-c="${COLS[i]}"${st.cell.r === 1 && st.cell.c === COLS[i] ? ' class="sel"' : ''}>${h}</td>`).join('')}</tr>`;
+      for (let i = 0; i < rowsMax - 1; i++) {
+        const d = vis[i], r = i + 2;
+        if (!d) { body += `<tr><th class="rn">${r}</th>${COLS.map(() => '<td></td>').join('')}</tr>`; continue; }
+        body += `<tr class="t-${G.tone(G.back(d))}"><th class="rn${st.cell.r === r ? ' hl' : ''}">${r}</th>${COLS.map(c => {
+          const sel = st.cell.r === r && st.cell.c === c, cls = [sel ? 'sel' : '', c === 'E' || c === 'F' ? 'num' : '', c === 'F' ? 'cf' : '', c === 'G' ? 'lnk' : ''].filter(Boolean).join(' ');
+          return c === 'G' ? `<td class="${cls}" data-act="open" data-id="${d.id}">${val(d, c)}</td>` : `<td class="${cls}" data-act="cell" data-r="${r}" data-c="${c}">${val(d, c)}</td>`;
+        }).join('')}</tr>`;
+      }
+      const curDoc = vis[st.cell.r - 2], curVal = st.cell.r === 1 ? ['เลขที่เอกสาร', 'วันที่', 'ต้นทาง', 'ปลายทาง', 'รายการ', 'ค้าง (วัน)', 'สินค้า'][COLS.indexOf(st.cell.c)] : curDoc ? val(curDoc, st.cell.c) : '';
+      const items = vis.reduce((s, d) => s + d.n, 0), avg = vis.length ? (vis.reduce((s, d) => s + G.back(d), 0) / vis.length).toFixed(1) : '—', old = G.oldest(vis);
+      return `<div class="xl"><div class="rib"><span class="file"><i>X</i>เอกสารค้างส่ง.xlsx</span><label class="find">${G.ico.search}<input type="text" data-input="q" data-keep="q" autocomplete="off" placeholder="ค้นหาเลขที่เอกสาร / รหัส / ชื่อสินค้า" value="${G.esc(st.q)}"></label><span class="tip">คลิกช่องเพื่อเลือก · ลิงก์สีน้ำเงินในช่อง G = เปิดสินค้าในเอกสาร</span></div>
+        <div class="fbar"><span class="nb">${st.cell.c}${st.cell.r}</span><span class="fx">fx</span><span class="fv">${G.esc(curVal)}</span></div>
+        <div class="gw" data-scroll="grid"><table class="sheet"><colgroup><col style="width:42px"><col style="width:19%"><col style="width:13%"><col style="width:15%"><col style="width:15%"><col style="width:10%"><col style="width:12%"><col style="width:16%"></colgroup><thead><tr><th class="rn"></th>${COLS.map(c => `<th class="${st.cell.c === c ? 'hl' : ''}">${c}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table>${kind ? `<div class="empty-in">${G.empty(kind)}</div>` : ''}</div>
+        <div class="tabs">${G.tabs(docs).map(t => `<button class="stab${st.tab === t.key ? ' on' : ''}" data-act="tab" data-v="${t.key}">${t.key}<small>${t.count}</small></button>`).join('')}</div>
+        <div class="stat"><span>พร้อม</span><span>นับ: <b>${vis.length}</b> เอกสาร</span><span>รวมรายการ: <b>${items}</b></span><span>ค้างเฉลี่ย: <b>${avg}</b> วัน</span><span>ค้างนานสุด: <b>${old ? G.back(old) : '—'}</b> วัน</span></div></div>${st.open ? G.modal(G.find(docs, st.open)) : ''}`;
+    },
+  });
+})();
+</script>
+
+<!-- ═══ แบบที่ 19 · โฟกัสด่วน (Neo-Brutalism) ═══ -->
+<style>
+.d19 { background: #dcebff; padding: 26px 28px 36px; color: #0b0b0b; }
+.d19 .top { display: flex; gap: 14px 20px; align-items: center; flex-wrap: wrap; margin-bottom: 22px; }
+.d19 .sb { border: 3px solid #0b0b0b; border-radius: 12px; box-shadow: 5px 5px 0 #0b0b0b; background: #fff; color: #0b0b0b; flex: 1 1 300px; max-width: 430px; }
+.d19 .sb:focus-within { border-color: #0b0b0b; box-shadow: 5px 5px 0 #4891db; }
+.d19 .sb input { font-weight: 600; }
+.d19 .btns { display: flex; gap: 12px; flex-wrap: wrap; }
+.d19 .btn { padding: 8px 14px; border: 3px solid #0b0b0b; border-radius: 10px; background: #fff; font-weight: 800; font-size: 13.5px; box-shadow: 4px 4px 0 #0b0b0b; transition: transform .08s, box-shadow .08s; }
+.d19 .btn:hover { transform: translate(-1px, -1px); box-shadow: 5px 5px 0 #0b0b0b; }
+.d19 .btn:active { transform: translate(4px, 4px); box-shadow: 0 0 0 #0b0b0b; }
+.d19 .btn.on { background: #4891db; color: #fff; }
+.d19 .btn b { margin-left: 7px; background: #0b0b0b; color: #fff; border-radius: 6px; padding: 0 6px; font: 800 12px/19px 'Outfit', sans-serif; display: inline-block; }
+.d19 .btn.on b { background: #fff; color: #0b0b0b; }
+.d19 .hero { position: relative; margin: 0 0 28px 0; padding: 40px 30px 26px; border: 4px solid #0b0b0b; border-radius: 20px; box-shadow: 9px 9px 0 #0b0b0b; background: var(--hb); display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 14px 30px; align-items: center; overflow: hidden; }
+.d19 .hero.t-alert { --hb: #ff8f9c; } .d19 .hero.t-warn { --hb: #ffc978; } .d19 .hero.t-ok { --hb: #a5d3ff; }
+.d19 .hero::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 16px; background: repeating-linear-gradient(45deg, #0b0b0b 0 14px, #fff 14px 28px); border-bottom: 4px solid #0b0b0b; }
+.d19 .tag { position: absolute; top: 24px; left: 28px; background: #0b0b0b; color: #fff; padding: 2px 12px; font-weight: 800; font-size: 12.5px; border-radius: 6px; letter-spacing: .5px; }
+.d19 .big { font: 900 104px/1 'Outfit', sans-serif; letter-spacing: -3px; margin-top: 12px; }
+.d19 .big small { font: 900 26px 'Noto Sans Thai', sans-serif; letter-spacing: 0; margin-left: 8px; }
+.d19 .hero .no { font: 900 25px 'Outfit', sans-serif; margin-top: 12px; display: block; }
+.d19 .hero .rt { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 10px 0 6px; font-weight: 800; }
+.d19 .pill { border: 3px solid #0b0b0b; background: #fff; border-radius: 999px; padding: 0 12px; font-weight: 800; font-size: 14px; line-height: 26px; }
+.d19 .hero p { font-weight: 700; font-size: 14px; }
+.d19 .go { padding: 14px 22px; border: 3px solid #0b0b0b; border-radius: 12px; background: #0b0b0b; color: #fff; font-weight: 800; font-size: 16px; box-shadow: 5px 5px 0 #fff; transition: transform .08s; white-space: nowrap; margin-top: 12px; }
+.d19 .go:hover { transform: translate(-2px, -2px); box-shadow: 7px 7px 0 #fff; }
+.d19 .lbl { font-weight: 900; font-size: 15px; margin: 0 0 12px 4px; display: flex; align-items: center; gap: 10px; }
+.d19 .lbl span { background: #0b0b0b; color: #fff; border-radius: 6px; padding: 0 9px; font: 800 12.5px/22px 'Outfit', sans-serif; }
+.d19 .list { display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: 18px 22px; }
+.d19 .row { display: flex; align-items: stretch; border: 3px solid #0b0b0b; border-radius: 14px; background: #fff; box-shadow: 5px 5px 0 #0b0b0b; overflow: hidden; transition: transform .08s, box-shadow .08s; }
+.d19 .row:hover { transform: translate(-2px, -2px); box-shadow: 7px 7px 0 #0b0b0b; }
+.d19 .row:active { transform: translate(4px, 4px); box-shadow: 1px 1px 0 #0b0b0b; }
+.d19 .num { width: 84px; flex: none; display: flex; flex-direction: column; align-items: center; justify-content: center; border-right: 3px solid #0b0b0b; background: var(--hb); padding: 8px 0; }
+.d19 .row.t-alert { --hb: #ff8f9c; } .d19 .row.t-warn { --hb: #ffc978; } .d19 .row.t-ok { --hb: #a5d3ff; }
+.d19 .num b { font: 900 34px/1 'Outfit', sans-serif; } .d19 .num small { font-weight: 800; font-size: 12px; }
+.d19 .mid { flex: 1; min-width: 0; padding: 10px 14px; display: flex; flex-direction: column; justify-content: center; gap: 4px; }
+.d19 .mid .no { font: 800 15.5px 'Outfit', sans-serif; }
+.d19 .mid .rt { display: flex; gap: 6px; align-items: center; font-weight: 700; font-size: 13px; flex-wrap: wrap; }
+.d19 .mid .rt .pill { font-size: 12px; line-height: 20px; border-width: 2px; padding: 0 8px; }
+.d19 .mid .ct { font-size: 12.5px; font-weight: 600; color: #3b4a5c; }
+.d19 .arr { display: grid; place-items: center; padding: 0 16px; font: 900 22px 'Outfit', sans-serif; border-left: 3px solid #0b0b0b; background: #fff; }
+.d19 .row:hover .arr { background: #0b0b0b; color: #fff; }
+.d19 .em { border: 4px solid #0b0b0b; border-radius: 20px; background: #b8f5d8; box-shadow: 9px 9px 0 #0b0b0b; padding: 54px 20px; color: #0b0b0b; }
+.d19 .em-i { font-size: 64px; } .d19 .em-t { color: #0b0b0b; font: 900 30px 'Noto Sans Thai', sans-serif; } .d19 .em-s { font-weight: 700; font-size: 14px; opacity: 1; }
+.d19 .em.nm { background: #ffe0e6; }
+.d19 .gm-ov { background: rgba(11, 11, 11, .6); }
+.d19 .gm { border: 4px solid #0b0b0b; border-radius: 18px; box-shadow: 10px 10px 0 #0b0b0b; background: #fff; }
+.d19 .gm-h { background: #a5d3ff; border-bottom: 4px solid #0b0b0b; } .d19 .gm-h h2 { font: 900 22px 'Outfit', sans-serif; } .d19 .gm-h p { color: #0b0b0b; font-weight: 700; }
+.d19 .gm-x { border: 3px solid #0b0b0b; background: #fff; border-radius: 10px; box-shadow: 3px 3px 0 #0b0b0b; } .d19 .gm-x:hover { background: #ff8f9c; }
+.d19 .gm .it th { background: #0b0b0b; color: #fff; } .d19 .gm .it td { border-bottom: 2px solid #0b0b0b; } .d19 .gm-f { border-top: 4px solid #0b0b0b; color: #0b0b0b; font-weight: 800; background: #dcebff; }
+.d19 .gm .dy, .d19 .gm .bc { border: 2px solid #0b0b0b; color: #0b0b0b; background: #fff; }
+@media (max-width: 760px) { .d19 .hero { grid-template-columns: 1fr; } .d19 .list { grid-template-columns: 1fr; } }
+</style>
+<script>
+G.add({
+  id: 19, name: 'โฟกัสด่วน', en: 'Neo-Brutalism', desc: 'ขอบดำหนา เงาแข็ง สีสด — เอกสารที่ค้างนานสุดขึ้นเป็นป้ายใหญ่เต็มตาเตือนให้ตามก่อน ที่เหลือเป็นแถวปุ่มใหญ่กดง่าย · สถานะว่างเป็นป้ายเขียว "เคลียร์แล้ว!"', nav: 'ปุ่มหนามีเงา', detail: 'popup ขอบหนา',
+  esc: ['open'],
+  init: () => ({ tab: ALL, q: '', open: null }),
+  view(st, docs, G) {
+    const vis = G.vis(docs, st), kind = G.emptyKind(docs, vis), top = G.oldest(vis), rest = vis.filter(d => d !== top);
+    const n = top ? G.back(top) : 0;
+    const hero = top ? `<div class="hero t-${G.tone(n)}"><span class="tag">${G.tone(n) === 'ok' ? 'ใหม่ล่าสุดในระบบ' : '⚠ ค้างนานที่สุด — ตามก่อน!'}</span><div class="big">${n === 0 ? 'วันนี้' : n}${n === 0 ? '' : '<small>วัน</small>'}</div>
+      <div><span class="no">${top.no}</span><div class="rt"><span class="pill">${top.from}</span>➜<span class="pill">${top.to}</span></div><p>${top.n} รายการ · ออกเอกสารเมื่อ ${G.fmtDate(top.date)} · ยังไม่กด “ส่ง” ใน ProMaxx</p></div><button class="go" data-act="open" data-id="${top.id}">ดูสินค้า ↗</button></div>` : '';
+    const rows = rest.map(d => { const k = G.back(d); return `<article class="row t-${G.tone(k)}" data-act="open" data-id="${d.id}"><div class="num"><b>${k === 0 ? '0' : k}</b><small>${k === 0 ? 'วันนี้' : 'วัน'}</small></div><div class="mid"><span class="no">${d.no}</span><div class="rt"><span class="pill">${G.CODE[d.from]}</span>➜<span class="pill">${G.CODE[d.to]}</span></div><span class="ct">${d.n} รายการ · ${G.fmtDate(d.date)}</span></div><div class="arr">↗</div></article>`; }).join('');
+    return `<div class="top">${G.searchBox(st)}<div class="btns">${G.tabs(docs).map(t => `<button class="btn${st.tab === t.key ? ' on' : ''}" data-act="tab" data-v="${t.key}">${t.key}<b>${t.count}</b></button>`).join('')}</div></div>
+      ${kind ? G.empty(kind).replace('class="em"', kind === 'none' ? 'class="em"' : 'class="em nm"') : `${hero}${rest.length ? `<div class="lbl">ที่เหลือ <span>${rest.length}</span> เอกสาร — เรียงจากเก่าไปใหม่</div><div class="list">${rows}</div>` : '<div class="lbl">มีเอกสารเดียวเท่านั้น ไม่มีเอกสารอื่นค้างแล้ว 👍</div>'}`}
+      ${st.open ? G.modal(G.find(docs, st.open)) : ''}`;
+  },
+});
+</script>
+
+<!-- ═══ แบบที่ 20 · แฟ้มเอกสาร + ตราประทับ (Folder) ═══ -->
+<style>
+.d20 { background: linear-gradient(180deg, #d9e3ef, #c3d0e0); padding: 30px 28px 42px; }
+.d20 .fold { max-width: 960px; margin: 0 auto; position: relative; }
+.d20 .ftabs { display: flex; align-items: flex-end; padding-left: 14px; position: relative; z-index: 2; flex-wrap: wrap; }
+.d20 .ft { position: relative; padding: 9px 22px 8px; margin-right: -4px; border-radius: 13px 13px 0 0; border: 1px solid #93abc7; border-bottom: 0; background: linear-gradient(#aec4dc, #a0b8d3); color: #3a5878; font-weight: 700; font-size: 13.5px; box-shadow: inset 0 -7px 9px -7px rgba(0, 0, 0, .18); transition: transform .12s; top: 1px; }
+.d20 .ft:nth-child(odd) { padding-bottom: 8px; }
+.d20 .ft:hover { transform: translateY(-2px); }
+.d20 .ft b { margin-left: 7px; background: #fff; color: #3a5878; border-radius: 9px; padding: 0 7px; font: 800 11px/18px 'Outfit', sans-serif; display: inline-block; }
+.d20 .ft.on { background: #d6e4f4; color: #1f3f66; z-index: 3; padding-top: 11px; box-shadow: none; transform: none; }
+.d20 .ft.on b { background: #2d6cad; color: #fff; }
+.d20 .body { position: relative; z-index: 1; background: #d6e4f4; border: 1px solid #93abc7; border-radius: 0 14px 14px 14px; padding: 20px 22px 26px; box-shadow: 0 14px 30px rgba(30, 60, 100, .28), inset 0 1px 0 rgba(255, 255, 255, .6); }
+.d20 .paper { background: #fff; border-radius: 4px; padding: 20px 26px 16px; box-shadow: 0 1px 0 #fff inset, 0 4px 12px rgba(30, 60, 100, .22); position: relative; }
+.d20 .paper::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 4px; background: repeating-linear-gradient(90deg, #4891db 0 24px, #2d6cad 24px 48px); border-radius: 4px 4px 0 0; opacity: .85; }
+.d20 .ph { display: flex; justify-content: space-between; align-items: flex-end; gap: 14px; flex-wrap: wrap; margin-bottom: 8px; padding-bottom: 12px; border-bottom: 2px solid #1f3f66; }
+.d20 .ph h2 { font: 800 19px 'Noto Sans Thai', sans-serif; color: #1f3f66; }
+.d20 .ph h2 small { display: block; font-weight: 400; font-size: 12.5px; color: #6d88a6; margin-top: 2px; }
+.d20 .find { display: flex; align-items: center; gap: 8px; border-bottom: 2px solid #8fb0d4; color: #4a6d91; min-width: 280px; padding: 0 2px; }
+.d20 .find:focus-within { border-bottom-color: #2d6cad; }
+.d20 .find input { flex: 1; border: 0; outline: 0; background: none; padding: 6px 0; font-size: 14px; min-width: 0; }
+.d20 .ln { display: grid; grid-template-columns: 26px 150px 98px minmax(150px, 1fr) 84px 118px 70px; gap: 12px; align-items: center; padding: 10px 6px; border-bottom: 1px dotted #b9cde3; transition: background .12s; }
+.d20 .ln:hover { background: #f3f8fe; }
+.d20 .clip { font-size: 17px; line-height: 1; }
+.d20 .ln .no { color: #1f3f66; font-size: 14.5px; }
+.d20 .ln .dt { color: #4a6d91; font-size: 13px; }
+.d20 .ln .rt { display: flex; gap: 6px; align-items: center; font-size: 13px; color: #98b3cf; flex-wrap: wrap; }
+.d20 .ln .ct { color: #4a6d91; font-size: 13px; text-align: right; }
+.d20 .stamp { justify-self: center; border: 2.5px solid var(--tc); color: var(--tt); padding: 0 10px; font-weight: 800; font-size: 13px; letter-spacing: .4px; border-radius: 6px; transform: rotate(-5deg); opacity: .92; line-height: 24px; white-space: nowrap; background: rgba(255, 255, 255, .5); }
+.d20 .lk { color: #2d6cad; font-weight: 700; font-size: 12.5px; text-align: right; }
+.d20 .ln:hover .lk { text-decoration: underline; }
+.d20 .em { padding: 40px 20px; }
+.d20 .doc { position: relative; width: min(640px, 100%); max-height: 90vh; background: #fff; border-radius: 4px; box-shadow: 0 26px 70px rgba(0, 0, 0, .45); display: flex; flex-direction: column; overflow: hidden; animation: gmPop .2s ease-out; }
+.d20 .doc::before { content: 'ยังไม่ส่ง'; position: absolute; right: 22px; top: 62px; font: 900 40px 'Noto Sans Thai', sans-serif; color: var(--tc); border: 5px solid var(--tc); padding: 0 18px; border-radius: 10px; transform: rotate(14deg); opacity: .16; pointer-events: none; z-index: 2; }
+.d20 .dh { padding: 22px 26px 14px; border-bottom: 3px double #1f3f66; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.d20 .dh small { color: #6d88a6; letter-spacing: 1.5px; font-size: 11.5px; }
+.d20 .dh h2 { font: 800 22px 'Noto Sans Thai', sans-serif; color: #1f3f66; margin-top: 2px; }
+.d20 .dh h2 span { font-family: 'Outfit', sans-serif; display: block; font-size: 17px; color: #2d6cad; }
+.d20 .dx { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: #6b7c8f; flex: none; }
+.d20 .dx:hover { background: #eef3f9; }
+.d20 .dm { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px 16px; padding: 12px 26px 10px; border-bottom: 1px solid #dce6f2; }
+.d20 .dm div small { display: block; color: #8aa0b8; font-size: 11px; } .d20 .dm div b { font-size: 13.5px; color: #1f3f66; }
+.d20 .db { overflow: auto; padding: 4px 26px 6px; flex: 1; min-height: 0; }
+.d20 .doc .it th { background: #fff; color: #1f3f66; border-bottom: 2px solid #1f3f66; }
+.d20 .doc .it tbody tr:nth-child(even) td { background: #f6f9fd; }
+.d20 .df { padding: 12px 26px 18px; border-top: 1px solid #dce6f2; display: grid; grid-template-columns: 1fr 1fr 1.2fr; gap: 20px; align-items: end; font-size: 12px; color: #6d88a6; }
+.d20 .df div { border-top: 1.5px solid #8fa6c0; padding-top: 4px; text-align: center; }
+.d20 .df .tt { border: 0; text-align: right; font-size: 13px; color: #1f3f66; font-weight: 700; }
+@media (max-width: 860px) { .d20 .ln { grid-template-columns: 24px minmax(0, 1fr) auto; } .d20 .ln .dt, .d20 .ln .ct, .d20 .ln .lk { display: none; } .d20 .ln .rt { grid-column: 2 / -1; } }
+@media (max-width: 560px) { .d20 { padding: 14px 8px 24px; } .d20 .body { padding: 10px; } .d20 .paper { padding: 14px 12px; } .d20 .find { min-width: 0; width: 100%; } .d20 .dm { grid-template-columns: repeat(2, 1fr); } }
+</style>
+<script>
+G.add({
+  id: 20, name: 'แฟ้มเอกสาร + ตราประทับ', en: 'Folder + Stamps', desc: 'เหมือนเปิดแฟ้มกระดาษบนโต๊ะ — แท็บสาขาเป็นแท็บแฟ้ม เอกสารเก่ามีคลิปหนีบกระดาษ และตราประทับสี "ค้าง N วัน" · กดแล้วได้เอกสารโอนแบบทางการมีช่องลงชื่อ', nav: 'แท็บแฟ้ม', detail: 'popup เอกสารทางการ',
+  esc: ['open'],
+  init: () => ({ tab: ALL, q: '', open: null }),
+  view(st, docs, G) {
+    const vis = G.vis(docs, st), kind = G.emptyKind(docs, vis), dr = st.open ? G.find(docs, st.open) : null;
+    const stamp = d => (G.back(d) === 0 ? 'วันนี้' : 'ค้าง ' + G.dayTxt(G.back(d)));
+    const lines = vis.map(d => `<div class="ln t-${G.tone(G.back(d))}" data-act="open" data-id="${d.id}"><span class="clip">${G.back(d) >= 3 ? '📎' : ''}</span><span class="no">${d.no}</span><span class="dt">${G.fmtDate(d.date)}</span><span class="rt">${G.bc(d.from)}${G.ico.arrow}${G.bc(d.to)}</span><span class="ct">${d.n} รายการ</span><span class="stamp">${stamp(d)}</span><span class="lk">ดูสินค้า ›</span></div>`).join('');
+    const doc = dr ? `<div class="gm-ov"><div class="doc t-${G.tone(G.back(dr))}" role="dialog" aria-modal="true"><div class="dh"><div><small>เอกสารโอนสินค้าออก · TRANSFER OUT</small><h2>เอกสารรอกดส่ง<span>${dr.no}</span></h2></div><button class="dx" data-act="close" aria-label="ปิด">${G.ico.x}</button></div>
+      <div class="dm"><div><small>วันที่ออกเอกสาร</small><b>${G.fmtDate(dr.date)}</b></div><div><small>ต้นทาง</small><b>${dr.from}</b></div><div><small>ปลายทาง</small><b>${dr.to}</b></div><div><small>ค้างมาแล้ว</small><b>${G.dayTxt(G.back(dr))}</b></div></div>
+      <div class="db">${G.itemsTable(dr)}</div><div class="df"><div>ผู้ส่ง</div><div>ผู้รับ</div><div class="tt">รวม ${dr.n} รายการ · จำนวน ${G.qty(G.total(dr))}</div></div></div></div>` : '';
+    return `<div class="fold"><div class="ftabs">${G.tabs(docs).map(t => `<button class="ft${st.tab === t.key ? ' on' : ''}" data-act="tab" data-v="${t.key}">${t.key}<b>${t.count}</b></button>`).join('')}</div>
+      <div class="body"><div class="paper"><div class="ph"><h2>บัญชีเอกสารค้างส่ง ${st.tab === ALL ? '' : '— ' + st.tab}<small>เอกสารโอนสินค้าออกที่ยังไม่กด “ส่ง” ใน ProMaxx · ${vis.length} เอกสาร</small></h2><label class="find">${G.ico.search}<input type="text" data-input="q" data-keep="q" autocomplete="off" placeholder="ค้นหาเลขที่เอกสาร / รหัส / ชื่อสินค้า" value="${G.esc(st.q)}"></label></div>
+      ${kind ? G.empty(kind) : lines}</div></div></div>${doc}`;
+  },
+});
+</script>
+
+<script>G.boot();</script>
+</body>
+</html>
