@@ -7,7 +7,8 @@ import type { WorkSheet } from 'xlsx';
  *  ⚠️ ไฟล์นี้ import 'xlsx' แค่ type (ไม่มีโค้ดตอนรัน) เพื่อให้ masterColumns.test.mjs โหลดไปเทสได้ตรง ๆ */
 
 // จับคู่หัวคอลัมน์ในไฟล์ Product_Master → คอลัมน์ในตาราง (เรียงจากเฉพาะเจาะจงก่อน)
-// ย้ายมาจาก SaleSupportPage.tsx (ไม่เปลี่ยนค่า) — ตัวนี้ "อ่านไฟล์" แบบหลวม (ไม่สนตัวพิมพ์/เว้นวรรค) ส่วนตัวตรวจด้านล่าง "ตรวจโครงไฟล์" แบบเข้ม
+// ย้ายมาจาก SaleSupportPage.tsx (ไม่เปลี่ยนค่า) — ตัวนี้ใช้ "อ่านไฟล์" (หลวม: ชื่อใกล้เคียงก็จับคู่ได้) · ส่วนตัวตรวจด้านล่างเข้มกว่า:
+// หัวคอลัมน์ต้องตรงมาตรฐานครบและห้ามมีเกิน (ยังไม่สนตัวพิมพ์/เว้นวรรค) — ต่อให้ regex จับคู่ได้ ชื่อที่ไม่อยู่ในมาตรฐานก็ถูกดีดกลับ
 export const MASTER_HEADER_MAP: [RegExp, string][] = [
   [/^sku[\s_]*name$/i,      'sku_name'],
   [/^sku$/i,                'sku'],
@@ -28,20 +29,19 @@ export const MASTER_HEADER_MAP: [RegExp, string][] = [
   [/^distributor$/i,        'distributor'],
 ];
 
-/** หัวคอลัมน์มาตรฐานของไฟล์ Product Master — ต้องมีครบทุกตัว ไม่งั้นนับเป็น "ลบ"
- *  ⚠️ เขียนตามคอมเมนต์ท้ายแต่ละช่องใน salesupport-setup.sql (ชื่อช่องของตาราง product_master) — ยังไม่ได้เทียบกับ
- *     หัวคอลัมน์ในไฟล์จริง · ถ้าไฟล์จริงสะกดต่างจากนี้ ไฟล์ปกติจะถูกดีดกลับทุกครั้ง แต่ popup บอกเองว่าต่างตรงไหน
- *     (เพิ่ม/เปลี่ยน/ลบ + เซลล์) → แก้ลิสต์นี้ให้ตรงไฟล์จริง และต้องมี regex ใน MASTER_HEADER_MAP รองรับทุกตัวด้วย (มีเทสเช็ค)
- *  ลำดับในลิสต์ไม่ใช่ลำดับที่ไฟล์ต้องเรียง — ไม่ตรวจลำดับคอลัมน์ (importer จับคู่ตามชื่อหัว ไม่ใช่ตำแหน่ง) */
-export const MASTER_REQUIRED_HEADERS = [
-  'SKU', 'Name', 'BASE_UNIT', 'ABC', 'Multiply', 'Supplier', 'Set_Deal', 'Purchase_Unit', 'Barcode_Unit',
-  'ทุนซื้อ', 'Buying_Deal_Normal', 'Buying_Deal_Free', 'Group', 'Group %', 'SKU Name',
+/** หัวคอลัมน์มาตรฐานของไฟล์ Product Master — ไฟล์ต้องมีครบ "และมีแค่นี้" ไม่งั้นถูกดีดกลับ (เพิ่ม/เปลี่ยน/ลบ)
+ *  ตรงกับแถวหัวของไฟล์จริง Product_Master_1.xlsx ที่ผู้ใช้ส่งให้ตรวจ 2569-10-29 (Sheet1 · A1:P3737 · 16 คอลัมน์)
+ *  ใช้ตัวพิมพ์ตามไฟล์จริง (MULTIPLY / SUPPLIER / PURCHASE_UNIT / Buying_deal_normal ...) เพราะ popup แสดงชื่อพวกนี้ในรายการ "ลบ"/"เปลี่ยน"
+ *  ⚠️ เรียงตามลำดับคอลัมน์ในไฟล์จริง — ลำดับไม่มีผลต่อการผ่าน/ไม่ผ่าน (ไม่ตรวจลำดับ) แต่มีผลต่อการจับคู่ "เปลี่ยนชื่อ":
+ *     diffMasterHeaders ดู "ช่องว่างเดียวกัน" จากคอลัมน์ข้างหน้าตามลำดับนี้
+ *  ⚠️ XYZ / ABCXYZ / BREAK_PACK อยู่ในไฟล์จริงแต่ importer ไม่นำเข้า (ไม่มี regex ใน MASTER_HEADER_MAP และไม่มีช่องในตาราง product_master)
+ *     จงใจให้อยู่ในมาตรฐาน — ไม่งั้นไฟล์ปกติถูกนับว่า "เพิ่ม 3 คอลัมน์" · เพิ่มคอลัมน์ใหม่ที่ต้องนำเข้า: ใส่ที่นี่ + เพิ่ม regex (มีเทสเช็คทั้งสองทาง)
+ *  ⚠️ ไม่มี Barcode_Unit / SKU Name / Distributor / Distributor Name — ตารางมีช่องเหล่านี้ (กรอกผ่านฟอร์ม ➕ New Product / เติมจากไฟล์ Supplier)
+ *     แต่ไฟล์จริงไม่มี · เคยอนุมานผิดจากคอมเมนต์ใน salesupport-setup.sql จนไฟล์จริงถูกดีดกลับ (พบตอนได้รับไฟล์จริง) */
+export const MASTER_STANDARD_HEADERS = [
+  'SKU', 'Name', 'BASE_UNIT', 'ABC', 'XYZ', 'ABCXYZ', 'MULTIPLY', 'SUPPLIER', 'Set_Deal', 'PURCHASE_UNIT',
+  'ทุนซื้อ', 'Buying_deal_normal', 'Buying_deal_free', 'Group', 'Group %', 'BREAK_PACK',
 ] as const;
-
-/** มีหรือไม่มีในไฟล์ก็ได้ (ไม่นับเป็น "ลบ" เมื่อหาย · ไม่นับเป็น "เพิ่ม" เมื่อมี)
- *  Distributor / Distributor Name ระบบเติมจากไฟล์ Supplier ตอนแสดงผลอยู่แล้ว (loadSupplierMap) — เลือกให้เป็นแบบนี้
- *  เพราะไม่รู้ว่าไฟล์จริงมีสองช่องนี้หรือไม่: ถ้าบังคับแล้วไฟล์จริงไม่มี ทุกไฟล์จะโดนดีดกลับ แต่ถ้าปล่อยหลวมแล้วไฟล์มี ก็ไม่เสียหายอะไร */
-export const MASTER_OPTIONAL_HEADERS = ['Distributor', 'Distributor Name'] as const;
 
 /** ชื่อที่โชว์แทนคอลัมน์ที่มีข้อมูลแต่เซลล์หัวว่าง */
 export const MASTER_NO_HEADER_LABEL = '(ไม่มีหัวคอลัมน์)';
@@ -69,13 +69,7 @@ const cleanText = (s: string) => s.replace(INVISIBLE, '').replace(/\s+/g, ' ').t
 export const normalizeHeader = (s: string) => cleanText(s).normalize('NFKC').toLowerCase();
 
 interface ExpectedColumn { name: string; key: string }
-const EXPECTED_REQUIRED: ExpectedColumn[] = MASTER_REQUIRED_HEADERS.map(name => ({ name, key: normalizeHeader(name) }));
-const EXPECTED_OPTIONAL: ExpectedColumn[] = MASTER_OPTIONAL_HEADERS.map(name => ({ name, key: normalizeHeader(name) }));
-/** เรียง required ก่อน optional — ตัวชี้ใน EXPECTED ใช้ทั้งการจับคู่และการหา "ช่องว่างเดียวกัน" */
-const EXPECTED: (ExpectedColumn & { required: boolean })[] = [
-  ...EXPECTED_REQUIRED.map(e => ({ ...e, required: true })),
-  ...EXPECTED_OPTIONAL.map(e => ({ ...e, required: false })),
-];
+const EXPECTED: ExpectedColumn[] = MASTER_STANDARD_HEADERS.map(name => ({ name, key: normalizeHeader(name) }));
 
 // ── ที่อยู่เซลล์ (A1) — เขียนเองแทน XLSX.utils เพื่อไม่ต้อง import xlsx ตอนรัน ──
 const decodeCol = (letters: string) => letters.split('').reduce((n, ch) => n * 26 + ch.charCodeAt(0) - 64, 0) - 1;
@@ -130,7 +124,7 @@ export function readMasterHeaderCells(ws: WorkSheet): MasterHeaderCell[] {
  *
  *  1) จับคู่ตามชื่อ (ผ่าน normalizeHeader) ไม่สนลำดับคอลัมน์ · ชื่อซ้ำในไฟล์: ตัวแรกจับคู่ ตัวที่เหลือนับเป็น "เพิ่ม"
  *  2) ที่เหลือจับคู่เป็น "เปลี่ยน" เมื่อ หายกี่ตัว โผล่กี่ตัว ใน "ช่องว่างเดียวกัน" เท่ากันพอดี
- *     ช่องว่างเดียวกัน = ถัดจากคอลัมน์ที่ตรงตัวเดียวกันพอดี เช่น Barcode_Unit | ทุนซื้อ ↔ Barcode_Unit | ทุนล่าสุด
+ *     ช่องว่างเดียวกัน = ถัดจากคอลัมน์ที่ตรงตัวเดียวกันพอดี เช่น PURCHASE_UNIT | ทุนซื้อ ↔ PURCHASE_UNIT | ทุนล่าสุด
  *     (หาย 1 โผล่ 1) → เปลี่ยนชื่อ · ไม่ใช่ทุกอย่างที่ต่างกันจะเป็นการเปลี่ยน:
  *     - คอลัมน์ที่หายคนละที่กับคอลัมน์ที่โผล่ใหม่ = "ลบ" + "เพิ่ม" แยกกัน
  *       (ถ้าเทียบตามตำแหน่ง การลบ 1 คอลัมน์กลางไฟล์จะทำให้ทุกคอลัมน์หลังจากนั้นดูเหมือนถูกเปลี่ยนชื่อหมด)
@@ -171,7 +165,7 @@ export function diffMasterHeaders(cells: MasterHeaderCell[]): MasterColumnDiff |
     if (!fileHit[i]) slotFor(noMatch ? `file:${i}` : slotBefore(fileHit, fileKeys, i)).file.push(i);
   });
   EXPECTED.forEach((e, j) => {
-    if (e.required && !expectedHit[j]) slotFor(noMatch ? `exp:${j}` : slotBefore(expectedHit, expectedKeys, j)).exp.push(j);
+    if (!expectedHit[j]) slotFor(noMatch ? `exp:${j}` : slotBefore(expectedHit, expectedKeys, j)).exp.push(j);
   });
 
   const added: { name: string; cell: string; at: number }[] = [];

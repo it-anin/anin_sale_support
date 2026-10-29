@@ -81,7 +81,7 @@ Seven-page React app sharing the same `App.css` and Supabase project.
 **Key files — ซัพพอร์ต (Sale Support):**
 - `SaleSupportPage.tsx` — ศูนย์รวมงานซัพพอร์ตการขาย: sidebar 5 เมนู (Order / Request Item / New Product / Ticket / Products), ฟอร์มเพิ่มข้อมูล, popup รายละเอียด, อัปโหลด Excel (Supplier + Product Master), อัปโหลดรูปเข้า Storage
 - `MasterUploadNotice.tsx` — popup "ใช้ไฟล์นามสกุล .xlsx" ที่ขึ้นก่อนเปิดหน้าต่างเลือกไฟล์ Product Master (ไอคอนไฟล์บินจากปุ่มลงกล่อง · 2569-10-29) + ปุ่มกระเบื้องนูน `.ss-tile-btn` ใน `App.css`
-- `MasterRejectNotice.tsx` — popup "ไฟล์ถูกดีดกลับ" (ดีไซน์แบบที่ 6 "File Reject" · ไฟล์ Product Master มีคอลัมน์ เพิ่ม/เปลี่ยน/ลบ → อัปโหลดไม่ได้ พร้อมตำแหน่งเซลล์ เช่น J1 · 2569-10-29) · `masterColumns.ts` — ตัวเทียบหัวคอลัมน์ของไฟล์กับมาตรฐาน (`MASTER_REQUIRED_HEADERS` ⚠️ ยังเป็นการอนุมาน ยังไม่ได้เทียบไฟล์จริง) + `MASTER_HEADER_MAP` ที่ย้ายมา · เทส `npm run test:master-columns`
+- `MasterRejectNotice.tsx` — popup "ไฟล์ถูกดีดกลับ" (ดีไซน์แบบที่ 6 "File Reject" · ไฟล์ Product Master มีคอลัมน์ เพิ่ม/เปลี่ยน/ลบ → อัปโหลดไม่ได้ พร้อมตำแหน่งเซลล์ เช่น J1 · 2569-10-29) · `masterColumns.ts` — ตัวเทียบหัวคอลัมน์ของไฟล์กับมาตรฐาน (`MASTER_STANDARD_HEADERS` = หัวจริง 16 คอลัมน์ของ Product_Master_1.xlsx ยืนยันกับไฟล์จริง 2569-10-29 · ห้ามเดาลิสต์จากชื่อช่องในตาราง) + `MASTER_HEADER_MAP` ที่ย้ายมา · เทส `npm run test:master-columns`
 - `salesupport-setup.sql` — SQL สร้างตาราง `ss_*`, `product_master` + storage bucket `salesupport`
 
 > **อ่าน [`docs/salesupport.md`](docs/salesupport.md) ก่อนแก้ `SaleSupportPage.tsx` เสมอ** — รายละเอียด schema/notification system/hazard ทั้งหมดอยู่ที่นั่น
