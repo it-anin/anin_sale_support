@@ -42,8 +42,9 @@ const FLY_MS = 400;
 /** ยกเส้นโค้งของท่าบินขึ้นด้านบนกี่ px (เหนือจุดที่สูงกว่าของ 2 ปลาย) */
 const ARC_LIFT = 62;
 
-/** ไอคอนไฟล์ xlsx — สีคุมจาก CSS (.ss-doc-body / .ss-doc-fold / .ss-doc-line) */
-function XlsxDocIcon() {
+/** ไอคอนไฟล์ xlsx — สีคุมจาก CSS (.ss-doc-body / .ss-doc-fold / .ss-doc-line)
+ *  export ให้ MasterRejectNotice.tsx (popup ไฟล์ถูกดีดกลับ) ใช้ร่วมกัน */
+export function XlsxDocIcon() {
   return (
     <svg className="ss-doc" viewBox="0 0 48 56" aria-hidden="true">
       <path className="ss-doc-body" d="M7 4a4 4 0 0 1 4-4h18l12 12v40a4 4 0 0 1-4 4H11a4 4 0 0 1-4-4z" />
@@ -56,7 +57,7 @@ function XlsxDocIcon() {
   );
 }
 
-function prefersReducedMotion(): boolean {
+export function prefersReducedMotion(): boolean {
   return typeof window !== 'undefined' && typeof window.matchMedia === 'function'
     && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }

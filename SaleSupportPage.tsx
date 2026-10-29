@@ -5,6 +5,8 @@ import { AnimatedLogoText } from './AnimatedLogo';
 import { PageNavRow, usePageNotifications } from './pageAccess';
 import { BRANCH_PROFILE_CODES, STORE_BRANCH_CODES, branchCodeLabel } from './auth';
 import { MasterUploadNotice, type ViewportRect } from './MasterUploadNotice';
+import { MasterRejectNotice } from './MasterRejectNotice';
+import { MASTER_HEADER_MAP, diffMasterHeaders, readMasterHeaderCells, type MasterColumnDiff } from './masterColumns';
 
 const ORDER_BRANCHES = ['SRC', 'KKL', 'SSS', 'SALE_ADMIN', 'Warehouse'] as const;
 /** ผู้ลงรายการ BackOrder — ต้องตรงกับ CHECK ของ ss_backorders.branch เป๊ะ ๆ
@@ -189,26 +191,7 @@ function emptyMasterForm(): MasterForm {
   };
 }
 
-// จับคู่หัวคอลัมน์ในไฟล์ Product_Master → คอลัมน์ในตาราง (เรียงจากเฉพาะเจาะจงก่อน)
-const MASTER_HEADER_MAP: [RegExp, string][] = [
-  [/^sku[\s_]*name$/i,      'sku_name'],
-  [/^sku$/i,                'sku'],
-  [/^name$|ชื่อสินค้า/i,     'name'],
-  [/base[\s_]*unit/i,       'base_unit'],
-  [/^abc$/i,                'abc'],
-  [/multiply/i,             'multiply'],
-  [/^supplier$/i,           'supplier'],
-  [/set[\s_]*deal/i,        'set_deal'],
-  [/purchase[\s_]*unit/i,   'purchase_unit'],
-  [/barcode[\s_]*unit/i,    'barcode_unit'],
-  [/ทุนซื้อ|^cost$/i,        'cost'],
-  [/buying[\s_]*deal[\s_]*normal/i, 'buying_deal_normal'],
-  [/buying[\s_]*deal[\s_]*free/i,   'buying_deal_free'],
-  [/group\s*%|group[\s_]*percent/i, 'group_percent'],
-  [/^group$/i,              'group_name'],
-  [/distributor[\s_]*name/i, 'distributor_name'],
-  [/^distributor$/i,        'distributor'],
-];
+// MASTER_HEADER_MAP (จับคู่หัวคอลัมน์ไฟล์ Product_Master → คอลัมน์ตาราง) ย้ายไป masterColumns.ts แล้ว — รวมกับตัวตรวจโครงคอลัมน์ของไฟล์
 
 /** ไฟล์ Product Master ต้องเป็น .xlsx เท่านั้น (ผู้ใช้สั่ง 2569-10-29 — ตรงกับข้อความใน popup "ใช้ไฟล์นามสกุล .xlsx")
  *  เช็คจากนามสกุลท้ายชื่อไฟล์ ไม่สนตัวพิมพ์เล็ก/ใหญ่ (`.XLSX` ผ่าน)
@@ -1565,6 +1548,8 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
   const [masterNotice, setMasterNotice] = useState<{ from: ViewportRect | null } | null>(null);
   const masterBtnIconRef = useRef<SVGSVGElement>(null);
   const masterBtnRef = useRef<HTMLButtonElement>(null);
+  // popup ไฟล์ถูกดีดกลับ (หัวคอลัมน์ไม่ตรงมาตรฐาน) — null = ปิด · handleMasterFile เป็นคนเปิด (ดู masterColumns.ts)
+  const [masterReject, setMasterReject] = useState<{ fileName: string; diff: MasterColumnDiff } | null>(null);
   // ปฏิทิน "อัปโหลดล่าสุด" — undefined = ยังโหลดไม่เสร็จ/อ่านตารางไม่ได้ (ไม่ render เลย) · null = ยังไม่เคยอัปโหลด
   const [lastMasterUpload, setLastMasterUpload] = useState<MasterUploadLog | null | undefined>(undefined);
   const [clockNow, setClockNow] = useState(() => Date.now());
@@ -2703,7 +2688,7 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
     setMasterNotice({ from: r ? { left: r.left, top: r.top, width: r.width, height: r.height } : null });
   };
 
-  // อ่านไฟล์ Product_Master → จับคู่หัวคอลัมน์ → เทียบกับ product_master ปัจจุบัน → เปิด modal สรุปให้ดูก่อน
+  // อ่านไฟล์ Product_Master → ตรวจโครงคอลัมน์ (ไม่ตรงมาตรฐาน = popup ดีดไฟล์กลับ จบเลย) → จับคู่หัวคอลัมน์ → เทียบกับ product_master ปัจจุบัน → เปิด modal สรุปให้ดูก่อน
   // ยังไม่เขียนอะไรลง DB จนกว่าจะกดยืนยันใน modal (confirmMasterUpload)
   // merge ตาม SKU: SKU ที่ไม่อยู่ในไฟล์ไม่ถูกลบ · ⚠️ แต่ช่องที่ไฟล์เว้นว่างจะล้างค่าเดิมเป็นค่าว่าง (ส่ง null ไปทั้งคอลัมน์)
   const handleMasterFile = async (file: File) => {
@@ -2723,6 +2708,16 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
       const wb = XLSX.read(await file.arrayBuffer());
       const ws = wb.Sheets[wb.SheetNames[0]];
       if (!ws) throw new Error('ไม่พบชีทข้อมูลในไฟล์');
+      // ตรวจโครงคอลัมน์ก่อนอ่านแถวข้อมูล (ผู้ใช้สั่ง 2569-10-29: ไฟล์มีคอลัมน์ เพิ่ม/เปลี่ยน/ลบ → อัปโหลดไม่ได้ ขึ้น popup)
+      // ไม่ตรง = เปิด popup ไฟล์ถูกดีดกลับแล้วจบเลย — ยังไม่ query product_master ไม่เปิด modal สรุป ไม่เขียนอะไรลง DB
+      // ⚠️ แถวหัวว่างทั้งแถว (ชีทว่าง) ไม่เข้าด่านนี้ — ปล่อยให้ 'ไฟล์ไม่มีข้อมูล' / 'ไม่พบคอลัมน์ SKU' ด้านล่างตอบตามเดิม
+      // ⚠️ return ใน try ยังผ่าน finally ด้านล่าง (ปิดสถานะกำลังตรวจ + เคลียร์ค่า input) — เลือกไฟล์เดิมซ้ำแล้วต้องเตือนซ้ำได้
+      const headerCells = readMasterHeaderCells(ws);
+      const columnDiff = headerCells.some(c => c.text !== '') ? diffMasterHeaders(headerCells) : null;
+      if (columnDiff) {
+        setMasterReject({ fileName: file.name, diff: columnDiff });
+        return;
+      }
       const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: '' });
       if (rows.length === 0) throw new Error('ไฟล์ไม่มีข้อมูล');
 
@@ -5041,6 +5036,18 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
           onClose={() => {
             setMasterNotice(null);
             masterBtnRef.current?.focus({ preventScroll: true });   // คืนโฟกัสให้ปุ่มที่เปิด popup (คีย์บอร์ดไม่หลุดไปต้นหน้า)
+          }}
+        />
+      )}
+
+      {/* popup ไฟล์ถูกดีดกลับ — หัวคอลัมน์ไม่ตรงมาตรฐาน (ตัวเทียบอยู่ masterColumns.ts) · ปิดแล้วคืนโฟกัสให้ปุ่มอัปโหลดเหมือน popup ข้างบน */}
+      {isPurchasing && masterReject && (
+        <MasterRejectNotice
+          fileName={masterReject.fileName}
+          diff={masterReject.diff}
+          onClose={() => {
+            setMasterReject(null);
+            masterBtnRef.current?.focus({ preventScroll: true });
           }}
         />
       )}

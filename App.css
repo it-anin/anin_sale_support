@@ -4894,6 +4894,188 @@ button.ss-mdiff-stat:not(:disabled):hover { background: #f5f9fd; }
   @keyframes ssMnoticeFadeOut { from { opacity: 1; } to { opacity: 0; } }
 }
 
+/* ── popup ไฟล์ถูกดีดกลับ — ไฟล์ Product Master มีคอลัมน์ เพิ่ม/เปลี่ยน/ลบ จึงอัปโหลดไม่ได้ (2569-10-29) ──
+   ดีไซน์แบบที่ 6 "File Reject" จาก public/master-columns-popup-designs.html + ตำแหน่งเซลล์ (เช่น J1) — component: MasterRejectNotice.tsx
+   ลำดับ (CSS ล้วน นับเวลาจากตอน mount): ไอคอนไฟล์ตกลงช่อง 0.1–0.9 วิ → วงแดงสั่น 0.34–0.94 → ตรา ✕ 0.62–0.94
+   → ข้อความ/รายการ/ปุ่มค่อยตามขึ้นมา (.ss-mreject-rise เริ่ม 0.74 วิ ห่างกันตัวละ 0.06 วิ)
+   ⚠️ ไม่มี onClick ปิดที่ overlay โดยตั้งใจ — ปิดได้ด้วย [ตกลง] / Esc เท่านั้น (กฎเดียวกับ modal อื่นในแอป)
+   ⚠️ ทุก animation ภายในใช้ fill "backwards" และสไตล์ปกติของ element = ภาพตอนนิ่งแล้ว ไม่พึ่ง fill ค้างท้ายท่า
+      (บทเรียนจาก .ss-mnotice: ถอด .is-open ตอนปิดแล้วของที่มองเห็นอยู่ต้องไม่หายวูบ)
+   ⚠️ ระยะปิด 0.2 วิ ต้องเท่ากับ CLOSE_MS ใน MasterRejectNotice.tsx · ปุ่ม [ตกลง] กดไม่ได้จนกว่าจะ .is-landed (ACTIONS_MS = 1.04 วิ)
+   ⚠️ ใช้ keyframes ssMnoticeScrimIn/Out + ssMnoticeIn/Out ร่วมกับ .ss-mnotice — ห้ามลบหรือเปลี่ยนชื่อ */
+.ss-mreject-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  overflow: hidden;
+  font-family: 'Noto Sans Thai', sans-serif;
+  color: #1c3d5e;
+}
+.ss-mreject-scrim { position: absolute; inset: 0; background: rgba(20, 35, 55, 0.46); }
+.ss-mreject-overlay.is-open .ss-mreject-scrim { animation: ssMnoticeScrimIn 0.26s ease-out both; }
+.ss-mreject-overlay.is-closing .ss-mreject-scrim { animation: ssMnoticeScrimOut 0.2s ease-in both; }
+.ss-mreject {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(340px, 100%);
+  max-height: 100%;
+  border-radius: 18px;
+  background: #fff;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(10, 26, 46, 0.34);
+  overflow: hidden;
+}
+/* กล่องรับโฟกัสตอนเปิดด้วยโค้ด (tabIndex -1) ไม่ใช่ปุ่มที่ผู้ใช้กดถึง — ไม่ต้องมีเส้นโฟกัส */
+.ss-mreject:focus { outline: none; }
+.ss-mreject-overlay.is-open .ss-mreject { animation: ssMnoticeIn 0.26s 0.06s cubic-bezier(0.22, 0.9, 0.36, 1) both; }
+.ss-mreject-overlay.is-closing .ss-mreject { animation: ssMnoticeOut 0.2s ease-in both; }
+/* ส่วนเนื้อหา — เลื่อนได้เองเมื่อจอเตี้ยมาก · ปุ่ม [ตกลง] อยู่นอกส่วนนี้ ไม่เลื่อนหนี */
+.ss-mreject-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-height: 0;
+  padding: 22px 22px 8px;
+  overflow-y: auto;
+}
+/* ช่องไอคอน: ไอคอนไฟล์ตกลงช่อง → วงแดง (สั่น) → ตรา ✕ ติดมุม · ภาพตอนนิ่ง = วงแดง + ไฟล์ซีด + ตรา ✕ */
+.ss-mreject-slot { position: relative; display: grid; place-items: center; flex-shrink: 0; width: 72px; height: 72px; margin-bottom: 6px; }
+.ss-mreject-ring { position: absolute; inset: 0; border: 2.5px solid #f2c0be; border-radius: 50%; background: #fdeaea; }
+.ss-mreject-doc { position: relative; display: block; filter: grayscale(0.6); }
+.ss-mreject-doc .ss-doc { width: 36px; height: 42px; }
+.ss-mreject-x {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  display: grid;
+  place-items: center;
+  width: 27px;
+  height: 27px;
+  border: 2.5px solid #fff;
+  border-radius: 50%;
+  background: #c0392b;
+  color: #fff;
+}
+.ss-mreject-x svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 3.2; stroke-linecap: round; }
+.ss-mreject-overlay.is-open .ss-mreject-ring { animation: ssMrejectRing 0.6s 0.34s ease-out backwards; }
+.ss-mreject-overlay.is-open .ss-mreject-doc { animation: ssMrejectDrop 0.8s 0.1s cubic-bezier(0.3, 0.8, 0.4, 1) backwards; }
+.ss-mreject-overlay.is-open .ss-mreject-x { animation: ssMrejectX 0.32s 0.62s cubic-bezier(0.34, 1.56, 0.64, 1) backwards; }
+@keyframes ssMrejectDrop {
+  0% { opacity: 0; transform: translateY(-54px) rotate(-18deg); filter: none; }
+  38% { opacity: 1; transform: translateY(4px) rotate(3deg); filter: none; }
+  52% { transform: translateY(-2px) rotate(-1deg); filter: none; }
+  64% { transform: none; filter: none; }
+}
+@keyframes ssMrejectRing {
+  0% { border-color: #cfe0f2; background: #f4f8fc; transform: none; }
+  8% { border-color: #f2c0be; background: #fdeaea; transform: translateX(-5px); }
+  24% { transform: translateX(5px); }
+  40% { transform: translateX(-4px); }
+  56% { transform: translateX(3px); }
+  72% { transform: translateX(-1px); }
+  100% { transform: none; }
+}
+@keyframes ssMrejectX { from { opacity: 0; transform: scale(0); } }
+.ss-mreject-cap { margin: 0; font-size: 12px; font-weight: 600; color: #8194a8; }
+.ss-mreject-title { margin: 0; font-size: 17px; font-weight: 700; line-height: 1.6; color: #1c3d5e; }
+.ss-mreject-kinds {
+  display: inline-block;
+  padding: 0 9px;
+  border-radius: 7px;
+  background: #eaf3fc;
+  color: #2d6cad;
+  font-weight: 700;
+  letter-spacing: 0.1px;
+  line-height: 1.35;
+}
+/* nowrap: กันเบราว์เซอร์ตัดกลางคำ "อัป|โหลด" */
+.ss-mreject-bad { color: #c0392b; white-space: nowrap; }
+.ss-mreject-file {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 100%;
+  margin: 6px 0 0;
+  padding: 4px 11px;
+  border-radius: 9px;
+  background: #f3f7fb;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1c3d5e;
+}
+.ss-mreject-file .ss-doc { width: 12px; height: 14px; }
+.ss-mreject-file span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* รายการต่อชนิด (เพิ่ม/เปลี่ยน/ลบ) — แสดงครบทุกรายการ ยาวเกินเลื่อนในกรอบ (ไม่ตัดด้วย … แบบในแกลเลอรี) */
+.ss-mreject-list {
+  display: grid;
+  gap: 7px;
+  width: 100%;
+  max-height: min(232px, 34vh);
+  margin: 10px 0 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+  text-align: left;
+}
+.ss-mreject-item { display: flex; align-items: flex-start; gap: 8px; padding: 6px 10px; border-radius: 9px; font-size: 12.5px; line-height: 1.7; }
+.ss-mreject-item--add { --k: #2e8b47; background: #e9f7ee; }
+.ss-mreject-item--chg { --k: #b8791c; background: #fdf4e6; }
+.ss-mreject-item--del { --k: #c0392b; background: #fdeaea; }
+.ss-mreject-sg {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 17px;
+  height: 17px;
+  margin-top: 3px;
+  border-radius: 50%;
+  background: var(--k);
+  color: #fff;
+}
+.ss-mreject-sg svg { width: 10px; height: 10px; fill: none; stroke: currentColor; stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; }
+.ss-mreject-txt { min-width: 0; overflow-wrap: anywhere; }
+.ss-mreject-txt b { margin-right: 6px; font-weight: 700; color: var(--k); }
+/* ระหว่างรายการมีช่องว่างจริงคั่นอยู่แล้ว (ดู MasterRejectNotice.tsx) margin แค่เผื่อให้โปร่งขึ้น */
+.ss-mreject-tok { display: inline-block; max-width: 100%; margin-right: 4px; }
+.ss-mreject-tok i { font-style: normal; font-weight: 700; color: var(--k); }
+/* ตำแหน่งเซลล์ของหัวคอลัมน์ในไฟล์ (เช่น J1) */
+.ss-mreject-cell {
+  display: inline-block;
+  padding: 0 5px;
+  border: 1px solid #dbe6f0;
+  border-radius: 5px;
+  background: #fff;
+  font: 600 10.5px/1.6 'Outfit', sans-serif;
+  font-style: normal;
+  letter-spacing: 0.2px;
+  color: #8194a8;
+  vertical-align: 1px;
+}
+.ss-mreject-safe { display: inline-flex; align-items: center; gap: 6px; margin: 10px 0 0; font-size: 11.5px; line-height: 1.5; color: #8194a8; }
+.ss-mreject-safe svg { flex: none; width: 14px; height: 14px; fill: none; stroke: #2e8b47; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+/* padding-bottom 20px เผื่อเงานูนใต้ปุ่ม .ss-tile-btn (3px) */
+.ss-mreject-actions { display: flex; flex-shrink: 0; justify-content: center; padding: 8px 20px 20px; pointer-events: none; }
+.ss-mreject-overlay.is-landed .ss-mreject-actions { pointer-events: auto; }
+.ss-mreject-overlay.is-open .ss-mreject-rise { animation: ssMrejectRise 0.3s calc(0.74s + var(--i) * 0.06s) cubic-bezier(0.22, 0.9, 0.36, 1) backwards; }
+@keyframes ssMrejectRise { from { opacity: 0; transform: translateY(8px); } }
+/* ผู้ใช้ตั้งค่าลดการเคลื่อนไหว: ไม่ตก ไม่สั่น ไม่ไล่ขึ้นทีละตัว เหลือแค่เฟดเข้า-ออก (component ปล่อยให้กดปุ่มได้ทันทีด้วย) */
+@media (prefers-reduced-motion: reduce) {
+  .ss-mreject-overlay.is-open .ss-mreject { animation: ssMrejectFade 0.18s ease-out both; }
+  .ss-mreject-overlay.is-closing .ss-mreject { animation: ssMrejectFadeOut 0.18s ease-in both; }
+  .ss-mreject-overlay.is-open .ss-mreject-ring,
+  .ss-mreject-overlay.is-open .ss-mreject-doc,
+  .ss-mreject-overlay.is-open .ss-mreject-x,
+  .ss-mreject-overlay.is-open .ss-mreject-rise { animation: none; }
+  @keyframes ssMrejectFade { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes ssMrejectFadeOut { from { opacity: 1; } to { opacity: 0; } }
+}
+
 /* ฟอร์ม New Order */
 .dl-modal--new-order { max-width: 820px; }
 
