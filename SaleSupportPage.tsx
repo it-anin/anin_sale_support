@@ -210,6 +210,13 @@ const MASTER_HEADER_MAP: [RegExp, string][] = [
   [/^distributor$/i,        'distributor'],
 ];
 
+/** ไฟล์ Product Master ต้องเป็น .xlsx เท่านั้น (ผู้ใช้สั่ง 2569-10-29 — ตรงกับข้อความใน popup "ใช้ไฟล์นามสกุล .xlsx")
+ *  เช็คจากนามสกุลท้ายชื่อไฟล์ ไม่สนตัวพิมพ์เล็ก/ใหญ่ (`.XLSX` ผ่าน)
+ *  ⚠️ จงใจไม่รวม .xls / .xlsm / .xlsb / .csv แม้ SheetJS จะอ่านได้ทั้งหมด
+ *  ⚠️ เช็คที่ handleMasterFile ด้วย ไม่ใช่แค่ `accept` ของ <input> — `accept` แค่กรองรายการในหน้าต่างเลือกไฟล์
+ *     ผู้ใช้เปลี่ยนเป็น "All files" แล้วเลือกไฟล์อื่นได้ */
+const MASTER_FILE_EXT = /\.xlsx$/i;
+
 interface SupplierRow {
   name: string;
   details: Record<string, string> | null;
@@ -2702,8 +2709,16 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
   const handleMasterFile = async (file: File) => {
     // กันชนชั้นที่สอง — ปุ่มซ่อนจากโปรไฟล์อื่นอยู่แล้ว (เฉพาะจัดซื้อ ผู้ใช้สั่ง 2569-10-12)
     if (!isPurchasing) return;
-    setUploadingMaster(true);
     setMasterMsg('');
+    // เช็คนามสกุลก่อนอ่านไฟล์ (ผู้ใช้สั่ง 2569-10-29) — ไม่ผ่าน = ไม่อ่านไฟล์ ไม่ query product_master ไม่เปิด modal
+    // ⚠️ ต้องเคลียร์ค่า input ก่อน return ด้วย (เหมือน finally ด้านล่าง) ไม่งั้นเลือกไฟล์เดิมซ้ำแล้ว onChange ไม่ยิง
+    //    ผู้ใช้จะกดแล้วเงียบ ไม่เห็นข้อความเตือนรอบสอง
+    if (!MASTER_FILE_EXT.test(file.name.trim())) {
+      setMasterMsg(`✕ ใช้ไฟล์นามสกุล .xlsx เท่านั้น — ไฟล์ที่เลือกคือ "${file.name}" (เปิดใน Excel แล้วบันทึกเป็น .xlsx ก่อน)`);
+      if (masterFileRef.current) masterFileRef.current.value = '';
+      return;
+    }
+    setUploadingMaster(true);
     try {
       const wb = XLSX.read(await file.arrayBuffer());
       const ws = wb.Sheets[wb.SheetNames[0]];
@@ -3612,7 +3627,7 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
                         — gate เดียวกับปุ่มอัปโหลด Supplier ใน sidebar · ซ่อนทั้ง input ไม่ใช่แค่ปุ่ม */}
                     {isPurchasing && (
                       <>
-                        <input ref={masterFileRef} type="file" accept=".xlsx,.xls" style={{ display: 'none' }}
+                        <input ref={masterFileRef} type="file" accept=".xlsx" style={{ display: 'none' }}
                           onChange={e => { const f = e.target.files?.[0]; if (f) handleMasterFile(f); }} />
                         {/* ปุ่มกระเบื้องนูน (แบบที่ 2) — กดแล้วเปิด popup แจ้งนามสกุลไฟล์ แทนการเปิดหน้าต่างเลือกไฟล์ตรง ๆ
                             ไอคอนเป็น SVG (ไม่ใช่อีโมจิ 📤) เพราะ popup ต้องวัดตำแหน่งไอคอนเป็นจุดเริ่มท่าบิน */}
