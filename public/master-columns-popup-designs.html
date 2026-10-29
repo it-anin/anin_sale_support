@@ -1,0 +1,1039 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Popup ตรวจคอลัมน์ Product Master</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap">
+<style>
+  /* โทนของหน้าแกลเลอรีเปลี่ยนตามธีมผู้ดู · ฉากจำลอง (.stage) ข้างในใช้สีจริงของแอปตายตัว เพราะแอปมีแต่ธีมสว่าง
+     ทุกความเร็วของแอนิเมชันคูณด้วย --spd (ปุ่ม "ความเร็ว" ด้านบน) เพื่อให้ดูแบบสโลว์โมชันได้
+     กฎของ keyframe ทุกแบบ: สไตล์ปกติของ element = ภาพตอนนิ่งแล้ว · keyframe เขียนแค่ท่าเริ่มต้น + ใช้ fill "backwards"
+     (ไม่พึ่ง fill ค้างท้ายท่า ไม่งั้นตอนถอด .is-open ตอนปิดแล้วข้อความหายวูบ — บทเรียนจาก MasterUploadNotice) */
+  :root {
+    --bg: #eef2f6;
+    --surface: #ffffff;
+    --ink: #1f2b37;
+    --muted: #5c6b7a;
+    --line: #d9e3ec;
+    --accent: #2d6cad;
+    --accent-ink: #ffffff;
+    --accent-soft: #e3eef9;
+    --good: #1d7a4a;
+    --note: #7a5200;
+    --note-bg: #fff6e0;
+    --note-line: #efd9a4;
+    --spd: 1;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #0f161e;
+      --surface: #17212b;
+      --ink: #e4ebf2;
+      --muted: #98a8b8;
+      --line: #273442;
+      --accent: #7db4ea;
+      --accent-ink: #0f161e;
+      --accent-soft: #1d2b3a;
+      --good: #6fcf97;
+      --note: #e9c46a;
+      --note-bg: #2a2412;
+      --note-line: #4a3f1d;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0f161e;
+    --surface: #17212b;
+    --ink: #e4ebf2;
+    --muted: #98a8b8;
+    --line: #273442;
+    --accent: #7db4ea;
+    --accent-ink: #0f161e;
+    --accent-soft: #1d2b3a;
+    --good: #6fcf97;
+    --note: #e9c46a;
+    --note-bg: #2a2412;
+    --note-line: #4a3f1d;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Noto Sans Thai', 'Sarabun', system-ui, sans-serif;
+    padding-block: 28px 72px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  .wrap { max-width: 1240px; margin: 0 auto; }
+
+  /* ───────── หัวหน้า ───────── */
+  .page-head { display: grid; gap: 10px; margin-bottom: 26px; max-width: 880px; }
+  .eyebrow {
+    margin: 0; color: var(--accent);
+    font: 600 12px/1.4 'Outfit', 'Noto Sans Thai', sans-serif; letter-spacing: .08em; text-transform: uppercase;
+  }
+  .page-head h1 { margin: 0; font-size: clamp(22px, 2.6vw, 30px); line-height: 1.35; font-weight: 700; text-wrap: balance; }
+  .lede { margin: 0; font-size: 14.5px; line-height: 1.8; color: var(--muted); max-width: 72ch; }
+  .lede b { color: var(--ink); font-weight: 600; }
+  .controls { display: grid; justify-items: start; gap: 8px; margin-top: 6px; }
+  .seg {
+    display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px; width: fit-content; max-width: 100%;
+    padding: 4px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line);
+  }
+  .seg-label { padding: 0 8px 0 6px; font-size: 12.5px; color: var(--muted); }
+  .seg button {
+    padding: 7px 14px; border: 0; border-radius: 9px; background: transparent; color: var(--ink);
+    font: 500 13.5px 'Noto Sans Thai', sans-serif; cursor: pointer;
+  }
+  .seg button:hover { background: var(--accent-soft); }
+  .seg button[aria-checked="true"] { background: var(--accent); color: var(--accent-ink); }
+  .seg button:focus-visible, .replay:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .note {
+    margin: 4px 0 0; padding: 10px 14px; border-radius: 10px; max-width: 72ch;
+    background: var(--note-bg); border: 1px solid var(--note-line); color: var(--note); font-size: 13px; line-height: 1.7;
+  }
+
+  /* ───────── การ์ดแต่ละแบบ ───────── */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 520px), 1fr)); gap: 22px; }
+  .card { display: flex; flex-direction: column; min-width: 0; overflow: hidden; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; }
+  .card-head { display: grid; gap: 7px; padding: 14px 18px 13px; }
+  .card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  .card-title { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 3px 9px; font-size: 16px; font-weight: 700; line-height: 1.5; min-width: 0; }
+  .card-title small { font-size: 12.5px; font-weight: 500; color: var(--muted); }
+  .num {
+    display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+    width: 26px; height: 26px; border-radius: 8px; background: #2d6cad; color: #fff;
+    font: 700 13px 'Outfit', sans-serif; font-variant-numeric: tabular-nums;
+  }
+  .replay {
+    flex-shrink: 0; padding: 6px 12px; border: 1px solid var(--line); border-radius: 9px; background: transparent;
+    color: var(--accent); font: 600 12.5px 'Noto Sans Thai', sans-serif; cursor: pointer;
+  }
+  .replay:hover { background: var(--accent-soft); }
+  .card-desc { margin: 0; padding-left: 35px; font-size: 13px; line-height: 1.75; color: var(--muted); }
+  .card-meta { margin: 0; padding-left: 35px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 12px; color: var(--muted); }
+  .chip { padding: 1px 9px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .card-foot { display: grid; gap: 3px; padding: 12px 18px 15px; font-size: 12.5px; line-height: 1.7; color: var(--muted); }
+  .card-foot p { margin: 0; padding-left: 56px; text-indent: -56px; }
+  .card-foot b { display: inline-block; width: 50px; margin-right: 6px; text-indent: 0; font-weight: 600; color: var(--ink); }
+  .card-foot .pro b { color: var(--good); }
+  .card-foot .con b { color: var(--note); }
+  .footer-note { margin: 34px 0 0; text-align: center; font-size: 14px; line-height: 1.8; color: var(--muted); }
+  .footer-note b { color: var(--accent); font-weight: 600; }
+
+  /* ───────── ฉากจำลองหน้า SaleSupport (สีจริงของแอป) ───────── */
+  .stage {
+    position: relative; height: 500px; overflow: hidden; isolation: isolate; background: #fff;
+    border-block: 1px solid var(--line); font-family: 'Noto Sans Thai', 'Sarabun', sans-serif; color: #1c3d5e;
+  }
+  .mock { position: absolute; inset: 0; display: flex; flex-direction: column; }
+  .mock-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; padding: 10px 14px; min-height: 54px; border-bottom: 1px solid #e3e8ee; }
+  .mock-title { display: flex; align-items: baseline; gap: 8px; font-size: 13px; font-weight: 700; }
+  .mock-title small { font-size: 11px; font-weight: 500; color: #8194a8; }
+  .mock-btns { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+  .mock-new { padding: 7px 16px; border-radius: 10px; background: #4891db; color: #fff; font-size: 12.5px; font-weight: 600; line-height: 1.45; white-space: nowrap; }
+  .mock-rows { padding: 2px 14px; }
+  .mock-row { display: grid; grid-template-columns: 70px 1fr 90px 54px; gap: 14px; align-items: center; height: 37px; border-bottom: 1px solid #eef2f6; }
+  .mock-row i { display: block; height: 8px; border-radius: 4px; background: #e6edf4; }
+  .mock-row--h i { height: 9px; background: #cddae8; }
+  /* ปุ่ม "อัปโหลด Product Master" — คลิกเพื่อจำลองว่าเลือกไฟล์ที่คอลัมน์ไม่ตรง (ข้าม popup .xlsx) */
+  .tgt {
+    position: relative; display: inline-flex; align-items: center; gap: 7px; padding: 7px 16px;
+    border: 0; border-radius: 10px; background: #eaf3fc; color: #2d6cad;
+    font: 600 12.5px/1.45 'Noto Sans Thai', 'Sarabun', sans-serif; white-space: nowrap; cursor: pointer;
+    -webkit-tap-highlight-color: transparent; transition: background .15s;
+  }
+  .tgt:hover { background: #d8eafb; }
+  .tgt svg { width: 15px; height: 15px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+  .tgt:focus-visible, .pbtn:focus-visible { outline: 3px solid rgba(72, 145, 219, .55); outline-offset: 3px; }
+
+  /* ───────── ส่วนกลางของ popup ───────── */
+  .ov {
+    --ink: #1c3d5e; --mut: #8194a8; --blue: #4891db; --blue-d: #2d6cad;
+    --red: #c0392b; --red-bg: #fdeaea; --red-bd: #f2c0be;
+    --amb: #b8791c; --amb-bg: #fdf4e6; --amb-bd: #f0d9a8;
+    --grn: #2e8b47; --grn-bg: #e9f7ee; --grn-bd: #bfe3c9;
+    position: absolute; inset: 0; z-index: 5; display: flex; align-items: center; justify-content: center;
+    padding: 12px; overflow: hidden; font-family: 'Noto Sans Thai', 'Sarabun', sans-serif; color: var(--ink);
+  }
+  .scrim { position: absolute; inset: 0; background: rgba(20, 35, 55, .46); }
+  .ov.is-open .scrim { animation: scrimIn calc(.26s * var(--spd)) ease-out backwards; }
+  .ov.is-closing .scrim { animation: scrimOut calc(.2s * var(--spd)) ease-in both; }
+  @keyframes scrimIn { from { opacity: 0; } }
+  @keyframes scrimOut { to { opacity: 0; } }
+  .pop {
+    position: relative; display: flex; flex-direction: column; width: min(360px, 100%); max-height: 100%;
+    background: #fff; border-radius: 18px; box-shadow: 0 20px 60px rgba(10, 26, 46, .34); text-align: center; overflow: hidden;
+  }
+  .ov.is-open .pop { animation: popIn calc(.26s * var(--spd)) calc(.06s * var(--spd)) cubic-bezier(.22, .9, .36, 1) backwards; }
+  .ov.is-closing .pop { animation: popOut calc(.2s * var(--spd)) ease-in both; }
+  @keyframes popIn { from { opacity: 0; transform: scale(.93) translateY(8px); } }
+  @keyframes popOut { to { opacity: 0; transform: scale(.94); } }
+  @keyframes rise { from { opacity: 0; transform: translateY(8px); } }
+
+  .pop h3 { margin: 0; }
+  .msg { margin: 0; font-size: 17px; font-weight: 700; line-height: 1.6; }
+  .kinds {
+    display: inline-block; padding: 0 9px; border-radius: 7px; background: #eaf3fc; color: #2d6cad;
+    font-weight: 700; letter-spacing: .1px; line-height: 1.35;
+  }
+  .bad { color: var(--red); white-space: nowrap; }   /* nowrap: กันเบราว์เซอร์ตัดกลางคำ "อัป|โหลด" ตอนบรรทัดไม่พอ — ทั้งวลีตกบรรทัดใหม่แทน */
+  .cap { margin: 0; font-size: 12px; font-weight: 600; color: var(--mut); }
+  .safe { display: inline-flex; align-items: center; gap: 6px; margin: 10px 0 0; font-size: 11.5px; line-height: 1.5; color: var(--mut); }
+  .safe svg { flex: none; width: 14px; height: 14px; fill: none; stroke: var(--grn); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .acts { display: flex; justify-content: center; gap: 10px; padding: 8px 20px 20px; }   /* เผื่อเงานูนใต้ปุ่ม 3px */
+  .doc { display: block; flex-shrink: 0; }
+  .doc-body { fill: #2e9e62; }
+  .doc-fold { fill: #1d7a49; }
+  .doc-line { stroke: #fff; }
+
+  /* ปุ่มกระเบื้องนูน — ค่าเดียวกับ .ss-tile-btn--lg / --primary ใน App.css (ปุ่มที่เลือกไว้ใน popup .xlsx) */
+  .pbtn {
+    position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 8px 24px;
+    border: 1px solid #e3ecf5; border-radius: 12px; background: #fff; color: #2d6cad;
+    font: 600 13px/1.45 'Noto Sans Thai', 'Sarabun', sans-serif; white-space: nowrap; cursor: pointer;
+    box-shadow: 0 3px 0 #cfe0f2; transition: transform .2s, box-shadow .2s; -webkit-tap-highlight-color: transparent;
+  }
+  .pbtn--primary { border-color: #3a7fc8; background: #4891db; color: #fff; box-shadow: 0 3px 0 #2d6cad; }
+  .pbtn--block { width: 100%; }
+  .pbtn:hover { transform: translateY(-1px); box-shadow: 0 4px 0 #cfe0f2; }
+  .pbtn--primary:hover { box-shadow: 0 4px 0 #2d6cad; }
+  .pbtn:active, .pbtn--primary:active { transform: translateY(3px); box-shadow: 0 0 0 transparent; transition-duration: .08s; }
+
+  /* สามชนิดของความต่าง — สีชุดเดียวกับ toast/ตราของแอป (เขียว = เพิ่ม · เหลืองอำพัน = เปลี่ยน · แดง = ลบ)
+     ไม่พึ่งสีอย่างเดียว: ทุกที่มีเครื่องหมาย + − ⇄ และคำว่า เพิ่ม/เปลี่ยน/ลบ กำกับ */
+  .k-add { --k: var(--grn); --kbg: var(--grn-bg); --kbd: var(--grn-bd); }
+  .k-chg { --k: var(--amb); --kbg: var(--amb-bg); --kbd: var(--amb-bd); }
+  .k-del { --k: var(--red); --kbg: var(--red-bg); --kbd: var(--red-bd); }
+  .sg {
+    display: inline-grid; place-items: center; flex: none; width: 17px; height: 17px; border-radius: 50%;
+    background: var(--k); color: #fff;
+  }
+  .sg svg { width: 10px; height: 10px; fill: none; stroke: currentColor; stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; }
+  .col {
+    display: inline-block; max-width: 100%; padding: 1px 8px; border-radius: 7px;
+    background: var(--kbg, #f1f5f9); border: 1px solid var(--kbd, #e1e8f0); color: var(--k, #51657a);
+    font: 600 12px/1.55 'Outfit', 'Noto Sans Thai', sans-serif; letter-spacing: .1px; overflow-wrap: anywhere; text-align: left;
+  }
+  .col--n { --kbg: #f1f5f9; --kbd: #e1e8f0; --k: #51657a; }          /* ชื่อฝั่ง "ที่ระบบกำหนด" — สีกลาง */
+  .col--gone { text-decoration: line-through; text-decoration-thickness: 1.5px; }
+  .cell {
+    display: inline-block; padding: 0 5px; border: 1px solid #dbe6f0; border-radius: 5px; background: #fff;
+    font: 600 10.5px/1.6 'Outfit', sans-serif; font-style: normal; letter-spacing: .2px; color: var(--mut);
+  }
+  .pill {
+    display: inline-flex; align-items: center; gap: 6px; padding: 3px 11px 3px 6px; border-radius: 999px;
+    background: var(--kbg); border: 1px solid var(--kbd); color: var(--k); font-size: 12px; font-weight: 600; line-height: 1.5;
+  }
+  .hico {
+    flex: none; display: grid; place-items: center; width: 38px; height: 38px; border-radius: 12px;
+    background: var(--red-bg); color: var(--red);
+  }
+  .hico svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .hico + div { min-width: 0; }
+  .sub { margin: 2px 0 0; font-size: 12px; line-height: 1.6; color: var(--mut); }
+
+  /* ───────── แบบ 1 · Classic Alert ───────── */
+  .d1 .pop { width: min(350px, 100%); }
+  .d1-body { display: flex; flex-direction: column; align-items: center; gap: 4px; min-height: 0; padding: 24px 22px 10px; overflow: auto; }
+  .d1-ico {
+    display: grid; place-items: center; width: 58px; height: 58px; margin-bottom: 6px; border-radius: 50%;
+    background: var(--red-bg); color: var(--red); box-shadow: 0 0 0 7px rgba(192, 57, 43, .07);
+  }
+  .d1-ico svg { width: 28px; height: 28px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .ov.is-open .d1-ico { animation: d1ico calc(.55s * var(--spd)) calc(.12s * var(--spd)) ease-out backwards; }
+  @keyframes d1ico {
+    0% { opacity: 0; transform: scale(.5); }
+    35% { opacity: 1; transform: scale(1.1) rotate(-9deg); }
+    52% { transform: rotate(8deg); }
+    68% { transform: rotate(-5deg); }
+    84% { transform: rotate(2deg); }
+  }
+  .d1-file { display: inline-flex; align-items: center; gap: 8px; margin: 8px 0 0; padding: 5px 12px; border-radius: 9px; background: #f3f7fb; font-size: 12px; color: var(--ink); }
+  .d1-file b { font-weight: 600; white-space: nowrap; }
+  .d1-file .doc { width: 13px; height: 15px; }
+  .d1-pills { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 10px; }
+  .d1-more { width: 100%; margin-top: 6px; text-align: left; }
+  .d1-more summary {
+    display: flex; align-items: center; justify-content: center; gap: 5px; padding: 4px; border-radius: 8px;
+    list-style: none; cursor: pointer; color: var(--blue-d); font-size: 12.5px; font-weight: 600;
+  }
+  .d1-more summary::-webkit-details-marker { display: none; }
+  .d1-more summary:focus-visible { outline: 3px solid rgba(72, 145, 219, .5); outline-offset: 2px; }
+  .d1-more summary svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; transition: transform .2s; }
+  .d1-more[open] summary svg { transform: rotate(180deg); }
+  .d1-more ul { display: grid; gap: 7px; max-height: 128px; margin: 6px 0 0; padding: 10px 12px; overflow: auto; list-style: none; border: 1px solid #e8eef5; border-radius: 10px; background: #f8fafc; }
+  .d1-more li { display: flex; align-items: flex-start; gap: 8px; font-size: 12.5px; line-height: 1.7; }
+  .d1-more li > span:last-child { min-width: 0; overflow-wrap: anywhere; }
+  .d1-more li b { color: var(--k); font-weight: 700; margin-right: 4px; }
+
+  /* ───────── แบบ 2 · Diff Table ───────── */
+  .d2 .pop { width: min(450px, 100%); text-align: left; }
+  .d2-head { display: flex; align-items: flex-start; gap: 12px; padding: 18px 20px 12px; }
+  .d2-head .msg { font-size: 15.5px; line-height: 1.6; }
+  .d2-tbl { display: flex; flex-direction: column; min-height: 0; margin: 0 20px; border: 1px solid #dbe6f0; border-radius: 12px; overflow: hidden; }
+  .d2-tr { display: grid; grid-template-columns: 78px minmax(0, 1fr) minmax(0, 1.2fr); align-items: center; gap: 8px; padding: 7px 10px; }
+  .d2-th { background: #f4f8fc; font-size: 11.5px; font-weight: 600; color: var(--mut); }
+  .d2-body { min-height: 0; max-height: 234px; overflow: auto; }
+  .d2-body .d2-tr { background: var(--kbg); border-top: 1px solid var(--kbd); box-shadow: inset 3px 0 0 var(--k); }
+  .d2-body .d2-tr:first-child { border-top: 0; }
+  .ov.is-open .d2-body .d2-tr { animation: d2in calc(.28s * var(--spd)) calc((var(--i) * .07s + .2s) * var(--spd)) cubic-bezier(.22, .9, .36, 1) backwards; }
+  @keyframes d2in { from { opacity: 0; transform: translateX(-12px); } }
+  .d2-kind { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--k); }
+  .d2-act { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; min-width: 0; }
+  .d2-none { font-size: 12px; color: var(--mut); }
+  .d2-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 20px 20px; }
+  .d2-ok { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; line-height: 1.5; color: var(--mut); }
+  .d2-ok svg { flex: none; width: 15px; height: 15px; fill: none; stroke: var(--grn); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* ───────── แบบ 3 · Chip Groups ───────── */
+  .d3 .pop { width: min(410px, 100%); text-align: left; }
+  .d3-top { display: flex; align-items: flex-start; gap: 12px; padding: 18px 20px 10px; }
+  .d3-top .msg { font-size: 15.5px; line-height: 1.6; }
+  .d3-groups { display: grid; gap: 8px; min-height: 0; max-height: 262px; padding: 0 20px; overflow: auto; }
+  .d3-grp { padding: 9px 11px 10px; border: 1px solid var(--kbd); border-radius: 12px; background: var(--kbg); }
+  .d3-grp h4 { display: flex; align-items: center; gap: 7px; margin: 0 0 7px; font-size: 12.5px; font-weight: 700; color: var(--k); }
+  .d3-grp h4 .n { margin-left: auto; padding: 0 8px; border-radius: 99px; background: #fff; font: 700 11.5px/19px 'Outfit', sans-serif; }
+  .d3-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .d3-chips .col { background: #fff; }
+  .d3-pair { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 5px; max-width: 100%; }
+  .d3-pair i { font-style: normal; font-weight: 700; color: var(--k); }
+  .ov.is-open .d3-chips > * { animation: d3chip calc(.26s * var(--spd)) calc((var(--i) * .05s + .2s) * var(--spd)) cubic-bezier(.34, 1.56, .64, 1) backwards; }
+  @keyframes d3chip { from { opacity: 0; transform: scale(.6); } }
+  .d3-hint { margin: 10px 20px 0; font-size: 12px; line-height: 1.7; color: var(--mut); }
+  .d3-foot { display: flex; justify-content: flex-end; padding: 8px 20px 20px; }
+
+  /* ───────── แบบ 4 · Excel Column Map ───────── */
+  .d4 .pop { width: min(510px, 100%); text-align: left; }
+  .d4-head { display: flex; align-items: flex-start; gap: 12px; padding: 18px 20px 12px; }
+  .d4-head .msg { font-size: 15.5px; line-height: 1.6; }
+  .d4-sheet {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 5px; min-height: 0; max-height: 274px;
+    margin: 0 20px; padding: 8px; overflow: auto; border: 1px solid #cfe0f2; border-radius: 12px; background: #f4f8fc;
+  }
+  .d4-cell {
+    display: flex; flex-direction: column; justify-content: center; gap: 1px; min-height: 47px; padding: 3px 8px 4px;
+    border: 1px solid #dde7f1; border-radius: 7px; background: #fff;
+  }
+  .d4-cell i { font: 700 9.5px/1.3 'Outfit', sans-serif; font-style: normal; letter-spacing: .3px; color: #9bb0c4; }
+  .d4-cell b { font: 600 11.5px/1.35 'Outfit', 'Noto Sans Thai', sans-serif; color: #6a86a3; overflow-wrap: anywhere; }
+  .d4-top { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; min-width: 0; }
+  .d4-cell u { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; font-weight: 600; line-height: 1.4; text-decoration: none; color: var(--k); }
+  .d4-cell.k-add, .d4-cell.k-chg { border-color: var(--kbd); background: var(--kbg); }
+  .d4-cell.k-add b, .d4-cell.k-chg b { color: var(--k); }
+  .d4-cell.k-del { border: 1.5px dashed var(--red-bd); background: transparent; }
+  .d4-cell.k-del b { color: var(--red); text-decoration: line-through; opacity: .85; }
+  .ov.is-open .d4-cell { animation: d4pop calc(.28s * var(--spd)) calc((var(--i) * .03s + .15s) * var(--spd)) cubic-bezier(.34, 1.4, .64, 1) backwards; }
+  .ov.is-open .d4-cell.hit { animation: d4pop calc(.28s * var(--spd)) calc((var(--i) * .03s + .15s) * var(--spd)) cubic-bezier(.34, 1.4, .64, 1) backwards,
+                                       d4pulse calc(.8s * var(--spd)) calc(.9s * var(--spd)) ease-out; }
+  @keyframes d4pop { from { opacity: 0; transform: scale(.8); } }
+  @keyframes d4pulse { 0% { box-shadow: 0 0 0 0 var(--kbd); } 100% { box-shadow: 0 0 0 9px transparent; } }
+  .d4-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 9px 20px 0; padding: 0; list-style: none; font-size: 11.5px; color: var(--mut); }
+  .d4-legend li { display: inline-flex; align-items: center; gap: 6px; }
+  .d4-legend i { width: 12px; height: 12px; border-radius: 4px; border: 1px solid var(--kbd, #dde7f1); background: var(--kbg, #fff); }
+  .d4-legend .k-del i { border-style: dashed; background: transparent; }
+  .d4 .safe { margin: 8px 20px 0; }
+  .d4 .acts { justify-content: flex-end; }
+
+  /* ───────── แบบ 5 · Full Compare ───────── */
+  .d5 .pop { width: min(540px, 100%); text-align: left; }
+  .d5-head { display: flex; align-items: flex-start; gap: 12px; padding: 18px 20px 10px; }
+  .d5-head .msg { font-size: 15.5px; line-height: 1.6; }
+  .d5-tools { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 20px 8px; font-size: 12px; color: var(--mut); }
+  .d5-sw { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; color: var(--ink); cursor: pointer; user-select: none; }
+  .d5-sw input {
+    position: relative; appearance: none; -webkit-appearance: none; width: 32px; height: 19px; margin: 0;
+    border-radius: 99px; background: #cfe0f2; cursor: pointer; transition: background .2s;
+  }
+  .d5-sw input::after {
+    content: ''; position: absolute; top: 2px; left: 2px; width: 15px; height: 15px; border-radius: 50%;
+    background: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, .25); transition: transform .2s;
+  }
+  .d5-sw input:checked { background: var(--blue); }
+  .d5-sw input:checked::after { transform: translateX(13px); }
+  .d5-sw input:focus-visible { outline: 3px solid rgba(72, 145, 219, .5); outline-offset: 2px; }
+  .d5-cmp { display: flex; flex-direction: column; min-height: 0; margin: 0 20px; border: 1px solid #dbe6f0; border-radius: 12px; overflow: hidden; }
+  .d5-hd, .d5-row { display: grid; grid-template-columns: minmax(0, 1fr) 30px minmax(0, 1.1fr); align-items: center; padding: 0 10px; }
+  .d5-hd { height: 30px; background: #f4f8fc; font-size: 11.5px; font-weight: 600; color: var(--mut); }
+  .d5-list { position: relative; min-height: 0; max-height: 200px; overflow: auto; }
+  .d5-row { gap: 0; min-height: 29px; border-top: 1px solid #eef3f8; font-size: 12px; }
+  .d5-row.k-add, .d5-row.k-chg, .d5-row.k-del { background: var(--kbg); box-shadow: inset 3px 0 0 var(--k); }
+  .d5-row .side { display: flex; align-items: center; gap: 6px; min-width: 0; padding: 3px 0; }
+  .d5-row .nm { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 600 12px/1.5 'Outfit', 'Noto Sans Thai', sans-serif; color: #51657a; }
+  .d5-row.k-chg .side:last-child .nm, .d5-row.k-add .side:last-child .nm { color: var(--k); }
+  .d5-row.k-del .side:first-child .nm { color: var(--red); }
+  .d5-row .nm.none { font-weight: 500; font-style: italic; color: #a9b8c8; }
+  .d5-row .conn { display: grid; place-items: center; color: var(--k, #b3c2d1); font: 700 12px/1 'Outfit', sans-serif; }
+  .d5-row .conn svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+  .d5-cmp.only-diff .d5-row:not([data-diff]) { display: none; }
+  .d5-cmp .d5-row:first-child { border-top: 0; }
+  .ov.is-open .d5-row { animation: rise calc(.26s * var(--spd)) calc((var(--i) * .018s + .15s) * var(--spd)) ease-out backwards; }
+  .d5-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 20px 20px; }
+
+  /* ───────── แบบ 6 · File Reject ───────── */
+  .d6 .pop { width: min(340px, 100%); }
+  .d6-top { display: flex; flex-direction: column; align-items: center; gap: 4px; min-height: 0; padding: 22px 22px 8px; overflow: auto; }
+  .d6-slot { position: relative; display: grid; place-items: center; width: 72px; height: 72px; margin-bottom: 6px; }
+  .d6-ring { position: absolute; inset: 0; border: 2.5px solid var(--red-bd); border-radius: 50%; background: var(--red-bg); }
+  .d6-doc { position: relative; filter: grayscale(.6); }
+  .d6-doc .doc { width: 36px; height: 42px; }
+  .d6-x {
+    position: absolute; right: -3px; bottom: -3px; display: grid; place-items: center; width: 27px; height: 27px;
+    border: 2.5px solid #fff; border-radius: 50%; background: var(--red); color: #fff;
+  }
+  .d6-x svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 3.2; stroke-linecap: round; }
+  .ov.is-open .d6-ring { animation: d6ring calc(.6s * var(--spd)) calc(.34s * var(--spd)) ease-out backwards; }
+  .ov.is-open .d6-doc { animation: d6drop calc(.8s * var(--spd)) calc(.1s * var(--spd)) cubic-bezier(.3, .8, .4, 1) backwards; }
+  .ov.is-open .d6-x { animation: d6x calc(.32s * var(--spd)) calc(.62s * var(--spd)) cubic-bezier(.34, 1.56, .64, 1) backwards; }
+  @keyframes d6drop {
+    0% { opacity: 0; transform: translateY(-54px) rotate(-18deg); filter: none; }
+    38% { opacity: 1; transform: translateY(4px) rotate(3deg); filter: none; }
+    52% { transform: translateY(-2px) rotate(-1deg); filter: none; }
+    64% { transform: none; filter: none; }
+  }
+  @keyframes d6ring {
+    0% { border-color: #cfe0f2; background: #f4f8fc; transform: none; }
+    8% { border-color: var(--red-bd); background: var(--red-bg); transform: translateX(-5px); }
+    24% { transform: translateX(5px); }
+    40% { transform: translateX(-4px); }
+    56% { transform: translateX(3px); }
+    72% { transform: translateX(-1px); }
+    100% { transform: none; }
+  }
+  @keyframes d6x { from { opacity: 0; transform: scale(0); } }
+  .d6-file { display: inline-flex; align-items: center; gap: 7px; margin: 6px 0 0; padding: 4px 11px; border-radius: 9px; background: #f3f7fb; font-size: 12px; font-weight: 600; color: var(--ink); }
+  .d6-file .doc { width: 12px; height: 14px; }
+  .d6-list { display: grid; gap: 7px; width: 100%; margin: 10px 0 0; padding: 0; list-style: none; text-align: left; }
+  .d6-list li { display: flex; align-items: flex-start; gap: 8px; padding: 6px 10px; border-radius: 9px; background: var(--kbg); font-size: 12.5px; line-height: 1.55; }
+  .d6-list li .sg { margin-top: 2px; }
+  .d6-list li > span:last-child { display: -webkit-box; min-width: 0; overflow: hidden; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow-wrap: anywhere; }
+  .d6-list li b { color: var(--k); font-weight: 700; margin-right: 4px; }
+  .ov.d6.is-open .rise { animation: rise calc(.3s * var(--spd)) calc((.74s + var(--i) * .06s) * var(--spd)) cubic-bezier(.22, .9, .36, 1) backwards; }
+
+  /* ───────── แบบ 7 · Stamp ───────── */
+  .d7 .pop { width: min(410px, 100%); text-align: left; }
+  .d7-paper { position: relative; min-height: 0; padding: 18px 22px 82px; overflow: auto; background: linear-gradient(#fff, #fbfdff); }
+  .d7-kick { margin: 0 0 8px; padding-bottom: 8px; border-bottom: 2px dashed #dbe6f0; font-size: 11.5px; font-weight: 600; color: var(--mut); }
+  .d7-kick b { color: var(--ink); }
+  .d7-paper .msg { font-size: 16px; }
+  .d7-rows { display: grid; gap: 2px; margin: 10px 0 0; }
+  .d7-rows > div { display: grid; grid-template-columns: 78px minmax(0, 1fr); gap: 8px; align-items: baseline; padding: 4px 0; border-bottom: 1px dotted #cdd9e5; }
+  .d7-rows dt { display: flex; align-items: baseline; gap: 5px; margin: 0; font-size: 12.5px; font-weight: 700; color: var(--k); }
+  .d7-rows dt i { font: 700 11px 'Outfit', sans-serif; font-style: normal; opacity: .8; }
+  .d7-rows dd { display: -webkit-box; margin: 0; overflow: hidden; -webkit-line-clamp: 2; -webkit-box-orient: vertical; font: 600 12.5px/1.6 'Outfit', 'Noto Sans Thai', sans-serif; color: var(--ink); overflow-wrap: anywhere; }
+  .d7-stamp {
+    position: absolute; right: 20px; bottom: 16px; padding: 5px 16px 4px; border: 3px double var(--red); border-radius: 10px;
+    color: var(--red); text-align: center; line-height: 1.15; transform: rotate(-11deg); opacity: .92; mix-blend-mode: multiply; pointer-events: none;
+  }
+  .d7-stamp b { display: block; font-size: 26px; font-weight: 800; letter-spacing: 1px; }
+  .d7-stamp small { display: block; font-size: 10.5px; font-weight: 700; letter-spacing: .6px; }
+  .ov.is-open .d7-stamp { animation: d7slam calc(.4s * var(--spd)) calc(.42s * var(--spd)) cubic-bezier(.2, .9, .3, 1.15) backwards; }
+  .ov.d7.is-open .pop { animation: popIn calc(.26s * var(--spd)) calc(.06s * var(--spd)) cubic-bezier(.22, .9, .36, 1) backwards,
+                                                          d7jolt calc(.22s * var(--spd)) calc(.74s * var(--spd)) ease-out; }
+  @keyframes d7slam { from { opacity: 0; transform: rotate(-26deg) scale(2.7); } 62% { opacity: 1; transform: rotate(-9deg) scale(.93); } }
+  @keyframes d7jolt { 0%, 100% { transform: none; } 35% { transform: translateY(3px); } 65% { transform: translateY(-1px); } }
+
+  /* ───────── แบบ 8 · Checklist ───────── */
+  .d8 .pop { width: min(410px, 100%); text-align: left; }
+  .d8-head { padding: 18px 20px 2px; }
+  .d8-head h4 { margin: 0; font-size: 14px; font-weight: 700; line-height: 1.6; }
+  .d8-head h4 span { margin-left: 8px; font-size: 12px; font-weight: 500; color: var(--mut); }
+  .d8-steps { display: grid; gap: 2px; min-height: 0; margin: 4px 0 0; padding: 0 12px; overflow: auto; list-style: none; }
+  .d8-step { display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 10px; align-items: start; padding: 7px 8px; border-radius: 11px; }
+  .d8-step.is-bad { background: var(--red-bg); }
+  .d8-st { position: relative; width: 22px; height: 22px; margin-top: 1px; }
+  .d8-st .spin { position: absolute; inset: 1px; border: 2.5px solid #cfe0f2; border-top-color: var(--blue); border-radius: 50%; opacity: 0; }
+  .d8-st .res { position: absolute; inset: 0; display: grid; place-items: center; border-radius: 50%; color: #fff; }
+  .d8-st .res svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; }
+  .is-ok .res { background: var(--grn); }
+  .is-bad .res { background: var(--red); }
+  .is-skip .res { background: #cfd8e2; }
+  .d8-tt { font-size: 13px; font-weight: 600; line-height: 1.5; }
+  .d8-sub { font-size: 11.5px; line-height: 1.6; color: var(--mut); }
+  .is-bad .d8-sub { color: var(--red); font-weight: 600; }
+  .is-skip .d8-tt { color: #9bb0c4; }
+  .d8-det { display: grid; grid-template-rows: 1fr; margin-top: 6px; }
+  .d8-det > div { display: grid; gap: 5px; min-height: 0; overflow: hidden; }
+  .d8-line { display: flex; align-items: flex-start; gap: 7px; font-size: 12px; line-height: 1.65; }
+  .d8-line .sg { margin-top: 2px; }
+  .d8-line > span:last-child { min-width: 0; overflow-wrap: anywhere; }
+  .d8-line b { color: var(--k); font-weight: 700; margin-right: 4px; }
+  .ov.is-open .d8-step { animation: rise calc(.26s * var(--spd)) calc(var(--i) * .13s * var(--spd)) ease-out backwards; }
+  .ov.is-open .d8-st .spin { animation: d8spin calc(.3s * var(--spd)) calc(var(--i) * .13s * var(--spd)) linear; }
+  .ov.is-open .d8-st .res { animation: d8res calc(.26s * var(--spd)) calc((var(--i) * .13s + .22s) * var(--spd)) cubic-bezier(.34, 1.56, .64, 1) backwards; }
+  .ov.is-open .d8-det { animation: d8open calc(.34s * var(--spd)) calc(.62s * var(--spd)) ease-out backwards; }
+  @keyframes d8spin { 0% { opacity: 1; transform: rotate(0); } 85% { opacity: 1; } 100% { opacity: 0; transform: rotate(300deg); } }
+  @keyframes d8res { from { opacity: 0; transform: scale(.3); } }
+  @keyframes d8open { from { grid-template-rows: 0fr; opacity: 0; } }
+  .d8-verdict { display: flex; align-items: center; gap: 10px; margin: 8px 20px 0; padding: 10px 12px; border: 1px solid var(--red-bd); border-radius: 12px; background: #fff; }
+  .d8-verdict .vi { flex: none; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--red-bg); color: var(--red); }
+  .d8-verdict .vi svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; }
+  .d8-verdict .msg { font-size: 14px; line-height: 1.55; }
+  .d8 .acts { justify-content: flex-end; padding-top: 12px; }
+  .ov.is-open .d8-verdict { animation: rise calc(.3s * var(--spd)) calc(.7s * var(--spd)) ease-out backwards; }
+
+  /* ───────── แบบ 9 · Tabs ───────── */
+  .d9 .pop { width: min(400px, 100%); }
+  .d9-top { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 22px 22px 4px; }
+  .d9-ico { display: grid; place-items: center; width: 46px; height: 46px; margin-bottom: 4px; border-radius: 50%; background: var(--red-bg); color: var(--red); }
+  .d9-ico svg { width: 23px; height: 23px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .ov.is-open .d9-ico { animation: d1ico calc(.55s * var(--spd)) calc(.12s * var(--spd)) ease-out backwards; }
+  .d9-tabs { display: flex; gap: 4px; margin: 12px 22px 0; padding: 4px; border-radius: 12px; background: #eef3f8; }
+  .d9-tab {
+    display: inline-flex; flex: 1; align-items: center; justify-content: center; gap: 6px; padding: 7px 4px; border: 0; border-radius: 9px;
+    background: transparent; color: var(--mut); font: 600 12.5px/1.5 'Noto Sans Thai', sans-serif; cursor: pointer; transition: background .15s, color .15s;
+  }
+  .d9-tab[aria-selected="true"] { background: #fff; color: var(--k); box-shadow: 0 1px 3px rgba(10, 26, 46, .14); }
+  .d9-tab .n { min-width: 19px; padding: 0 6px; border-radius: 99px; background: var(--kbg); color: var(--k); font: 700 11px/19px 'Outfit', sans-serif; }
+  .d9-tab:disabled { opacity: .42; cursor: not-allowed; }
+  .d9-tab:disabled .n { background: #e3ebf3; color: var(--mut); }
+  .d9-tab:focus-visible { outline: 3px solid rgba(72, 145, 219, .5); outline-offset: 1px; }
+  .d9-panels { height: 132px; margin: 8px 22px 0; overflow: auto; text-align: left; }
+  .d9-panels [role="tabpanel"] { display: grid; align-content: start; gap: 6px; padding: 2px 0; }
+  .d9-panels [hidden] { display: none; }
+  .d9-li { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 7px; padding: 6px 10px; border: 1px solid var(--kbd); border-radius: 10px; background: var(--kbg); }
+  .d9-li i { font-style: normal; font-weight: 700; color: var(--k); }
+  .d9-li .cell { margin-left: auto; }
+  .d9-li .col { background: #fff; }
+  .ov.is-open .d9-li { animation: rise calc(.24s * var(--spd)) calc((var(--i) * .05s + .2s) * var(--spd)) ease-out backwards; }
+  .d9 .safe { align-self: center; margin-top: 8px; }
+
+  /* ───────── แบบ 10 · Bottom Sheet ───────── */
+  .ov.d10 { align-items: flex-end; padding: 0; }
+  .d10 .pop { width: min(540px, 100%); border-radius: 22px 22px 0 0; text-align: left; box-shadow: 0 -10px 40px rgba(10, 26, 46, .3); }
+  .ov.d10.is-open .pop { animation: sheetUp calc(.36s * var(--spd)) cubic-bezier(.22, .9, .3, 1) backwards; }
+  .ov.d10.is-closing .pop { animation: sheetDown calc(.22s * var(--spd)) ease-in both; }
+  @keyframes sheetUp { from { transform: translateY(100%); } }
+  @keyframes sheetDown { to { transform: translateY(100%); } }
+  .d10-grab { flex: none; width: 40px; height: 4px; margin: 9px auto 0; border-radius: 99px; background: #d5dfea; }
+  .d10-head { display: flex; align-items: flex-start; gap: 12px; padding: 12px 20px 6px; }
+  .d10-head .msg { font-size: 15.5px; line-height: 1.6; }
+  .d10-sum { display: flex; flex-wrap: wrap; gap: 6px; padding: 2px 20px 0; }
+  .d10-list { min-height: 0; max-height: 214px; margin: 10px 20px 0; overflow: auto; border: 1px solid #e3ecf5; border-radius: 12px; }
+  .d10-grp { padding: 7px 12px 9px; border-top: 1px solid #eef3f8; }
+  .d10-grp:first-child { border-top: 0; }
+  .d10-grp h4 { display: flex; align-items: center; gap: 7px; margin: 0 0 5px; font-size: 12px; font-weight: 700; color: var(--k); }
+  .d10-grp .items { display: flex; flex-wrap: wrap; gap: 5px 6px; }
+  .d10-foot { flex: none; padding: 12px 20px 22px; }
+  .ov.d10.is-open .d10-grp { animation: rise calc(.26s * var(--spd)) calc((var(--i) * .08s + .3s) * var(--spd)) ease-out backwards; }
+
+  @media (max-width: 480px) {
+    .card-head, .card-foot { padding-left: 14px; padding-right: 14px; }
+    .card-desc, .card-meta { padding-left: 0; }
+    .stage { height: 540px; }
+    .d2-tr { grid-template-columns: 70px minmax(0, 1fr) minmax(0, 1.2fr); gap: 6px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="page-head">
+    <p class="eyebrow">SaleSupport · เมนู Products</p>
+    <h1>Popup ตรวจคอลัมน์ไฟล์ Product Master</h1>
+    <p class="lede">เมื่อเลือกไฟล์ .xlsx แล้ว ระบบจะอ่านหัวคอลัมน์ (แถวที่ 1) เทียบกับรายการที่ระบบกำหนดก่อนทำอย่างอื่น — ถ้ามีคอลัมน์ <b>เพิ่ม / เปลี่ยนชื่อ / ลบ</b> ให้ขึ้น popup นี้และ<b>ไม่อัปโหลด</b> (ยังไม่แตะฐานข้อมูล) · หัวข้อใช้ข้อความที่ระบุไว้ “ไฟล์มี … คอลัมน์ ไม่สามารถอัปโหลดได้” โดยคำที่แทน … จะเป็นชนิดที่พบจริง เช่น เพิ่ม/เปลี่ยน · กดปุ่ม “อัปโหลด Product Master” ในการ์ดเพื่อเปิด popup ใหม่ · ปิดด้วยปุ่ม [ตกลง] หรือ Esc (ไม่ปิดเมื่อคลิกพื้นหลัง ตามกฎของแอป)</p>
+    <div class="controls">
+      <div class="seg" role="radiogroup" aria-label="ตัวอย่างไฟล์">
+        <span class="seg-label">ตัวอย่างไฟล์</span>
+        <button type="button" role="radio" aria-checked="true" data-sc="all">เพิ่ม + เปลี่ยน + ลบ</button>
+        <button type="button" role="radio" aria-checked="false" data-sc="ac">เพิ่ม + เปลี่ยน</button>
+        <button type="button" role="radio" aria-checked="false" data-sc="add">เพิ่มอย่างเดียว</button>
+        <button type="button" role="radio" aria-checked="false" data-sc="del">ลบอย่างเดียว</button>
+        <button type="button" role="radio" aria-checked="false" data-sc="many">รายการเยอะ (13)</button>
+      </div>
+      <div class="seg" role="radiogroup" aria-label="ความเร็วแอนิเมชัน">
+        <span class="seg-label">ความเร็ว</span>
+        <button type="button" role="radio" aria-checked="true" data-spd="1">ปกติ</button>
+        <button type="button" role="radio" aria-checked="false" data-spd="2">ช้า ×2</button>
+        <button type="button" role="radio" aria-checked="false" data-spd="4">ช้ามาก ×4</button>
+      </div>
+    </div>
+    <p class="note">หัวคอลัมน์ในตัวอย่างเป็นข้อมูลสมมติ (อิงชื่อช่องของ Product Master ในแอป 15 ช่อง) ไม่ใช่หัวคอลัมน์จริงของไฟล์ · สลับ “ตัวอย่างไฟล์” ด้านบนเพื่อดูว่าแต่ละแบบรับกรณีรายการน้อย/ยาวได้ไหม</p>
+    <p class="note" id="rm-note" hidden>เครื่องนี้ตั้งค่า “ลดการเคลื่อนไหว” ไว้ แต่แกลเลอรีนี้ยังเล่นแอนิเมชันตอนเปิด popup เพราะเป็นตัวอย่างให้ดูท่าเคลื่อนไหว · ตอนใส่ในแอปจริงจะมีโหมดลดการเคลื่อนไหวเป็นเฟดเฉย ๆ</p>
+  </header>
+
+  <main class="grid" id="grid"></main>
+
+  <p class="footer-note">ชอบแบบไหนบอกเลขได้เลย เช่น <b>“เอาแบบ 4”</b> · ผสมกันได้ เช่น หัวแบบ 1 + รายการแบบ 3 · แล้วผมจะต่อการตรวจคอลัมน์จริง (เทียบหัวคอลัมน์แถวที่ 1 ของไฟล์กับรายการที่ระบบกำหนด) เข้ากับปุ่มอัปโหลด Product Master ครับ</p>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  /* ───────────────────────── ข้อมูลตัวอย่าง ───────────────────────── */
+  const FILE_NAME = 'Product Master.xlsx';
+  /* ชื่อช่องของ Product Master ในแอป (EDIT_FIELDS ใน SaleSupportPage.tsx) — ของจริงจะเทียบกับหัวคอลัมน์ในไฟล์ต้นแบบ */
+  const EXPECTED = ['SKU', 'Name', 'BASE_UNIT', 'ABC', 'Multiply', 'Supplier', 'Set_Deal', 'Purchase_Unit', 'Barcode_Unit', 'ทุนซื้อ', 'Buying_Deal_Normal', 'Buying_Deal_Free', 'Group', 'Group %', 'SKU Name'];
+  const SCENARIOS = {
+    all:  { added: ['Remark', 'Updated_By'], changed: [['ทุนซื้อ', 'ทุนล่าสุด']], removed: ['Group %'] },
+    ac:   { added: ['Remark', 'Updated_By'], changed: [['ทุนซื้อ', 'ทุนล่าสุด']], removed: [] },
+    add:  { added: ['Remark'], changed: [], removed: [] },
+    del:  { added: [], changed: [], removed: ['Group', 'Group %'] },
+    many: {
+      added: ['Remark', 'Updated_By', 'Brand', 'Color', 'Note'],
+      changed: [['ทุนซื้อ', 'ทุนล่าสุด'], ['ABC', 'ABC Class'], ['Supplier', 'Vendor'], ['SKU Name', 'ชื่อเต็ม']],
+      removed: ['Group', 'Group %', 'Set_Deal', 'Buying_Deal_Free'],
+    },
+  };
+  const KIND = { add: { th: 'เพิ่ม', cls: 'k-add' }, chg: { th: 'เปลี่ยน', cls: 'k-chg' }, del: { th: 'ลบ', cls: 'k-del' } };
+  const KEYS = ['add', 'chg', 'del'];                              // ลำดับแสดงผลทุกแบบ: เพิ่ม → เปลี่ยน → ลบ
+
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const colLetter = i => { let s = ''; for (let n = i + 1; n > 0; n = Math.floor((n - 1) / 26)) s = String.fromCharCode(65 + ((n - 1) % 26)) + s; return s; };
+
+  /* แถวเรียงตามลำดับต้นแบบ: ตรง (same) / เปลี่ยนชื่อ (chg) / ขาด (del) แล้วต่อด้วยคอลัมน์ที่เพิ่มมา (add)
+     r.cell = ตำแหน่งเซลล์ในไฟล์ (เช่น J1) — คอลัมน์ที่ขาดไม่มีเซลล์ */
+  function buildModel(sc) {
+    const renamed = new Map(sc.changed);
+    const dropped = new Set(sc.removed);
+    const rows = EXPECTED.map(name => dropped.has(name) ? { kind: 'del', exp: name, act: null }
+      : renamed.has(name) ? { kind: 'chg', exp: name, act: renamed.get(name) }
+      : { kind: 'same', exp: name, act: name });
+    sc.added.forEach(name => rows.push({ kind: 'add', exp: null, act: name }));
+    let n = 0;
+    rows.forEach(r => { r.cell = r.act ? colLetter(n++) + '1' : null; });
+    const by = { add: [], chg: [], del: [], same: [] };
+    rows.forEach(r => by[r.kind].push(r));
+    const kinds = KEYS.filter(k => by[k].length).map(k => KIND[k].th);
+    return {
+      fileName: FILE_NAME, rows, by, kindsText: kinds.join('/'),
+      expCols: EXPECTED.length, fileCols: n, diffCount: by.add.length + by.chg.length + by.del.length,
+    };
+  }
+
+  /* ───────────────────────── ตัวช่วยสร้าง HTML ───────────────────────── */
+  const make = s => { const t = document.createElement('template'); t.innerHTML = s.trim(); return t.content.firstElementChild; };
+  const svg = d => '<svg viewBox="0 0 24 24" aria-hidden="true">' + d + '</svg>';
+  const I = {
+    upload: svg('<path d="M12 15V4"/><path d="m7.5 8.5 4.5-4.5 4.5 4.5"/><path d="M4.5 15v3.2c0 .9.7 1.6 1.6 1.6h11.8c.9 0 1.6-.7 1.6-1.6V15"/>'),
+    warn: svg('<path d="M10.3 3.9 2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9.5v4.2M12 17.3h.01"/>'),
+    x: svg('<path d="M6 6l12 12M18 6 6 18"/>'),
+    plus: svg('<path d="M12 5v14M5 12h14"/>'),
+    minus: svg('<path d="M5 12h14"/>'),
+    swap: svg('<path d="M6 8h12m0 0-3.5-3.5M18 8l-3.5 3.5"/><path d="M18 16H6m0 0 3.5-3.5M6 16l3.5 3.5"/>'),
+    check: svg('<path d="m5 12.5 4.5 4.5L19 7.5"/>'),
+    shield: svg('<path d="M12 3 5 6v5.5c0 4.2 2.9 7.4 7 9 4.1-1.6 7-4.8 7-9V6z"/><path d="m9 12 2.2 2.2L15 10.5"/>'),
+    chev: svg('<path d="m6 9 6 6 6-6"/>'),
+  };
+  /* ไอคอนไฟล์ xlsx — สีคุมด้วย CSS (.doc-body / .doc-fold / .doc-line) · ชุดเดียวกับ popup .xlsx */
+  const DOC = '<svg class="doc" viewBox="0 0 48 56" aria-hidden="true">'
+    + '<path class="doc-body" d="M7 4a4 4 0 0 1 4-4h18l12 12v40a4 4 0 0 1-4 4H11a4 4 0 0 1-4-4z"/>'
+    + '<path class="doc-fold" d="M29 0l12 12h-8a4 4 0 0 1-4-4z"/>'
+    + '<g class="doc-line" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="14" y="24" width="20" height="20" rx="2.5"/><path d="M14 31h20M14 37.5h20M24 24v20"/></g>'
+    + '</svg>';
+
+  const signOf = k => '<span class="sg" aria-hidden="true">' + (k === 'add' ? I.plus : k === 'chg' ? I.swap : I.minus) + '</span>';
+  const brk = s => esc(s).replace(/_/g, '_<wbr>');                   // ให้ตกบรรทัดหลัง _ (Buying_Deal_ / Normal) แทนที่จะตัดกลางคำ
+  const col = (name, extra) => '<span class="col' + (extra ? ' ' + extra : '') + '">' + brk(name) + '</span>';
+  const pair = r => '<span class="d3-pair">' + col(r.exp, 'col--n') + '<i>→</i>' + col(r.act) + '</span>';
+  /* ข้อความสั้นของแต่ละชนิด — "Remark, Updated_By" / "ทุนซื้อ → ทุนล่าสุด" */
+  const namesOf = (m, k) => m.by[k].map(r => k === 'chg' ? esc(r.exp) + ' → ' + esc(r.act) : esc(r.act || r.exp)).join(', ');
+
+  const titleBr = (m, id) => '<h3 class="msg" id="t-' + id + '">ไฟล์มี <span class="kinds">' + m.kindsText + '</span> คอลัมน์<br><span class="bad">ไม่สามารถอัปโหลดได้</span></h3>';
+  const titleInline = (m, id) => '<h3 class="msg" id="t-' + id + '">ไฟล์มี <span class="kinds">' + m.kindsText + '</span> คอลัมน์ <span class="bad">ไม่สามารถอัปโหลดได้</span></h3>';
+  const SAFE = '<p class="safe">' + I.shield + '<span>ยังไม่มีข้อมูลถูกอัปโหลดเข้าระบบ</span></p>';
+  const OK = '<button type="button" class="pbtn pbtn--primary" data-act="close" data-primary>ตกลง</button>';
+  const shell = (id, inner) => '<div class="pop" role="alertdialog" aria-modal="true" aria-labelledby="t-' + id + '" aria-describedby="m-' + id + '">' + inner + '</div>';
+  const pills = m => KEYS.filter(k => m.by[k].length).map(k => '<span class="pill ' + KIND[k].cls + '">' + signOf(k) + KIND[k].th + ' ' + m.by[k].length + '</span>').join('');
+
+  /* ───────────────────────── ฉากจำลอง ───────────────────────── */
+  const ROWS = [[26, 70, 44, 18], [34, 58, 50, 14], [22, 76, 38, 20], [30, 64, 46, 16], [28, 72, 42, 22], [36, 54, 48, 12], [24, 68, 40, 18], [32, 60, 52, 16]];
+  const mockHtml = () => `
+    <div class="mock">
+      <div class="mock-bar">
+        <div class="mock-title"><span>Products</span><small>Product Master</small></div>
+        <div class="mock-btns">
+          <button type="button" class="tgt" data-target aria-haspopup="dialog" aria-expanded="false" title="คลิกเพื่อจำลองเลือกไฟล์ที่คอลัมน์ไม่ตรง">${I.upload}<span>อัปโหลด Product Master</span></button>
+          <span class="mock-new" aria-hidden="true">+ New Product</span>
+        </div>
+      </div>
+      <div class="mock-rows" aria-hidden="true">${ROWS.map((r, i) =>
+        `<div class="mock-row${i ? '' : ' mock-row--h'}">${r.map(w => `<i style="width:${w}%"></i>`).join('')}</div>`).join('')}</div>
+    </div>`;
+
+  const cardHtml = c => `
+    <article class="card" id="design-${c.n}" aria-labelledby="h-${c.n}">
+      <div class="card-head">
+        <div class="card-top">
+          <h2 class="card-title" id="h-${c.n}"><span class="num">${c.n}</span><span>${c.name}</span><small>${c.th}</small></h2>
+          <button type="button" class="replay" data-replay>▶ เล่นซ้ำ</button>
+        </div>
+        <p class="card-desc">${c.desc}</p>
+        <p class="card-meta"><span class="chip">${c.level}</span><span>${c.timing}</span></p>
+      </div>
+      <div class="stage">${mockHtml()}</div>
+      <div class="card-foot">
+        <p class="pro"><b>ข้อดี</b>${c.pros}</p>
+        <p class="con"><b>ข้อสังเกต</b>${c.cons}</p>
+      </div>
+    </article>`;
+
+  /* ───────────────────────── 10 แบบ ───────────────────────── */
+  const DESIGNS = [
+    /* 1 */ {
+      n: 1, name: 'Classic Alert', th: 'ไอคอนเตือน + สรุปจำนวน', level: 'ทำง่าย · เล็กสุด', timing: 'นิ่ง ~0.7 วิ · ปิด 0.2 วิ',
+      desc: 'ไอคอนเตือนสีแดงสั่นเบา ๆ ตอนเปิด ข้อความหัวตามที่ระบุ แล้วสรุปเป็นจำนวนสั้น ๆ (เพิ่ม 2 · เปลี่ยน 1 · ลบ 1) ส่วนรายละเอียดว่าคอลัมน์ไหนซ่อนไว้ใต้ลิงก์ “ดูว่าคอลัมน์ไหน” กดแล้วค่อยเปิด',
+      pros: 'ใกล้ข้อความที่ระบุที่สุด · การ์ดเล็ก ขนาดใกล้เคียง popup .xlsx เดิม · ไม่รก',
+      cons: 'ต้องกดเปิดเองถึงจะเห็นว่าคอลัมน์ไหนผิด',
+      render: m => shell(1, `
+        <div class="d1-body">
+          <span class="d1-ico">${I.warn}</span>
+          <p class="cap">อัปโหลด Product Master</p>
+          ${titleBr(m, 1)}
+          <p class="d1-file">${DOC}<b>${esc(m.fileName)}</b></p>
+          <p class="sub" id="m-1">${m.fileCols} คอลัมน์ · ที่ระบบกำหนด ${m.expCols}</p>
+          <div class="d1-pills">${pills(m)}</div>
+          <details class="d1-more">
+            <summary><span>ดูว่าคอลัมน์ไหน</span>${I.chev}</summary>
+            <ul>${KEYS.filter(k => m.by[k].length).map(k =>
+              `<li class="${KIND[k].cls}">${signOf(k)}<span><b>${KIND[k].th}</b>${namesOf(m, k)}</span></li>`).join('')}</ul>
+          </details>
+          ${SAFE}
+        </div>
+        <div class="acts">${OK}</div>`),
+    },
+    /* 2 */ {
+      n: 2, name: 'Diff Table', th: 'ตารางเทียบเฉพาะที่ต่าง', level: 'ปานกลาง · ตารางสามช่อง', timing: 'นิ่ง ~0.6 วิ · แถวไล่เข้าทีละแถว',
+      desc: 'ตารางสามช่อง “ชนิด · ที่ระบบกำหนด · ในไฟล์” แสดงเฉพาะแถวที่ไม่ตรง พร้อมตำแหน่งเซลล์ในไฟล์ (เช่น J1) ให้เปิด Excel ไปแก้ตรงจุดได้ทันที ท้ายตารางบอกว่าที่เหลือตรงกันกี่คอลัมน์',
+      pros: 'เห็นชื่อเดิม → ชื่อใหม่ชัดที่สุด · มีเลขเซลล์ให้ตามไปแก้ · ขนาดสูงคงที่ เลื่อนเฉพาะในตาราง',
+      cons: 'กว้าง ~450px · ชื่อคอลัมน์ยาวมากจะขึ้นสองบรรทัด',
+      render: m => {
+        let i = 0;
+        const rows = KEYS.flatMap(k => m.by[k]).map(r => {
+          const kind = r.kind;
+          const exp = r.exp ? col(r.exp, 'col--n' + (kind === 'del' ? ' col--gone' : '')) : '<span class="d2-none">— ไม่ได้กำหนดไว้</span>';
+          const act = r.act ? col(r.act) + '<em class="cell">' + r.cell + '</em>' : '<span class="d2-none">ไม่พบในไฟล์</span>';
+          return `<div class="d2-tr ${KIND[kind].cls}" role="row" style="--i:${i++}">
+            <span class="d2-kind" role="cell">${signOf(kind)}${KIND[kind].th}</span>
+            <span role="cell">${exp}</span><span class="d2-act" role="cell">${act}</span></div>`;
+        }).join('');
+        return shell(2, `
+          <div class="d2-head">
+            <span class="hico">${I.warn}</span>
+            <div>${titleInline(m, 2)}<p class="sub" id="m-2">${esc(m.fileName)} · พบ ${m.diffCount} จุดที่ไม่ตรงกับที่ระบบกำหนด</p></div>
+          </div>
+          <div class="d2-tbl" role="table" aria-label="คอลัมน์ที่ไม่ตรงกับที่ระบบกำหนด">
+            <div class="d2-tr d2-th" role="row"><span role="columnheader">ชนิด</span><span role="columnheader">ที่ระบบกำหนด</span><span role="columnheader">ในไฟล์ (แถวที่ 1)</span></div>
+            <div class="d2-body">${rows}</div>
+          </div>
+          <div class="d2-foot"><span class="d2-ok">${I.check}<span>ตรงกัน ${m.by.same.length} จาก ${m.expCols} คอลัมน์ · ยังไม่ได้อัปโหลด</span></span>${OK}</div>`);
+      },
+    },
+    /* 3 */ {
+      n: 3, name: 'Chip Groups', th: 'ชิปแยกกลุ่มตามชนิด', level: 'ปานกลาง · กะทัดรัด', timing: 'นิ่ง ~0.7 วิ · ชิปเด้งเข้าทีละอัน',
+      desc: 'แยกเป็นกล่องสามสี (เขียว = เพิ่ม · เหลืองอำพัน = เปลี่ยน · แดง = ลบ) แต่ละกล่องมีจำนวนที่มุมและชื่อคอลัมน์เป็นชิป คอลัมน์ที่เปลี่ยนชื่อโชว์เป็นคู่ “ชื่อเดิม → ชื่อใหม่” ปิดท้ายด้วยคำแนะนำสั้น ๆ',
+      pros: 'เห็นทุกชนิดพร้อมกันในแวบเดียว ไม่ต้องกดอะไร · ใช้พื้นที่น้อยกว่าตาราง · สีเดียวกับตราประทับ/toast ของแอป',
+      cons: 'ไม่มีเลขเซลล์ · ถ้ากล่องยาวเกิน ~260px จะเลื่อนในกรอบ',
+      render: m => {
+        let i = 0;
+        const groups = KEYS.filter(k => m.by[k].length).map(k => `
+          <section class="d3-grp ${KIND[k].cls}">
+            <h4>${signOf(k)}${KIND[k].th}<span class="n">${m.by[k].length}</span></h4>
+            <div class="d3-chips">${m.by[k].map(r => {
+              const style = ' style="--i:' + (i++) + '"';
+              return k === 'chg' ? '<span class="d3-pair"' + style + '>' + col(r.exp, 'col--n') + '<i>→</i>' + col(r.act) + '</span>'
+                : '<span class="col' + (k === 'del' ? ' col--gone' : '') + '"' + style + '>' + esc(r.act || r.exp) + '</span>';
+            }).join('')}</div>
+          </section>`).join('');
+        return shell(3, `
+          <div class="d3-top">
+            <span class="hico">${I.warn}</span>
+            <div>${titleInline(m, 3)}<p class="sub" id="m-3">${esc(m.fileName)} · พบ ${m.diffCount} จุดที่ไม่ตรงกับที่ระบบกำหนด</p></div>
+          </div>
+          <div class="d3-groups">${groups}</div>
+          <p class="d3-hint">แก้หัวคอลัมน์ในไฟล์ให้ตรงกับที่ระบบกำหนด แล้วเลือกไฟล์ใหม่อีกครั้ง · ยังไม่มีข้อมูลถูกอัปโหลดเข้าระบบ</p>
+          <div class="d3-foot">${OK}</div>`);
+      },
+    },
+    /* 4 */ {
+      n: 4, name: 'Excel Column Map', th: 'แผนผังหัวคอลัมน์เหมือนแถวที่ 1', level: 'ซับซ้อน · เห็นภาพรวมทั้งไฟล์', timing: 'นิ่ง ~1.1 วิ · เซลล์ไล่เป็นคลื่น แล้วจุดผิดเต้นหนึ่งครั้ง',
+      desc: 'จำลองแถวที่ 1 ของไฟล์เป็นตารางเซลล์ มีตัวอักษรคอลัมน์ A B C… มุมซ้ายบนของแต่ละเซลล์ คอลัมน์ที่ตรงเป็นสีเทาจาง เซลล์ที่เพิ่ม/เปลี่ยนไฮไลต์สีเขียว/เหลืองอำพัน ส่วนคอลัมน์ที่ขาดเป็นช่องเส้นประแดงขีดฆ่า',
+      pros: 'คนทำงานกับ Excel อยู่แล้วเห็นภาพทันทีว่าช่องไหนผิด · เห็นทั้ง 15 ช่องพร้อมกัน แยกตำแหน่งชัดเจน',
+      cons: 'ใหญ่สุดในชุด (~510px) · คอลัมน์ที่ตรงกันกินพื้นที่ทั้งที่ไม่ใช่สิ่งที่ต้องแก้',
+      render: m => {
+        const cells = m.rows.map((r, i) => {
+          const letter = r.cell ? r.cell.replace(/\d+$/, '') : '—';
+          const tag = r.kind === 'add' ? 'เพิ่มใหม่' : r.kind === 'chg' ? 'เดิม: ' + esc(r.exp) : r.kind === 'del' ? 'ขาดหาย' : '';
+          const cls = r.kind === 'same' ? '' : KIND[r.kind].cls + ' hit';
+          return `<div class="d4-cell ${cls}" role="listitem" style="--i:${i}" title="${esc(r.act || r.exp)}">
+            <div class="d4-top"><i>${letter}</i>${tag ? '<u>' + tag + '</u>' : ''}</div><b>${brk(r.act || r.exp)}</b></div>`;
+        }).join('');
+        const lg = (k, label, n) => n ? `<li class="${KIND[k] ? KIND[k].cls : ''}"><i></i>${label} ${n}</li>` : '';
+        return shell(4, `
+          <div class="d4-head">
+            <span class="hico">${I.warn}</span>
+            <div>${titleInline(m, 4)}<p class="sub" id="m-4">แถวที่ 1 ของ ${esc(m.fileName)} (${m.fileCols} คอลัมน์) เทียบกับที่ระบบกำหนด ${m.expCols} คอลัมน์</p></div>
+          </div>
+          <div class="d4-sheet" role="list" aria-label="หัวคอลัมน์แถวที่ 1 ของไฟล์">${cells}</div>
+          <ul class="d4-legend">${lg('same', 'ตรงกัน', m.by.same.length)}${lg('add', 'เพิ่ม', m.by.add.length)}${lg('chg', 'เปลี่ยน', m.by.chg.length)}${lg('del', 'ขาด', m.by.del.length)}</ul>
+          ${SAFE}
+          <div class="acts">${OK}</div>`);
+      },
+    },
+    /* 5 */ {
+      n: 5, name: 'Full Compare', th: 'เทียบครบทุกคอลัมน์สองฝั่ง', level: 'ซับซ้อนสุด · มีสวิตช์', timing: 'นิ่ง ~0.8 วิ · เลื่อนไปจุดแรกที่ผิดให้เอง',
+      desc: 'สองฝั่ง “ที่ระบบกำหนด” กับ “ไฟล์ของคุณ” เรียงตามลำดับที่ระบบกำหนด แถวที่ตรงเป็นสีเทา แถวที่ต่างไฮไลต์พร้อมตัวเชื่อม + ⇄ − เปิดมาเลื่อนไปที่จุดแรกที่ผิดให้เอง และมีสวิตช์ “แสดงเฉพาะที่ต่าง” ให้ย่อเหลือแต่ตัวปัญหา',
+      pros: 'เห็นบริบทครบ ว่าคอลัมน์ที่ผิดอยู่ตรงไหนของไฟล์ · เลือกดูแบบเต็มหรือเฉพาะที่ต่างได้ · รองรับรายการยาว',
+      cons: 'มีส่วนประกอบมากสุด (สวิตช์ + เลื่อน) · เกินกว่าที่ขอเล็กน้อย',
+      render: m => {
+        const rows = m.rows.map((r, i) => {
+          const conn = r.kind === 'same' ? '=' : r.kind === 'chg' ? I.swap : r.kind === 'add' ? I.plus : I.minus;
+          const left = r.exp ? '<span class="nm">' + esc(r.exp) + '</span>' : '<span class="nm none">—</span>';
+          const right = r.act ? '<span class="nm">' + esc(r.act) + '</span><em class="cell">' + r.cell + '</em>' : '<span class="nm none">ไม่พบในไฟล์</span>';
+          return `<div class="d5-row ${r.kind === 'same' ? '' : KIND[r.kind].cls}"${r.kind === 'same' ? '' : ' data-diff'} style="--i:${i}">
+            <div class="side">${left}</div><span class="conn">${conn}</span><div class="side">${right}</div></div>`;
+        }).join('');
+        return shell(5, `
+          <div class="d5-head">
+            <span class="hico">${I.warn}</span>
+            <div>${titleInline(m, 5)}<p class="sub" id="m-5">${esc(m.fileName)} · พบ ${m.diffCount} จุดที่ไม่ตรงกับที่ระบบกำหนด</p></div>
+          </div>
+          <div class="d5-tools">
+            <label class="d5-sw"><input type="checkbox" data-only-diff> <span>แสดงเฉพาะที่ต่าง</span></label>
+            <span>ที่ระบบกำหนด ${m.expCols} · ในไฟล์ ${m.fileCols}</span>
+          </div>
+          <div class="d5-cmp">
+            <div class="d5-hd"><span>ที่ระบบกำหนด</span><span></span><span>ไฟล์ของคุณ</span></div>
+            <div class="d5-list" role="list">${rows}</div>
+          </div>
+          <div class="d5-foot"><span class="d2-ok">${I.shield}<span>ยังไม่ได้อัปโหลดอะไร</span></span>${OK}</div>`);
+      },
+      init: ov => {
+        const sw = ov.querySelector('[data-only-diff]');
+        const cmp = ov.querySelector('.d5-cmp');
+        const list = ov.querySelector('.d5-list');
+        const jump = () => {                                         // เลื่อนให้จุดแรกที่ผิดโผล่ในกรอบ เหลือบริบทด้านบนไว้นิดหน่อย
+          const first = list.querySelector('[data-diff]');
+          list.scrollTop = first && !cmp.classList.contains('only-diff') ? Math.max(0, first.offsetTop - 34) : 0;
+        };
+        sw.addEventListener('change', () => { cmp.classList.toggle('only-diff', sw.checked); jump(); });
+        jump();
+      },
+    },
+    /* 6 */ {
+      n: 6, name: 'File Reject', th: 'ไฟล์ถูกดีดกลับ', level: 'ปานกลาง · CSS ล้วน', timing: 'นิ่ง ~1.0 วิ · ไอคอนตกลงช่อง → วงแดงสั่น → ตรา ✕',
+      desc: 'ต่อเรื่องจาก popup .xlsx เดิม (ช่องวงกลมเดียวกัน): ไอคอนไฟล์ Excel ตกลงช่อง แล้ววงเปลี่ยนเป็นแดงสั่น ไฟล์ซีดลงและมีตรา ✕ ติดมุม ตามด้วยข้อความและสรุปชนิดละหนึ่งบรรทัด',
+      pros: 'ภาษาภาพต่อเนื่องกับ popup แจ้งนามสกุล .xlsx · เล่าเรื่อง “ไฟล์นี้ไม่ผ่าน” โดยไม่ต้องอ่านเยอะ',
+      cons: 'โชว์รายการได้น้อย (ชนิดละ 2 บรรทัด ที่เหลือตัดด้วย …) · ถ้าต้องการรายการครบต้องพึ่งแบบอื่น',
+      render: m => shell(6, `
+        <div class="d6-top">
+          <div class="d6-slot"><span class="d6-ring"></span><span class="d6-doc">${DOC}</span><span class="d6-x">${I.x}</span></div>
+          <p class="cap rise" style="--i:0">อัปโหลด Product Master</p>
+          <div class="rise" style="--i:1">${titleBr(m, 6)}</div>
+          <p class="d6-file rise" style="--i:2" id="m-6">${DOC}${esc(m.fileName)}</p>
+          <ul class="d6-list rise" style="--i:3">${KEYS.filter(k => m.by[k].length).map(k =>
+            `<li class="${KIND[k].cls}" title="${namesOf(m, k)}">${signOf(k)}<span><b>${KIND[k].th} ${m.by[k].length}</b>${namesOf(m, k)}</span></li>`).join('')}</ul>
+          <div class="rise" style="--i:4">${SAFE}</div>
+        </div>
+        <div class="acts rise" style="--i:5">${OK}</div>`),
+    },
+    /* 7 */ {
+      n: 7, name: 'Stamp', th: 'ตราประทับ “ไม่ผ่าน”', level: 'ปานกลาง · เล่นกับภาษาภาพของแอป', timing: 'นิ่ง ~0.9 วิ · ตราฟาดลงพร้อมกระดาษกระเทือน',
+      desc: 'การ์ดเป็นแบบฟอร์มผลตรวจ แต่ละชนิดหนึ่งบรรทัดมีเส้นประคั่น แล้วตราประทับแดง “ไม่ผ่าน” ฟาดลงมุมขวาล่างพร้อมกระดาษกระเทือนเล็กน้อย — ภาษาภาพเดียวกับตราประทับ 3 ขั้นใน Order',
+      pros: 'จำง่าย เข้ากับตราประทับอนุมัติ/ยกเลิกที่ผู้ใช้คุ้นอยู่แล้ว · บอกผลแบบไม่ต้องอ่านก็รู้',
+      cons: 'โทนเล่นกว่าแบบอื่น · รายการยาวถูกตัดเหลือ 2 บรรทัดต่อชนิด',
+      render: m => shell(7, `
+        <div class="d7-paper">
+          <p class="d7-kick">ผลตรวจหัวคอลัมน์ · <b>${esc(m.fileName)}</b></p>
+          ${titleInline(m, 7)}
+          <dl class="d7-rows" id="m-7">${KEYS.filter(k => m.by[k].length).map(k =>
+            `<div class="${KIND[k].cls}"><dt>${KIND[k].th}<i>${m.by[k].length}</i></dt><dd title="${namesOf(m, k)}">${namesOf(m, k)}</dd></div>`).join('')}</dl>
+          <div class="d7-stamp" aria-hidden="true"><b>ไม่ผ่าน</b><small>ตรวจคอลัมน์</small></div>
+        </div>
+        <div class="acts">${OK}</div>`),
+    },
+    /* 8 */ {
+      n: 8, name: 'Checklist', th: 'เช็กลิสต์ขั้นตอนตรวจไฟล์', level: 'ปานกลาง · เกินที่ขอ', timing: 'นิ่ง ~1.0 วิ · ติ๊กทีละข้อ ข้อที่ตกขยายออก',
+      desc: 'แสดงขั้นตอนที่ระบบตรวจไฟล์ทีละข้อ: นามสกุล .xlsx ✓ → อ่านชีทได้ ✓ → ตรวจหัวคอลัมน์ ✕ (ขยายรายละเอียดออก) แล้วสรุปประโยคเต็มที่ระบุไว้ในแถบแดงด้านล่าง',
+      pros: 'ผู้ใช้เห็นว่าไฟล์ผ่านอะไรมาแล้ว และตกที่ด่านไหน · เพิ่มด่านตรวจอื่นในอนาคตได้ (เช่น ตรวจ SKU ซ้ำ)',
+      cons: 'ข้อมูลเยอะกว่าที่ขอ · ท่าติ๊กทีละข้อใช้เวลา ~1 วิ แต่ปุ่ม [ตกลง] กดได้ทันที',
+      render: m => {
+        const steps = [
+          { st: 'ok', t: 'ตรวจนามสกุลไฟล์', s: '.xlsx' },
+          { st: 'ok', t: 'อ่านชีทแรกของไฟล์', s: 'พบแถวหัวคอลัมน์ ' + m.fileCols + ' คอลัมน์' },
+          { st: 'bad', t: 'ตรวจหัวคอลัมน์', s: 'พบ ' + m.diffCount + ' จุดไม่ตรงกับที่ระบบกำหนด', det: true },
+        ];
+        const li = steps.map((s, i) => `
+          <li class="d8-step is-${s.st}" style="--i:${i}">
+            <span class="d8-st"><span class="spin"></span><span class="res">${s.st === 'ok' ? I.check : s.st === 'bad' ? I.x : I.minus}</span></span>
+            <div><div class="d8-tt">${s.t}</div><div class="d8-sub">${s.s}</div>
+            ${s.det ? '<div class="d8-det"><div>' + KEYS.filter(k => m.by[k].length).map(k =>
+              `<div class="d8-line ${KIND[k].cls}">${signOf(k)}<span><b>${KIND[k].th}</b>${namesOf(m, k)}</span></div>`).join('') + '</div></div>' : ''}</div>
+          </li>`).join('');
+        return shell(8, `
+          <div class="d8-head"><h4>ตรวจไฟล์ Product Master<span id="m-8">${esc(m.fileName)}</span></h4></div>
+          <ol class="d8-steps">${li}</ol>
+          <div class="d8-verdict"><span class="vi">${I.x}</span>${titleInline(m, 8)}</div>
+          <div class="acts">${OK}</div>`);
+      },
+    },
+    /* 9 */ {
+      n: 9, name: 'Tabs', th: 'แท็บ เพิ่ม · เปลี่ยน · ลบ', level: 'ปานกลาง · JS เล็กน้อย', timing: 'นิ่ง ~0.7 วิ · การ์ดสูงคงที่',
+      desc: 'ข้อความหัว + ไอคอนเตือนอยู่บน แล้วแท็บสามชนิดพร้อมตัวเลข (เพิ่ม 2 · เปลี่ยน 1 · ลบ 1) แท็บที่ไม่มีรายการจะจางและกดไม่ได้ เปิดมาแท็บแรกที่มีรายการ เนื้อหาใต้แท็บสูงคงที่ เลื่อนเฉพาะในกรอบ',
+      pros: 'การ์ดไม่กระโดดตอนสลับแท็บ · รองรับรายการยาวมาก · ใช้คีย์บอร์ด ← → Home End ได้',
+      cons: 'ต้องกดสลับแท็บถึงเห็นครบทุกชนิด (เปิดมาเห็นแค่ชนิดเดียว)',
+      render: m => {
+        const avail = KEYS.filter(k => m.by[k].length);
+        const sel = avail[0];
+        const tabs = KEYS.map(k => `
+          <button type="button" role="tab" class="d9-tab ${KIND[k].cls}" id="tab9-${k}" aria-controls="pan9-${k}"
+            aria-selected="${k === sel}" tabindex="${k === sel ? 0 : -1}"${m.by[k].length ? '' : ' disabled'}>${KIND[k].th}<span class="n">${m.by[k].length}</span></button>`).join('');
+        const panels = KEYS.filter(k => m.by[k].length).map(k => `
+          <div role="tabpanel" id="pan9-${k}" aria-labelledby="tab9-${k}" class="${KIND[k].cls}"${k === sel ? '' : ' hidden'}>${m.by[k].map((r, i) => `
+            <div class="d9-li" style="--i:${i}">${k === 'chg' ? col(r.exp, 'col--n') + '<i>→</i>' + col(r.act) : col(r.act || r.exp, k === 'del' ? 'col--gone' : '')}${r.cell ? '<em class="cell">' + r.cell + '</em>' : ''}</div>`).join('')}</div>`).join('');
+        return shell(9, `
+          <div class="d9-top">
+            <span class="d9-ico">${I.warn}</span>
+            ${titleBr(m, 9)}
+            <p class="sub" id="m-9">${esc(m.fileName)} · พบ ${m.diffCount} จุดที่ไม่ตรงกับที่ระบบกำหนด</p>
+          </div>
+          <div class="d9-tabs" role="tablist" aria-label="ชนิดของคอลัมน์ที่ไม่ตรง">${tabs}</div>
+          <div class="d9-panels">${panels}</div>
+          ${SAFE}
+          <div class="acts">${OK}</div>`);
+      },
+      init: ov => {
+        const tabs = [...ov.querySelectorAll('[role="tab"]')];
+        const panels = [...ov.querySelectorAll('[role="tabpanel"]')];
+        const select = t => {
+          tabs.forEach(x => { x.setAttribute('aria-selected', String(x === t)); x.tabIndex = x === t ? 0 : -1; });
+          panels.forEach(p => { p.hidden = p.id !== t.getAttribute('aria-controls'); });
+          ov.querySelector('.d9-panels').scrollTop = 0;
+          ov.querySelectorAll('.d9-li').forEach(el => { el.style.animation = 'none'; });   // สลับแท็บแล้วไม่ต้องเล่นท่าเข้าซ้ำ
+        };
+        tabs.forEach(t => {
+          t.addEventListener('click', () => { if (!t.disabled) select(t); });
+          t.addEventListener('keydown', e => {
+            const on = tabs.filter(x => !x.disabled);
+            const i = on.indexOf(t);
+            const next = e.key === 'ArrowRight' ? on[(i + 1) % on.length] : e.key === 'ArrowLeft' ? on[(i - 1 + on.length) % on.length]
+              : e.key === 'Home' ? on[0] : e.key === 'End' ? on[on.length - 1] : null;
+            if (next) { e.preventDefault(); select(next); next.focus(); }
+          });
+        });
+      },
+    },
+    /* 10 */ {
+      n: 10, name: 'Bottom Sheet', th: 'แผ่นเลื่อนขึ้นจากด้านล่าง', level: 'ปานกลาง · เหมาะมือถือ', timing: 'นิ่ง ~0.4 วิ · เลื่อนขึ้น 0.36 วิ',
+      desc: 'แผ่นเลื่อนขึ้นจากขอบล่างของจอ มีขีดจับด้านบน ชนิดแต่ละอย่างเป็นหัวข้อย่อยพร้อมชิปชื่อคอลัมน์ในกรอบที่เลื่อนได้ ปุ่ม [ตกลง] เต็มความกว้างอยู่ล่างสุด ใกล้นิ้วโป้งบนมือถือ',
+      pros: 'เหมาะกับจอมือถือ · ปุ่มใหญ่กดง่าย · พื้นที่รายการเยอะ',
+      cons: 'ต่างจาก popup อื่นในแอปที่เป็นกล่องกลางจอ · บนเดสก์ท็อปจะดูแปลกกว่า (ลอยติดขอบล่าง)',
+      render: m => shell(10, `
+        <div class="d10-grab" aria-hidden="true"></div>
+        <div class="d10-head">
+          <span class="hico">${I.warn}</span>
+          <div>${titleInline(m, 10)}<p class="sub" id="m-10">${esc(m.fileName)} · ${m.fileCols} คอลัมน์ · ที่ระบบกำหนด ${m.expCols}</p></div>
+        </div>
+        <div class="d10-sum">${pills(m)}</div>
+        <div class="d10-list">${KEYS.filter(k => m.by[k].length).map((k, gi) => `
+          <section class="d10-grp ${KIND[k].cls}" style="--i:${gi}">
+            <h4>${signOf(k)}${KIND[k].th} ${m.by[k].length}</h4>
+            <div class="items">${m.by[k].map(r => k === 'chg' ? '<span class="d3-pair">' + col(r.exp, 'col--n') + '<i>→</i>' + col(r.act) + '</span>'
+              : col(r.act || r.exp, k === 'del' ? 'col--gone' : '')).join('')}</div>
+          </section>`).join('')}</div>
+        <div class="d10-foot"><button type="button" class="pbtn pbtn--primary pbtn--block" data-act="close" data-primary>ตกลง</button></div>`),
+    },
+  ];
+
+  /* ───────────────────────── ตัวเล่น ─────────────────────────
+     เปิด popup = สร้าง overlay ใหม่ใส่ .is-open (ท่าเข้าเล่นเอง) · ปิด = .is-closing แล้วรอ CSS เล่นจบค่อยถอด */
+  let SPD = 1;                                                       // ตัวคูณความเร็ว (1 / 2 / 4) — CSS ใช้ --spd ตัวเดียวกัน
+  let model = buildModel(SCENARIOS.all);
+  const cards = [];
+
+  function openPopup(ctx, focus) {
+    if (ctx.ov) ctx.ov.remove();
+    ctx.tok++;
+    const ov = document.createElement('div');
+    ov.className = 'ov d' + ctx.cfg.n + ' is-open';
+    ov.innerHTML = '<div class="scrim"></div>' + ctx.cfg.render(model);
+    ov.addEventListener('click', e => {                              // ไม่ปิดเมื่อคลิกพื้นหลัง (กฎเดียวกับ modal อื่นในแอป)
+      if (e.target.closest('[data-act="close"]')) closePopup(ctx, true);
+    });
+    ctx.stage.appendChild(ov);
+    ctx.ov = ov;
+    ctx.tgt.setAttribute('aria-expanded', 'true');
+    if (ctx.cfg.init) ctx.cfg.init(ov);
+    if (focus) ov.querySelector('[data-primary]').focus({ preventScroll: true });
+  }
+
+  function closePopup(ctx, refocus) {
+    const ov = ctx.ov;
+    if (!ov || ov.classList.contains('is-closing')) return;
+    ov.classList.remove('is-open');
+    ov.classList.add('is-closing');
+    const tok = ++ctx.tok;
+    setTimeout(() => {
+      if (ctx.tok !== tok) return;
+      ov.remove();
+      ctx.ov = null;
+      ctx.tgt.setAttribute('aria-expanded', 'false');
+      if (refocus) ctx.tgt.focus({ preventScroll: true });
+    }, 230 * SPD);
+  }
+
+  /* ───────────────────────── ประกอบหน้า ───────────────────────── */
+  const grid = document.getElementById('grid');
+  DESIGNS.forEach(cfg => {
+    const root = make(cardHtml(cfg));
+    grid.appendChild(root);
+    const ctx = { cfg, root, stage: root.querySelector('.stage'), tgt: root.querySelector('[data-target]'), ov: null, tok: 0, seen: false };
+    cards.push(ctx);
+    ctx.tgt.addEventListener('click', () => { if (!ctx.ov) openPopup(ctx, true); });
+    root.querySelector('[data-replay]').addEventListener('click', () => { ctx.seen = true; openPopup(ctx, true); });
+  });
+
+  /* เปิด popup อัตโนมัติเมื่อการ์ดเลื่อนเข้าจอ (ท่าเข้าจะได้ไม่เล่นทิ้งตอนอยู่นอกจอ) */
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver(entries => entries.forEach(en => {
+      if (!en.isIntersecting) return;
+      const ctx = cards.find(c => c.stage === en.target);
+      io.unobserve(en.target);
+      if (ctx && !ctx.seen) { ctx.seen = true; openPopup(ctx, false); }
+    }), { threshold: 0.4 });
+    cards.forEach(c => io.observe(c.stage));
+  } else {
+    cards.forEach(c => { c.seen = true; openPopup(c, false); });
+  }
+
+  /* Esc ปิดเฉพาะ popup ของการ์ดที่ใช้อยู่ — จำการ์ดที่แตะล่าสุดไว้ด้วย เพราะคลิกพื้นหลังแล้วโฟกัสหลุดไปที่ body
+     (ในแอปจริงมี popup ตัวเดียว ฟัง Esc ที่ document ตรง ๆ ไม่มีปัญหานี้) */
+  let lastCard = null;
+  document.addEventListener('pointerdown', e => {
+    const root = e.target.closest('.card');
+    lastCard = root ? cards.find(c => c.root === root) : null;
+  }, true);
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    const ctx = cards.find(c => c.root.contains(document.activeElement)) || lastCard;
+    if (ctx) closePopup(ctx, true);
+  });
+
+  const scBtns = [...document.querySelectorAll('[data-sc]')];
+  scBtns.forEach(b => b.addEventListener('click', () => {
+    model = buildModel(SCENARIOS[b.dataset.sc]);
+    scBtns.forEach(x => x.setAttribute('aria-checked', String(x === b)));
+    cards.forEach(c => { if (c.ov && !c.ov.classList.contains('is-closing')) openPopup(c, false); });
+  }));
+
+  const spdBtns = [...document.querySelectorAll('[data-spd]')];
+  spdBtns.forEach(b => b.addEventListener('click', () => {
+    SPD = Number(b.dataset.spd);
+    document.documentElement.style.setProperty('--spd', String(SPD));
+    spdBtns.forEach(x => x.setAttribute('aria-checked', String(x === b)));
+  }));
+
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    document.getElementById('rm-note').hidden = false;
+  }
+})();
+</script>
+</body>
+</html>
