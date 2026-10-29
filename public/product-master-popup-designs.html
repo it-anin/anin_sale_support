@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Popup อัปโหลด Product Master</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap">
+<style>
+  /* โทนของหน้าแกลเลอรีเปลี่ยนตามธีมผู้ดู · ฉากจำลอง (.stage) ข้างในใช้สีจริงของแอปตายตัว เพราะแอปมีแต่ธีมสว่าง
+     ทุกความเร็วของแอนิเมชันคูณด้วย --spd (ปุ่ม "ความเร็ว" ด้านบน) เพื่อให้ดูแบบสโลว์โมชันได้ */
+  :root {
+    --bg: #eef2f6;
+    --surface: #ffffff;
+    --ink: #1f2b37;
+    --muted: #5c6b7a;
+    --line: #d9e3ec;
+    --accent: #2d6cad;
+    --accent-ink: #ffffff;
+    --accent-soft: #e3eef9;
+    --good: #1d7a4a;
+    --note: #7a5200;
+    --note-bg: #fff6e0;
+    --note-line: #efd9a4;
+    --spd: 1;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #0f161e;
+      --surface: #17212b;
+      --ink: #e4ebf2;
+      --muted: #98a8b8;
+      --line: #273442;
+      --accent: #7db4ea;
+      --accent-ink: #0f161e;
+      --accent-soft: #1d2b3a;
+      --good: #6fcf97;
+      --note: #e9c46a;
+      --note-bg: #2a2412;
+      --note-line: #4a3f1d;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0f161e;
+    --surface: #17212b;
+    --ink: #e4ebf2;
+    --muted: #98a8b8;
+    --line: #273442;
+    --accent: #7db4ea;
+    --accent-ink: #0f161e;
+    --accent-soft: #1d2b3a;
+    --good: #6fcf97;
+    --note: #e9c46a;
+    --note-bg: #2a2412;
+    --note-line: #4a3f1d;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Noto Sans Thai', 'Sarabun', system-ui, sans-serif;
+    padding-block: 28px 72px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  .wrap { max-width: 1240px; margin: 0 auto; }
+
+  /* ───────── หัวหน้า ───────── */
+  .page-head { display: grid; gap: 10px; margin-bottom: 26px; max-width: 880px; }
+  .eyebrow {
+    margin: 0; color: var(--accent);
+    font: 600 12px/1.4 'Outfit', 'Noto Sans Thai', sans-serif; letter-spacing: .08em; text-transform: uppercase;
+  }
+  .page-head h1 { margin: 0; font-size: clamp(22px, 2.6vw, 30px); line-height: 1.35; font-weight: 700; text-wrap: balance; }
+  .lede { margin: 0; font-size: 14.5px; line-height: 1.8; color: var(--muted); max-width: 70ch; }
+  .lede b { color: var(--ink); font-weight: 600; white-space: nowrap; }
+  .seg {
+    display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px; width: fit-content; max-width: 100%;
+    margin-top: 6px; padding: 4px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line);
+  }
+  .seg-label { padding: 0 8px 0 6px; font-size: 12.5px; color: var(--muted); }
+  .seg button {
+    padding: 7px 14px; border: 0; border-radius: 9px; background: transparent; color: var(--ink);
+    font: 500 13.5px 'Noto Sans Thai', sans-serif; cursor: pointer;
+  }
+  .seg button:hover { background: var(--accent-soft); }
+  .seg button[aria-checked="true"] { background: var(--accent); color: var(--accent-ink); }
+  .seg button:focus-visible, .replay:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .note {
+    margin: 4px 0 0; padding: 10px 14px; border-radius: 10px; max-width: 70ch;
+    background: var(--note-bg); border: 1px solid var(--note-line); color: var(--note); font-size: 13px; line-height: 1.7;
+  }
+
+  /* ───────── การ์ดแต่ละแบบ ───────── */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 520px), 1fr)); gap: 22px; }
+  .card { display: flex; flex-direction: column; min-width: 0; overflow: hidden; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; }
+  .card-head { display: grid; gap: 7px; padding: 14px 18px 13px; }
+  .card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  .card-title { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 3px 9px; font-size: 16px; font-weight: 700; line-height: 1.5; min-width: 0; }
+  .card-title small { font-size: 12.5px; font-weight: 500; color: var(--muted); }
+  .num {
+    display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+    width: 26px; height: 26px; border-radius: 8px; background: #2d6cad; color: #fff;
+    font: 700 13px 'Outfit', sans-serif; font-variant-numeric: tabular-nums;
+  }
+  .replay {
+    flex-shrink: 0; padding: 6px 12px; border: 1px solid var(--line); border-radius: 9px; background: transparent;
+    color: var(--accent); font: 600 12.5px 'Noto Sans Thai', sans-serif; cursor: pointer;
+  }
+  .replay:hover { background: var(--accent-soft); }
+  .card-desc { margin: 0; padding-left: 35px; font-size: 13px; line-height: 1.75; color: var(--muted); }
+  .card-meta { margin: 0; padding-left: 35px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 12px; color: var(--muted); }
+  .chip { padding: 1px 9px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .card-foot { display: grid; gap: 3px; padding: 12px 18px 15px; font-size: 12.5px; line-height: 1.7; color: var(--muted); }
+  .card-foot p { margin: 0; padding-left: 56px; text-indent: -56px; }
+  .card-foot b { display: inline-block; width: 50px; margin-right: 6px; text-indent: 0; font-weight: 600; color: var(--ink); }
+  .card-foot .pro b { color: var(--good); }
+  .card-foot .con b { color: var(--note); }
+  .footer-note { margin: 34px 0 0; text-align: center; font-size: 14px; line-height: 1.8; color: var(--muted); }
+  .footer-note b { color: var(--accent); font-weight: 600; }
+
+  /* ───────── ฉากจำลองหน้า SaleSupport (สีจริงของแอป) ───────── */
+  .stage {
+    position: relative; height: 392px; overflow: hidden; isolation: isolate; background: #fff;
+    border-block: 1px solid var(--line); font-family: 'Noto Sans Thai', 'Sarabun', sans-serif; color: #1c3d5e;
+  }
+  .mock { position: absolute; inset: 0; display: flex; flex-direction: column; }
+  .mock-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; padding: 10px 14px; min-height: 54px; border-bottom: 1px solid #e3e8ee; }
+  .mock-title { display: flex; align-items: baseline; gap: 8px; font-size: 13px; font-weight: 700; }
+  .mock-title small { font-size: 11px; font-weight: 500; color: #8194a8; }
+  .mock-btns { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+  .mock-new { padding: 7px 16px; border-radius: 10px; background: #4891db; color: #fff; font-size: 12.5px; font-weight: 600; line-height: 1.45; white-space: nowrap; }
+  .mock-rows { padding: 2px 14px; }
+  .mock-row { display: grid; grid-template-columns: 70px 1fr 90px 54px; gap: 14px; align-items: center; height: 37px; border-bottom: 1px solid #eef2f6; }
+  .mock-row i { display: block; height: 8px; border-radius: 4px; background: #e6edf4; }
+  .mock-row--h i { height: 9px; background: #cddae8; }
+
+  /* ปุ่ม "อัปโหลด Product Master" — ค่าเริ่มต้นคือ .ss-add-btn--secondary ที่ใช้อยู่จริง */
+  .tgt {
+    position: relative; display: inline-flex; align-items: center; gap: 7px; padding: 7px 16px;
+    border: 0; border-radius: 10px; background: #eaf3fc; color: #2d6cad;
+    font: 600 12.5px/1.45 'Noto Sans Thai', 'Sarabun', sans-serif; white-space: nowrap; cursor: pointer;
+    -webkit-tap-highlight-color: transparent; transition: background .15s;
+  }
+  .tgt:hover { background: #d8eafb; }
+  .tgt svg { width: 15px; height: 15px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+  .tgt > svg, .tgt > .lbl { position: relative; z-index: 1; }
+  .tgt.is-gone { visibility: hidden; }
+  .tgt:focus-visible, .pbtn:focus-visible, .pop-x:focus-visible, .grab:focus-visible {
+    outline: 3px solid rgba(72, 145, 219, .55); outline-offset: 2px;
+  }
+
+  /* ───────── ส่วนกลางของ popup ───────── */
+  .ov {
+    position: absolute; inset: 0; z-index: 5; display: flex; align-items: center; justify-content: center;
+    padding: 12px; overflow: hidden; font-family: 'Noto Sans Thai', 'Sarabun', sans-serif; color: #1c3d5e;
+  }
+  .scrim { position: absolute; inset: 0; background: rgba(20, 35, 55, .46); }
+  .ov.is-open .scrim { animation: scrimIn calc(.26s * var(--spd)) ease-out both; }
+  .ov.is-closing .scrim { animation: scrimOut calc(.22s * var(--spd)) ease-in both; }
+  @keyframes scrimIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes scrimOut { from { opacity: 1; } to { opacity: 0; } }
+  .pop { position: relative; width: min(340px, 100%); background: #fff; }
+  .pop-msg { margin: 0; font-size: 17px; font-weight: 700; line-height: 1.6; }
+  .ext { display: inline-block; font-family: 'Outfit', 'Noto Sans Thai', sans-serif; font-weight: 700; letter-spacing: .2px; line-height: 1.35; }
+  .doc { display: block; width: 50px; height: 58px; flex-shrink: 0; }
+  .doc-body { fill: var(--doc, #2e9e62); }
+  .doc-fold { fill: var(--doc-fold, #1d7a49); }
+  .doc-line { stroke: var(--doc-line, #fff); }
+  .pbtn {
+    padding: 8px 18px; border: 1px solid transparent; border-radius: 10px; cursor: pointer;
+    font: 600 13px/1.45 'Noto Sans Thai', 'Sarabun', sans-serif; transition: background .15s, box-shadow .15s, transform .08s, border-color .15s;
+  }
+  .pbtn--ghost { background: #fff; border-color: #d8e2ec; color: #5b7590; }
+  .pbtn--ghost:hover { background: #f5f8fb; }
+  .pbtn--primary { background: #4891db; color: #fff; }
+  .pbtn--primary:hover { background: #2d6cad; box-shadow: 0 4px 12px rgba(72, 145, 219, .4); }
+  .pbtn:active { transform: translateY(1px); }
+  .pop-x {
+    display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; padding: 0;
+    border: 0; border-radius: 8px; background: none; color: inherit; cursor: pointer;
+  }
+  .pop-x svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; }
+  .toast {
+    position: absolute; left: 50%; bottom: 14px; z-index: 9; max-width: calc(100% - 24px); padding: 8px 14px; border-radius: 999px;
+    background: #1c3d5e; color: #fff; font: 500 12px/1.5 'Noto Sans Thai', 'Sarabun', sans-serif; white-space: nowrap;
+    box-shadow: 0 6px 18px rgba(10, 26, 46, .3); pointer-events: none;
+    animation: toast calc(1.8s * var(--spd)) ease both;
+  }
+  @keyframes toast {
+    0% { opacity: 0; transform: translate(-50%, 8px); }
+    12%, 82% { opacity: 1; transform: translate(-50%, 0); }
+    100% { opacity: 0; transform: translate(-50%, 4px); }
+  }
+
+  /* ═══════════ 1 · Ripple + Scale ═══════════ */
+  .d1 .tgt { overflow: hidden; transition: transform .1s ease, background .15s; }
+  .d1 .tgt:active, .d1 .tgt.is-down { transform: scale(.97); }
+  .d1 .rip {
+    position: absolute; z-index: 0; border-radius: 50%; background: rgba(45, 108, 173, .3); pointer-events: none; transform: scale(0);
+    animation: d1rip calc(.55s * var(--spd)) cubic-bezier(.2, .7, .2, 1) forwards;
+  }
+  @keyframes d1rip { to { transform: scale(1); opacity: 0; } }
+  .d1 .pop { overflow: hidden; border-radius: 16px; box-shadow: 0 20px 60px rgba(0, 0, 0, .3); }
+  .d1 .ov.is-open .pop { animation: d1in calc(.3s * var(--spd)) cubic-bezier(.22, .9, .36, 1) both; }
+  .d1 .ov.is-closing .pop { animation: d1out calc(.22s * var(--spd)) ease-in both; }
+  @keyframes d1in { from { opacity: 0; transform: scale(.9); } to { opacity: 1; transform: scale(1); } }
+  @keyframes d1out { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(.9); } }
+  .d1 .pop-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px 10px 18px; background: #4682b4; color: #fff; font-size: 14.5px; font-weight: 700; }
+  .d1 .pop-x { color: #eaf3fc; }
+  .d1 .pop-x:hover { background: rgba(255, 255, 255, .16); }
+  .d1 .pop-body { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 22px 20px 20px; text-align: center; }
+  .d1 .ext { padding: 0 10px; border-radius: 7px; background: #eaf3fc; color: #2d6cad; }
+  .d1 .pop-foot { display: flex; justify-content: flex-end; gap: 10px; padding: 12px 16px; border-top: 1px solid #e8e0d5; background: #faf8f5; }
+
+  /* ═══════════ 2 · 3D Tile + Spring Drop ═══════════ */
+  .d2 .tgt {
+    border: 1px solid #e3ecf5; border-radius: 11px; background: #fff;
+    box-shadow: 0 3px 0 #cfe0f2, 0 4px 10px rgba(0, 0, 0, .08);
+    transition: transform calc(.2s * var(--spd)), box-shadow calc(.2s * var(--spd));
+  }
+  .d2 .tgt:hover { background: #fff; transform: translateY(-2px); box-shadow: 0 5px 0 #cfe0f2, 0 8px 14px rgba(0, 0, 0, .12); }
+  .d2 .tgt:active, .d2 .tgt.is-down, .d2 .tgt.sunk {
+    transform: translateY(3px); box-shadow: 0 0 0 #cfe0f2, 0 1px 2px rgba(0, 0, 0, .12); transition-duration: .08s;
+  }
+  .d2 .shock {
+    position: absolute; inset: -1px; border-radius: inherit; border: 2px solid #4891db; pointer-events: none;
+    animation: d2shock calc(.5s * var(--spd)) ease-out forwards;
+  }
+  @keyframes d2shock { from { opacity: .75; transform: scale(1); } to { opacity: 0; transform: scale(1.22, 1.75); } }
+  .d2 .pop { display: flex; width: min(384px, 100%); overflow: hidden; border-radius: 20px; box-shadow: 0 20px 60px rgba(0, 0, 0, .32); }
+  .d2 .ov.is-open .pop { animation: d2in calc(.52s * var(--spd)) cubic-bezier(.25, .8, .35, 1) both; }
+  .d2 .ov.is-closing .pop { animation: d2out calc(.2s * var(--spd)) ease-in both; }
+  @keyframes d2in {
+    0% { opacity: 0; transform: translateY(-64px) scale(.97); }
+    55% { opacity: 1; transform: translateY(7px) scale(1.01); }
+    78% { transform: translateY(-3px); }
+    100% { opacity: 1; transform: none; }
+  }
+  @keyframes d2out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(-26px) scale(.98); } }
+  .d2 .pop-side { display: flex; align-items: center; justify-content: center; flex-shrink: 0; width: 84px; background: linear-gradient(160deg, #2d6cad, #4891db); }
+  .d2 .pop-side .doc { --doc: #fff; --doc-fold: #bcd8f3; --doc-line: #3f87cf; width: 38px; height: 44px; }
+  .d2 .ov.is-open .pop-side .doc { animation: d2doc calc(.42s * var(--spd)) calc(.34s * var(--spd)) cubic-bezier(.34, 1.56, .64, 1) both; }
+  @keyframes d2doc { from { opacity: 0; transform: scale(.4) rotate(-14deg); } to { opacity: 1; transform: none; } }
+  .d2 .pop-main { position: relative; flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; padding: 22px 16px 18px 18px; }
+  .d2 .pop-cap { margin: 0; padding-right: 30px; font-size: 11.5px; font-weight: 600; color: #8194a8; }
+  .d2 .pop-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+  .d2 .pbtn {
+    margin-bottom: 3px; border: 1px solid #e3ecf5; border-radius: 12px; background: #fff; color: #2d6cad;
+    box-shadow: 0 3px 0 #cfe0f2; transition: transform .2s, box-shadow .2s;
+  }
+  .d2 .pbtn:hover { transform: translateY(-1px); box-shadow: 0 4px 0 #cfe0f2; background: #fff; }
+  .d2 .pbtn--primary { border-color: #3a7fc8; background: #4891db; color: #fff; box-shadow: 0 3px 0 #2d6cad; }
+  .d2 .pbtn--primary:hover { background: #4891db; box-shadow: 0 4px 0 #2d6cad; }
+  .d2 .pbtn:active { transform: translateY(3px); box-shadow: 0 0 0 transparent; transition-duration: .08s; }
+  .d2 .pop-x {
+    position: absolute; top: 10px; right: 10px; width: 30px; height: 30px; border: 1px solid #e3ecf5; border-radius: 9px;
+    background: #fff; color: #2d6cad; box-shadow: 0 3px 0 #cfe0f2, 0 4px 8px rgba(0, 0, 0, .06); transition: transform .2s, box-shadow .2s;
+  }
+  .d2 .pop-x:hover { transform: translateY(-1px); background: #fff; box-shadow: 0 4px 0 #cfe0f2, 0 6px 10px rgba(0, 0, 0, .1); }
+  .d2 .pop-x:active { transform: translateY(3px); box-shadow: 0 0 0 #cfe0f2; }
+  .d2 .ext { padding: 0 9px; border-radius: 7px; background: #eaf3fc; color: #2d6cad; }
+
+  /* ═══════════ 3 · Morph — ปุ่มขยายร่างเป็น popup ═══════════ */
+  .d3 .tgt { transition: transform .1s ease, background .15s; }
+  .d3 .tgt:active, .d3 .tgt.is-down { transform: scale(.94); }
+  .d3 .morph { position: absolute; overflow: hidden; border-radius: 10px; background: #eaf3fc; }
+  .d3 .ghost {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 7px;
+    color: #2d6cad; font: 600 12.5px/1.45 'Noto Sans Thai', 'Sarabun', sans-serif; white-space: nowrap; pointer-events: none;
+  }
+  .d3 .ghost svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+  .d3 .mc {
+    position: absolute; left: 50%; top: 50%; width: var(--W); height: var(--H); transform: translate(-50%, -50%);
+    display: flex; flex-direction: column; justify-content: space-between; padding: 22px 22px 18px;
+  }
+  .d3 .mc-row { display: flex; align-items: center; gap: 14px; }
+  .d3 .mc-row .doc { width: 44px; height: 51px; }
+  .d3 .mc-cap { margin: 0 0 1px; font-size: 12px; font-weight: 600; color: #8194a8; }
+  .d3 .mc-foot { display: flex; justify-content: flex-end; gap: 10px; padding-top: 14px; border-top: 1px solid #edf2f7; }
+  .d3 .ov.is-open .mc > * { animation: d3rise calc(.26s * var(--spd)) calc((.2s + var(--i) * .06s) * var(--spd)) cubic-bezier(.22, .9, .36, 1) both; }
+  @keyframes d3rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  .d3 .ext { padding: 0 9px; border-radius: 7px; background: #eaf3fc; color: #2d6cad; }
+
+  /* ═══════════ 4 · Bubble — ฟองข้อความใต้ปุ่ม ═══════════ */
+  .d4 .tgt { transition: transform .1s ease, background .15s, box-shadow .15s; }
+  .d4 .tgt:active, .d4 .tgt.is-down { transform: scale(.96); }
+  .d4 .tgt.is-on { background: #d3e6fa; box-shadow: inset 0 0 0 1.5px #9fc5e9; }
+  .d4 .ping {
+    position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+    animation: d4ping calc(.62s * var(--spd)) ease-out both;
+  }
+  @keyframes d4ping { from { box-shadow: 0 0 0 0 rgba(72, 145, 219, .6); } to { box-shadow: 0 0 0 15px rgba(72, 145, 219, 0); } }
+  .d4 .ov { display: block; padding: 0; pointer-events: none; }
+  .d4 .bubble {
+    position: absolute; padding: 14px 14px 12px; border: 1px solid #cfe0f2; border-radius: 14px; background: #fff;
+    box-shadow: 0 12px 32px rgba(28, 61, 94, .24); pointer-events: auto; transform-origin: var(--cx) 0;
+  }
+  .d4 .bubble::before {
+    content: ''; position: absolute; top: -7px; left: calc(var(--cx) - 6px); width: 12px; height: 12px;
+    border-top: 1px solid #cfe0f2; border-left: 1px solid #cfe0f2; border-top-left-radius: 3px; background: #fff; transform: rotate(45deg);
+  }
+  .d4 .ov.is-open .bubble { animation: d4in calc(.34s * var(--spd)) cubic-bezier(.34, 1.4, .64, 1) both; }
+  .d4 .ov.is-closing .bubble { animation: d4out calc(.16s * var(--spd)) ease-in both; }
+  @keyframes d4in { 0% { opacity: 0; transform: scale(.55) translateY(-8px); } 100% { opacity: 1; transform: none; } }
+  @keyframes d4out { from { opacity: 1; transform: none; } to { opacity: 0; transform: scale(.92) translateY(-4px); } }
+  .d4 .bub-row { display: flex; align-items: center; gap: 11px; }
+  .d4 .bub-row .doc { width: 33px; height: 38px; }
+  .d4 .bub-cap { margin: 0; font-size: 11.5px; font-weight: 600; color: #8194a8; }
+  .d4 .pop-msg { font-size: 15px; line-height: 1.5; }
+  .d4 .bub-actions { display: flex; justify-content: flex-end; align-items: center; gap: 6px; margin-top: 12px; }
+  .d4 .pbtn { padding: 6px 14px; font-size: 12.5px; }
+  .d4 .pbtn--ghost { border-color: transparent; background: none; }
+  .d4 .ext { padding: 0 8px; border-radius: 6px; background: #eaf3fc; color: #2d6cad; }
+
+  /* ═══════════ 5 · Bottom Sheet ═══════════ */
+  .d5 .tgt.squish { animation: d5squish calc(.4s * var(--spd)) cubic-bezier(.3, .7, .4, 1); }
+  @keyframes d5squish {
+    0% { transform: scale(1); }
+    28% { transform: scale(.93, .86); }
+    62% { transform: scale(1.04, 1.1); }
+    100% { transform: scale(1); }
+  }
+  .d5 .ov { align-items: flex-end; padding: 0; }
+  .d5 .sheet {
+    position: relative; width: min(448px, 100%); padding: 6px 20px 20px; border-radius: 22px 22px 0 0; background: #fff;
+    box-shadow: 0 -12px 40px rgba(10, 26, 46, .28);
+  }
+  .d5 .ov.is-open .sheet { animation: d5in calc(.4s * var(--spd)) cubic-bezier(.2, .85, .25, 1) both; }
+  .d5 .ov.is-closing .sheet { animation: d5out calc(.26s * var(--spd)) cubic-bezier(.5, 0, .9, .6) both; }
+  @keyframes d5in { from { transform: translateY(105%); } to { transform: none; } }
+  @keyframes d5out { from { transform: none; } to { transform: translateY(105%); } }
+  .d5 .grab { position: relative; display: block; width: 64px; height: 24px; margin: 0 auto 8px; padding: 0; border: 0; background: none; cursor: pointer; }
+  .d5 .grab::before { content: ''; position: absolute; left: 10px; right: 10px; top: 10px; height: 4px; border-radius: 4px; background: #cfe0f2; transition: background .15s; }
+  .d5 .grab:hover::before { background: #9fc5e9; }
+  .d5 .sheet-row { display: flex; align-items: center; gap: 14px; }
+  .d5 .sheet-tile { display: flex; align-items: center; justify-content: center; flex-shrink: 0; width: 56px; height: 56px; border-radius: 16px; background: #eaf3fc; }
+  .d5 .sheet-tile .doc { width: 29px; height: 34px; }
+  .d5 .sheet-cap { margin: 0; font-size: 12px; font-weight: 600; color: #8194a8; }
+  .d5 .pop-msg { font-size: 18px; }
+  .d5 .sheet-actions { display: flex; gap: 10px; margin-top: 18px; }
+  .d5 .pbtn { min-height: 46px; padding: 10px 18px; border-radius: 12px; font-size: 14px; }
+  .d5 .pbtn--primary { flex: 1; }
+  .d5 .ext { padding: 0 9px; border-radius: 7px; background: #eaf3fc; color: #2d6cad; }
+
+  /* ═══════════ 6 · Ink Reveal ═══════════ */
+  .d6 .tgt { transition: transform .1s ease, background .15s, box-shadow calc(.2s * var(--spd)); }
+  .d6 .tgt:active, .d6 .tgt.is-down { transform: scale(.96); }
+  .d6 .tgt.flare { box-shadow: 0 0 0 5px rgba(72, 145, 219, .35); }
+  .d6 .ink {
+    position: absolute; inset: 0;
+    background: radial-gradient(130% 130% at var(--ox) var(--oy), #4891db 0%, #2d6cad 48%, #1d4f84 100%);
+    clip-path: circle(0px at var(--ox) var(--oy));
+  }
+  .d6 .ov.is-open .ink { animation: d6ink calc(.44s * var(--spd)) cubic-bezier(.5, 0, .2, 1) both; }
+  .d6 .ov.is-closing .ink { animation: d6inkOut calc(.4s * var(--spd)) calc(.1s * var(--spd)) cubic-bezier(.5, 0, .5, 1) both; }
+  @keyframes d6ink { from { clip-path: circle(0px at var(--ox) var(--oy)); } to { clip-path: circle(var(--R) at var(--ox) var(--oy)); } }
+  @keyframes d6inkOut { from { clip-path: circle(var(--R) at var(--ox) var(--oy)); } to { clip-path: circle(0px at var(--ox) var(--oy)); } }
+  .d6 .pop {
+    display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 24px 22px 18px; text-align: center;
+    border-radius: 20px; box-shadow: 0 22px 60px rgba(8, 30, 56, .5);
+  }
+  .d6 .ov.is-open .pop { animation: d6card calc(.3s * var(--spd)) calc(.26s * var(--spd)) cubic-bezier(.22, .9, .36, 1) both; }
+  .d6 .ov.is-closing .pop { animation: d6cardOut calc(.2s * var(--spd)) ease-in both; }
+  @keyframes d6card { from { opacity: 0; transform: translateY(22px) scale(.96); } to { opacity: 1; transform: none; } }
+  @keyframes d6cardOut { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(10px) scale(.97); } }
+  .d6 .ov.is-open .st { animation: d6st calc(.26s * var(--spd)) calc((.32s + var(--i) * .05s) * var(--spd)) cubic-bezier(.22, .9, .36, 1) both; }
+  @keyframes d6st { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  .d6 .pop .doc { width: 46px; height: 54px; margin-bottom: 4px; }
+  .d6 .cap { margin: 0; font-size: 12px; font-weight: 600; color: #8194a8; }
+  .d6 .pop-msg { font-size: 15px; line-height: 1.4; }
+  .d6 .ext { display: block; margin-top: 2px; font-size: 46px; font-weight: 800; line-height: 1.2; color: #2d6cad; letter-spacing: -.5px; }
+  .d6 .acts { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 100%; margin-top: 12px; }
+  .d6 .pbtn--primary { width: 100%; padding: 11px 18px; border-radius: 12px; font-size: 14px; }
+  .d6 .pbtn--link { border: 0; background: none; color: #5b7590; padding: 6px 12px; }
+  .d6 .pbtn--link:hover { color: #2d6cad; }
+
+  /* ═══════════ 7 · File Fly ═══════════ */
+  .d7 .tgt { transition: transform .1s ease, background .15s; }
+  .d7 .tgt:active, .d7 .tgt.is-down { transform: scale(.95); }
+  .d7 .tgt svg { transition: transform calc(.22s * var(--spd)) cubic-bezier(.34, 1.56, .64, 1), opacity calc(.2s * var(--spd)); }
+  .d7 .tgt.launch svg { transform: translateY(-5px) scale(1.15); opacity: .25; }
+  .d7 .pop {
+    display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 22px 20px 18px; text-align: center;
+    border-radius: 18px; box-shadow: 0 20px 60px rgba(10, 26, 46, .34);
+  }
+  .d7 .ov.is-open .pop { animation: d7in calc(.26s * var(--spd)) calc(.06s * var(--spd)) cubic-bezier(.22, .9, .36, 1) both; }
+  .d7 .ov.is-closing .pop { animation: d7out calc(.2s * var(--spd)) ease-in both; }
+  @keyframes d7in { from { opacity: 0; transform: scale(.93) translateY(8px); } to { opacity: 1; transform: none; } }
+  @keyframes d7out { from { opacity: 1; transform: none; } to { opacity: 0; transform: scale(.94); } }
+  .d7 .slot { position: relative; display: grid; place-items: center; width: 68px; height: 68px; margin-bottom: 6px; }
+  .d7 .slot-ring { position: absolute; inset: 0; border: 2px dashed #9fc5e9; border-radius: 50%; }
+  .d7 .slot-doc { opacity: 0; }
+  .d7 .slot-doc .doc { width: 38px; height: 44px; }
+  .d7 .slot.is-landed .slot-doc { opacity: 1; animation: d7land calc(.36s * var(--spd)) cubic-bezier(.34, 1.56, .64, 1); }
+  .d7 .slot.is-landed .slot-ring { border-style: solid; border-color: #bfe3c9; animation: d7burst calc(.5s * var(--spd)) ease-out; }
+  @keyframes d7land { from { transform: scale(1.3); } to { transform: none; } }
+  @keyframes d7burst { 0% { box-shadow: 0 0 0 0 rgba(46, 158, 98, .45); } 100% { box-shadow: 0 0 0 16px rgba(46, 158, 98, 0); } }
+  .d7 .fly { position: absolute; left: 0; top: 0; z-index: 8; pointer-events: none; will-change: transform; filter: drop-shadow(0 6px 7px rgba(10, 26, 46, .28)); }
+  .d7 .fly .doc { width: 100%; height: 100%; }
+  .d7 .cap { margin: 0; font-size: 12px; font-weight: 600; color: #8194a8; }
+  .d7 .acts { display: flex; gap: 10px; margin-top: 12px; }
+  .d7 .after { opacity: 0; }
+  .d7 .ov.is-landed .after { animation: d7rise calc(.3s * var(--spd)) calc(var(--i) * .06s * var(--spd)) cubic-bezier(.22, .9, .36, 1) both; }
+  @keyframes d7rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  .d7 .ext { padding: 0 9px; border-radius: 7px; background: #eaf3fc; color: #2d6cad; }
+
+  /* ═══════════ 8 · Stamp ═══════════ */
+  .d8 .tgt {
+    padding: 5px 14px; border: 2px dashed #9fc5e9; background: #f3f8fd;
+    transition: transform .1s ease, background .15s, border-color .15s;
+  }
+  .d8 .tgt:hover { background: #e6f1fc; border-color: #6fa8dc; }
+  .d8 .tgt:active, .d8 .tgt.is-down { transform: scale(.93) rotate(-2deg); }
+  .d8 .tgt.stamped { animation: d8press calc(.36s * var(--spd)) cubic-bezier(.3, .7, .4, 1); }
+  @keyframes d8press {
+    0% { transform: scale(1); }
+    35% { transform: scale(.9) rotate(-2.5deg); }
+    70% { transform: scale(1.04) rotate(.6deg); }
+    100% { transform: none; }
+  }
+  .d8 .inkring {
+    position: absolute; inset: -3px; border: 2px solid rgba(45, 108, 173, .55); border-radius: 12px; pointer-events: none;
+    animation: d8ring calc(.5s * var(--spd)) ease-out forwards;
+  }
+  @keyframes d8ring { from { opacity: .85; transform: scale(1); } to { opacity: 0; transform: scale(1.3, 1.85); } }
+  .d8 .pop { padding: 16px 18px 16px; border-radius: 14px; box-shadow: 0 18px 50px rgba(10, 26, 46, .34); width: min(348px, 100%); }
+  .d8 .ov.is-open .pop { animation: d8pop calc(.24s * var(--spd)) ease-out both, d8jolt calc(.22s * var(--spd)) calc(.38s * var(--spd)) ease-out; }
+  .d8 .ov.is-closing .pop { animation: d8out calc(.2s * var(--spd)) ease-in both; }
+  @keyframes d8pop { from { opacity: 0; transform: translateY(12px) scale(.95); } to { opacity: 1; transform: none; } }
+  @keyframes d8jolt { 0% { transform: none; } 30% { transform: translateY(3px); } 65% { transform: translateY(-1.5px); } 100% { transform: none; } }
+  @keyframes d8out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(8px) rotate(-1.5deg); } }
+  .d8 .slip-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .d8 .slip-cap { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: .3px; color: #5b7590; }
+  .d8 .pop-x { width: 28px; height: 28px; color: #7c93ab; }
+  .d8 .pop-x:hover { background: #eef3f8; }
+  .d8 .slip-body {
+    display: flex; align-items: center; gap: 10px; min-height: 92px; padding: 14px 4px;
+    border-top: 1.5px dashed #cfe0f2; border-bottom: 1.5px dashed #cfe0f2;
+  }
+  .d8 .slip-body .pop-msg { flex: 1; min-width: 0; }
+  .d8 .stamp-wrap { position: relative; display: grid; place-items: center; flex-shrink: 0; width: 112px; height: 70px; }
+  .d8 .stamp-mark {
+    padding: 5px 12px; border: 3px solid #2d6cad; border-radius: 10px; background: rgba(255, 255, 255, .9); color: #2d6cad;
+    font: 800 21px/1.15 'Outfit', sans-serif; letter-spacing: 1px; transform: rotate(-8deg); opacity: .92;
+  }
+  .d8 .ov.is-open .stamp-mark { animation: d8stamp calc(.34s * var(--spd)) calc(.2s * var(--spd)) cubic-bezier(.3, 1.5, .6, 1) both; }
+  @keyframes d8stamp { from { opacity: 0; transform: rotate(-28deg) scale(2.8); } to { opacity: .92; transform: rotate(-8deg) scale(1); } }
+  .d8 .hit { position: absolute; left: 50%; top: 50%; width: 100px; height: 100px; margin: -50px 0 0 -50px; border: 3px solid rgba(45, 108, 173, .4); border-radius: 50%; opacity: 0; pointer-events: none; }
+  .d8 .ov.is-open .hit { animation: d8hit calc(.5s * var(--spd)) calc(.38s * var(--spd)) ease-out forwards; }
+  @keyframes d8hit { from { opacity: .85; transform: scale(.35); } to { opacity: 0; transform: scale(1.35); } }
+  .d8 .slip-foot { display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px; }
+  .d8 .ext { padding: 0 8px; border-radius: 6px; background: #eaf3fc; color: #2d6cad; }
+
+  /* ═══════════ 9 · Sheet Grid ═══════════ */
+  .d9 .tgt { transition: transform .1s ease, background calc(.15s * var(--spd)), color calc(.15s * var(--spd)), box-shadow calc(.2s * var(--spd)); }
+  .d9 .tgt:active, .d9 .tgt.is-down { transform: scale(.96); }
+    .d9 .tgt.hit { background: #dff3e6; color: #1d7a4a; box-shadow: 0 0 0 3px rgba(46, 158, 98, .3); }
+  .d9 .tgt.hit svg { animation: d9swap calc(.3s * var(--spd)) cubic-bezier(.34, 1.56, .64, 1) both; }
+  @keyframes d9swap { from { opacity: .2; transform: rotate(-90deg) scale(.5); } to { opacity: 1; transform: none; } }
+  .d9 .xl {
+    position: relative; width: min(396px, 100%); overflow: hidden; border: 1px solid #b9dcc8; border-radius: 12px; background: #fff;
+    box-shadow: 0 20px 60px rgba(10, 26, 46, .34);
+  }
+  .d9 .ov.is-open .xl { animation: d9in calc(.28s * var(--spd)) cubic-bezier(.22, .9, .36, 1) both; }
+  .d9 .ov.is-closing .xl { animation: d9out calc(.2s * var(--spd)) ease-in both; }
+  @keyframes d9in { from { opacity: 0; transform: scale(.95) translateY(10px); } to { opacity: 1; transform: none; } }
+  @keyframes d9out { from { opacity: 1; transform: none; } to { opacity: 0; transform: scale(.96); } }
+  .d9 .xl-title { display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 12px; background: linear-gradient(135deg, #1d7a49, #2e9e62); color: #fff; font-size: 13px; font-weight: 700; }
+  .d9 .xl-title svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+  .d9 .xl-title span { flex: 1; min-width: 0; }
+  .d9 .pop-x { width: 26px; height: 26px; color: #e4f6ea; }
+  .d9 .pop-x:hover { background: rgba(255, 255, 255, .18); }
+  .d9 .xl-fx { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-bottom: 1px solid #dfe8e3; background: #f5faf7; font-size: 12px; }
+  .d9 .xl-fxb { padding: 0 7px; border-right: 1px solid #c9ddd0; color: #1d7a49; font: italic 700 12px 'Outfit', sans-serif; }
+  .d9 .xl-fxt { flex: 1; min-width: 0; color: #2d3a48; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .d9 .ov.is-open .xl-fxt { animation: d9fade calc(.22s * var(--spd)) calc(.5s * var(--spd)) ease-out both; }
+  @keyframes d9fade { from { opacity: 0; } to { opacity: 1; } }
+  .d9 .xl-grid {
+    position: relative; display: grid; grid-template-columns: 26px repeat(5, 1fr); grid-template-rows: 22px repeat(4, 30px);
+    background: #fff; font-size: 11px;
+  }
+  .d9 .c { display: flex; align-items: center; justify-content: center; border-right: 1px solid #e3ebe6; border-bottom: 1px solid #e3ebe6; }
+  .d9 .ch, .d9 .rh, .d9 .corner { background: #eef4f0; color: #5f7a6a; font-weight: 600; }
+  .d9 .ov.is-open .c { animation: d9cell calc(.2s * var(--spd)) calc((var(--i) * .028s + .04s) * var(--spd)) ease-out both; }
+  @keyframes d9cell { from { opacity: 0; transform: scale(.6); } to { opacity: 1; transform: none; } }
+  .d9 .xl-msg {
+    grid-column: 3 / span 3; grid-row: 3 / span 2; z-index: 1; display: flex; align-items: center; justify-content: center; padding: 4px 6px;
+    background: #f1faf4; text-align: center; font-size: 14.5px; font-weight: 700; line-height: 1.5; color: #1c3d5e;
+    border-right: 1px solid #e3ebe6; border-bottom: 1px solid #e3ebe6;
+  }
+  .d9 .ov.is-open .xl-msg span { animation: d9fade calc(.22s * var(--spd)) calc(.46s * var(--spd)) ease-out both; }
+  .d9 .xl-sel { position: absolute; z-index: 2; border: 2px solid #1d7a49; background: rgba(46, 158, 98, .1); pointer-events: none; opacity: 0; }
+  .d9 .xl-sel::after { content: ''; position: absolute; right: -5px; bottom: -5px; width: 7px; height: 7px; border: 1px solid #fff; background: #1d7a49; }
+  .d9 .xl-foot { display: flex; justify-content: flex-end; gap: 10px; padding: 11px 12px; border-top: 1px solid #dfe8e3; background: #f5faf7; }
+  .d9 .pbtn--primary { background: #2a9460; }
+  .d9 .pbtn--primary:hover { background: #1d7a49; box-shadow: 0 4px 12px rgba(46, 158, 98, .4); }
+  .d9 .ext { padding: 0 8px; border-radius: 6px; background: #dff3e6; color: #1d7a49; }
+
+  /* ═══════════ 10 · Scan Reveal ═══════════ */
+  .d10 .tgt { overflow: hidden; transition: transform .1s ease, background .15s, box-shadow .2s; }
+  .d10 .tgt:active, .d10 .tgt.is-down { transform: scale(.97); }
+  .d10 .tgt.beep { animation: d10beep calc(.34s * var(--spd)) ease-out; }
+  @keyframes d10beep { 0% { box-shadow: 0 0 0 0 rgba(255, 90, 77, .55); } 40% { background: #fff; } 100% { box-shadow: 0 0 0 9px rgba(255, 90, 77, 0); } }
+  .d10 .laser {
+    position: absolute; z-index: 2; top: 0; bottom: 0; left: -4px; width: 2px; border-radius: 2px; background: #ff5a4d; pointer-events: none;
+    box-shadow: 0 0 8px 2px rgba(255, 90, 77, .6); animation: d10sweep calc(.3s * var(--spd)) linear forwards;
+  }
+  @keyframes d10sweep { from { left: -4px; opacity: 1; } 85% { opacity: 1; } to { left: calc(100% + 2px); opacity: 0; } }
+  .d10 .scan { position: relative; width: min(344px, 100%); filter: drop-shadow(0 16px 26px rgba(10, 26, 46, .36)); }
+  .d10 .sc-pop { overflow: hidden; border-radius: 14px; background: #fff; }
+  .d10 .ov.is-open .sc-pop { animation: d10wipe calc(.46s * var(--spd)) cubic-bezier(.45, .05, .25, 1) both; }
+  .d10 .ov.is-closing .scan { animation: d10out calc(.18s * var(--spd)) ease-in both; }
+  @keyframes d10wipe { from { clip-path: inset(0 0 100% 0); } to { clip-path: inset(0 0 0 0); } }
+  @keyframes d10out { from { opacity: 1; } to { opacity: 0; } }
+  .d10 .beam {
+    position: absolute; z-index: 3; left: -12px; right: -12px; top: 0; height: 2px; pointer-events: none; opacity: 0;
+    background: linear-gradient(90deg, transparent, #ff5a4d 10%, #ff5a4d 90%, transparent);
+    box-shadow: 0 0 14px 3px rgba(255, 90, 77, .55);
+  }
+  .d10 .ov.is-open .beam { animation: d10beam calc(.46s * var(--spd)) cubic-bezier(.45, .05, .25, 1) both; }
+  @keyframes d10beam { from { top: 0; opacity: 1; } 90% { opacity: 1; } to { top: 100%; opacity: 0; } }
+  .d10 .br { position: absolute; z-index: 3; width: 20px; height: 20px; border: 0 solid #4891db; pointer-events: none; }
+  .d10 .br--tl { left: -7px; top: -7px; border-width: 3px 0 0 3px; border-top-left-radius: 6px; }
+  .d10 .br--tr { right: -7px; top: -7px; border-width: 3px 3px 0 0; border-top-right-radius: 6px; }
+  .d10 .br--bl { left: -7px; bottom: -7px; border-width: 0 0 3px 3px; border-bottom-left-radius: 6px; }
+  .d10 .br--bb { right: -7px; bottom: -7px; border-width: 0 3px 3px 0; border-bottom-right-radius: 6px; }
+  .d10 .ov.is-open .br { animation: d10br calc(.26s * var(--spd)) calc(.28s * var(--spd)) cubic-bezier(.22, .9, .36, 1) both, d10lock calc(.4s * var(--spd)) calc(.5s * var(--spd)) ease-out both; }
+  @keyframes d10br { from { opacity: 0; transform: scale(1.5); } to { opacity: 1; transform: none; } }
+  @keyframes d10lock { 0% { border-color: #4891db; } 35% { border-color: #2e9e5b; } 100% { border-color: #4891db; } }
+  .d10 .sc-bar {
+    height: 30px; background-color: #f1f5f9;
+    background-image: repeating-linear-gradient(90deg, #1c3d5e 0 2px, transparent 2px 5px, #1c3d5e 5px 6px, transparent 6px 9px, #1c3d5e 9px 12px, transparent 12px 14px, #1c3d5e 14px 15px, transparent 15px 19px);
+    background-size: 100% 100%; background-clip: content-box; padding: 8px 18px;
+  }
+  .d10 .sc-body { display: flex; align-items: center; gap: 14px; padding: 18px 20px 6px; }
+  .d10 .sc-body .doc { width: 42px; height: 49px; }
+  .d10 .sc-cap { margin: 0; font-size: 12px; font-weight: 600; color: #8194a8; }
+  .d10 .sc-foot { display: flex; justify-content: flex-end; gap: 10px; padding: 12px 20px 16px; }
+  .d10 .ext { padding: 0 9px; border-radius: 7px; background: #eaf3fc; color: #2d6cad; }
+
+  @media (max-width: 480px) {
+    .card-head, .card-foot { padding-left: 14px; padding-right: 14px; }
+    .card-desc, .card-meta { padding-left: 0; }
+    .stage { height: 420px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="page-head">
+    <p class="eyebrow">SaleSupport · เมนู Products</p>
+    <h1>Popup อัปโหลด Product Master</h1>
+    <p class="lede">กดปุ่ม “อัปโหลด Product Master” ในแต่ละการ์ดเพื่อดูตั้งแต่ตอนกดปุ่มจนถึง popup ที่ขึ้นข้อความ <b>ใช้ไฟล์นามสกุล .xlsx</b> · ปุ่ม [เลือกไฟล์] ใน popup คือจุดที่จะไปเปิดหน้าต่างเลือกไฟล์ตัวเดิม ส่วน [ยกเลิก] / ✕ / Esc ปิด popup โดยไม่ทำอะไรต่อ · ปุ่มนี้ในหน้าจริงเห็นเฉพาะรหัสจัดซื้อ</p>
+    <div class="seg" role="radiogroup" aria-label="ความเร็วแอนิเมชัน">
+      <span class="seg-label">ความเร็ว</span>
+      <button type="button" role="radio" aria-checked="true" data-spd="1">ปกติ</button>
+      <button type="button" role="radio" aria-checked="false" data-spd="2">ช้า ×2</button>
+      <button type="button" role="radio" aria-checked="false" data-spd="4">ช้ามาก ×4</button>
+    </div>
+    <p class="note" id="rm-note" hidden>เครื่องนี้ตั้งค่า “ลดการเคลื่อนไหว” ไว้ แต่แกลเลอรีนี้ยังเล่นแอนิเมชันตอนกดปุ่ม เพราะเป็นตัวอย่างให้ดูท่าเคลื่อนไหว · ตอนใส่ในแอปจริงจะมีโหมดลดการเคลื่อนไหวเป็นเฟดเฉย ๆ</p>
+  </header>
+
+  <main class="grid" id="grid"></main>
+
+  <p class="footer-note">ชอบแบบไหนบอกเลขได้เลย เช่น <b>“เอาแบบ 3”</b> · ผสมกันได้ เช่น ปุ่มแบบ 2 + popup แบบ 6 · แล้วผมจะใส่ให้ปุ่มจริงในเมนู Products ของหน้า SaleSupport ครับ</p>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  /* ───────────────────────── ตัวช่วยกลาง ───────────────────────── */
+  const CANCEL = Symbol('cancel');
+  let SPD = 1;                                   // ตัวคูณความเร็ว (1 / 2 / 4) — CSS ใช้ --spd ตัวเดียวกัน
+  const ms = n => n * SPD;
+  const make = s => { const t = document.createElement('template'); t.innerHTML = s.trim(); return t.content.firstElementChild; };
+
+  const ICON = {
+    upload: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4"/><path d="m7.5 8.5 4.5-4.5 4.5 4.5"/><path d="M4.5 15v3.2c0 .9.7 1.6 1.6 1.6h11.8c.9 0 1.6-.7 1.6-1.6V15"/></svg>',
+    grid: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2.5"/><path d="M4 10h16M4 15h16M10 4v16"/></svg>',
+    x: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>',
+  };
+  const ICON_GRID = '<rect x="4" y="4" width="16" height="16" rx="2.5"/><path d="M4 10h16M4 15h16M10 4v16"/>';
+  /* ไอคอนไฟล์ xlsx — สีคุมด้วย --doc / --doc-fold / --doc-line */
+  const doc = () => '<svg class="doc" viewBox="0 0 48 56" aria-hidden="true">'
+    + '<path class="doc-body" d="M7 4a4 4 0 0 1 4-4h18l12 12v40a4 4 0 0 1-4 4H11a4 4 0 0 1-4-4z"/>'
+    + '<path class="doc-fold" d="M29 0l12 12h-8a4 4 0 0 1-4-4z"/>'
+    + '<g class="doc-line" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="14" y="24" width="20" height="20" rx="2.5"/><path d="M14 31h20M14 37.5h20M24 24v20"/></g>'
+    + '</svg>';
+
+  const MSG = 'ใช้ไฟล์นามสกุล <span class="ext">.xlsx</span>';       // ข้อความตามที่ผู้ใช้กำหนด
+  const BTN_CANCEL = '<button type="button" class="pbtn pbtn--ghost" data-act="close">ยกเลิก</button>';
+  const BTN_PICK = '<button type="button" class="pbtn pbtn--primary" data-act="pick" data-primary>เลือกไฟล์</button>';
+  const BTN_X = '<button type="button" class="pop-x" data-act="close" aria-label="ปิด">' + ICON.x + '</button>';
+
+  /* ───────────────────────── ฉากจำลอง ───────────────────────── */
+  const ROWS = [[26, 70, 44, 18], [34, 58, 50, 14], [22, 76, 38, 20], [30, 64, 46, 16], [28, 72, 42, 22], [36, 54, 48, 12], [24, 68, 40, 18], [32, 60, 52, 16]];
+  const mockHtml = () => `
+    <div class="mock">
+      <div class="mock-bar">
+        <div class="mock-title"><span>Products</span><small>Product Master</small></div>
+        <div class="mock-btns">
+          <button type="button" class="tgt" data-target aria-haspopup="dialog" aria-expanded="false">${ICON.upload}<span class="lbl">อัปโหลด Product Master</span></button>
+          <span class="mock-new" aria-hidden="true">+ New Product</span>
+        </div>
+      </div>
+      <div class="mock-rows" aria-hidden="true">${ROWS.map((r, i) =>
+        `<div class="mock-row${i ? '' : ' mock-row--h'}">${r.map(w => `<i style="width:${w}%"></i>`).join('')}</div>`).join('')}</div>
+    </div>`;
+
+  const cardHtml = c => `
+    <article class="card d${c.n}" id="design-${c.n}" aria-labelledby="h-${c.n}">
+      <div class="card-head">
+        <div class="card-top">
+          <h2 class="card-title" id="h-${c.n}"><span class="num">${c.n}</span><span>${c.name}</span><small>${c.th}</small></h2>
+          <button type="button" class="replay" data-replay>▶ เล่นซ้ำ</button>
+        </div>
+        <p class="card-desc">${c.desc}</p>
+        <p class="card-meta"><span class="chip">${c.level}</span><span>${c.timing}</span></p>
+      </div>
+      <div class="stage">${mockHtml()}</div>
+      <div class="card-foot">
+        <p class="pro"><b>ข้อดี</b>${c.pros}</p>
+        <p class="con"><b>ข้อสังเกต</b>${c.cons}</p>
+      </div>
+    </article>`;
+
+  /* ───────────────────────── ตัวเล่น (state machine ต่อการ์ด) ─────────────────────────
+     idle → pressing → opening → open → closing → idle   ·   reset() ตัดทุกอย่างทิ้งทันที (ปุ่มเล่นซ้ำ) */
+  const cards = [];
+
+  function origin(ev, ctx) {
+    const sr = ctx.stage.getBoundingClientRect();
+    const br = ctx.tgt.getBoundingClientRect();
+    if (ev && ev.detail > 0 && ev.clientX) {                       // คลิกด้วยเมาส์: ใช้จุดที่กดจริง
+      return { x: ev.clientX - sr.left, y: ev.clientY - sr.top, bx: ev.clientX - br.left, by: ev.clientY - br.top };
+    }
+    return { x: br.left - sr.left + br.width / 2, y: br.top - sr.top + br.height / 2, bx: br.width / 2, by: br.height / 2 };
+  }
+
+  function mount(ctx, inner, { open = true, cls = '' } = {}) {
+    if (ctx.ov) ctx.ov.remove();
+    const ov = document.createElement('div');
+    ov.className = ('ov ' + cls).trim();
+    ov.innerHTML = inner;
+    ov.addEventListener('click', e => {
+      const a = e.target.closest('[data-act]');
+      if (!a) return;                                              // ไม่ปิดเมื่อคลิกพื้นหลัง (กฎเดียวกับ modal อื่นในแอป)
+      if (a.dataset.act === 'pick') pick(ctx); else requestClose(ctx);
+    });
+    ctx.stage.appendChild(ov);
+    ctx.ov = ov;
+    if (open) ov.classList.add('is-open');
+    return ov;
+  }
+
+  function toast(ctx, text) {
+    const t = make(`<div class="toast" role="status">${text}</div>`);
+    ctx.stage.appendChild(t);
+    t.addEventListener('animationend', () => t.remove());
+  }
+
+  function pick(ctx) {
+    toast(ctx, 'เปิดหน้าต่างเลือกไฟล์ (จำลอง)');
+    requestClose(ctx);
+  }
+
+  function requestClose(ctx) {
+    if (ctx.state === 'open') close(ctx);
+    else if (ctx.state === 'pressing' || ctx.state === 'opening') ctx.wantClose = true;
+  }
+
+  function teardown(ctx) {
+    if (ctx.cfg.cleanup) ctx.cfg.cleanup(ctx);
+    if (ctx.outside) { document.removeEventListener('pointerdown', ctx.outside, true); ctx.outside = null; }
+    if (ctx.ov) { ctx.ov.remove(); ctx.ov = null; }
+    ctx.parts = {};
+    ctx.tgt.classList.remove('is-gone', 'is-on', 'is-down', 'sunk', 'launch', 'hit', 'flare');
+    ctx.tgt.setAttribute('aria-expanded', 'false');
+  }
+
+  async function play(ctx, o) {
+    const tok = ++ctx.tok;
+    ctx.sleep = n => new Promise((res, rej) => setTimeout(() => (ctx.tok === tok ? res() : rej(CANCEL)), ms(n)));
+    ctx.origin = o;
+    ctx.wantClose = false;
+    try {
+      ctx.state = 'pressing';
+      ctx.tgt.setAttribute('aria-expanded', 'true');
+      await ctx.cfg.press(ctx);
+      ctx.state = 'opening';
+      await ctx.cfg.open(ctx);
+      ctx.state = 'open';
+      const p = ctx.ov && ctx.ov.querySelector('[data-primary]');
+      if (p) p.focus({ preventScroll: true });
+      if (ctx.wantClose) { ctx.wantClose = false; close(ctx); }
+    } catch (e) {
+      if (e !== CANCEL && !(e && e.name === 'AbortError')) console.error(e);
+    }
+  }
+
+  async function close(ctx) {
+    if (ctx.state !== 'open') return;
+    ctx.state = 'closing';
+    const tok = ctx.tok;
+    try {
+      await ctx.cfg.close(ctx);
+      if (ctx.tok !== tok) return;
+      teardown(ctx);
+      ctx.state = 'idle';
+      ctx.tgt.focus({ preventScroll: true });
+    } catch (e) {
+      if (e !== CANCEL && !(e && e.name === 'AbortError')) console.error(e);
+    }
+  }
+
+  function reset(ctx) {
+    ctx.tok++;
+    if (ctx.ov) ctx.ov.getAnimations({ subtree: true }).forEach(a => a.cancel());
+    teardown(ctx);
+    ctx.stage.querySelectorAll('.toast').forEach(t => t.remove());
+    ctx.state = 'idle';
+  }
+
+  /* ปิดแบบมาตรฐาน: ใส่ .is-closing แล้วรอให้ CSS เล่นจบ */
+  async function closeBy(ctx, dur) {
+    ctx.ov.classList.remove('is-open');
+    ctx.ov.classList.add('is-closing');
+    await ctx.sleep(dur);
+  }
+
+  function ripple(ctx) {                                            // วงกระเพื่อมจากจุดที่คลิก (แบบ 1)
+    const r = ctx.tgt.getBoundingClientRect();
+    const { bx, by } = ctx.origin;
+    const d = Math.hypot(Math.max(bx, r.width - bx), Math.max(by, r.height - by)) * 2;
+    const s = document.createElement('span');
+    s.className = 'rip';
+    Object.assign(s.style, { width: d + 'px', height: d + 'px', left: (bx - d / 2) + 'px', top: (by - d / 2) + 'px' });
+    ctx.tgt.appendChild(s);
+    s.addEventListener('animationend', () => s.remove());
+  }
+
+  function addFx(ctx, cls, host) {                                  // ใส่ element เอฟเฟกต์ชั่วคราวในปุ่ม
+    const s = document.createElement('span');
+    s.className = cls;
+    (host || ctx.tgt).appendChild(s);
+    s.addEventListener('animationend', () => s.remove());
+    return s;
+  }
+
+  function flash(el, cls, dur) {                                    // คลาสชั่วคราว ให้ CSS animation เล่นใหม่ได้ทุกครั้ง
+    el.classList.remove(cls);
+    void el.offsetWidth;
+    el.classList.add(cls);
+    setTimeout(() => el.classList.remove(cls), ms(dur));
+  }
+
+  /* ───────────────────────── 10 แบบ ───────────────────────── */
+  const DESIGNS = [
+    /* 1 */ {
+      n: 1, name: 'Ripple + Scale', th: 'วงกระเพื่อม แล้ว popup ขยายกลางจอ', level: 'ทำง่าย · วงน้ำต้องรู้จุดคลิก', timing: 'กดถึงนิ่ง ~0.4 วิ · ปิด 0.22 วิ',
+      desc: 'ปุ่มยุบลงนิดเดียวพร้อมวงน้ำกระเพื่อมที่แผ่ออกจากจุดที่คลิก จากนั้น popup ขยายจาก 90% เป็น 100% กลางจอ จังหวะเดียวกับ popup รายละเอียดที่แอปใช้อยู่แล้ว',
+      pros: 'เหมือน popup อื่นในแอปที่สุด ผู้ใช้ไม่ต้องทำความรู้จักใหม่ · โค้ดน้อยสุด',
+      cons: 'ธรรมดา ไม่มีอะไรเชื่อมปุ่มกับ popup นอกจากวงน้ำ',
+      press: async c => { ripple(c); await c.sleep(100); },
+      open: async c => {
+        mount(c, `<div class="scrim"></div>
+          <div class="pop" role="dialog" aria-modal="true" aria-labelledby="t1">
+            <div class="pop-head"><span id="t1">อัปโหลด Product Master</span>${BTN_X}</div>
+            <div class="pop-body">${doc()}<p class="pop-msg">${MSG}</p></div>
+            <div class="pop-foot">${BTN_CANCEL}${BTN_PICK}</div>
+          </div>`);
+        await c.sleep(300);
+      },
+      close: c => closeBy(c, 220),
+    },
+    /* 2 */ {
+      n: 2, name: '3D Tile + Spring Drop', th: 'ปุ่มนูนยุบลง popup เด้งลงมา', level: 'ทำง่าย · CSS เป็นหลัก', timing: 'กดถึงนิ่ง ~0.65 วิ · ปิด 0.2 วิ',
+      desc: 'ปุ่มเป็นกระเบื้องนูน กดแล้วยุบลง 3 px พร้อมวงคลื่นเมื่อปล่อย จากนั้น popup ร่วงลงมาจากด้านบนแล้วเด้งตัวเข้าที่ ไอคอนไฟล์ผุดตามหลัง',
+      pros: 'สไตล์เดียวกับปุ่ม 3D Tile และ Mini 3D Tile ที่เลือกไว้ใน ⚙️ Admin · รู้สึกว่า “กดจริง”',
+      cons: 'ต้องเปลี่ยนหน้าตาปุ่มเดิมเป็นปุ่มนูน (ต่างจากปุ่มข้างเคียงในแถบเครื่องมือ) · เด้งอาจดูซนไปสำหรับงานจัดซื้อ',
+      press: async c => { c.tgt.classList.add('sunk'); addFx(c, 'shock'); await c.sleep(130); c.tgt.classList.remove('sunk'); },
+      open: async c => {
+        mount(c, `<div class="scrim"></div>
+          <div class="pop" role="dialog" aria-modal="true" aria-labelledby="t2">
+            <div class="pop-side">${doc()}</div>
+            <div class="pop-main">
+              ${BTN_X}
+              <p class="pop-cap" id="t2">อัปโหลด Product Master</p>
+              <p class="pop-msg">${MSG}</p>
+              <div class="pop-actions">${BTN_CANCEL}${BTN_PICK}</div>
+            </div>
+          </div>`);
+        await c.sleep(520);
+      },
+      close: c => closeBy(c, 200),
+    },
+    /* 3 */ {
+      n: 3, name: 'Morph', th: 'ปุ่มขยายร่างเป็น popup', level: 'ปานกลาง · ต้องวัดตำแหน่งปุ่ม', timing: 'กดถึงนิ่ง ~0.6 วิ · ปิด 0.34 วิ',
+      desc: 'ปุ่มยุบเล็กน้อยแล้ว “พอง” ออกกลายเป็น popup เลย (ขนาด สี และมุมโค้งค่อย ๆ เปลี่ยนจากปุ่มเป็นการ์ดขาว) ตอนปิดหดกลับเข้าที่ปุ่มเดิม',
+      pros: 'ตามองออกทันทีว่า popup มาจากปุ่มไหน · ดูเป็นระบบ ไม่ฉูดฉาด',
+      cons: 'ต้องวัดตำแหน่งปุ่มด้วย JS และซ่อนปุ่มจริงระหว่างเปิด · ถ้าหน้าจอเปลี่ยนขนาดตอนเปิดอยู่ต้องจัดการเพิ่ม',
+      press: async c => { c.tgt.classList.add('is-down'); await c.sleep(90); c.tgt.classList.remove('is-down'); },
+      open: async c => {
+        const sr = c.stage.getBoundingClientRect(), br = c.tgt.getBoundingClientRect();
+        const from = { left: br.left - sr.left, top: br.top - sr.top, width: br.width, height: br.height };
+        const W = Math.min(344, sr.width - 24), H = 160;
+        const to = { left: (sr.width - W) / 2, top: (sr.height - H) / 2, width: W, height: H };
+        const ov = mount(c, `<div class="scrim"></div>
+          <div class="morph">
+            <span class="ghost">${ICON.upload}<span>อัปโหลด Product Master</span></span>
+            <div class="mc" style="--W:${W}px;--H:${H}px" role="dialog" aria-modal="true" aria-labelledby="t3">
+              <div class="mc-row" style="--i:0">${doc()}<div><p class="mc-cap" id="t3">อัปโหลด Product Master</p><p class="pop-msg">${MSG}</p></div></div>
+              <div class="mc-foot" style="--i:1">${BTN_CANCEL}${BTN_PICK}</div>
+            </div>
+          </div>`);
+        const morph = ov.querySelector('.morph'), ghost = ov.querySelector('.ghost'), mc = ov.querySelector('.mc');
+        const px = o => ({ left: o.left + 'px', top: o.top + 'px', width: o.width + 'px', height: o.height + 'px' });
+        Object.assign(morph.style, px(from));
+        c.tgt.classList.add('is-gone');
+        const a = morph.animate([
+          { ...px(from), borderRadius: '10px', backgroundColor: '#eaf3fc', boxShadow: '0 0 0 rgba(10,26,46,0)' },
+          { ...px(to), borderRadius: '18px', backgroundColor: '#ffffff', boxShadow: '0 20px 60px rgba(10,26,46,.34)' },
+        ], { duration: ms(420), easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'forwards' });
+        ghost.animate([{ opacity: 1 }, { opacity: 0 }], { duration: ms(140), fill: 'forwards' });
+        c.parts = { morph, ghost, mc, to, px };
+        await a.finished;
+      },
+      close: async c => {
+        const { morph, ghost, mc, to, px } = c.parts;
+        const sr = c.stage.getBoundingClientRect(), br = c.tgt.getBoundingClientRect();
+        const from = { left: br.left - sr.left, top: br.top - sr.top, width: br.width, height: br.height };
+        c.ov.classList.remove('is-open');
+        c.ov.classList.add('is-closing');
+        mc.animate([{ opacity: 1 }, { opacity: 0 }], { duration: ms(110), fill: 'forwards' });
+        ghost.animate([{ opacity: 0 }, { opacity: 1 }], { duration: ms(150), delay: ms(190), fill: 'forwards' });
+        const a = morph.animate([
+          { ...px(to), borderRadius: '18px', backgroundColor: '#ffffff', boxShadow: '0 20px 60px rgba(10,26,46,.34)' },
+          { ...px(from), borderRadius: '10px', backgroundColor: '#eaf3fc', boxShadow: '0 0 0 rgba(10,26,46,0)' },
+        ], { duration: ms(340), easing: 'cubic-bezier(.5,0,.2,1)', fill: 'forwards' });
+        await a.finished;
+      },
+    },
+    /* 4 */ {
+      n: 4, name: 'Bubble', th: 'ฟองข้อความลอยใต้ปุ่ม', level: 'ปานกลาง · ต้องคำนวณตำแหน่ง', timing: 'กดถึงนิ่ง ~0.45 วิ · ปิด 0.16 วิ',
+      desc: 'ปุ่มปล่อยวงคลื่นสองรอบ แล้วฟองข้อความเด้งออกมาใต้ปุ่มพร้อมลูกศรชี้ ไม่มีฉากมืดบังหน้าจอ คลิกที่อื่น กด Esc หรือกดปุ่มซ้ำเพื่อปิด',
+      pros: 'เบาที่สุด ไม่บังตาราง ข้อความอยู่ติดปุ่มจึงอ่านได้ทันที',
+      cons: 'เป็นแค่ป้ายเตือน อาจถูกมองข้ามถ้าผู้ใช้รีบ · ต้องคำนวณตำแหน่งตามปุ่ม (ขอบจอ/หน้าต่างแคบ)',
+      toggle: true,
+      press: async c => { addFx(c, 'ping'); setTimeout(() => addFx(c, 'ping'), ms(140)); await c.sleep(110); },
+      open: async c => {
+        const sr = c.stage.getBoundingClientRect(), br = c.tgt.getBoundingClientRect();
+        const W = Math.min(292, sr.width - 16);
+        let left = br.right - sr.left - W + 14;
+        left = Math.max(8, Math.min(left, sr.width - W - 8));
+        const cx = Math.max(22, Math.min(br.left - sr.left + br.width / 2 - left, W - 22));
+        const ov = mount(c, `<div class="bubble" role="dialog" aria-labelledby="t4">
+            <div class="bub-row">${doc()}<div><p class="bub-cap" id="t4">อัปโหลด Product Master</p><p class="pop-msg">${MSG}</p></div></div>
+            <div class="bub-actions">${BTN_CANCEL}${BTN_PICK}</div>
+          </div>`);
+        ov.querySelector('.bubble').style.cssText = `left:${left}px;top:${br.bottom - sr.top + 11}px;width:${W}px;--cx:${cx}px`;
+        c.tgt.classList.add('is-on');
+        c.outside = e => { if (!e.target.closest('.bubble') && e.target.closest('.tgt') !== c.tgt) requestClose(c); };
+        document.addEventListener('pointerdown', c.outside, true);
+        await c.sleep(340);
+      },
+      close: c => closeBy(c, 160),
+    },
+    /* 5 */ {
+      n: 5, name: 'Bottom Sheet', th: 'แผ่นเลื่อนขึ้นจากขอบล่าง', level: 'ทำง่าย · CSS เป็นหลัก', timing: 'กดถึงนิ่ง ~0.55 วิ · ปิด 0.26 วิ',
+      desc: 'ปุ่มบีบแล้วดีดกลับ (squash & stretch) จากนั้นแผ่นข้อความเลื่อนขึ้นจากขอบล่างของหน้าจอ ปุ่มในแผ่นใหญ่กว่าปกติ กดแถบจับด้านบนเพื่อปิดได้',
+      pros: 'ปุ่มใหญ่กดง่าย (เหมาะแท็บเล็ต/มือถือ) · ไม่บังแถบเครื่องมือด้านบน',
+      cons: 'บนจอคอมใหญ่ แผ่นอยู่ไกลจากปุ่มมาก · ไม่เหมือน popup อื่นในระบบ',
+      press: async c => { flash(c.tgt, 'squish', 400); await c.sleep(140); },
+      open: async c => {
+        mount(c, `<div class="scrim"></div>
+          <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="t5">
+            <button type="button" class="grab" data-act="close" aria-label="ปิด"></button>
+            <div class="sheet-row"><span class="sheet-tile">${doc()}</span><div><p class="sheet-cap" id="t5">อัปโหลด Product Master</p><p class="pop-msg">${MSG}</p></div></div>
+            <div class="sheet-actions">${BTN_CANCEL}${BTN_PICK}</div>
+          </div>`);
+        await c.sleep(400);
+      },
+      close: c => closeBy(c, 260),
+    },
+    /* 6 */ {
+      n: 6, name: 'Ink Reveal', th: 'หมึกสีฟ้าแผ่ออกจากจุดที่กด', level: 'ปานกลาง · ต้องวัดจุดคลิก', timing: 'กดถึงนิ่ง ~0.8 วิ · ปิด 0.5 วิ',
+      desc: 'ปุ่มวาบเรืองแสง แล้วสีฟ้าแบรนด์แผ่เป็นวงจากจุดที่เมาส์คลิกจนเต็มจอ การ์ดขาวลอยขึ้นมาทีหลัง ข้อความไล่โผล่ทีละบรรทัด ตัว .xlsx ใหญ่เด่น',
+      pros: 'เด่นสุด ผู้ใช้ไม่พลาดข้อความแน่ ๆ · พื้นฟ้าเข้ากับสีหลักของแอป',
+      cons: 'คลุมทั้งจอ อาจดูเว่อร์สำหรับข้อความบรรทัดเดียว · ใช้งานบ่อยจะรู้สึกช้ากว่าแบบอื่น',
+      press: async c => { flash(c.tgt, 'flare', 300); await c.sleep(80); },
+      open: async c => {
+        const sr = c.stage.getBoundingClientRect();
+        const { x, y } = c.origin;
+        const R = Math.hypot(Math.max(x, sr.width - x), Math.max(y, sr.height - y)) + 4;
+        const ov = mount(c, `<div class="ink"></div>
+          <div class="pop" role="dialog" aria-modal="true" aria-labelledby="t6">
+            <div class="st" style="--i:0">${doc()}</div>
+            <p class="cap st" style="--i:1" id="t6">อัปโหลด Product Master</p>
+            <p class="pop-msg st" style="--i:2">${MSG}</p>
+            <div class="acts st" style="--i:3">${BTN_PICK}<button type="button" class="pbtn pbtn--link" data-act="close">ยกเลิก</button></div>
+          </div>`);
+        ov.style.setProperty('--ox', x + 'px');
+        ov.style.setProperty('--oy', y + 'px');
+        ov.style.setProperty('--R', R + 'px');
+        await c.sleep(720);
+      },
+      close: c => closeBy(c, 500),
+    },
+    /* 7 */ {
+      n: 7, name: 'File Fly', th: 'ไอคอนไฟล์บินจากปุ่มลงกล่อง', level: 'ยาก · วัดตำแหน่ง 2 จุด', timing: 'กดถึงนิ่ง ~0.75 วิ · ปิด 0.2 วิ',
+      desc: 'ลูกศรบนปุ่มดีดขึ้น แล้วไอคอนไฟล์ Excel บินเป็นเส้นโค้งจากปุ่มไปลงช่องกลาง popup (มีวงเส้นประรออยู่ก่อนแล้ว) พอลงวงแล้วข้อความกับปุ่มค่อยตามขึ้นมา',
+      pros: 'เล่าเรื่องชัดว่า “ไฟล์ Excel” กำลังจะถูกอัปโหลด · สนุก จำง่าย',
+      cons: 'ซับซ้อนสุด (ต้องวัดตำแหน่งปุ่มกับช่อง) · ใช้เวลานานสุด ~0.75 วิ ถ้าอัปโหลดบ่อยอาจรู้สึกรอ',
+      press: async c => { c.tgt.classList.add('launch'); await c.sleep(60); },
+      open: async c => {
+        const sr = c.stage.getBoundingClientRect();
+        const ib = c.tgt.querySelector('svg').getBoundingClientRect();
+        const ov = mount(c, `<div class="scrim"></div>
+          <div class="pop" role="dialog" aria-modal="true" aria-labelledby="t7">
+            <div class="slot"><span class="slot-ring"></span><span class="slot-doc">${doc()}</span></div>
+            <p class="cap" id="t7">อัปโหลด Product Master</p>
+            <p class="pop-msg after" style="--i:0">${MSG}</p>
+            <div class="acts after" style="--i:1">${BTN_CANCEL}${BTN_PICK}</div>
+          </div>`, { open: false });
+        // วัดช่องปลายทางก่อนเริ่มแอนิเมชัน (ตอนนี้ popup ยังไม่ถูกย่อ/ขยาย ค่าที่ได้จึงเป็นขนาดจริง)
+        const sl = ov.querySelector('.slot-doc').getBoundingClientRect();
+        const x0 = ib.left - sr.left + ib.width / 2, y0 = ib.top - sr.top + ib.height / 2;
+        const x1 = sl.left - sr.left + sl.width / 2, y1 = sl.top - sr.top + sl.height / 2;
+        const w = sl.width, h = sl.height, s0 = ib.height / h;
+        const fly = make(`<span class="fly" style="width:${w}px;height:${h}px;margin:${-h / 2}px 0 0 ${-w / 2}px">${doc()}</span>`);
+        ov.appendChild(fly);
+        ov.classList.add('is-open');
+        const cx = (x0 + x1) / 2, cy = Math.min(y0, y1) - 62;           // จุดควบคุมของเส้นโค้ง (ยกขึ้นด้านบน)
+        const N = 20, frames = [];
+        for (let i = 0; i <= N; i++) {
+          const t = i / N, u = 1 - t;
+          const x = u * u * x0 + 2 * u * t * cx + t * t * x1;
+          const y = u * u * y0 + 2 * u * t * cy + t * t * y1;
+          const s = s0 + (1 - s0) * Math.pow(t, .6);
+          frames.push({ transform: `translate(${x}px,${y}px) scale(${s}) rotate(${-28 * (1 - t)}deg)`, offset: t });
+        }
+        await c.sleep(30);
+        const a = fly.animate(frames, { duration: ms(400), easing: 'cubic-bezier(.45,.05,.2,1)', fill: 'forwards' });
+        await a.finished;
+        ov.querySelector('.slot').classList.add('is-landed');
+        ov.classList.add('is-landed');
+        fly.remove();
+        await c.sleep(260);
+      },
+      close: c => closeBy(c, 200),
+    },
+    /* 8 */ {
+      n: 8, name: 'Stamp', th: 'ตราประทับ .XLSX ตกลงบนใบแจ้ง', level: 'ทำง่าย · CSS เป็นหลัก', timing: 'กดถึงนิ่ง ~0.7 วิ · ปิด 0.2 วิ',
+      desc: 'ปุ่มขอบประแบบเดียวกับปุ่มตราประทับในหน้า Order ถูก “กดตรา” จนยุบเอียง พร้อมวงหมึก แล้ว popup เป็นใบแจ้งที่มีตรา .XLSX ฟาดลงมา การ์ดสะเทือนตอนตราถึงพื้น',
+      pros: 'เข้ากับภาษาภาพ “ตราประทับ” ที่แอปใช้อยู่ทั้งระบบ · .XLSX เด่นจนอ่านไม่พลาด',
+      cons: 'ในแอปนี้ตราประทับแปลว่า “อนุมัติ/ยกเลิก” ผู้ใช้อาจสับสนว่านี่คือการอนุมัติ (ใช้สีฟ้าเพื่อลดความสับสน) · เล่นนานกว่าแบบพื้นฐานราว 0.3 วิ',
+      press: async c => { flash(c.tgt, 'stamped', 360); addFx(c, 'inkring'); await c.sleep(110); },
+      open: async c => {
+        mount(c, `<div class="scrim"></div>
+          <div class="pop" role="dialog" aria-modal="true" aria-labelledby="t8">
+            <div class="slip-top"><p class="slip-cap" id="t8">อัปโหลด Product Master</p>${BTN_X}</div>
+            <div class="slip-body">
+              <p class="pop-msg">${MSG}</p>
+              <div class="stamp-wrap"><span class="hit"></span><span class="stamp-mark">.XLSX</span></div>
+            </div>
+            <div class="slip-foot">${BTN_CANCEL}${BTN_PICK}</div>
+          </div>`);
+        await c.sleep(560);
+      },
+      close: c => closeBy(c, 200),
+    },
+    /* 9 */ {
+      n: 9, name: 'Sheet Grid', th: 'ตารางสเปรดชีตไล่คลื่นเข้ามา', level: 'ปานกลาง · มี JS ช่วยกรอบเลือก', timing: 'กดถึงนิ่ง ~0.8 วิ · ปิด 0.2 วิ',
+      desc: 'ไอคอนบนปุ่มเปลี่ยนจากลูกศรอัปโหลดเป็นตารางพร้อมแฟลชเขียว จากนั้นหน้าต่างสเปรดชีตเด้งขึ้น เซลล์ไล่โผล่เป็นคลื่นจากมุมซ้ายบน กรอบเลือกลากจาก A1 ไปคลุมเซลล์ที่มีข้อความ',
+      pros: 'หน้าตาบอกทันทีว่าเป็นไฟล์สเปรดชีต · สีเขียวแยกจาก popup อื่นให้เห็นชัด',
+      cons: 'โทนเขียวต่างจากธีมฟ้าของแอป · โค้ดเยอะที่สุด · ข้อความเป็นแค่ 1 เซลล์ในตาราง อาจอ่านช้ากว่าแบบอื่นนิดหน่อย',
+      press: async c => {
+        const ic = c.tgt.querySelector('svg');
+        c.parts.upload = ic.innerHTML;                                   // จำไอคอนอัปโหลดเดิมไว้คืนตอนปิด
+        ic.innerHTML = ICON_GRID;
+        c.tgt.classList.add('hit');
+        await c.sleep(100);
+      },
+      cleanup: c => { if (c.parts.upload) c.tgt.querySelector('svg').innerHTML = c.parts.upload; },
+      open: async c => {
+        const cols = ['A', 'B', 'C', 'D', 'E'];
+        let cells = '<i class="c corner"></i>' + cols.map((l, i) => `<i class="c ch" style="--i:${i + 1}">${l}</i>`).join('');
+        for (let r = 1; r <= 4; r++) {
+          cells += `<i class="c rh" style="--i:${r}">${r}</i>`;
+          for (let k = 1; k <= 5; k++) {
+            if (r >= 2 && r <= 3 && k >= 2 && k <= 4) continue;           // B2:D3 ถูกรวมเป็นเซลล์ข้อความ
+            cells += `<i class="c${r === 1 && k === 1 ? ' a1' : ''}" style="--i:${r + k}"></i>`;
+          }
+          if (r === 2) cells += `<div class="xl-msg"><span>${MSG}</span></div>`;
+        }
+        const ov = mount(c, `<div class="scrim"></div>
+          <div class="xl" role="dialog" aria-modal="true" aria-labelledby="t9">
+            <div class="xl-title">${ICON.grid}<span id="t9">อัปโหลด Product Master</span>${BTN_X}</div>
+            <div class="xl-fx"><span class="xl-fxb">fx</span><span class="xl-fxt">ใช้ไฟล์นามสกุล .xlsx</span></div>
+            <div class="xl-grid">${cells}<span class="xl-sel"></span></div>
+            <div class="xl-foot">${BTN_CANCEL}${BTN_PICK}</div>
+          </div>`);
+        // กรอบเลือกลากจากเซลล์ A1 ไปคลุมช่วงที่รวมไว้ (วัดด้วย offset* ซึ่งไม่ถูก transform ของ popup กระทบ)
+        const a1 = ov.querySelector('.a1'), msg = ov.querySelector('.xl-msg'), sel = ov.querySelector('.xl-sel');
+        const box = e => ({ left: e.offsetLeft + 'px', top: e.offsetTop + 'px', width: e.offsetWidth + 'px', height: e.offsetHeight + 'px' });
+        Object.assign(sel.style, box(a1));
+        sel.animate([
+          { ...box(a1), opacity: 0, offset: 0 },
+          { ...box(a1), opacity: 1, offset: .12 },
+          { ...box(msg), opacity: 1, offset: 1 },
+        ], { duration: ms(300), delay: ms(220), easing: 'cubic-bezier(.4,0,.2,1)', fill: 'both' });
+        await c.sleep(720);
+      },
+      close: c => closeBy(c, 200),
+    },
+    /* 10 */ {
+      n: 10, name: 'Scan', th: 'เลเซอร์สแกนเปิด popup', level: 'ทำง่าย · CSS เป็นหลัก', timing: 'กดถึงนิ่ง ~0.7 วิ · ปิด 0.18 วิ',
+      desc: 'เลเซอร์แดงกวาดผ่านปุ่มเหมือนเครื่องสแกนบาร์โค้ด แล้วเลเซอร์ลากลงมาเปิดเผย popup ทีละบรรทัดจากบนลงล่าง มุมกรอบ 4 มุมล็อกเป้าแล้วกะพริบเขียว',
+      pros: 'เล่าเรื่องเดียวกับธุรกิจ (บาร์โค้ด/ป้ายราคา) · โค้ดไม่ซับซ้อน',
+      cons: 'เลเซอร์สีแดงอยู่นอกพาเลตต์ฟ้าของแอป · ต้องรอเลเซอร์ไล่เปิดเผย ~0.5 วิ ก่อนอ่านข้อความครบ',
+      press: async c => { flash(c.tgt, 'beep', 340); addFx(c, 'laser'); await c.sleep(190); },
+      open: async c => {
+        mount(c, `<div class="scrim"></div>
+          <div class="scan">
+            <div class="sc-pop" role="dialog" aria-modal="true" aria-labelledby="t10">
+              <div class="sc-bar" aria-hidden="true"></div>
+              <div class="sc-body">${doc()}<div><p class="sc-cap" id="t10">อัปโหลด Product Master</p><p class="pop-msg">${MSG}</p></div></div>
+              <div class="sc-foot">${BTN_CANCEL}${BTN_PICK}</div>
+            </div>
+            <span class="beam"></span><i class="br br--tl"></i><i class="br br--tr"></i><i class="br br--bl"></i><i class="br br--bb"></i>
+          </div>`);
+        await c.sleep(520);
+      },
+      close: c => closeBy(c, 180),
+    },
+  ];
+
+  /* ───────────────────────── ประกอบหน้า ───────────────────────── */
+  const grid = document.getElementById('grid');
+  DESIGNS.forEach(cfg => {
+    const root = make(cardHtml(cfg));
+    grid.appendChild(root);
+    const ctx = {
+      cfg, root, stage: root.querySelector('.stage'), tgt: root.querySelector('[data-target]'),
+      ov: null, parts: {}, state: 'idle', tok: 0, wantClose: false, origin: null, outside: null, sleep: null, replayTimer: 0,
+    };
+    cards.push(ctx);
+    ctx.tgt.addEventListener('click', ev => {
+      if (ctx.state === 'idle') play(ctx, origin(ev, ctx));
+      else if (ctx.state === 'open' && cfg.toggle) requestClose(ctx);
+    });
+    root.querySelector('[data-replay]').addEventListener('click', () => {
+      reset(ctx);
+      clearTimeout(ctx.replayTimer);
+      ctx.tgt.classList.add('is-down');                                  // จำลองมือกดค้าง แล้วปล่อย
+      ctx.replayTimer = setTimeout(() => {
+        ctx.tgt.classList.remove('is-down');
+        if (ctx.state === 'idle') play(ctx, origin(null, ctx));
+      }, 130);
+    });
+  });
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') cards.forEach(requestClose);
+  });
+
+  const spdBtns = [...document.querySelectorAll('[data-spd]')];
+  spdBtns.forEach(b => b.addEventListener('click', () => {
+    SPD = Number(b.dataset.spd);
+    document.documentElement.style.setProperty('--spd', String(SPD));
+    spdBtns.forEach(x => x.setAttribute('aria-checked', String(x === b)));
+  }));
+
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    document.getElementById('rm-note').hidden = false;
+  }
+})();
+</script>
+</body>
+</html>

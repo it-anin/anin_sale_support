@@ -4,6 +4,7 @@ import { supabase } from './supabase';
 import { AnimatedLogoText } from './AnimatedLogo';
 import { PageNavRow, usePageNotifications } from './pageAccess';
 import { BRANCH_PROFILE_CODES, STORE_BRANCH_CODES, branchCodeLabel } from './auth';
+import { MasterUploadNotice, type ViewportRect } from './MasterUploadNotice';
 
 const ORDER_BRANCHES = ['SRC', 'KKL', 'SSS', 'SALE_ADMIN', 'Warehouse'] as const;
 /** ผู้ลงรายการ BackOrder — ต้องตรงกับ CHECK ของ ss_backorders.branch เป๊ะ ๆ
@@ -208,6 +209,13 @@ const MASTER_HEADER_MAP: [RegExp, string][] = [
   [/distributor[\s_]*name/i, 'distributor_name'],
   [/^distributor$/i,        'distributor'],
 ];
+
+/** ไฟล์ Product Master ต้องเป็น .xlsx เท่านั้น (ผู้ใช้สั่ง 2569-10-29 — ตรงกับข้อความใน popup "ใช้ไฟล์นามสกุล .xlsx")
+ *  เช็คจากนามสกุลท้ายชื่อไฟล์ ไม่สนตัวพิมพ์เล็ก/ใหญ่ (`.XLSX` ผ่าน)
+ *  ⚠️ จงใจไม่รวม .xls / .xlsm / .xlsb / .csv แม้ SheetJS จะอ่านได้ทั้งหมด
+ *  ⚠️ เช็คที่ handleMasterFile ด้วย ไม่ใช่แค่ `accept` ของ <input> — `accept` แค่กรองรายการในหน้าต่างเลือกไฟล์
+ *     ผู้ใช้เปลี่ยนเป็น "All files" แล้วเลือกไฟล์อื่นได้ */
+const MASTER_FILE_EXT = /\.xlsx$/i;
 
 interface SupplierRow {
   name: string;
@@ -1553,6 +1561,10 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
   const [masterSaving, setMasterSaving] = useState(false);
   const [masterSaveError, setMasterSaveError] = useState('');
   const [masterSavedAt, setMasterSavedAt] = useState<Date | null>(null);
+  // popup แจ้งนามสกุลไฟล์ก่อนเปิดหน้าต่างเลือกไฟล์ — null = ปิด · from = ตำแหน่งไอคอนบนปุ่มตอนกด (จุดเริ่มท่าไอคอนบิน)
+  const [masterNotice, setMasterNotice] = useState<{ from: ViewportRect | null } | null>(null);
+  const masterBtnIconRef = useRef<SVGSVGElement>(null);
+  const masterBtnRef = useRef<HTMLButtonElement>(null);
   // ปฏิทิน "อัปโหลดล่าสุด" — undefined = ยังโหลดไม่เสร็จ/อ่านตารางไม่ได้ (ไม่ render เลย) · null = ยังไม่เคยอัปโหลด
   const [lastMasterUpload, setLastMasterUpload] = useState<MasterUploadLog | null | undefined>(undefined);
   const [clockNow, setClockNow] = useState(() => Date.now());
@@ -2682,14 +2694,31 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
     }
   };
 
+  // กดปุ่ม "อัปโหลด Product Master" → เปิด popup แจ้งนามสกุลไฟล์ก่อน (เดิมเปิดหน้าต่างเลือกไฟล์ทันที)
+  // เก็บตำแหน่งไอคอนบนปุ่มตอนกดไว้ให้ popup ใช้เป็นจุดเริ่มของท่าไอคอนไฟล์บินลงกล่อง
+  // ปุ่ม [เลือกไฟล์] ใน popup ค่อยเรียก masterFileRef.click() (ดู MasterUploadNotice onPick) แล้วเข้า handleMasterFile ตามเดิม
+  const openMasterNotice = () => {
+    if (!isPurchasing || uploadingMaster) return;
+    const r = masterBtnIconRef.current?.getBoundingClientRect();
+    setMasterNotice({ from: r ? { left: r.left, top: r.top, width: r.width, height: r.height } : null });
+  };
+
   // อ่านไฟล์ Product_Master → จับคู่หัวคอลัมน์ → เทียบกับ product_master ปัจจุบัน → เปิด modal สรุปให้ดูก่อน
   // ยังไม่เขียนอะไรลง DB จนกว่าจะกดยืนยันใน modal (confirmMasterUpload)
   // merge ตาม SKU: SKU ที่ไม่อยู่ในไฟล์ไม่ถูกลบ · ⚠️ แต่ช่องที่ไฟล์เว้นว่างจะล้างค่าเดิมเป็นค่าว่าง (ส่ง null ไปทั้งคอลัมน์)
   const handleMasterFile = async (file: File) => {
     // กันชนชั้นที่สอง — ปุ่มซ่อนจากโปรไฟล์อื่นอยู่แล้ว (เฉพาะจัดซื้อ ผู้ใช้สั่ง 2569-10-12)
     if (!isPurchasing) return;
-    setUploadingMaster(true);
     setMasterMsg('');
+    // เช็คนามสกุลก่อนอ่านไฟล์ (ผู้ใช้สั่ง 2569-10-29) — ไม่ผ่าน = ไม่อ่านไฟล์ ไม่ query product_master ไม่เปิด modal
+    // ⚠️ ต้องเคลียร์ค่า input ก่อน return ด้วย (เหมือน finally ด้านล่าง) ไม่งั้นเลือกไฟล์เดิมซ้ำแล้ว onChange ไม่ยิง
+    //    ผู้ใช้จะกดแล้วเงียบ ไม่เห็นข้อความเตือนรอบสอง
+    if (!MASTER_FILE_EXT.test(file.name.trim())) {
+      setMasterMsg(`✕ ใช้ไฟล์นามสกุล .xlsx เท่านั้น — ไฟล์ที่เลือกคือ "${file.name}" (เปิดใน Excel แล้วบันทึกเป็น .xlsx ก่อน)`);
+      if (masterFileRef.current) masterFileRef.current.value = '';
+      return;
+    }
+    setUploadingMaster(true);
     try {
       const wb = XLSX.read(await file.arrayBuffer());
       const ws = wb.Sheets[wb.SheetNames[0]];
@@ -3598,11 +3627,18 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
                         — gate เดียวกับปุ่มอัปโหลด Supplier ใน sidebar · ซ่อนทั้ง input ไม่ใช่แค่ปุ่ม */}
                     {isPurchasing && (
                       <>
-                        <input ref={masterFileRef} type="file" accept=".xlsx,.xls" style={{ display: 'none' }}
+                        <input ref={masterFileRef} type="file" accept=".xlsx" style={{ display: 'none' }}
                           onChange={e => { const f = e.target.files?.[0]; if (f) handleMasterFile(f); }} />
-                        <button className="ss-add-btn ss-add-btn--secondary" disabled={uploadingMaster}
-                          onClick={() => masterFileRef.current?.click()}>
-                          {uploadingMaster ? 'กำลังตรวจไฟล์...' : '📤 อัปโหลด Product Master'}
+                        {/* ปุ่มกระเบื้องนูน (แบบที่ 2) — กดแล้วเปิด popup แจ้งนามสกุลไฟล์ แทนการเปิดหน้าต่างเลือกไฟล์ตรง ๆ
+                            ไอคอนเป็น SVG (ไม่ใช่อีโมจิ 📤) เพราะ popup ต้องวัดตำแหน่งไอคอนเป็นจุดเริ่มท่าบิน */}
+                        <button ref={masterBtnRef} type="button" className={`ss-tile-btn${masterNotice ? ' is-launch' : ''}`} disabled={uploadingMaster}
+                          aria-haspopup="dialog" aria-expanded={masterNotice !== null} onClick={openMasterNotice}>
+                          <svg ref={masterBtnIconRef} viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M12 15V4" />
+                            <path d="m7.5 8.5 4.5-4.5 4.5 4.5" />
+                            <path d="M4.5 15v3.2c0 .9.7 1.6 1.6 1.6h11.8c.9 0 1.6-.7 1.6-1.6V15" />
+                          </svg>
+                          <span>{uploadingMaster ? 'กำลังตรวจไฟล์...' : 'อัปโหลด Product Master'}</span>
                         </button>
                       </>
                     )}
@@ -4994,6 +5030,19 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
             </div>
           </div>
         </div>
+      )}
+
+      {/* popup แจ้งนามสกุลไฟล์ (ไอคอนไฟล์บินลงกล่อง) — render ตรงนี้ไม่ใช่ในแถบเครื่องมือ เพราะเป็น position: fixed
+          [เลือกไฟล์] → masterFileRef.click() ต้องเรียกแบบ sync ในตัว onPick (ดู MasterUploadNotice) ไม่งั้นเบราว์เซอร์บล็อก */}
+      {isPurchasing && masterNotice && (
+        <MasterUploadNotice
+          from={masterNotice.from}
+          onPick={() => masterFileRef.current?.click()}
+          onClose={() => {
+            setMasterNotice(null);
+            masterBtnRef.current?.focus({ preventScroll: true });   // คืนโฟกัสให้ปุ่มที่เปิด popup (คีย์บอร์ดไม่หลุดไปต้นหน้า)
+          }}
+        />
       )}
 
       {masterPreview && (

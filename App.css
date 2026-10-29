@@ -4732,6 +4732,168 @@ button.ss-mdiff-stat:not(:disabled):hover { background: #f5f9fd; }
 .ss-mupload--none .ss-mupload-day { color: #b6c3d1; }
 .ss-mupload--none .ss-mupload-bot { font-weight: 600; color: #8194a8; }
 
+/* ── ปุ่มกระเบื้องนูน (Tile Button) — แบบที่ 2 จาก public/product-master-popup-designs.html (2569-10-29) ──
+   ใช้กับ 3 ปุ่มของการอัปโหลด Product Master: ปุ่มในแถบเครื่องมือเมนู Products + [ยกเลิก] + [เลือกไฟล์] ใน popup
+   ตระกูลเดียวกับ .page-settings-unlock / .page-settings-close: ชี้แล้วยกขึ้น กดแล้วยุบลง 3 px
+   ⚠️ กฎ :hover ต้องอยู่ก่อนกฎ :active ทั้งหมด — 2 กฎนี้ specificity เท่ากัน ตอนกดค้าง (ชี้อยู่ด้วย) ตัวหลังต้องชนะ
+   ⚠️ ปุ่มสูงกว่ากรอบจริง 3 px (เงานูนใต้ปุ่ม) — แถวที่วางปุ่มนี้ต้องเผื่อที่ใต้ปุ่มเอง (ดู .ss-mnotice-actions) */
+.ss-tile-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 7px 16px;
+  border: 1px solid #e3ecf5;
+  border-radius: 11px;
+  background: #fff;
+  color: #2d6cad;
+  font-family: 'Noto Sans Thai', sans-serif;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.45;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: 0 3px 0 #cfe0f2, 0 4px 10px rgba(0, 0, 0, 0.08);
+  transition: transform 0.2s, box-shadow 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+.ss-tile-btn svg {
+  display: block;
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s;
+}
+/* popup เปิดอยู่: ลูกศรอัปโหลดบนปุ่มดีดขึ้นแล้วจาง (ไอคอนไฟล์บินออกจากปุ่มไปแล้ว) */
+.ss-tile-btn.is-launch svg { transform: translateY(-5px) scale(1.15); opacity: 0.25; }
+.ss-tile-btn:focus-visible { outline: 3px solid rgba(72, 145, 219, 0.5); outline-offset: 3px; }
+.ss-tile-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+/* ขนาดใหญ่ขึ้น (ปุ่มใน popup) */
+.ss-tile-btn--lg {
+  padding: 8px 18px;
+  border-radius: 12px;
+  font-size: 13px;
+  box-shadow: 0 3px 0 #cfe0f2;
+}
+/* ปุ่มหลัก (ฟ้าทึบ) */
+.ss-tile-btn--primary {
+  border-color: #3a7fc8;
+  background: #4891db;
+  color: #fff;
+  box-shadow: 0 3px 0 #2d6cad;
+}
+/* hover ทั้งหมดก่อน */
+.ss-tile-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 5px 0 #cfe0f2, 0 8px 14px rgba(0, 0, 0, 0.12); }
+.ss-tile-btn--lg:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 0 #cfe0f2; }
+.ss-tile-btn--primary:hover:not(:disabled) { box-shadow: 0 4px 0 #2d6cad; }
+/* active ทีหลังสุด — กดแล้วยุบลง 3 px เท่าความสูงของเงานูน (เงาหุบเหลือ 0 พอดี) · transition สั้นให้ตอบสนองทันที */
+.ss-tile-btn:active:not(:disabled),
+.ss-tile-btn--lg:active:not(:disabled),
+.ss-tile-btn--primary:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow: 0 0 0 transparent;
+  transition-duration: 0.08s;
+}
+
+/* ── popup แจ้งนามสกุลไฟล์ก่อนเลือกไฟล์ Product Master (2569-10-29) ──
+   ดีไซน์แบบที่ 7 "File Fly" จาก public/product-master-popup-designs.html — component: MasterUploadNotice.tsx
+   ลำดับ: ไอคอนไฟล์ Excel บินจากปุ่มลงช่องกลางการ์ด (WAAPI ใน component) → ลงช่อง (.is-landed) → ข้อความ + ปุ่มค่อยตามขึ้นมา
+   ⚠️ ไม่มี onClick ปิดที่ overlay โดยตั้งใจ — ปิดได้ด้วย [ยกเลิก] / Esc เท่านั้น (กฎเดียวกับ modal อื่นในแอป)
+   ⚠️ ระยะปิด 0.2 วิ ต้องเท่ากับ CLOSE_MS ใน MasterUploadNotice.tsx
+   ⚠️ ข้อความ + ปุ่ม (.ss-mnotice-after) ซ่อนไว้จนกว่าจะ .is-landed — ต้องปิด pointer-events ด้วย ไม่งั้นกดโดนปุ่มที่ยังมองไม่เห็น */
+.ss-mnotice-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  overflow: hidden;
+  font-family: 'Noto Sans Thai', sans-serif;
+  color: #1c3d5e;
+}
+.ss-mnotice-scrim { position: absolute; inset: 0; background: rgba(20, 35, 55, 0.46); }
+.ss-mnotice-overlay.is-open .ss-mnotice-scrim { animation: ssMnoticeScrimIn 0.26s ease-out both; }
+.ss-mnotice-overlay.is-closing .ss-mnotice-scrim { animation: ssMnoticeScrimOut 0.2s ease-in both; }
+@keyframes ssMnoticeScrimIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes ssMnoticeScrimOut { from { opacity: 1; } to { opacity: 0; } }
+.ss-mnotice {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: min(340px, 100%);
+  padding: 22px 20px 18px;
+  border-radius: 18px;
+  background: #fff;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(10, 26, 46, 0.34);
+}
+.ss-mnotice-overlay.is-open .ss-mnotice { animation: ssMnoticeIn 0.26s 0.06s cubic-bezier(0.22, 0.9, 0.36, 1) both; }
+.ss-mnotice-overlay.is-closing .ss-mnotice { animation: ssMnoticeOut 0.2s ease-in both; }
+@keyframes ssMnoticeIn { from { opacity: 0; transform: scale(0.93) translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes ssMnoticeOut { from { opacity: 1; transform: none; } to { opacity: 0; transform: scale(0.94); } }
+/* ช่องรับไอคอน: วงเส้นประรออยู่ก่อน พอไอคอนลงช่องกลายเป็นวงเขียวทึบ + คลื่นกระเพื่อม */
+.ss-mnotice-slot { position: relative; display: grid; place-items: center; width: 68px; height: 68px; margin-bottom: 6px; }
+.ss-mnotice-ring { position: absolute; inset: 0; border: 2px dashed #9fc5e9; border-radius: 50%; }
+.ss-mnotice-slot-doc { display: block; opacity: 0; }
+.ss-mnotice-slot-doc .ss-doc { width: 38px; height: 44px; }
+.ss-mnotice-slot.is-landed .ss-mnotice-slot-doc { opacity: 1; animation: ssMnoticeLand 0.36s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.ss-mnotice-slot.is-landed .ss-mnotice-ring { border-style: solid; border-color: #bfe3c9; animation: ssMnoticeBurst 0.5s ease-out; }
+@keyframes ssMnoticeLand { from { transform: scale(1.3); } to { transform: none; } }
+@keyframes ssMnoticeBurst { 0% { box-shadow: 0 0 0 0 rgba(46, 158, 98, 0.45); } 100% { box-shadow: 0 0 0 16px rgba(46, 158, 98, 0); } }
+/* ไอคอนที่กำลังบิน — ตำแหน่ง/ขนาดเริ่มต้นตั้งจาก component (inline) แล้ว WAAPI ขยับต่อ */
+.ss-mnotice-fly { position: absolute; left: 0; top: 0; z-index: 8; pointer-events: none; will-change: transform; filter: drop-shadow(0 6px 7px rgba(10, 26, 46, 0.28)); }
+.ss-mnotice-fly .ss-doc { width: 100%; height: 100%; }
+.ss-mnotice-overlay.is-closing .ss-mnotice-fly { opacity: 0; transition: opacity 0.1s; }
+/* ไอคอนไฟล์ xlsx — สีเขียวประจำไฟล์สเปรดชีต */
+.ss-doc { display: block; flex-shrink: 0; }
+.ss-doc-body { fill: #2e9e62; }
+.ss-doc-fold { fill: #1d7a49; }
+.ss-doc-line { stroke: #fff; }
+.ss-mnotice-cap { margin: 0; font-size: 12px; font-weight: 600; color: #8194a8; }
+.ss-mnotice-msg { margin: 0; font-size: 17px; font-weight: 700; line-height: 1.6; }
+.ss-mnotice-ext {
+  display: inline-block;
+  padding: 0 9px;
+  border-radius: 7px;
+  background: #eaf3fc;
+  color: #2d6cad;
+  font-family: 'Outfit', 'Noto Sans Thai', sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  line-height: 1.35;
+}
+/* padding-bottom 3px เผื่อเงานูนใต้ปุ่ม .ss-tile-btn */
+.ss-mnotice-actions { display: flex; gap: 10px; margin-top: 12px; padding-bottom: 3px; }
+.ss-mnotice-after { opacity: 0; pointer-events: none; }
+.ss-mnotice-overlay.is-landed .ss-mnotice-after {
+  opacity: 1;
+  pointer-events: auto;
+  animation: ssMnoticeRise 0.3s calc(var(--i) * 0.06s) cubic-bezier(0.22, 0.9, 0.36, 1) both;
+}
+@keyframes ssMnoticeRise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+/* ผู้ใช้ตั้งค่าลดการเคลื่อนไหว: ไม่บิน ไม่เด้ง เหลือแค่เฟดเข้า-ออก (component ข้ามท่าบินเองด้วย) */
+@media (prefers-reduced-motion: reduce) {
+  .ss-mnotice-overlay.is-open .ss-mnotice { animation: ssMnoticeFade 0.18s ease-out both; }
+  .ss-mnotice-overlay.is-closing .ss-mnotice { animation: ssMnoticeFadeOut 0.18s ease-in both; }
+  .ss-mnotice-overlay.is-landed .ss-mnotice-after { animation: none; }
+  .ss-mnotice-slot.is-landed .ss-mnotice-slot-doc,
+  .ss-mnotice-slot.is-landed .ss-mnotice-ring { animation: none; }
+  .ss-tile-btn,
+  .ss-tile-btn svg { transition: none; }
+  @keyframes ssMnoticeFade { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes ssMnoticeFadeOut { from { opacity: 1; } to { opacity: 0; } }
+}
+
 /* ฟอร์ม New Order */
 .dl-modal--new-order { max-width: 820px; }
 
