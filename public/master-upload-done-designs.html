@@ -1,0 +1,1100 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Popup อัปโหลดเสร็จสิ้น Product Master</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap">
+<style>
+  /* โทนของหน้าแกลเลอรีเปลี่ยนตามธีมผู้ดู · ฉากจำลอง (.stage) ข้างในใช้สีจริงของแอปตายตัว เพราะแอปมีแต่ธีมสว่าง
+     ทุกความเร็วของแอนิเมชันคูณด้วย --spd (ปุ่ม "ความเร็ว" ด้านบน) เพื่อให้ดูแบบสโลว์โมชันได้
+     สถานะของ popup คุมด้วยแอตทริบิวต์ data-st บน .ov (notice → uploading → done) — ภาพตอนนิ่งของแต่ละสถานะเขียนเป็นสไตล์ปกติ
+     ส่วนท่าเข้าใช้ keyframe + fill "backwards" (ไม่พึ่ง fill ค้างท้ายท่า — บทเรียนจาก MasterUploadNotice: ของที่มองเห็นอยู่ต้องไม่หายวูบตอนปิด) */
+  :root {
+    --bg: #eef2f6;
+    --surface: #ffffff;
+    --ink: #1f2b37;
+    --muted: #5c6b7a;
+    --line: #d9e3ec;
+    --accent: #2d6cad;
+    --accent-ink: #ffffff;
+    --accent-soft: #e3eef9;
+    --good: #1d7a4a;
+    --note: #7a5200;
+    --note-bg: #fff6e0;
+    --note-line: #efd9a4;
+    --spd: 1;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #0f161e;
+      --surface: #17212b;
+      --ink: #e4ebf2;
+      --muted: #98a8b8;
+      --line: #273442;
+      --accent: #7db4ea;
+      --accent-ink: #0f161e;
+      --accent-soft: #1d2b3a;
+      --good: #6fcf97;
+      --note: #e9c46a;
+      --note-bg: #2a2412;
+      --note-line: #4a3f1d;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0f161e;
+    --surface: #17212b;
+    --ink: #e4ebf2;
+    --muted: #98a8b8;
+    --line: #273442;
+    --accent: #7db4ea;
+    --accent-ink: #0f161e;
+    --accent-soft: #1d2b3a;
+    --good: #6fcf97;
+    --note: #e9c46a;
+    --note-bg: #2a2412;
+    --note-line: #4a3f1d;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Noto Sans Thai', 'Sarabun', system-ui, sans-serif;
+    padding-block: 28px 72px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  .wrap { max-width: 1240px; margin: 0 auto; }
+
+  /* ───────── หัวหน้า ───────── */
+  .page-head { display: grid; gap: 10px; margin-bottom: 26px; max-width: 880px; }
+  .eyebrow {
+    margin: 0; color: var(--accent);
+    font: 600 12px/1.4 'Outfit', 'Noto Sans Thai', sans-serif; letter-spacing: .08em; text-transform: uppercase;
+  }
+  .page-head h1 { margin: 0; font-size: clamp(22px, 2.6vw, 30px); line-height: 1.35; font-weight: 700; text-wrap: balance; }
+  .lede { margin: 0; font-size: 14.5px; line-height: 1.8; color: var(--muted); max-width: 74ch; }
+  .lede b { color: var(--ink); font-weight: 600; }
+  .controls { display: grid; justify-items: start; gap: 8px; margin-top: 6px; }
+  .seg {
+    display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px; width: fit-content; max-width: 100%;
+    padding: 4px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line);
+  }
+  .seg-label { padding: 0 8px 0 6px; font-size: 12.5px; color: var(--muted); }
+  .seg button {
+    padding: 7px 14px; border: 0; border-radius: 9px; background: transparent; color: var(--ink);
+    font: 500 13.5px 'Noto Sans Thai', sans-serif; cursor: pointer;
+  }
+  .seg button:hover { background: var(--accent-soft); }
+  .seg button[aria-checked="true"] { background: var(--accent); color: var(--accent-ink); }
+  .seg button:focus-visible, .replay:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .note {
+    margin: 4px 0 0; padding: 10px 14px; border-radius: 10px; max-width: 74ch;
+    background: var(--note-bg); border: 1px solid var(--note-line); color: var(--note); font-size: 13px; line-height: 1.75;
+  }
+  .note b { font-weight: 700; }
+  .note--info { background: var(--accent-soft); border-color: var(--line); color: var(--ink); }
+
+  /* ───────── การ์ดแต่ละแบบ ───────── */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 520px), 1fr)); gap: 22px; }
+  .card { display: flex; flex-direction: column; min-width: 0; overflow: hidden; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; }
+  .card-head { display: grid; gap: 7px; padding: 14px 18px 13px; }
+  .card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  .card-title { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 3px 9px; font-size: 16px; font-weight: 700; line-height: 1.5; min-width: 0; }
+  .card-title small { font-size: 12.5px; font-weight: 500; color: var(--muted); }
+  .num {
+    display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+    width: 26px; height: 26px; border-radius: 8px; background: #2d6cad; color: #fff;
+    font: 700 13px 'Outfit', sans-serif; font-variant-numeric: tabular-nums;
+  }
+  .replay {
+    flex-shrink: 0; padding: 6px 12px; border: 1px solid var(--line); border-radius: 9px; background: transparent;
+    color: var(--accent); font: 600 12.5px 'Noto Sans Thai', sans-serif; cursor: pointer;
+  }
+  .replay:hover { background: var(--accent-soft); }
+  .card-desc { margin: 0; padding-left: 35px; font-size: 13px; line-height: 1.75; color: var(--muted); }
+  .card-meta { margin: 0; padding-left: 35px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 12px; color: var(--muted); }
+  .chip { padding: 1px 9px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .card-foot { display: grid; gap: 3px; padding: 12px 18px 15px; font-size: 12.5px; line-height: 1.7; color: var(--muted); }
+  .card-foot p { margin: 0; padding-left: 56px; text-indent: -56px; }
+  .card-foot b { display: inline-block; width: 50px; margin-right: 6px; text-indent: 0; font-weight: 600; color: var(--ink); }
+  .card-foot .pro b { color: var(--good); }
+  .card-foot .con b { color: var(--note); }
+  .footer-note { margin: 34px 0 0; text-align: center; font-size: 14px; line-height: 1.8; color: var(--muted); }
+  .footer-note b { color: var(--accent); font-weight: 600; }
+
+  /* ───────── ฉากจำลองหน้า SaleSupport (สีจริงของแอป) ───────── */
+  .stage {
+    position: relative; height: 470px; overflow: hidden; isolation: isolate; background: #fff;
+    border-block: 1px solid var(--line); font-family: 'Noto Sans Thai', 'Sarabun', sans-serif; color: #1c3d5e;
+  }
+  .mock { position: absolute; inset: 0; display: flex; flex-direction: column; }
+  .mock-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; padding: 10px 14px; min-height: 54px; border-bottom: 1px solid #e3e8ee; }
+  .mock-title { display: flex; align-items: baseline; gap: 8px; font-size: 13px; font-weight: 700; }
+  .mock-title small { font-size: 11px; font-weight: 500; color: #8194a8; }
+  .mock-btns { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+  .mock-new { padding: 7px 16px; border-radius: 10px; background: #4891db; color: #fff; font-size: 12.5px; font-weight: 600; line-height: 1.45; white-space: nowrap; }
+  /* แถบข้อความหลังอัปโหลดเสร็จ — สไตล์เดียวกับ .ss-panel-msg ในแอป (masterMsg) · โผล่หลังกด [ตกลง] เพื่อให้เห็นว่าตัวเลขสรุปยังอยู่บนหน้า */
+  .mock-msg { padding: 8px 16px; font-size: 12.5px; font-weight: 600; line-height: 1.6; color: #2e8b47; background: #f0f9f2; border-bottom: 1px solid #d8ecdc; }
+  .mock-msg[hidden] { display: none; }
+  .mock-msg.is-new { animation: rise .4s ease-out backwards; }
+  .mock-rows { padding: 2px 14px; }
+  .mock-row { display: grid; grid-template-columns: 70px 1fr 90px 54px; gap: 14px; align-items: center; height: 37px; border-bottom: 1px solid #eef2f6; }
+  .mock-row i { display: block; height: 8px; border-radius: 4px; background: #e6edf4; }
+  .mock-row--h i { height: 9px; background: #cddae8; }
+  /* ปุ่ม "อัปโหลด Product Master" — คลิกเพื่อเปิด popup ใบแรก (ใช้ไฟล์นามสกุล .xlsx) แล้วกด [เลือกไฟล์] เองได้ */
+  .tgt {
+    position: relative; display: inline-flex; align-items: center; gap: 7px; padding: 7px 16px;
+    border: 0; border-radius: 10px; background: #eaf3fc; color: #2d6cad;
+    font: 600 12.5px/1.45 'Noto Sans Thai', 'Sarabun', sans-serif; white-space: nowrap; cursor: pointer;
+    -webkit-tap-highlight-color: transparent; transition: background .15s;
+  }
+  .tgt:hover { background: #d8eafb; }
+  .tgt svg { width: 15px; height: 15px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+  .tgt:focus-visible { outline: 3px solid rgba(72, 145, 219, .55); outline-offset: 3px; }
+
+  /* ───────── popup กลาง (ค่าเดียวกับ .ss-mnotice ใน App.css — การ์ดในรูปที่ส่งมา) ───────── */
+  .ov {
+    --ink: #1c3d5e; --mut: #8194a8; --blue: #4891db; --blue-d: #2d6cad; --blue-l: #eaf3fc;
+    --grn: #2e9e62; --grn-d: #1d7a49; --grn-t: #2e8b47; --grn-bg: #e9f7ee; --grn-bd: #bfe3c9;
+    --amb: #b8791c; --amb-bg: #fdf4e6; --amb-bd: #f0d9a8;
+    --p: 0;
+    position: absolute; inset: 0; z-index: 5; display: flex; align-items: center; justify-content: center;
+    padding: 12px; overflow: hidden; font-family: 'Noto Sans Thai', 'Sarabun', sans-serif; color: var(--ink);
+  }
+  .scrim { position: absolute; inset: 0; background: rgba(20, 35, 55, .46); }
+  .ov.is-open .scrim { animation: scrimIn calc(.26s * var(--spd)) ease-out backwards; }
+  .ov.is-closing .scrim { animation: scrimOut calc(.2s * var(--spd)) ease-in both; }
+  @keyframes scrimIn { from { opacity: 0; } }
+  @keyframes scrimOut { to { opacity: 0; } }
+  .pop {
+    position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px;
+    width: min(340px, 100%); max-height: 100%; padding: 22px 20px 18px; overflow: hidden;
+    border-radius: 18px; background: #fff; text-align: center; box-shadow: 0 20px 60px rgba(10, 26, 46, .34);
+  }
+  .ov.is-open .pop { animation: popIn calc(.26s * var(--spd)) calc(.06s * var(--spd)) cubic-bezier(.22, .9, .36, 1) backwards; }
+  .ov.is-closing .pop { animation: popOut calc(.2s * var(--spd)) ease-in both; }
+  @keyframes popIn { from { opacity: 0; transform: scale(.93) translateY(8px); } }
+  @keyframes popOut { to { opacity: 0; transform: scale(.94); } }
+  @keyframes rise { from { opacity: 0; transform: translateY(8px); } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes draw { from { stroke-dashoffset: 1.1; } }
+  @keyframes burst { 0% { box-shadow: 0 0 0 0 rgba(46, 158, 98, .45); } 100% { box-shadow: 0 0 0 16px rgba(46, 158, 98, 0); } }
+
+  /* ส่วนที่แสดงเฉพาะบางสถานะ — data-s="notice" / "uploading done" ฯลฯ
+     วางซ้อนกันในช่องเดียวของ .stack (grid) เพื่อให้การ์ดไม่สูง/เตี้ยกระโดดเวลาข้อความสลับ
+     visibility เปลี่ยนทันทีตอน "แสดง" (ปุ่มโฟกัสได้ทันที) แต่หน่วงตอน "ซ่อน" ให้ opacity จางจบก่อน */
+  .stack { display: grid; justify-items: center; width: 100%; }
+  .stack > * { grid-area: 1 / 1; }
+  .ov [data-s] {
+    opacity: 0; visibility: hidden; transform: translateY(6px); pointer-events: none;
+    transition: opacity calc(.16s * var(--spd)) ease-in, transform calc(.16s * var(--spd)) ease-in, visibility 0s calc(.16s * var(--spd));
+  }
+  .ov[data-st="notice"] [data-s~="notice"],
+  .ov[data-st="uploading"] [data-s~="uploading"],
+  .ov[data-st="done"] [data-s~="done"] {
+    opacity: 1; visibility: visible; transform: none; pointer-events: auto;
+    transition: opacity calc(.28s * var(--spd)) calc(.12s * var(--spd)) ease-out,
+                transform calc(.3s * var(--spd)) calc(.12s * var(--spd)) cubic-bezier(.22, .9, .36, 1), visibility 0s;
+  }
+  /* ส่วนที่ขยาย/หุบตามสถานะ — data-x="uploading done" · margin-top:-4px หักช่อง gap ของ .pop ตอนหุบ */
+  /* visibility:hidden ตอนหุบ — ไม่งั้นปุ่ม/ลิงก์ในส่วนที่หุบ (เช่น "ดาวน์โหลดสรุป" ของแบบ 9) ยังกด Tab โฟกัสได้ทั้งที่มองไม่เห็น */
+  .xtra {
+    display: grid; grid-template-rows: 0fr; width: 100%; margin-top: -4px; visibility: hidden;
+    transition: grid-template-rows calc(.38s * var(--spd)) cubic-bezier(.22, .9, .36, 1), margin-top calc(.38s * var(--spd)) cubic-bezier(.22, .9, .36, 1),
+                visibility 0s calc(.38s * var(--spd));
+  }
+  .xin { min-height: 0; overflow: hidden; }
+  .ov[data-st="notice"] .xtra[data-x~="notice"],
+  .ov[data-st="uploading"] .xtra[data-x~="uploading"],
+  .ov[data-st="done"] .xtra[data-x~="done"] {
+    grid-template-rows: 1fr; margin-top: 0; visibility: visible;
+    transition: grid-template-rows calc(.38s * var(--spd)) cubic-bezier(.22, .9, .36, 1), margin-top calc(.38s * var(--spd)) cubic-bezier(.22, .9, .36, 1), visibility 0s;
+  }
+
+  .cap { margin: 0; font-size: 12px; font-weight: 600; color: var(--mut); }
+  .msg { margin: 0; font-size: 17px; font-weight: 700; line-height: 1.6; }
+  .ext {
+    display: inline-block; padding: 0 9px; border-radius: 7px; background: var(--blue-l); color: var(--blue-d);
+    font-family: 'Outfit', 'Noto Sans Thai', sans-serif; font-weight: 700; letter-spacing: .2px; line-height: 1.35;
+  }
+  /* บรรทัดเล็กที่เพิ่มใหม่ใช้เทาเข้มกว่า --mut (ที่ลอกจาก caption เดิม ความคมชัดแค่ ~3:1) — ข้อความอย่าง "อย่าปิดหน้านี้" ต้องอ่านออกชัด */
+  .hint { margin: 0; font-size: 11.5px; line-height: 1.7; color: #60748a; font-variant-numeric: tabular-nums; }
+  .hint b { color: var(--blue-d); font-weight: 700; }
+  .dots i { font-style: normal; opacity: .25; animation: dotBlink calc(1.2s * var(--spd)) infinite; }
+  .dots i:nth-child(2) { animation-delay: calc(.2s * var(--spd)); }
+  .dots i:nth-child(3) { animation-delay: calc(.4s * var(--spd)); }
+  @keyframes dotBlink { 0%, 60%, 100% { opacity: .25; } 30% { opacity: 1; } }
+
+  /* ไอคอนไฟล์ xlsx — ชุดเดียวกับ .ss-doc */
+  .doc { display: block; flex-shrink: 0; }
+  .doc-body { fill: #2e9e62; }
+  .doc-fold { fill: #1d7a49; }
+  .doc-line { stroke: #fff; }
+  /* เครื่องหมายถูกที่ "วาด" ได้ — pathLength=1 · เริ่ม 1.1 (ไม่ใช่ 1) กันจุดกลมโผล่ที่ต้นเส้นตอนปลายเส้นมน */
+  .chk { display: block; }
+  .chk path { fill: none; stroke: currentColor; stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1 2; stroke-dashoffset: 1.1; }
+  .file-doc { display: inline-flex; }
+
+  /* ช่องกลมของไอคอน — ขนาดเดียวกับ .ss-mnotice-slot (68px) · ring = วงเขียวอ่อนตอนนิ่ง */
+  .slot { position: relative; display: grid; place-items: center; flex-shrink: 0; width: 68px; height: 68px; margin-bottom: 6px; }
+  .slot .ring { position: absolute; inset: 0; border: 2px solid var(--grn-bd); border-radius: 50%; }
+  .slot .doc { width: 38px; height: 44px; }
+
+  /* ปุ่มกระเบื้องนูน — ค่าเดียวกับ .ss-tile-btn--lg / --primary ใน App.css */
+  .acts { margin-top: 12px; padding-bottom: 3px; }
+  .acts-row { display: flex; justify-content: center; gap: 10px; }
+  .pbtn {
+    position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 8px 18px;
+    border: 1px solid #e3ecf5; border-radius: 12px; background: #fff; color: #2d6cad;
+    font: 600 13px/1.45 'Noto Sans Thai', 'Sarabun', sans-serif; white-space: nowrap; cursor: pointer;
+    box-shadow: 0 3px 0 #cfe0f2; transition: transform .2s, box-shadow .2s; -webkit-tap-highlight-color: transparent;
+  }
+  .pbtn--primary { border-color: #3a7fc8; background: #4891db; color: #fff; box-shadow: 0 3px 0 #2d6cad; }
+  .pbtn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 0 #cfe0f2; }
+  .pbtn--primary:hover:not(:disabled) { box-shadow: 0 4px 0 #2d6cad; }
+  .pbtn:active:not(:disabled), .pbtn--primary:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 0 0 transparent; transition-duration: .08s; }
+  .pbtn:focus-visible { outline: 3px solid rgba(72, 145, 219, .5); outline-offset: 3px; }
+  .pbtn:disabled { opacity: .6; cursor: not-allowed; }
+  .pbtn .spin { width: 13px; height: 13px; border: 2px solid #cfe0f2; border-top-color: #4891db; border-radius: 50%; animation: spin calc(.8s * var(--spd)) linear infinite; }
+
+  /* ───────── แบบ 1 · Ring Check — วงแหวนวาดถูก ───────── */
+  .d1-ring { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  .d1-ring circle { fill: none; stroke-linecap: round; }
+  .d1-bg { stroke: var(--grn-bd); stroke-width: 2; transition: stroke calc(.3s * var(--spd)), stroke-width calc(.3s * var(--spd)), fill calc(.3s * var(--spd)); }
+  /* opacity 0 ตอนยังไม่อัปโหลด — เส้นยาว 0 ที่ปลายมนยังวาดเป็นจุดกลมเล็ก ๆ ที่ยอดวง (เจอตอนทดสอบ) */
+  .d1-arc {
+    stroke: var(--blue); stroke-width: 3; stroke-dasharray: 0 100; transform: rotate(-90deg); transform-origin: 34px 34px; opacity: 0;
+    transition: stroke-dasharray calc(.45s * var(--spd)) ease-out, stroke calc(.3s * var(--spd)), opacity calc(.2s * var(--spd));
+  }
+  .ov[data-st="uploading"] .d1-bg { stroke: #d9e8f6; stroke-width: 3; }
+  .ov[data-st="uploading"] .d1-arc { opacity: 1; stroke-dasharray: 26 74; animation: d1spin calc(.95s * var(--spd)) linear infinite; }
+  .ov[data-st="done"] .d1-bg { stroke: var(--grn); stroke-width: 3; fill: var(--grn-bg); }
+  .ov[data-st="done"] .d1-arc { opacity: 1; stroke: var(--grn); stroke-dasharray: 100 0; animation: d1spin calc(.95s * var(--spd)) linear infinite; animation-play-state: paused; }
+  @keyframes d1spin { to { transform: rotate(270deg); } }
+  .d1-doc { display: block; transition: transform calc(.3s * var(--spd)), opacity calc(.25s * var(--spd)); }
+  .ov[data-st="uploading"] .d1-doc { animation: d1bob calc(1.1s * var(--spd)) ease-in-out infinite; }
+  .ov[data-st="done"] .d1-doc { transform: scale(.35); opacity: 0; }
+  @keyframes d1bob { 50% { transform: translateY(-3px); } }
+  .d1-slot .chk { position: absolute; inset: 0; margin: auto; width: 34px; height: 34px; color: var(--grn); opacity: 0; }
+  .d1-slot .chk path { stroke-width: 3.4; }
+  .ov[data-st="done"] .d1-slot .chk { opacity: 1; }
+  .ov[data-st="done"] .d1-slot .chk path { stroke-dashoffset: 0; animation: draw calc(.42s * var(--spd)) calc(.3s * var(--spd)) cubic-bezier(.65, 0, .35, 1) backwards; }
+  .d1-slot::after { content: ''; position: absolute; inset: 0; border-radius: 50%; pointer-events: none; }
+  .ov[data-st="done"] .d1-slot::after { animation: burst calc(.6s * var(--spd)) calc(.36s * var(--spd)) ease-out backwards; }
+
+  /* ───────── แบบ 2 · File Badge — ไอคอนไฟล์ติดตราถูก ───────── */
+  .d2-docs { position: relative; display: block; width: 38px; height: 44px; }
+  .d2-docs > span { position: absolute; inset: 0; display: block; }
+  .d2-docs .doc { width: 100%; height: 100%; }
+  .d2-gray { opacity: 0; transition: opacity calc(.2s * var(--spd)); }
+  .d2-gray .doc-body { fill: #c8d3de; }
+  .d2-gray .doc-fold { fill: #a9b8c8; }
+  .d2-gray .doc-line { stroke: #f4f7fa; }
+  .d2-fill { clip-path: inset(0 0 0 0); transition: clip-path calc(.16s * var(--spd)) linear; }
+  .ov[data-st="uploading"] .d2-gray { opacity: 1; }
+  .ov[data-st="uploading"] .d2-fill { clip-path: inset(calc((1 - var(--p)) * 100%) 0 0 0); }
+  .ov[data-st="uploading"] .d2-ring { border-style: dashed; border-color: #9fc5e9; animation: spin calc(8s * var(--spd)) linear infinite; }
+  .d2-badge {
+    position: absolute; right: -3px; bottom: -3px; display: grid; place-items: center; width: 27px; height: 27px;
+    border: 2.5px solid #fff; border-radius: 50%; background: var(--grn); color: #fff; transform: scale(0);
+    transition: transform calc(.34s * var(--spd)) calc(.28s * var(--spd)) cubic-bezier(.34, 1.56, .64, 1);
+  }
+  .ov[data-st="done"] .d2-badge { transform: scale(1); }
+  .d2-badge .chk { width: 12px; height: 12px; }
+  .d2-badge .chk path { stroke-width: 3.8; stroke-dashoffset: 0; }
+  .d2-slot::after { content: ''; position: absolute; inset: 0; border-radius: 50%; pointer-events: none; }
+  .ov[data-st="done"] .d2-slot::after { animation: burst calc(.6s * var(--spd)) calc(.2s * var(--spd)) ease-out backwards; }
+  .file {
+    display: inline-flex; align-items: center; gap: 7px; max-width: 100%; margin: 6px 0 4px; padding: 4px 11px;
+    border-radius: 9px; background: #f3f7fb; font-size: 12px; font-weight: 600; color: var(--ink);
+  }
+  .file .doc { width: 12px; height: 14px; }
+  .file-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* ───────── แบบ 3 · Burst — วงเขียวทึบ + ฉลอง ───────── */
+  .d3-ring { transition: border-color calc(.3s * var(--spd)); }
+  .ov[data-st="uploading"] .d3-ring { border-color: #9fc5e9; animation: d3pulse calc(1s * var(--spd)) ease-in-out infinite; }
+  @keyframes d3pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); border-color: var(--blue); } }
+  .d3-doc { display: block; transition: transform calc(.3s * var(--spd)), opacity calc(.2s * var(--spd)); }
+  .ov[data-st="uploading"] .d3-doc { animation: d3pack calc(.7s * var(--spd)) ease-in-out infinite; }
+  @keyframes d3pack { 0%, 100% { transform: scale(.94) rotate(-3deg); } 50% { transform: scale(1.05) rotate(3deg); } }
+  .ov[data-st="done"] .d3-doc { opacity: 0; transform: scale(.4); }
+  .d3-disc {
+    position: absolute; inset: 0; display: grid; place-items: center; border-radius: 50%; background: var(--grn); color: #fff;
+    box-shadow: 0 6px 16px rgba(46, 158, 98, .35); transform: scale(0);
+    transition: transform calc(.46s * var(--spd)) calc(.08s * var(--spd)) cubic-bezier(.34, 1.7, .5, 1);
+  }
+  .ov[data-st="done"] .d3-disc { transform: scale(1); }
+  .d3-disc .chk { width: 36px; height: 36px; }
+  .d3-disc .chk path { stroke-width: 3.2; }
+  .ov[data-st="done"] .d3-disc .chk path { stroke-dashoffset: 0; animation: draw calc(.36s * var(--spd)) calc(.34s * var(--spd)) cubic-bezier(.65, 0, .35, 1) backwards; }
+  .d3-wave { position: absolute; inset: 0; border: 2px solid var(--grn); border-radius: 50%; opacity: 0; pointer-events: none; }
+  .ov[data-st="done"] .d3-wave { animation: d3wave calc(.8s * var(--spd)) calc(.18s * var(--spd)) ease-out; }
+  .ov[data-st="done"] .d3-wave--2 { animation-delay: calc(.34s * var(--spd)); }
+  @keyframes d3wave { 0% { opacity: .6; transform: scale(1); } 100% { opacity: 0; transform: scale(1.6); } }
+  .d3-parts i {
+    position: absolute; left: 50%; top: 50%; width: var(--s); height: var(--s); margin: calc(var(--s) / -2) 0 0 calc(var(--s) / -2);
+    border-radius: var(--r); background: var(--c); opacity: 0;
+  }
+  .ov[data-st="done"] .d3-parts i { animation: d3fly calc(.85s * var(--spd)) calc(.2s * var(--spd)) cubic-bezier(.12, .8, .3, 1); }
+  @keyframes d3fly {
+    0% { opacity: 0; transform: rotate(var(--a)) translateY(-34px) scale(.5) rotate(0deg); }
+    12% { opacity: 1; }
+    65% { opacity: 1; }
+    100% { opacity: 0; transform: rotate(var(--a)) translateY(calc(var(--d) * -1)) scale(1) rotate(260deg); }
+  }
+
+  /* ───────── แบบ 4 · Tick Ring — วงขีดไล่สี ───────── */
+  .d4-disc { position: absolute; inset: 9px; border-radius: 50%; background: #f1f6fb; opacity: 0; transition: opacity calc(.3s * var(--spd)), background calc(.4s * var(--spd)); }
+  .ov[data-st="uploading"] .d4-disc { opacity: 1; }
+  .ov[data-st="done"] .d4-disc { opacity: 1; background: var(--grn-bg); }
+  .d4-ring { transition: opacity calc(.25s * var(--spd)); }
+  .ov[data-st="uploading"] .d4-ring, .ov[data-st="done"] .d4-ring { opacity: 0; }
+  .d4-ticks { position: absolute; inset: 0; display: block; }
+  .d4-ticks i {
+    position: absolute; left: 50%; top: 50%; width: 3px; height: 8px; margin: -34px 0 0 -1.5px; border-radius: 2px;
+    background: #dbe8f5; opacity: 0; transform-origin: 50% 34px; transform: rotate(calc(var(--i) * 15deg));
+    transition: background calc(.16s * var(--spd)), opacity calc(.25s * var(--spd));
+  }
+  .ov[data-st="uploading"] .d4-ticks i { opacity: 1; }
+  .ov[data-st="uploading"] .d4-ticks i.on { background: var(--blue); }
+  .ov[data-st="done"] .d4-ticks i { opacity: 1; background: var(--grn); transition: background calc(.2s * var(--spd)) calc(var(--i) * 16ms * var(--spd)); }
+  .d4-doc { display: block; transition: transform calc(.3s * var(--spd)), opacity calc(.25s * var(--spd)); }
+  .ov[data-st="uploading"] .d4-doc, .ov[data-st="done"] .d4-doc { opacity: 0; transform: scale(.6); }
+  .d4-pct {
+    position: absolute; inset: 0; display: grid; place-items: center; font: 800 17px/1 'Outfit', 'Noto Sans Thai', sans-serif;
+    font-variant-numeric: tabular-nums; color: var(--blue-d); opacity: 0; transition: opacity calc(.25s * var(--spd));
+  }
+  .ov[data-st="uploading"] .d4-pct { opacity: 1; }
+  .d4-slot .chk { position: absolute; inset: 0; margin: auto; width: 32px; height: 32px; color: var(--grn); opacity: 0; }
+  .d4-slot .chk path { stroke-width: 3.4; }
+  .ov[data-st="done"] .d4-slot .chk { opacity: 1; }
+  .ov[data-st="done"] .d4-slot .chk path { stroke-dashoffset: 0; animation: draw calc(.4s * var(--spd)) calc(.55s * var(--spd)) cubic-bezier(.65, 0, .35, 1) backwards; }
+  .d4-slot::after { content: ''; position: absolute; inset: 0; border-radius: 50%; pointer-events: none; }
+  .ov[data-st="done"] .d4-slot::after { animation: burst calc(.6s * var(--spd)) calc(.7s * var(--spd)) ease-out backwards; }
+
+  /* ───────── แบบ 5 · Flip Coin — เหรียญพลิก ───────── */
+  .d5-slot { perspective: 520px; }
+  .d5-orbit {
+    position: absolute; inset: -7px; border: 2px dashed #9fc5e9; border-radius: 50%; opacity: 0;
+    transition: opacity calc(.3s * var(--spd));
+  }
+  .ov[data-st="uploading"] .d5-orbit { opacity: 1; animation: spin calc(5s * var(--spd)) linear infinite; }
+  .d5-coin {
+    position: relative; display: block; width: 100%; height: 100%; transform-style: preserve-3d;
+    transition: transform calc(.85s * var(--spd)) cubic-bezier(.5, 0, .3, 1.3);   /* ออกตัวช้า พลิกผ่านครึ่งทางเร็ว แล้วเด้งเกินนิดเดียวก่อนนิ่ง */
+  }
+  .ov[data-st="uploading"] .d5-coin { animation: d5bob calc(1.2s * var(--spd)) ease-in-out infinite; }
+  .ov[data-st="done"] .d5-coin { transform: translateY(0) rotateY(180deg); }
+  @keyframes d5bob { 0%, 100% { transform: translateY(0) rotateY(-14deg); } 50% { transform: translateY(-4px) rotateY(14deg); } }
+  .d5-face { position: absolute; inset: 0; display: grid; place-items: center; border-radius: 50%; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+  .d5-front { background: #fff; }
+  .d5-back { transform: rotateY(180deg); background: var(--grn); color: #fff; box-shadow: 0 6px 16px rgba(46, 158, 98, .35); }
+  .d5-back .chk { width: 36px; height: 36px; }
+  .d5-back .chk path { stroke-width: 3.2; }
+  .ov[data-st="done"] .d5-back .chk path { stroke-dashoffset: 0; animation: draw calc(.36s * var(--spd)) calc(.55s * var(--spd)) cubic-bezier(.65, 0, .35, 1) backwards; }
+  .d5-slot::after { content: ''; position: absolute; inset: 0; border-radius: 50%; pointer-events: none; }
+  .ov[data-st="done"] .d5-slot::after { animation: burst calc(.6s * var(--spd)) calc(.62s * var(--spd)) ease-out backwards; }
+
+  /* ───────── แบบ 6 · Stamp — ตราประทับสีเขียว ───────── */
+  .d6-bar { position: absolute; left: 0; right: 0; top: 0; height: 4px; background: #e3ecf5; opacity: 0; transition: opacity calc(.3s * var(--spd)) calc(.9s * var(--spd)); }
+  .d6-bar i { display: block; height: 100%; width: calc(var(--p) * 100%); background: linear-gradient(90deg, #4891db, #2d6cad); transition: width calc(.14s * var(--spd)) linear, background calc(.3s * var(--spd)); }
+  .ov[data-st="uploading"] .d6-bar { opacity: 1; transition-delay: 0s; }
+  .ov[data-st="done"] .d6-bar i { width: 100%; background: var(--grn); }
+  .d6-detail { position: relative; width: 100%; }
+  .d6-detail .xin { padding-right: 124px; text-align: left; }
+  .d6-detail dl { display: grid; margin: 6px 0 2px; }
+  .d6-detail dl > div { display: grid; grid-template-columns: 38px minmax(0, 1fr); gap: 6px; align-items: baseline; padding: 4px 0; border-bottom: 1px dotted #cdd9e5; }
+  .d6-detail dl > div:last-child { border-bottom: 0; }
+  .d6-detail dt { margin: 0; font-size: 11.5px; font-weight: 600; color: #60748a; }
+  .d6-detail dd { display: grid; min-width: 0; margin: 0; font: 600 12px/1.55 'Outfit', 'Noto Sans Thai', sans-serif; font-variant-numeric: tabular-nums; color: var(--ink); }
+  .d6-detail dd > * { grid-area: 1 / 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .d6-detail dd.wrap > * { white-space: normal; overflow-wrap: anywhere; }   /* เวลา: จอแคบให้ตกบรรทัดแทนการตัดด้วย … */
+  .d6-ph {
+    position: absolute; right: 0; top: 50%; width: 112px; height: 76px; border: 2px dashed #cfe0f2; border-radius: 10px;
+    transform: translateY(-50%) rotate(-9deg); opacity: 0; transition: opacity calc(.25s * var(--spd));
+  }
+  .ov[data-st="uploading"] .d6-ph { opacity: 1; }
+  .d6-stamp {
+    position: absolute; right: 0; top: 50%; width: 112px; padding: 4px 0 3px; border: 3px double var(--grn-t); border-radius: 10px;
+    color: var(--grn-t); text-align: center; line-height: 1.15; transform: translateY(-50%) rotate(-9deg); opacity: 0; pointer-events: none;
+  }
+  .d6-stamp b { display: block; font-size: 17px; font-weight: 800; letter-spacing: .3px; white-space: nowrap; }
+  .d6-sc { display: block; width: 26px; height: 26px; margin: 0 auto; fill: none; stroke: currentColor; stroke-width: 3.4; stroke-linecap: round; stroke-linejoin: round; }
+  .d6-stamp small { display: block; font: 700 9px/1.5 'Outfit', sans-serif; letter-spacing: .9px; }
+  .ov[data-st="done"] .d6-stamp { opacity: .94; animation: d6slam calc(.42s * var(--spd)) calc(.16s * var(--spd)) cubic-bezier(.2, .9, .3, 1.15) backwards; }
+  @keyframes d6slam { from { opacity: 0; transform: translateY(-50%) rotate(-26deg) scale(2.6); } 62% { opacity: 1; transform: translateY(-50%) rotate(-8deg) scale(.93); } }
+  .ov.d6[data-st="done"] .pop { animation: d6jolt calc(.22s * var(--spd)) calc(.5s * var(--spd)) ease-out; }
+  @keyframes d6jolt { 0%, 100% { transform: none; } 35% { transform: translateY(3px); } 65% { transform: translateY(-1px); } }
+
+  /* ───────── แบบ 7 · Header Band — แถบสี ฟ้า → เขียว ───────── */
+  .d7-pop { gap: 0; padding: 0 0 18px; }
+  .d7-band { position: relative; width: 100%; height: 96px; overflow: hidden; flex-shrink: 0; }
+  .d7-g { position: absolute; inset: 0; transition: opacity calc(.6s * var(--spd)); }
+  .d7-g--blue { background: linear-gradient(135deg, #5aa7ea, #2d6cad); }
+  .d7-g--green { background: linear-gradient(135deg, #3cc07a, #1d7a49); opacity: 0; }
+  .ov[data-st="done"] .d7-g--green { opacity: 1; }
+  .d7-bubbles i {
+    position: absolute; bottom: -30px; left: var(--x); width: var(--w); height: var(--w); border-radius: 50%;
+    background: rgba(255, 255, 255, .26); animation: d7rise calc(var(--t) * var(--spd)) linear infinite; animation-delay: calc(var(--dl) * var(--spd));
+  }
+  .ov[data-st="uploading"] .d7-bubbles i { animation-duration: calc(var(--t) * .55s * var(--spd)); }
+  @keyframes d7rise { 0% { transform: translateY(0) scale(.8); opacity: 0; } 15% { opacity: 1; } 100% { transform: translateY(-136px) scale(1.1); opacity: 0; } }
+  .d7-prog { position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: rgba(255, 255, 255, .22); opacity: 0; transition: opacity calc(.3s * var(--spd)); }
+  .d7-prog i { display: block; height: 100%; width: calc(var(--p) * 100%); background: #fff; transition: width calc(.14s * var(--spd)) linear; }
+  .ov[data-st="uploading"] .d7-prog { opacity: 1; }
+  .d7-badge {
+    position: relative; z-index: 1; display: grid; place-items: center; width: 68px; height: 68px; margin-top: -34px;
+    border-radius: 50%; background: #fff; box-shadow: 0 4px 14px rgba(10, 26, 46, .2);
+  }
+  .d7-badge .doc { width: 36px; height: 42px; }
+  .d7-doc { display: block; transition: transform calc(.2s * var(--spd)), opacity calc(.16s * var(--spd)); }
+  .ov[data-st="done"] .d7-doc { transform: scale(.4); opacity: 0; }
+  .d7-badge .chk { position: absolute; inset: 0; margin: auto; width: 36px; height: 36px; color: var(--grn); opacity: 0; }
+  .d7-badge .chk path { stroke-width: 3.4; }
+  .ov[data-st="done"] .d7-badge .chk { opacity: 1; }
+  .ov[data-st="done"] .d7-badge .chk path { stroke-dashoffset: 0; animation: draw calc(.4s * var(--spd)) calc(.22s * var(--spd)) cubic-bezier(.65, 0, .35, 1) backwards; }
+  .ov[data-st="done"] .d7-badge { animation: d7pop calc(.5s * var(--spd)) calc(.12s * var(--spd)) cubic-bezier(.34, 1.56, .64, 1) backwards; }
+  @keyframes d7pop { from { transform: scale(.55); } }
+  .d7-badge::after { content: ''; position: absolute; inset: 0; border-radius: 50%; pointer-events: none; }
+  .ov[data-st="done"] .d7-badge::after { animation: burst calc(.6s * var(--spd)) calc(.3s * var(--spd)) ease-out backwards; }
+  .d7-in { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 100%; padding: 6px 20px 0; }
+
+  /* ───────── แบบ 8 · Checklist — เช็กลิสต์ 3 ขั้น ───────── */
+  .d8-doc { display: block; transition: transform calc(.3s * var(--spd)), opacity calc(.25s * var(--spd)); }
+  .ov[data-st="done"] .d8-doc { transform: scale(.35); opacity: 0; }
+  .d8-slot .ring { transition: border-color calc(.3s * var(--spd)), background calc(.3s * var(--spd)); }
+  .ov[data-st="done"] .d8-slot .ring { border-color: var(--grn); background: var(--grn-bg); }
+  .d8-slot > .chk { position: absolute; inset: 0; margin: auto; width: 34px; height: 34px; color: var(--grn); opacity: 0; }
+  .d8-slot > .chk path { stroke-width: 3.4; }
+  .ov[data-st="done"] .d8-slot > .chk { opacity: 1; }
+  .ov[data-st="done"] .d8-slot > .chk path { stroke-dashoffset: 0; animation: draw calc(.42s * var(--spd)) calc(.3s * var(--spd)) cubic-bezier(.65, 0, .35, 1) backwards; }
+  .d8-slot::after { content: ''; position: absolute; inset: 0; border-radius: 50%; pointer-events: none; }
+  .ov[data-st="done"] .d8-slot::after { animation: burst calc(.6s * var(--spd)) calc(.36s * var(--spd)) ease-out backwards; }
+  .d8-steps {
+    display: grid; gap: 1px; width: 100%; margin: 6px 0 0; padding: 5px 12px; list-style: none; text-align: left;
+    background: #f6f9fc; border: 1px solid #e3ecf5; border-radius: 12px;
+  }
+  .d8-step { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 28px; }
+  .d8-st { position: relative; width: 20px; height: 20px; }
+  .d8-st::before { content: ''; position: absolute; inset: 3px; border: 2px solid #cfe0f2; border-radius: 50%; background: #fff; transition: opacity calc(.2s * var(--spd)); }
+  .d8-st .sp { position: absolute; inset: 1px; border: 2.5px solid #d9e8f6; border-top-color: var(--blue); border-radius: 50%; opacity: 0; animation: spin calc(.8s * var(--spd)) linear infinite; }
+  .d8-st .ok { position: absolute; inset: 0; display: grid; place-items: center; border-radius: 50%; background: var(--grn); color: #fff; transform: scale(0); transition: transform calc(.28s * var(--spd)) cubic-bezier(.34, 1.56, .64, 1); }
+  .d8-st .ok .chk { width: 12px; height: 12px; }
+  .d8-st .ok .chk path { stroke-width: 3.8; stroke-dashoffset: 0; }
+  .d8-step.is-active .sp { opacity: 1; }
+  .d8-step.is-active .d8-st::before, .d8-step.is-done .d8-st::before { opacity: 0; }
+  .d8-step.is-done .ok { transform: scale(1); }
+  .d8-tt { font-size: 13px; font-weight: 600; line-height: 1.5; color: #9bb0c4; transition: color calc(.2s * var(--spd)); }
+  .d8-step.is-active .d8-tt, .d8-step.is-done .d8-tt { color: var(--ink); }
+  .d8-sub { font-size: 11.5px; color: #60748a; font-variant-numeric: tabular-nums; opacity: 0; transition: opacity calc(.2s * var(--spd)); }
+  .d8-step.is-active .d8-sub, .d8-step.is-done .d8-sub { opacity: 1; }
+
+  /* ───────── แบบ 9 · Receipt Chips — ชิปสรุปย่อ ───────── */
+  .d9-doc { display: block; transition: transform calc(.3s * var(--spd)), opacity calc(.2s * var(--spd)); }
+  .ov[data-st="done"] .d9-doc { opacity: 0; transform: scale(.4); }
+  .d9-disc {
+    position: absolute; inset: 4px; display: grid; place-items: center; border-radius: 50%; background: var(--grn); color: #fff;
+    box-shadow: 0 5px 14px rgba(46, 158, 98, .32); transform: scale(0);
+    transition: transform calc(.5s * var(--spd)) calc(.06s * var(--spd)) cubic-bezier(.34, 1.7, .5, 1);
+  }
+  .ov[data-st="done"] .d9-disc { transform: scale(1); }
+  .d9-disc .chk { width: 32px; height: 32px; }
+  .d9-disc .chk path { stroke-width: 3.4; }
+  .ov[data-st="done"] .d9-disc .chk path { stroke-dashoffset: 0; animation: draw calc(.38s * var(--spd)) calc(.32s * var(--spd)) cubic-bezier(.65, 0, .35, 1) backwards; }
+  .d9-slot::after { content: ''; position: absolute; inset: 0; border-radius: 50%; pointer-events: none; }
+  .ov[data-st="done"] .d9-slot::after { animation: burst calc(.6s * var(--spd)) calc(.3s * var(--spd)) ease-out backwards; }
+  .d9-bar { height: 6px; margin: 8px 0 4px; overflow: hidden; border-radius: 99px; background: #e3ecf5; }
+  .d9-bar i { display: block; height: 100%; width: calc(var(--p) * 100%); border-radius: 99px; background: linear-gradient(90deg, #4891db, #2d6cad); transition: width calc(.14s * var(--spd)) linear; }
+  .d9-chips { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 8px 0 0; }
+  .d9-chip { display: grid; gap: 1px; padding: 8px 4px 7px; border: 1px solid var(--kbd); border-radius: 12px; background: var(--kbg); }
+  .d9-chip b { font: 800 19px/1.2 'Outfit', 'Noto Sans Thai', sans-serif; font-variant-numeric: tabular-nums; color: var(--k); }
+  .d9-chip span { font-size: 11px; font-weight: 600; line-height: 1.4; color: var(--k); }
+  .d9-chip--add { --k: #2e8b47; --kbg: #e9f7ee; --kbd: #bfe3c9; }
+  .d9-chip--chg { --k: #b8791c; --kbg: #fdf4e6; --kbd: #f0d9a8; }
+  .d9-chip--same { --k: #51657a; --kbg: #f3f7fb; --kbd: #dbe6f0; }
+  .d9-meta { margin: 8px 0 0; font-size: 11.5px; line-height: 1.6; color: #60748a; }
+  .d9-dl {
+    margin: 2px 0 0; padding: 3px 8px; border: 0; border-radius: 7px; background: transparent; color: var(--blue-d);
+    font: 600 12px/1.6 'Noto Sans Thai', 'Sarabun', sans-serif; cursor: pointer;
+  }
+  .d9-dl:hover { background: var(--blue-l); }
+  .d9-dl:focus-visible { outline: 3px solid rgba(72, 145, 219, .5); outline-offset: 1px; }
+
+  /* ───────── แบบ 10 · Cloud — ไฟล์ลอยขึ้นก้อนเมฆ ───────── */
+  .d10-big { display: block; transition: transform calc(.3s * var(--spd)), opacity calc(.22s * var(--spd)); }
+  .d10-slot .ring { transition: opacity calc(.25s * var(--spd)), transform calc(.3s * var(--spd)); }
+  .ov[data-st="uploading"] .d10-big, .ov[data-st="done"] .d10-big { opacity: 0; transform: scale(.5); }
+  .ov[data-st="uploading"] .d10-slot .ring, .ov[data-st="done"] .d10-slot .ring { opacity: 0; transform: scale(.7); }
+  /* viewBox ตัดชิดตัวก้อนเมฆ (x 4–58 · y 6–40) ไม่เว้นขอบเปล่า — ก้อนเมฆจะได้ใหญ่พอ ๆ กับวงของแบบอื่น */
+  .d10-cloud {
+    position: absolute; left: 50%; top: 50%; width: 76px; height: 48px; margin: -24px 0 0 -38px; overflow: visible;
+    opacity: 0; transform: scale(.7); transition: opacity calc(.3s * var(--spd)), transform calc(.4s * var(--spd)) cubic-bezier(.34, 1.56, .64, 1);
+  }
+  .ov[data-st="uploading"] .d10-cloud, .ov[data-st="done"] .d10-cloud { opacity: 1; transform: none; }
+  .d10-shape { fill: transparent; stroke: #9fc5e9; stroke-width: 1.8; stroke-linejoin: round; transition: fill calc(.4s * var(--spd)), stroke calc(.3s * var(--spd)); }
+  .ov[data-st="uploading"] .d10-shape { stroke: var(--blue); stroke-dasharray: 3 2.6; animation: d10dash calc(.8s * var(--spd)) linear infinite; }
+  .ov[data-st="done"] .d10-shape { stroke: var(--grn); fill: var(--grn-bg); }
+  @keyframes d10dash { to { stroke-dashoffset: -5.6; } }
+  .d10-chk { fill: none; stroke: var(--grn); stroke-width: 2.3; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1 2; stroke-dashoffset: 1.1; opacity: 0; }
+  .ov[data-st="done"] .d10-chk { opacity: 1; stroke-dashoffset: 0; animation: draw calc(.4s * var(--spd)) calc(.34s * var(--spd)) cubic-bezier(.65, 0, .35, 1) backwards; }
+  .ov[data-st="done"] .d10-cloud { animation: d10bounce calc(.6s * var(--spd)) calc(.12s * var(--spd)) ease-out; }
+  @keyframes d10bounce {
+    0% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(46, 158, 98, 0)); }
+    35% { transform: scale(1.13); filter: drop-shadow(0 0 9px rgba(46, 158, 98, .55)); }
+    100% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(46, 158, 98, 0)); }
+  }
+  .d10-up { position: absolute; left: 50%; top: 50%; width: 21px; height: 25px; margin: -12.5px 0 0 -10.5px; opacity: 0; }
+  .d10-up .doc { width: 100%; height: 100%; }
+  .ov[data-st="uploading"] .d10-up { animation: d10rise calc(1.15s * var(--spd)) cubic-bezier(.4, 0, .4, 1) infinite; }
+  @keyframes d10rise {
+    0% { opacity: 0; transform: translateY(26px) scale(1.1); }
+    18% { opacity: 1; }
+    70% { opacity: 1; transform: translateY(0) scale(.7); }
+    100% { opacity: 0; transform: translateY(-6px) scale(.4); }
+  }
+
+  @media (max-width: 480px) {
+    .card-head, .card-foot { padding-left: 14px; padding-right: 14px; }
+    .card-desc, .card-meta { padding-left: 0; }
+    .stage { height: 500px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="page-head">
+    <p class="eyebrow">SaleSupport · เมนู Products</p>
+    <h1>Popup <span style="white-space:nowrap">อัปโหลดเสร็จสิ้น</span> — Product Master</h1>
+    <p class="lede">เดิมเลือกไฟล์ Product Master แล้วจะขึ้นหน้าต่าง <b>“📤 สรุปการเปลี่ยนแปลง Product Master”</b> ใบใหญ่ให้ตรวจแล้วกดยืนยัน · แบบใหม่<b>เอาหน้าต่างนั้นออก</b> แล้วใช้ popup ใบเล็กใบเดียวกับตอนกดปุ่ม (“ใช้ไฟล์นามสกุล .xlsx”) ทำงานต่อจนจบในใบเดียว: <b>เลือกไฟล์ → กำลังอัปโหลด → อัปโหลดเสร็จสิ้น ✓ สีเขียว</b> · 10 แบบนี้ต่างกันที่ตัวเครื่องหมายถูก ท่าเคลื่อนไหว และข้อมูลที่โชว์ ส่วนการ์ด ขนาด และปุ่มกระเบื้องนูนเหมือนของเดิมทุกแบบ · เล่นเองเมื่อเลื่อนการ์ดเข้าจอ กด “▶ เล่นซ้ำ” เพื่อดูใหม่ หรือกดปุ่ม “อัปโหลด Product Master” ในการ์ดแล้วกด [เลือกไฟล์] เอง</p>
+    <div class="controls">
+      <div class="seg" role="radiogroup" aria-label="ตัวอย่างไฟล์">
+        <span class="seg-label">ตัวอย่างไฟล์</span>
+        <button type="button" role="radio" aria-checked="true" data-sc="real">ไฟล์จริง 3,736 SKU</button>
+        <button type="button" role="radio" aria-checked="false" data-sc="same">ไม่มีอะไรเปลี่ยน</button>
+        <button type="button" role="radio" aria-checked="false" data-sc="small">ไฟล์เล็ก 24 SKU · ชื่อยาว</button>
+      </div>
+      <div class="seg" role="radiogroup" aria-label="โหมดดู">
+        <span class="seg-label">โหมดดู</span>
+        <button type="button" role="radio" aria-checked="true" data-mode="full">เล่นทั้งขั้นตอน</button>
+        <button type="button" role="radio" aria-checked="false" data-mode="result">ข้ามไปตอนเสร็จ</button>
+      </div>
+      <div class="seg" role="radiogroup" aria-label="ความเร็วแอนิเมชัน">
+        <span class="seg-label">ความเร็ว</span>
+        <button type="button" role="radio" aria-checked="true" data-spd="1">ปกติ</button>
+        <button type="button" role="radio" aria-checked="false" data-spd="2">ช้า ×2</button>
+        <button type="button" role="radio" aria-checked="false" data-spd="4">ช้ามาก ×4</button>
+      </div>
+    </div>
+    <p class="note"><b>สิ่งที่หายไปพร้อมหน้าต่างสรุปใบใหญ่:</b> (1) <b>ขั้นยืนยัน</b> — เดิมต้องกด “ยืนยันอัปโหลด” ก่อนระบบเขียนข้อมูล แบบนี้ระบบจะเขียนทันทีหลังเลือกไฟล์ (ช่องที่ไฟล์เว้นว่างจะล้างค่าเดิมในระบบเลย โดยไม่มีหน้าให้ดูก่อน) · (2) ปุ่ม <b>ดาวน์โหลดสรุป (Excel)</b> · ที่ยังอยู่เหมือนเดิม: ด่านตรวจนามสกุล .xlsx / หัวคอลัมน์ · แถบข้อความสีเขียวบนหน้า (“✓ อัปเดต Product Master แล้ว — SKU ใหม่ … เปลี่ยนแปลง …” โผล่หลังกด [ตกลง] ดูในการ์ดได้) · ปฏิทินเวลาอัปโหลดล่าสุด · <b>แบบ 9</b> เก็บตัวเลขสรุปย่อกับลิงก์ดาวน์โหลดไว้ใน popup เผื่ออยากได้</p>
+    <p class="note note--info">ตัวเลขในตัวอย่างเป็นข้อมูลสมมติ (อิงไฟล์จริง 3,736 แถว) · ท่าไอคอนไฟล์บินจากปุ่มลงช่อง (ขั้นแรก) ไม่ได้จำลองในแกลเลอรีนี้ — ในแอปจริงยังเหมือนเดิม · ระหว่าง “กำลังอัปโหลด” ปิด popup ไม่ได้ (Esc / ปุ่มปิดไม่ทำงาน) เหมือนกฎของหน้าต่างเดิมที่ปิดไม่ได้ระหว่างบันทึก · กรณีอัปโหลดไม่สำเร็จจะใช้การ์ดใบเดียวกันแต่เป็นตรา ✕ สีแดง (ชุดเดียวกับ popup “ไฟล์ถูกดีดกลับ”) — ยังไม่ได้ทำเป็นแบบให้เลือก</p>
+    <p class="note" id="rm-note" hidden>เครื่องนี้ตั้งค่า “ลดการเคลื่อนไหว” ไว้ แต่แกลเลอรีนี้ยังเล่นแอนิเมชันตอนเปิด popup เพราะเป็นตัวอย่างให้ดูท่าเคลื่อนไหว · ตอนใส่ในแอปจริงจะมีโหมดลดการเคลื่อนไหวเป็นเฟดเฉย ๆ</p>
+  </header>
+
+  <main class="grid" id="grid"></main>
+
+  <p class="footer-note">ชอบแบบไหนบอกเลขได้เลย เช่น <b>“เอาแบบ 3”</b> · ผสมกันได้ เช่น ตัวเครื่องหมายถูกแบบ 1 + ชื่อไฟล์แบบ 2 · แล้วผมจะต่อเข้ากับปุ่มอัปโหลด Product Master จริง (เอาหน้าต่างสรุปเดิมออก ใช้ popup ใบเดียวจบ)</p>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  /* ───────────────────────── ข้อมูลตัวอย่าง ───────────────────────── */
+  const SCENARIOS = {
+    real:  { total: 3736, add: 5, chg: 344, same: 3387, file: 'Product_Master_1.xlsx' },
+    same:  { total: 3736, add: 0, chg: 0, same: 3736, file: 'Product_Master_1.xlsx' },
+    small: { total: 24, add: 2, chg: 3, same: 19, file: 'Product Master สาขาแยกชากค้อ รอบเดือนตุลาคม 2569 (แก้ไขล่าสุด).xlsx' },
+  };
+  const fmt = n => Number(n).toLocaleString('th-TH');
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const two = n => String(n).padStart(2, '0');
+
+  function buildModel(key) {
+    const now = new Date();
+    const date = now.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' });
+    return { ...SCENARIOS[key], time: date + ' ' + two(now.getHours()) + ':' + two(now.getMinutes()) + ' น.' };
+  }
+
+  /* ───────────────────────── ตัวช่วยสร้าง HTML ───────────────────────── */
+  const make = s => { const t = document.createElement('template'); t.innerHTML = s.trim(); return t.content.firstElementChild; };
+  const svg = d => '<svg viewBox="0 0 24 24" aria-hidden="true">' + d + '</svg>';
+  const UPLOAD = svg('<path d="M12 15V4"/><path d="m7.5 8.5 4.5-4.5 4.5 4.5"/><path d="M4.5 15v3.2c0 .9.7 1.6 1.6 1.6h11.8c.9 0 1.6-.7 1.6-1.6V15"/>');
+  /* ไอคอนไฟล์ xlsx — สีคุมด้วย CSS (.doc-body / .doc-fold / .doc-line) · ชุดเดียวกับ popup .xlsx */
+  const DOC = '<svg class="doc" viewBox="0 0 48 56" aria-hidden="true">'
+    + '<path class="doc-body" d="M7 4a4 4 0 0 1 4-4h18l12 12v40a4 4 0 0 1-4 4H11a4 4 0 0 1-4-4z"/>'
+    + '<path class="doc-fold" d="M29 0l12 12h-8a4 4 0 0 1-4-4z"/>'
+    + '<g class="doc-line" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="14" y="24" width="20" height="20" rx="2.5"/><path d="M14 31h20M14 37.5h20M24 24v20"/></g>'
+    + '</svg>';
+  const CHK = '<svg class="chk" viewBox="0 0 24 24" aria-hidden="true"><path pathLength="1" d="m5 12.5 4.5 4.5L19 7.5"/></svg>';
+
+  const CAP = n => '<p class="cap" id="t-' + n + '">อัปโหลด Product Master</p>';
+  /* ข้อความหลัก 3 สถานะ — วางซ้อนในช่องเดียว การ์ดจึงไม่สูงเตี้ยตามข้อความ */
+  const MSG = '<div class="stack" role="status" aria-live="polite">'
+    + '<p class="msg" data-s="notice">ใช้ไฟล์นามสกุล <span class="ext">.xlsx</span></p>'
+    + '<p class="msg" data-s="uploading">กำลังอัปโหลด<span class="dots" aria-hidden="true"><i>.</i><i>.</i><i>.</i></span></p>'
+    + '<p class="msg" data-s="done">อัปโหลดเสร็จสิ้น</p>'
+    + '</div>';
+  const ACTS = '<div class="acts stack">'
+    + '<div class="acts-row" data-s="notice"><button type="button" class="pbtn" data-act="close">ยกเลิก</button><button type="button" class="pbtn pbtn--primary" data-act="pick" data-focus="notice">เลือกไฟล์</button></div>'
+    + '<div class="acts-row" data-s="uploading"><button type="button" class="pbtn" disabled><span class="spin" aria-hidden="true"></span>กำลังอัปโหลด…</button></div>'
+    + '<div class="acts-row" data-s="done"><button type="button" class="pbtn pbtn--primary" data-act="close" data-focus="done">ตกลง</button></div>'
+    + '</div>';
+  /* บรรทัดเล็กใต้ข้อความหลัก — ขยายออกตอนเริ่มอัปโหลด (ตอนยังไม่เลือกไฟล์การ์ดเตี้ยเท่าของเดิม) */
+  const HINT = (up, done) => '<div class="xtra" data-x="uploading done"><div class="xin"><div class="stack">'
+    + '<p class="hint" data-s="uploading">' + up + '</p><p class="hint" data-s="done">' + done + '</p></div></div></div>';
+  const COUNT = '<b data-count>0</b> / <span data-total></span> SKU';
+  const shell = (n, inner, extra) => '<div class="pop d' + n + '-pop" role="dialog" aria-modal="true" aria-labelledby="t-' + n + '"' + (extra || '') + '>' + inner + '</div>';
+
+  /* เศษกระดาษแบบที่ 3 — 14 ชิ้น กระจายรอบวง ระยะ 40–52px (ไม่เกินขอบการ์ดด้านบน) */
+  const PARTS = (() => {
+    const cols = ['#4891db', '#2e9e62', '#9fc5e9', '#7fd3a2', '#2d6cad', '#bfe3c9'];
+    return Array.from({ length: 14 }, (_, i) => {
+      const a = Math.round(i * (360 / 14) + (i % 2 ? 6 : -4));
+      const d = 40 + (i * 7) % 13;
+      const s = 5 + (i * 3) % 4;
+      const r = i % 3 === 0 ? '2px' : '50%';
+      return '<i style="--a:' + a + 'deg;--d:' + d + 'px;--s:' + s + 'px;--c:' + cols[i % cols.length] + ';--r:' + r + '"></i>';
+    }).join('');
+  })();
+  const TICKS = Array.from({ length: 24 }, (_, i) => '<i style="--i:' + i + '"></i>').join('');
+  const BUBBLES = [[8, 16, 5.2, 0], [22, 10, 4.1, 1.3], [38, 22, 6.4, .5], [54, 12, 4.6, 2.2], [68, 18, 5.6, .9], [84, 9, 3.8, 1.8]]
+    .map(([x, w, t, dl]) => '<i style="--x:' + x + '%;--w:' + w + 'px;--t:' + t + 's;--dl:' + dl + 's"></i>').join('');
+  const CLOUD_D = 'M16 38A10 10 0 1 1 16.6 18A14 14 0 0 1 43.9 20.5A9 9 0 1 1 47 38Z';
+
+  /* ───────────────────────── ฉากจำลอง ───────────────────────── */
+  const ROWS = [[26, 70, 44, 18], [34, 58, 50, 14], [22, 76, 38, 20], [30, 64, 46, 16], [28, 72, 42, 22], [36, 54, 48, 12], [24, 68, 40, 18], [32, 60, 52, 16]];
+  const mockHtml = () => `
+    <div class="mock">
+      <div class="mock-bar">
+        <div class="mock-title"><span>Products</span><small>Product Master</small></div>
+        <div class="mock-btns">
+          <button type="button" class="tgt" data-target aria-haspopup="dialog" aria-expanded="false" title="คลิกเพื่อเปิด popup ใบแรก แล้วกด [เลือกไฟล์] เอง">${UPLOAD}<span>อัปโหลด Product Master</span></button>
+          <span class="mock-new" aria-hidden="true">+ New Product</span>
+        </div>
+      </div>
+      <div class="mock-msg" data-banner hidden></div>
+      <div class="mock-rows" aria-hidden="true">${ROWS.map((r, i) =>
+        `<div class="mock-row${i ? '' : ' mock-row--h'}">${r.map(w => `<i style="width:${w}%"></i>`).join('')}</div>`).join('')}</div>
+    </div>`;
+
+  const cardHtml = c => `
+    <article class="card" id="design-${c.n}" aria-labelledby="h-${c.n}">
+      <div class="card-head">
+        <div class="card-top">
+          <h2 class="card-title" id="h-${c.n}"><span class="num">${c.n}</span><span>${c.name}</span><small>${c.th}</small></h2>
+          <button type="button" class="replay" data-replay>▶ เล่นซ้ำ</button>
+        </div>
+        <p class="card-desc">${c.desc}</p>
+        <p class="card-meta"><span class="chip">${c.level}</span><span>${c.timing}</span></p>
+      </div>
+      <div class="stage">${mockHtml()}</div>
+      <div class="card-foot">
+        <p class="pro"><b>ข้อดี</b>${c.pros}</p>
+        <p class="con"><b>ข้อสังเกต</b>${c.cons}</p>
+      </div>
+    </article>`;
+
+  /* ───────────────────────── 10 แบบ ───────────────────────── */
+  const DESIGNS = [
+    /* 1 */ {
+      n: 1, name: 'Ring Check', th: 'วงแหวนวาดถูก', level: 'ทำง่าย · SVG + CSS', timing: 'จบท่า ~0.9 วิ หลังรู้ว่าเสร็จ',
+      desc: 'ต่อจากช่องวงกลมเดิมตรง ๆ: ระหว่างอัปโหลดมีเส้นโค้งสีฟ้าวิ่งรอบไอคอนไฟล์ พอเสร็จเส้นวิ่งต่อจนครบวงแล้วเปลี่ยนเป็นเขียว ไอคอนไฟล์ย่อหาย เครื่องหมายถูกถูก “วาด” ลงกลางวง พร้อมคลื่นกระเพื่อมหนึ่งครั้ง',
+      pros: 'ใกล้ popup เดิมที่สุด (วงเดียวกัน ขนาดเดียวกัน) · เรียบ ไม่รก · ดูเป็นของชุดเดียวกับ popup ไฟล์ถูกดีดกลับ',
+      cons: 'เส้นหมุนไม่บอกความคืบหน้าจริง · ไม่มีตัวเลขว่าอัปโหลดไปกี่ SKU',
+      render: m => shell(1, `
+        <div class="slot d1-slot">
+          <svg class="d1-ring" viewBox="0 0 68 68" aria-hidden="true"><circle class="d1-bg" cx="34" cy="34" r="32.5"/><circle class="d1-arc" cx="34" cy="34" r="32.5" pathLength="100"/></svg>
+          <span class="d1-doc">${DOC}</span>${CHK}
+        </div>
+        ${CAP(1)}${MSG}
+        ${HINT('อย่าปิดหน้านี้ระหว่างอัปโหลด', 'ข้อมูลในระบบเป็นปัจจุบันแล้ว')}
+        ${ACTS}`),
+    },
+    /* 2 */ {
+      n: 2, name: 'File Badge', th: 'ไอคอนไฟล์ติดตราถูก', level: 'ทำง่าย · CSS ล้วน', timing: 'เติมสีตามจำนวน SKU จริง · ตราเด้ง 0.3 วิ',
+      desc: 'คู่กับ popup “ไฟล์ถูกดีดกลับ” (ตรา ✕ แดง) แบบกลับด้าน: ไอคอนไฟล์ Excel อยู่ในช่องเดิมตลอด ระหว่างอัปโหลดไฟล์ซีดแล้วค่อย “เติมสีเขียว” จากล่างขึ้นบนตามจำนวน SKU ที่บันทึกแล้ว พอเต็มก็มีตราถูกสีเขียวเด้งติดมุม พร้อมชื่อไฟล์และจำนวน SKU ใต้ข้อความ',
+      pros: 'เล่าเรื่องต่อเนื่องกับ popup ดีดกลับ (ผ่าน = ตราเขียว · ไม่ผ่าน = ตราแดง) · เห็นความคืบหน้าจริง · ชื่อไฟล์ยืนยันว่าอัปโหลดไฟล์ไหน',
+      cons: 'ไฟล์เล็กมากเติมเต็มเร็วจนแทบไม่เห็นท่าเติม · ตราถูกเล็ก (27px) ตามตรา ✕ เดิม',
+      render: m => shell(2, `
+        <div class="slot d2-slot">
+          <span class="ring d2-ring"></span>
+          <span class="d2-docs"><span class="d2-gray">${DOC}</span><span class="d2-fill">${DOC}</span></span>
+          <span class="d2-badge">${CHK}</span>
+        </div>
+        ${CAP(2)}${MSG}
+        <div class="xtra" data-x="uploading done"><div class="xin">
+          <p class="file"><span class="file-doc">${DOC}</span><span class="file-name" title="${esc(m.file)}">${esc(m.file)}</span></p>
+          <div class="stack"><p class="hint" data-s="uploading">บันทึกแล้ว ${COUNT}</p><p class="hint" data-s="done">ครบ <span data-total></span> SKU</p></div>
+        </div></div>
+        ${ACTS}`),
+    },
+    /* 3 */ {
+      n: 3, name: 'Burst', th: 'วงเขียวทึบ + ฉลองเบา ๆ', level: 'ปานกลาง · CSS ล้วน', timing: 'จบท่า ~1.0 วิ · คลื่น 2 ชั้น + เศษกระดาษ 14 ชิ้น',
+      desc: 'ระหว่างอัปโหลดวงรอบไอคอนเต้นเป็นจังหวะ พอเสร็จวงกลายเป็นเขียวทึบ เครื่องหมายถูกสีขาวเด้งออกมา มีคลื่นแผ่ออก 2 ชั้น และเศษกระดาษสีฟ้า/เขียวพุ่งกระจายสั้น ๆ แล้วหายไป เหลือแต่วงเขียวกับเครื่องหมายถูก',
+      pros: 'รู้สึกว่า “สำเร็จแล้ว” ชัดที่สุดในชุด · เห็นผลได้แม้มองผ่านหางตา',
+      cons: 'โทนสนุกกว่าแบบอื่น — ถ้าอัปโหลดทุกวันอาจดูเล่นเกินไปสำหรับงานจัดซื้อ',
+      render: m => shell(3, `
+        <div class="slot d3-slot">
+          <span class="ring d3-ring"></span>
+          <span class="d3-wave"></span><span class="d3-wave d3-wave--2"></span>
+          <span class="d3-doc">${DOC}</span>
+          <span class="d3-disc">${CHK}</span>
+          <span class="d3-parts" aria-hidden="true">${PARTS}</span>
+        </div>
+        ${CAP(3)}${MSG}
+        ${HINT('อย่าปิดหน้านี้ระหว่างอัปโหลด', 'เรียบร้อย ข้อมูลล่าสุดอยู่ในระบบแล้ว')}
+        ${ACTS}`),
+    },
+    /* 4 */ {
+      n: 4, name: 'Tick Ring', th: 'วงขีดไล่สี + ตัวเลข %', level: 'ปานกลาง · JS คุมขีด', timing: 'คลื่นเขียวรอบวง ~0.7 วิ แล้วถูกวาด',
+      desc: 'วงรอบไอคอนเป็นขีดสั้น 24 ขีด ไล่ติดสีฟ้าตามเปอร์เซ็นต์ที่บันทึกแล้ว ตรงกลางเป็นตัวเลข % พอครบทุกขีดเปลี่ยนเป็นเขียวไล่เป็นคลื่นรอบวง ตัวเลขสลับเป็นเครื่องหมายถูก ใต้ข้อความมีตัวนับ SKU (เช่น 1,568 / 3,736)',
+      pros: 'บอกความคืบหน้าจริงละเอียดที่สุด (ทั้ง % และจำนวน SKU) · ไฟล์ใหญ่ที่รอนานก็ไม่ต้องใจหายว่าค้างหรือเปล่า',
+      cons: 'ซับซ้อนกว่าแบบอื่น (JS สั่งไฟขีดทีละขีด) · ไฟล์เล็กเสร็จไวจนท่า % ผ่านไปเร็วมาก',
+      render: m => shell(4, `
+        <div class="slot d4-slot">
+          <span class="ring d4-ring"></span>
+          <span class="d4-disc"></span>
+          <span class="d4-ticks" aria-hidden="true">${TICKS}</span>
+          <span class="d4-doc">${DOC}</span>
+          <span class="d4-pct" data-pct>0%</span>
+          ${CHK}
+        </div>
+        ${CAP(4)}${MSG}
+        ${HINT('บันทึกแล้ว ' + COUNT, 'ครบ <span data-total></span> SKU')}
+        ${ACTS}`),
+    },
+    /* 5 */ {
+      n: 5, name: 'Flip Coin', th: 'เหรียญพลิก 3 มิติ', level: 'ปานกลาง · CSS 3D', timing: 'พลิกครึ่งรอบ 0.8 วิ (เด้งเกินนิดหนึ่งแล้วนิ่ง)',
+      desc: 'ไอคอนไฟล์อยู่บนเหรียญกลม ระหว่างอัปโหลดเหรียญลอยขึ้นลงเอียงซ้ายขวาเบา ๆ มีวงเส้นประหมุนรอบ พอเสร็จเหรียญพลิก 3 มิติครึ่งรอบ หงายด้านหลังเป็นวงเขียวมีเครื่องหมายถูก',
+      pros: 'ท่าพลิกเล่า “ไฟล์ → เสร็จแล้ว” ในจังหวะเดียว ไม่ต้องอ่านข้อความ · จำง่าย',
+      cons: 'ใช้ 3D transform (เบราว์เซอร์เก่าบางตัวอาจไม่ลื่น) · ท่าสั้น ถ้าไม่ได้มองตอนพลิกอาจพลาดไปเลย',
+      render: m => shell(5, `
+        <div class="slot d5-slot">
+          <span class="d5-orbit" aria-hidden="true"></span>
+          <span class="d5-coin">
+            <span class="d5-face d5-front"><span class="ring"></span>${DOC}</span>
+            <span class="d5-face d5-back">${CHK}</span>
+          </span>
+        </div>
+        ${CAP(5)}${MSG}
+        ${HINT('อย่าปิดหน้านี้ระหว่างอัปโหลด', 'ข้อมูลในระบบเป็นปัจจุบันแล้ว')}
+        ${ACTS}`),
+    },
+    /* 6 */ {
+      n: 6, name: 'Stamp', th: 'ตราประทับสีเขียว', level: 'ปานกลาง · เล่นกับภาษาภาพของแอป', timing: 'ตราฟาด 0.4 วิ + การ์ดสะเทือนเบา ๆ',
+      desc: 'การ์ดกลายเป็นใบเสร็จเล็ก ๆ มีแถบฟ้าวิ่งที่ขอบบนระหว่างอัปโหลด ใต้ข้อความเป็นรายการ ไฟล์ / จำนวน / เวลา มีกรอบประรอตราอยู่ด้านขวา พอเสร็จตราเขียว “อัปโหลดแล้ว” ฟาดลงเอียง ๆ ในกรอบพร้อมการ์ดสะเทือน',
+      pros: 'ภาษาภาพเดียวกับตราประทับ 3 ขั้นของ Order ที่พนักงานคุ้นอยู่แล้ว · มีเวลาบันทึกเป็นหลักฐานในตัว',
+      cons: 'ชื่อไฟล์ยาวถูกตัดด้วย … (ช่องแคบเพราะต้องเว้นที่ให้ตรา) · โทนทางการกว่าแบบอื่น',
+      render: m => shell(6, `
+        <span class="d6-bar" aria-hidden="true"><i></i></span>
+        <div class="slot d6-slot"><span class="ring"></span>${DOC}</div>
+        ${CAP(6)}${MSG}
+        <div class="d6-detail">
+          <div class="xtra" data-x="uploading done"><div class="xin"><dl>
+            <div><dt>ไฟล์</dt><dd title="${esc(m.file)}"><span>${esc(m.file)}</span></dd></div>
+            <div><dt>จำนวน</dt><dd><span data-s="uploading">${COUNT}</span><span data-s="done"><span data-total></span> SKU</span></dd></div>
+            <div data-s="done"><dt>เวลา</dt><dd class="wrap"><span>${m.time}</span></dd></div>
+          </dl></div></div>
+          <span class="d6-ph" aria-hidden="true"></span>
+          <div class="d6-stamp" aria-hidden="true"><svg class="d6-sc" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg><b>อัปโหลดแล้ว</b><small>PRODUCT MASTER</small></div>
+        </div>
+        ${ACTS}`),
+    },
+    /* 7 */ {
+      n: 7, name: 'Header Band', th: 'แถบสีเปลี่ยน ฟ้า → เขียว', level: 'ปานกลาง · CSS ล้วน', timing: 'แถบเปลี่ยนสี 0.6 วิ + วงถูกเด้ง 0.5 วิ',
+      desc: 'การ์ดมีแถบสีด้านบน ระหว่างอัปโหลดเป็นฟ้าไล่สีมีฟองลอยขึ้น (เหมือนหน้าล็อกอิน) พร้อมเส้นความคืบหน้าที่ขอบล่างของแถบ พอเสร็จแถบเปลี่ยนเป็นเขียวทั้งแถบ วงขาวใหญ่ซ้อนขอบแถบเด้งขึ้นพร้อมเครื่องหมายถูกเขียว',
+      pros: 'เห็นการเปลี่ยนสถานะทั้งการ์ดโดยไม่ต้องอ่านข้อความ · สีฟ้าเดียวกับธีมของแอป · ฟองลอยต่อเนื่องภาษาภาพหน้าล็อกอิน',
+      cons: 'ต่างจากการ์ดเดิมที่ขาวล้วน (มีแถบสีเพิ่ม) · กินพื้นที่แนวตั้งเพิ่ม ~40px',
+      render: m => shell(7, `
+        <div class="d7-band" aria-hidden="true">
+          <span class="d7-g d7-g--blue"></span><span class="d7-g d7-g--green"></span>
+          <span class="d7-bubbles">${BUBBLES}</span>
+          <span class="d7-prog"><i></i></span>
+        </div>
+        <div class="d7-badge"><span class="d7-doc">${DOC}</span>${CHK}</div>
+        <div class="d7-in">
+          ${CAP(7)}${MSG}
+          ${HINT('อย่าปิดหน้านี้ระหว่างอัปโหลด', 'ข้อมูลในระบบเป็นปัจจุบันแล้ว')}
+          ${ACTS}
+        </div>`),
+    },
+    /* 8 */ {
+      n: 8, name: 'Checklist', th: 'เช็กลิสต์ 3 ขั้นที่ระบบทำจริง', level: 'ปานกลาง · JS เล็กน้อย', timing: 'ติ๊กทีละข้อตามจังหวะจริง · จบด้วยถูกใหญ่ที่หัวการ์ด',
+      desc: 'ใต้ข้อความมีรายการ 3 ขั้นที่ระบบทำจริง: อ่านไฟล์ → เทียบกับข้อมูลเดิม → บันทึกลงระบบ แต่ละข้อมีวงหมุนแล้วกลายเป็นติ๊กเขียวทีละข้อ ข้อสุดท้ายนับ SKU ที่บันทึกแล้ว จบด้วยเครื่องหมายถูกใหญ่ที่หัวการ์ด',
+      pros: 'โปร่งใสที่สุด — เห็นว่าระบบกำลังทำอะไรอยู่ · ถ้าพังกลางทางรู้ทันทีว่าพังที่ขั้นไหน · มีตัวเลขสรุปย่อ (แถว / ใหม่ / เปลี่ยน) โดยไม่ต้องมีหน้าต่างแยก',
+      cons: 'การ์ดสูงขึ้น ~100px · ข้อมูลเยอะกว่าที่ขอ',
+      render: m => shell(8, `
+        <div class="slot d8-slot"><span class="ring"></span><span class="d8-doc">${DOC}</span>${CHK}</div>
+        ${CAP(8)}${MSG}
+        <div class="xtra" data-x="uploading done"><div class="xin">
+          <ol class="d8-steps" data-steps>
+            <li class="d8-step"><span class="d8-st"><span class="sp"></span><span class="ok">${CHK}</span></span><span class="d8-tt">อ่านไฟล์</span><span class="d8-sub">${fmt(m.total)} แถว</span></li>
+            <li class="d8-step"><span class="d8-st"><span class="sp"></span><span class="ok">${CHK}</span></span><span class="d8-tt">เทียบกับข้อมูลเดิม</span><span class="d8-sub">ใหม่ ${fmt(m.add)} · เปลี่ยน ${fmt(m.chg)}</span></li>
+            <li class="d8-step"><span class="d8-st"><span class="sp"></span><span class="ok">${CHK}</span></span><span class="d8-tt">บันทึกลงระบบ</span><span class="d8-sub">${COUNT}</span></li>
+          </ol>
+        </div></div>
+        ${ACTS}`),
+    },
+    /* 9 */ {
+      n: 9, name: 'Receipt Chips', th: 'ชิปสรุปย่อ + ลิงก์ดาวน์โหลด', level: 'ปานกลาง · JS นับเลข', timing: 'ถูกเด้ง 0.5 วิ แล้วเลขนับขึ้นจาก 0 ~0.7 วิ',
+      desc: 'ระหว่างอัปโหลดใช้แถบเส้นนับ SKU พอเสร็จเครื่องหมายถูกเขียวเด้งขึ้น แล้วมีชิป 3 ช่อง (SKU ใหม่ · เปลี่ยนแปลง · เหมือนเดิม) นับเลขขึ้นจาก 0 พร้อมเวลาที่บันทึก และลิงก์เล็ก “ดาวน์โหลดสรุป (Excel)” — เป็นการย่อหน้าต่างสรุปเดิมให้เหลือบรรทัดเดียว',
+      pros: 'ยังเก็บข้อมูล “อะไรเปลี่ยนบ้าง” ไว้ในจังหวะเดียวกับที่รู้ว่าเสร็จ · มีทางดาวน์โหลดสรุปเก็บไว้ (ถ้ายังต้องใช้)',
+      cons: 'ไม่ใช่ “เอาสรุปออก” เต็มตัว — ยังมีตัวเลขสรุปอยู่ (เลือกแบบอื่นถ้าอยากให้เหลือแต่ข้อความเสร็จสิ้น) · การ์ดสูงขึ้น ~110px',
+      render: m => shell(9, `
+        <div class="slot d9-slot"><span class="ring"></span><span class="d9-doc">${DOC}</span><span class="d9-disc">${CHK}</span></div>
+        ${CAP(9)}${MSG}
+        <div class="xtra" data-x="uploading"><div class="xin"><div class="d9-bar"><i></i></div><p class="hint">บันทึกแล้ว ${COUNT}</p></div></div>
+        <div class="xtra" data-x="done"><div class="xin">
+          <div class="d9-chips">
+            <div class="d9-chip d9-chip--add"><b data-cu="${m.add}">0</b><span>SKU ใหม่</span></div>
+            <div class="d9-chip d9-chip--chg"><b data-cu="${m.chg}">0</b><span>เปลี่ยนแปลง</span></div>
+            <div class="d9-chip d9-chip--same"><b data-cu="${m.same}">0</b><span>เหมือนเดิม</span></div>
+          </div>
+          <p class="d9-meta">บันทึกเมื่อ ${m.time}</p>
+          <button type="button" class="d9-dl" title="ในแอปจริงจะดาวน์โหลดไฟล์สรุป .xlsx เหมือนปุ่มเดิมในหน้าต่างสรุป">⬇ ดาวน์โหลดสรุป (Excel)</button>
+        </div></div>
+        ${ACTS}`),
+    },
+    /* 10 */ {
+      n: 10, name: 'Cloud', th: 'ไฟล์ลอยขึ้นก้อนเมฆ', level: 'ปานกลาง · SVG + CSS', timing: 'ก้อนเมฆเด้ง 0.6 วิ + ถูกวาดข้างใน',
+      desc: 'ระหว่างอัปโหลดวงรอบไอคอนเปลี่ยนเป็นก้อนเมฆเส้นประ และไอคอนไฟล์ตัวเล็กลอยขึ้นเข้าก้อนเมฆเป็นจังหวะ (ภาพ “อัปโหลดขึ้นระบบ” ต่อจากลูกศรบนปุ่ม) พอเสร็จก้อนเมฆเปลี่ยนเป็นเขียว เด้งหนึ่งครั้ง พร้อมเครื่องหมายถูกวาดอยู่ข้างใน',
+      pros: 'ภาพสื่อความหมาย “ส่งขึ้นระบบ” ตรงตัว ไม่ต้องอ่านข้อความก็เข้าใจ · ลอยขึ้นต่อเนื่องกับลูกศรอัปโหลดบนปุ่ม',
+      cons: 'ก้อนเมฆยังไม่เคยใช้ในแอป (เป็นภาษาภาพใหม่) · ไม่บอกความคืบหน้าจริง',
+      render: m => shell(10, `
+        <div class="slot d10-slot">
+          <span class="ring"></span>
+          <span class="d10-big">${DOC}</span>
+          <svg class="d10-cloud" viewBox="4 6 54 34" aria-hidden="true">
+            <path class="d10-shape" d="${CLOUD_D}"/>
+            <path class="d10-chk" pathLength="1" d="m23.5 25.5 5.5 5.5 10-11"/>
+          </svg>
+          <span class="d10-up">${DOC}</span>
+        </div>
+        ${CAP(10)}${MSG}
+        ${HINT('อย่าปิดหน้านี้ระหว่างอัปโหลด', 'ข้อมูลในระบบเป็นปัจจุบันแล้ว')}
+        ${ACTS}`),
+    },
+  ];
+
+  /* ───────────────────────── ตัวเล่น ─────────────────────────
+     เปิด popup = สร้าง overlay ใหม่ (data-st="notice") · กด [เลือกไฟล์] หรือรอให้ตัวเล่นกดเอง → "uploading" → "done"
+     ลำดับจำลองตามของจริง: อ่านไฟล์ → เทียบกับ product_master เดิม → upsert ทีละ 100 SKU (ตัวนับเด้งทีละ 100) */
+  const NOTICE_MS = 1300;      // ค้างที่ popup ใบแรกก่อนเล่นต่ออัตโนมัติ
+  const READ_MS = 450, COMPARE_MS = 500, SAVE_TICK_MS = 60, MIN_SAVE_MS = 800, END_PAUSE_MS = 300;
+  let SPD = 1;                 // ตัวคูณความเร็ว (1 / 2 / 4) — CSS ใช้ --spd ตัวเดียวกัน
+  let MODE = 'full';           // 'full' = เล่นทั้งขั้นตอน · 'result' = ข้ามไปตอนเสร็จ
+  let model = buildModel('real');
+  const cards = [];
+
+  const later = (ctx, tok, ms, fn) => {
+    const id = setTimeout(() => { if (ctx.tok === tok && ctx.ov) fn(); }, ms * SPD);
+    ctx.timers.push(id);
+  };
+  const clearTimers = ctx => { ctx.timers.forEach(clearTimeout); ctx.timers = []; };
+
+  function setProgress(ctx, p, saved) {
+    const ov = ctx.ov;
+    ov.style.setProperty('--p', p.toFixed(4));
+    ov.querySelectorAll('[data-count]').forEach(el => { el.textContent = fmt(saved); });
+    ov.querySelectorAll('[data-pct]').forEach(el => { el.textContent = Math.round(p * 100) + '%'; });
+    const on = Math.floor(p * 24 + 1e-6);
+    ov.querySelectorAll('.d4-ticks i').forEach((t, i) => t.classList.toggle('on', i < on));
+  }
+
+  /* เช็กลิสต์ของแบบ 8 — k = จำนวนข้อที่เสร็จแล้ว (ข้อถัดไปกำลังทำ) */
+  function setSteps(ctx, k) {
+    const list = ctx.ov.querySelector('[data-steps]');
+    if (!list) return;
+    [...list.children].forEach((li, i) => { li.classList.toggle('is-done', i < k); li.classList.toggle('is-active', i === k); });
+  }
+
+  function setState(ctx, st) {
+    const ov = ctx.ov;
+    ov.dataset.st = st;
+    if (ctx.focusOn) {
+      const b = ov.querySelector('[data-focus="' + st + '"]');
+      if (b) b.focus({ preventScroll: true });
+    }
+  }
+
+  /* แถวตัวเลขของแบบ 9 นับขึ้นจาก 0 หลังเสร็จ */
+  function countUp(ctx, tok) {
+    ctx.ov.querySelectorAll('[data-cu]').forEach(el => {
+      const to = Number(el.dataset.cu);
+      if (!to) { el.textContent = '0'; return; }
+      const dur = 700 * SPD, delay = 420 * SPD, t0 = performance.now() + delay;
+      const frame = now => {
+        if (ctx.tok !== tok || !ctx.ov) return;
+        const t = Math.min(1, Math.max(0, (now - t0) / dur));
+        el.textContent = fmt(Math.round(to * (1 - Math.pow(1 - t, 3))));
+        if (t < 1) requestAnimationFrame(frame);
+      };
+      requestAnimationFrame(frame);
+    });
+  }
+
+  function finish(ctx, tok) {
+    setSteps(ctx, 3);
+    setProgress(ctx, 1, model.total);
+    setState(ctx, 'done');
+    countUp(ctx, tok);
+  }
+
+  function runUpload(ctx) {
+    const tok = ++ctx.tok;
+    clearTimers(ctx);
+    const total = model.total;
+    setProgress(ctx, 0, 0);
+    setSteps(ctx, 0);
+    setState(ctx, 'uploading');
+    let t = READ_MS;
+    later(ctx, tok, t, () => setSteps(ctx, 1));
+    t += COMPARE_MS;
+    later(ctx, tok, t, () => setSteps(ctx, 2));
+    const ticks = Math.max(1, Math.ceil(total / 100));
+    const saveMs = Math.max(MIN_SAVE_MS, ticks * SAVE_TICK_MS);
+    for (let i = 1; i <= ticks; i++) {
+      const saved = Math.min(total, i * 100);
+      later(ctx, tok, t + saveMs * i / ticks, () => setProgress(ctx, saved / total, saved));
+    }
+    t += saveMs + END_PAUSE_MS;
+    later(ctx, tok, t, () => finish(ctx, tok));
+  }
+
+  function openPopup(ctx, opts) {
+    const { focus = false, autoplay = true } = opts || {};
+    removeNow(ctx);
+    const tok = ++ctx.tok;
+    const ov = document.createElement('div');
+    ov.className = 'ov d' + ctx.cfg.n + ' is-open';
+    ov.dataset.st = 'notice';
+    ov.innerHTML = '<div class="scrim"></div>' + ctx.cfg.render(model);
+    ov.addEventListener('click', e => {                              // ไม่ปิดเมื่อคลิกพื้นหลัง (กฎเดียวกับ modal อื่นในแอป)
+      const b = e.target.closest('[data-act]');
+      if (!b) return;
+      if (b.dataset.act === 'pick') { if (ov.dataset.st === 'notice') runUpload(ctx); }
+      else if (b.dataset.act === 'close') closePopup(ctx, true);
+    });
+    ctx.stage.appendChild(ov);
+    ctx.ov = ov;
+    ctx.focusOn = focus;
+    ctx.banner.hidden = true;                                        // เหมือน setMasterMsg('') ตอนเริ่มอัปโหลดรอบใหม่
+    ov.querySelectorAll('[data-total]').forEach(el => { el.textContent = fmt(model.total); });
+    setProgress(ctx, 0, 0);
+    setSteps(ctx, -1);
+    ctx.tgt.setAttribute('aria-expanded', 'true');
+    if (focus) { const b = ov.querySelector('[data-focus="notice"]'); if (b) b.focus({ preventScroll: true }); }
+    if (!autoplay) return;
+    if (MODE === 'result') {
+      // ข้ามไปตอนเสร็จ: เริ่มที่ "กำลังอัปโหลด" ที่เต็มแล้ว แล้วพลิกเป็นเสร็จ (transition ของทุกแบบจะได้มีสถานะเดิมให้เล่นจาก)
+      ov.dataset.st = 'uploading';
+      setSteps(ctx, 2);
+      setProgress(ctx, 1, model.total);
+      later(ctx, tok, 700, () => finish(ctx, tok));
+    } else {
+      later(ctx, tok, NOTICE_MS, () => { if (ov.dataset.st === 'notice') runUpload(ctx); });
+    }
+  }
+
+  function showBanner(ctx) {
+    ctx.banner.textContent = '✓ อัปเดต Product Master แล้ว — SKU ใหม่ ' + fmt(model.add) + ' · เปลี่ยนแปลง ' + fmt(model.chg) + ' · เหมือนเดิม ' + fmt(model.same);
+    ctx.banner.hidden = false;
+    ctx.banner.classList.remove('is-new');
+    void ctx.banner.offsetWidth;                                     // เริ่มท่าเข้าใหม่ทุกครั้ง
+    ctx.banner.classList.add('is-new');
+  }
+
+  function removeNow(ctx) {
+    clearTimers(ctx);
+    if (ctx.ov) { ctx.ov.remove(); ctx.ov = null; }
+    ctx.tgt.setAttribute('aria-expanded', 'false');
+  }
+
+  function closePopup(ctx, refocus) {
+    const ov = ctx.ov;
+    if (!ov || ov.classList.contains('is-closing')) return;
+    if (ov.dataset.st === 'uploading') return;                       // ระหว่างอัปโหลดปิดไม่ได้ (เหมือนหน้าต่างเดิมที่ปิดไม่ได้ระหว่างบันทึก)
+    const wasDone = ov.dataset.st === 'done';
+    clearTimers(ctx);
+    ov.classList.remove('is-open');
+    ov.classList.add('is-closing');                                  // ⚠️ คง data-st ไว้ — ถอดแล้วข้อความ/ภาพหายวูบก่อนจาง
+    if (wasDone) showBanner(ctx);
+    const tok = ++ctx.tok;
+    setTimeout(() => {
+      if (ctx.tok !== tok) return;
+      ov.remove();
+      ctx.ov = null;
+      ctx.tgt.setAttribute('aria-expanded', 'false');
+      if (refocus) ctx.tgt.focus({ preventScroll: true });
+    }, 230 * SPD);
+  }
+
+  /* ───────────────────────── ประกอบหน้า ───────────────────────── */
+  const grid = document.getElementById('grid');
+  DESIGNS.forEach(cfg => {
+    const root = make(cardHtml(cfg));
+    grid.appendChild(root);
+    const ctx = {
+      cfg, root, stage: root.querySelector('.stage'), tgt: root.querySelector('[data-target]'),
+      banner: root.querySelector('[data-banner]'), ov: null, tok: 0, seen: false, timers: [], focusOn: false,
+    };
+    cards.push(ctx);
+    ctx.tgt.addEventListener('click', () => { if (!ctx.ov) openPopup(ctx, { focus: true, autoplay: false }); });
+    root.querySelector('[data-replay]').addEventListener('click', () => { ctx.seen = true; openPopup(ctx, { focus: false, autoplay: true }); });
+  });
+
+  /* เปิด popup อัตโนมัติเมื่อการ์ดเลื่อนเข้าจอ (ท่าเข้าจะได้ไม่เล่นทิ้งตอนอยู่นอกจอ) */
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver(entries => entries.forEach(en => {
+      if (!en.isIntersecting) return;
+      const ctx = cards.find(c => c.stage === en.target);
+      io.unobserve(en.target);
+      if (ctx && !ctx.seen) { ctx.seen = true; openPopup(ctx, { focus: false, autoplay: true }); }
+    }), { threshold: 0.4 });
+    cards.forEach(c => io.observe(c.stage));
+  } else {
+    cards.forEach(c => { c.seen = true; openPopup(c, { focus: false, autoplay: true }); });
+  }
+
+  /* Esc ปิดเฉพาะ popup ของการ์ดที่ใช้อยู่ — จำการ์ดที่แตะล่าสุดไว้ด้วย เพราะคลิกพื้นหลังแล้วโฟกัสหลุดไปที่ body
+     (ในแอปจริงมี popup ตัวเดียว ฟัง Esc ที่ document ตรง ๆ ไม่มีปัญหานี้) */
+  let lastCard = null;
+  document.addEventListener('pointerdown', e => {
+    const root = e.target.closest('.card');
+    lastCard = root ? cards.find(c => c.root === root) : null;
+  }, true);
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    const ctx = cards.find(c => c.root.contains(document.activeElement)) || lastCard;
+    if (ctx) closePopup(ctx, true);
+  });
+
+  /* ตัวเลือกด้านบน — เปลี่ยนแล้วเล่นซ้ำเฉพาะ popup ที่เปิดค้างอยู่ */
+  const replayOpen = () => cards.forEach(c => { if (c.ov && !c.ov.classList.contains('is-closing')) openPopup(c, { focus: false, autoplay: true }); });
+  const bind = (sel, apply) => {
+    const btns = [...document.querySelectorAll(sel)];
+    btns.forEach(b => b.addEventListener('click', () => {
+      apply(b);
+      btns.forEach(x => x.setAttribute('aria-checked', String(x === b)));
+    }));
+  };
+  bind('[data-sc]', b => { model = buildModel(b.dataset.sc); replayOpen(); });
+  bind('[data-mode]', b => { MODE = b.dataset.mode; replayOpen(); });
+  bind('[data-spd]', b => { SPD = Number(b.dataset.spd); document.documentElement.style.setProperty('--spd', String(SPD)); });
+
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    document.getElementById('rm-note').hidden = false;
+  }
+})();
+</script>
+</body>
+</html>
