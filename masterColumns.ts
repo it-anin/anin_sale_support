@@ -36,7 +36,7 @@ export const MASTER_HEADER_MAP: [RegExp, string][] = [
  *     diffMasterHeaders ดู "ช่องว่างเดียวกัน" จากคอลัมน์ข้างหน้าตามลำดับนี้
  *  ⚠️ XYZ / ABCXYZ / BREAK_PACK อยู่ในไฟล์จริงแต่ importer ไม่นำเข้า (ไม่มี regex ใน MASTER_HEADER_MAP และไม่มีช่องในตาราง product_master)
  *     จงใจให้อยู่ในมาตรฐาน — ไม่งั้นไฟล์ปกติถูกนับว่า "เพิ่ม 3 คอลัมน์" · เพิ่มคอลัมน์ใหม่ที่ต้องนำเข้า: ใส่ที่นี่ + เพิ่ม regex (มีเทสเช็คทั้งสองทาง)
- *  ⚠️ ไม่มี Barcode_Unit / SKU Name / Distributor / Distributor Name — ตารางมีช่องเหล่านี้ (กรอกผ่านฟอร์ม ➕ New Product / เติมจากไฟล์ Supplier)
+ *  ⚠️ ไม่มี Barcode_Unit / SKU Name / Distributor / Distributor Name — ตารางมีช่องเหล่านี้ (เติมจากไฟล์ Supplier / ✏️ แก้ไขทีละแถว — ฟอร์ม ➕ New Product เดิมถอดออกแล้ว 2569-10-29)
  *     แต่ไฟล์จริงไม่มี · เคยอนุมานผิดจากคอมเมนต์ใน salesupport-setup.sql จนไฟล์จริงถูกดีดกลับ (พบตอนได้รับไฟล์จริง) */
 export const MASTER_STANDARD_HEADERS = [
   'SKU', 'Name', 'BASE_UNIT', 'ABC', 'XYZ', 'ABCXYZ', 'MULTIPLY', 'SUPPLIER', 'Set_Deal', 'PURCHASE_UNIT',
