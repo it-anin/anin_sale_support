@@ -1511,12 +1511,12 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
   // `isPurchasing` ตรงๆ ที่จุดของมันเองอยู่แล้ว ไม่เกี่ยวกับตัวแปรนี้
   const visibleColumns = menu.columns;
 
-  /** คอลัมน์ "ลบ" ท้ายตาราง — เมนู Products ซ่อนจาก SRC/KKL/SSS (ผู้ใช้สั่ง 2569-10-12)
-   *  Sale Admin / คลัง / จัดซื้อ ยังมี · เมนูอื่นทุกโปรไฟล์ยังมีตามเดิม */
-  const isStoreBranch = (STORE_BRANCH_CODES as readonly string[]).includes(userBranch ?? '');
-  const showDeleteCol = !(activeMenu === 'products' && isStoreBranch);
+  /** คอลัมน์ "ลบ" ท้ายตาราง — เมนู Products ไม่มีให้ทุกโปรไฟล์ (ผู้ใช้สั่ง 2569-10-29 · เดิมซ่อนเฉพาะ SRC/KKL/SSS ตั้งแต่ 2569-10-12)
+   *  เมนูอื่นทุกโปรไฟล์ยังมีตามเดิม */
+  const showDeleteCol = activeMenu !== 'products';
   /** ปุ่ม ✏️ แก้ไข ใน popup รายละเอียด — Product Master ซ่อนจาก SRC/KKL/SSS (ผู้ใช้สั่ง 2569-10-12)
    *  Sale Admin / คลัง / จัดซื้อ ยังแก้ได้ · popup ตัวเดียวกันของ New Product / Ticket ไม่เกี่ยว (ผูกกับตาราง ไม่ใช่ activeMenu) */
+  const isStoreBranch = (STORE_BRANCH_CODES as readonly string[]).includes(userBranch ?? '');
   const canEditDetail = (table: string) => !(table === 'product_master' && isStoreBranch);
 
   /** ทุนซื้อของแถว Product Master นี้แสดงให้ผู้ใช้คนนี้เห็นได้ไหม — สาขา (isBranchUser = SRC/KKL/SSS/Sale Admin)
@@ -2623,6 +2623,9 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
     }
   };
 
+  // ⚠️ ฟอร์ม ➕ New Product (Product Master): updateMasterForm / openAddMaster / saveMaster + modal `showAddMaster` ด้านล่าง
+  //    ตอนนี้ไม่มีปุ่มเรียกแล้ว (ซ่อนปุ่ม 2569-10-29 · ผู้ใช้เลือกเก็บโค้ดไว้เผื่อนำกลับมา — `noUnusedLocals: false` จึงไม่มี error เตือน)
+  //    เปิดคืน = ใส่ปุ่มกลับใน toolbar เมนู Products (ดูคอมเมนต์ตรงนั้น) · ถ้ายืนยันว่าไม่นำกลับ ลบชุดนี้ทิ้งได้ทั้งก้อน
   const updateMasterForm = (patch: Partial<MasterForm>) => setMasterForm(f => ({ ...f, ...patch }));
 
   const openAddMaster = () => {
@@ -3130,7 +3133,7 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
   };
 
   const openDeleteRow = (row: Record<string, unknown>) => {
-    if (!showDeleteCol) return;   // กันชนชั้นที่สอง — ปุ่มไม่ render อยู่แล้วสำหรับ SRC/KKL/SSS ในเมนู Products
+    if (!showDeleteCol) return;   // กันชนชั้นที่สอง — ปุ่มไม่ render อยู่แล้วในเมนู Products
     setDeleteTarget({
       id: String(row.id), table: menu.table, label: menu.label,
       branch: String(row.branch ?? ''), menuId: activeMenu,
@@ -3413,9 +3416,9 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
                         </button>
                       </>
                     )}
-                    {!isBranchUser && (
-                      <button className="ss-add-btn" onClick={openAddMaster}>➕ New Product</button>
-                    )}
+                    {/* ซ่อนปุ่ม ➕ New Product แล้ว (ผู้ใช้สั่ง 2569-10-29 · เลือก "ซ่อนปุ่มอย่างเดียว" ไม่ลบโค้ด) — สินค้าเข้า Product Master ทางไฟล์ Excel ด้านบนเท่านั้น
+                        ฟอร์มยังอยู่ครบแต่ไม่มีใครเรียก (openAddMaster / saveMaster / modal showAddMaster)
+                        เปิดคืน = เพิ่มปุ่ม .ss-add-btn ที่เรียก openAddMaster กลับตรงนี้ (เดิมครอบด้วย !isBranchUser — เห็นเฉพาะคลัง/จัดซื้อ) */}
                     {notificationRecipient && (
                       <button className="ss-notification-history-btn" onClick={openNotificationHistory}>
                         <span aria-hidden="true">🔔</span>
@@ -4696,6 +4699,7 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
         </div>
       )}
 
+      {/* ฟอร์ม New Product (Product Master) — ไม่มีปุ่มเปิดแล้ว (ซ่อนปุ่ม 2569-10-29) ดูคอมเมนต์ที่ updateMasterForm */}
       {showAddMaster && (
         <div className="dl-modal-overlay">
           <div className="dl-modal" onClick={e => e.stopPropagation()}>
