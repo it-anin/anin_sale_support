@@ -165,6 +165,33 @@ function emptyTicketForm(): TicketForm {
   return { branch: 'SRC', department: 'Purchase', issue: '' };
 }
 
+interface MasterForm {
+  sku: string;
+  name: string;
+  base_unit: string;
+  abc: string;
+  multiply: string;
+  supplier: string;
+  set_deal: string;
+  purchase_unit: string;
+  barcode_unit: string;
+  cost: string;
+  buying_deal_normal: string;
+  buying_deal_free: string;
+  group_name: string;
+  group_percent: string;
+  sku_name: string;
+}
+
+function emptyMasterForm(): MasterForm {
+  return {
+    sku: '', name: '', base_unit: '', abc: '', multiply: '',
+    supplier: '', set_deal: '', purchase_unit: '', barcode_unit: '',
+    cost: '', buying_deal_normal: '', buying_deal_free: '',
+    group_name: '', group_percent: '', sku_name: '',
+  };
+}
+
 // MASTER_HEADER_MAP (จับคู่หัวคอลัมน์ไฟล์ Product_Master → คอลัมน์ตาราง) ย้ายไป masterColumns.ts แล้ว — รวมกับตัวตรวจโครงคอลัมน์ของไฟล์
 
 /** ไฟล์ Product Master ต้องเป็น .xlsx เท่านั้น (ผู้ใช้สั่ง 2569-10-29 — ตรงกับข้อความใน popup "ใช้ไฟล์นามสกุล .xlsx")
@@ -788,7 +815,7 @@ const MASTER_COL_LABELS: Record<string, string> = Object.fromEntries(PRODUCT_DET
 const masterColLabel = (col: string) => MASTER_COL_LABELS[col] ?? col;
 
 /** ช่องที่ในไฟล์ Excel เป็นตัวเลข — เทียบด้วยค่าตัวเลข ไม่ใช่ข้อความ
- *  ค่าที่เคยพิมพ์ผ่านฟอร์ม ➕ New Product (ถอดฟอร์มแล้ว 2569-10-29 แต่แถวเก่ายังมีอยู่ เช่น "120.50") กับค่าจากไฟล์ ("120.5") ต้องนับว่าเท่ากัน
+ *  ค่าที่เคยพิมพ์ผ่านฟอร์ม ➕ New Product (เช่น "120.50") กับค่าจากไฟล์ ("120.5") ต้องนับว่าเท่ากัน
  *  ⚠️ ห้ามใส่ supplier / group_name — เป็นรหัส เลขศูนย์นำหน้ามีความหมาย ("0066" ≠ "66") */
 const MASTER_NUMERIC_COLS = new Set(['multiply', 'set_deal', 'cost', 'buying_deal_normal', 'buying_deal_free', 'group_percent']);
 
@@ -1264,6 +1291,8 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
   // ปฏิทิน "อัปโหลดล่าสุด" — undefined = ยังโหลดไม่เสร็จ/อ่านตารางไม่ได้ (ไม่ render เลย) · null = ยังไม่เคยอัปโหลด
   const [lastMasterUpload, setLastMasterUpload] = useState<MasterUploadLog | null | undefined>(undefined);
   const [clockNow, setClockNow] = useState(() => Date.now());
+  const [showAddMaster, setShowAddMaster] = useState(false);
+  const [masterForm, setMasterForm] = useState<MasterForm>(emptyMasterForm);
   const [deleteTarget, setDeleteTarget] = useState<{
     id: string; table: string; label: string; branch: string; menuId: MenuId;
     itemSku: string; itemName: string;
@@ -2594,6 +2623,45 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
     }
   };
 
+  // ⚠️ ฟอร์ม ➕ New Product (Product Master): updateMasterForm / openAddMaster / saveMaster + modal `showAddMaster` ด้านล่าง
+  //    ตอนนี้ไม่มีปุ่มเรียกแล้ว (ซ่อนปุ่ม 2569-10-29 · ผู้ใช้เลือกเก็บโค้ดไว้เผื่อนำกลับมา — `noUnusedLocals: false` จึงไม่มี error เตือน)
+  //    เปิดคืน = ใส่ปุ่มกลับใน toolbar เมนู Products (ดูคอมเมนต์ตรงนั้น) · ถ้ายืนยันว่าไม่นำกลับ ลบชุดนี้ทิ้งได้ทั้งก้อน
+  const updateMasterForm = (patch: Partial<MasterForm>) => setMasterForm(f => ({ ...f, ...patch }));
+
+  const openAddMaster = () => {
+    setMasterForm(emptyMasterForm());
+    setSaveError('');
+    setShowAddMaster(true);
+  };
+
+  const saveMaster = async () => {
+    if (!masterForm.sku.trim()) { setSaveError('กรุณาใส่ SKU'); return; }
+    setSaving(true);
+    setSaveError('');
+    const payload: Record<string, string | null> = {};
+    (Object.keys(masterForm) as (keyof MasterForm)[]).forEach(k => {
+      payload[k] = masterForm[k].trim() || null;
+    });
+    const { error } = await supabase.from('product_master').insert(payload);
+    setSaving(false);
+    if (error) {
+      setSaveError(error.code === '23505'
+        ? `SKU "${masterForm.sku.trim()}" มีอยู่ใน Product Master แล้ว`
+        : `บันทึกไม่สำเร็จ: ${error.message}`);
+    } else {
+      void notifyBranchUpdate(undefined, {
+        menuId: 'products', tableName: 'product_master', recordId: masterForm.sku,
+        title: 'เพิ่มสินค้าใน Product Master', detail: masterForm.sku,
+        itemSku: masterForm.sku,
+        itemName: masterForm.name,
+      });
+      setShowAddMaster(false);
+      setActiveMenu('products');
+      setAbcOptions(null);        // สินค้าใหม่อาจมีค่า ABC ที่ยังไม่เคยมี
+      setRefreshKey(k => k + 1);
+    }
+  };
+
   // popup ใช้ร่วมกับ BackOrder — ชื่อเมนู/ตารางต้องอ้างจากแถวที่เปิดอยู่ ไม่ใช่ค่าคงที่ 'ss_orders'
   const isBackOrderDetail = selectedOrderTable === 'ss_backorders';
   const orderDetailMenuId: MenuId = isBackOrderDetail ? 'backorder' : 'order';
@@ -3348,8 +3416,9 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
                         </button>
                       </>
                     )}
-                    {/* ไม่มีปุ่ม ➕ New Product แล้ว (ผู้ใช้สั่งเอาออก 2569-10-29) — สินค้าเข้า Product Master ทางไฟล์ Excel ด้านบนเท่านั้น
-                        ฟอร์มเดิม (MasterForm / saveMaster) ถูกลบทิ้ง กู้ได้จาก git history */}
+                    {/* ซ่อนปุ่ม ➕ New Product แล้ว (ผู้ใช้สั่ง 2569-10-29 · เลือก "ซ่อนปุ่มอย่างเดียว" ไม่ลบโค้ด) — สินค้าเข้า Product Master ทางไฟล์ Excel ด้านบนเท่านั้น
+                        ฟอร์มยังอยู่ครบแต่ไม่มีใครเรียก (openAddMaster / saveMaster / modal showAddMaster)
+                        เปิดคืน = เพิ่มปุ่ม .ss-add-btn ที่เรียก openAddMaster กลับตรงนี้ (เดิมครอบด้วย !isBranchUser — เห็นเฉพาะคลัง/จัดซื้อ) */}
                     {notificationRecipient && (
                       <button className="ss-notification-history-btn" onClick={openNotificationHistory}>
                         <span aria-hidden="true">🔔</span>
@@ -4623,6 +4692,114 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
             </div>
             <div className="dl-modal-footer">
               <button className="ss-add-btn" onClick={saveTicket} disabled={saving}>
+                {saving ? 'กำลังบันทึก...' : '💾 บันทึก'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ฟอร์ม New Product (Product Master) — ไม่มีปุ่มเปิดแล้ว (ซ่อนปุ่ม 2569-10-29) ดูคอมเมนต์ที่ updateMasterForm */}
+      {showAddMaster && (
+        <div className="dl-modal-overlay">
+          <div className="dl-modal" onClick={e => e.stopPropagation()}>
+            <div className="dl-modal-header">
+              <span>➕ New Product (Product Master)</span>
+              <button className="dl-modal-close" onClick={() => setShowAddMaster(false)}>✕</button>
+            </div>
+            <div className="dl-modal-body ss-form">
+              <div className="ss-form-row">
+                <label>SKU *</label>
+                <input className="ss-input" type="text" placeholder="รหัสสินค้า"
+                  value={masterForm.sku}
+                  onChange={e => updateMasterForm({ sku: e.target.value })} />
+              </div>
+              <div className="ss-form-row">
+                <label>ชื่อสินค้า</label>
+                <input className="ss-input" type="text" placeholder="ชื่อสินค้า"
+                  value={masterForm.name}
+                  onChange={e => updateMasterForm({ name: e.target.value })} />
+              </div>
+              <div className="ss-form-row">
+                <label>Base_Unit</label>
+                <input className="ss-input" type="text" placeholder="เช่น TAB, BOT"
+                  value={masterForm.base_unit}
+                  onChange={e => updateMasterForm({ base_unit: e.target.value })} />
+              </div>
+              <div className="ss-form-row">
+                <label>ABC</label>
+                <input className="ss-input" type="text" placeholder="เช่น A"
+                  value={masterForm.abc}
+                  onChange={e => updateMasterForm({ abc: e.target.value })} />
+              </div>
+              <div className="ss-form-row">
+                <label>Multiply</label>
+                <input className="ss-input" type="text" placeholder="Multiply"
+                  value={masterForm.multiply}
+                  onChange={e => updateMasterForm({ multiply: e.target.value })} />
+              </div>
+              <div className="ss-form-row">
+                <label>Supplier</label>
+                <SupplierInput value={masterForm.supplier} onChange={v => updateMasterForm({ supplier: v })} />
+              </div>
+              <div className="ss-form-row">
+                <label>Set_Deal</label>
+                <input className="ss-input" type="text" placeholder="Set_Deal"
+                  value={masterForm.set_deal}
+                  onChange={e => updateMasterForm({ set_deal: e.target.value })} />
+              </div>
+              <div className="ss-form-row">
+                <label>Purchase_Unit</label>
+                <input className="ss-input" type="text" placeholder="Purchase_Unit"
+                  value={masterForm.purchase_unit}
+                  onChange={e => updateMasterForm({ purchase_unit: e.target.value })} />
+              </div>
+              <div className="ss-form-row">
+                <label>Barcode_Unit</label>
+                <input className="ss-input" type="text" placeholder="Barcode_Unit"
+                  value={masterForm.barcode_unit}
+                  onChange={e => updateMasterForm({ barcode_unit: e.target.value })} />
+              </div>
+              <div className="ss-form-row">
+                <label>ทุนซื้อ</label>
+                <input className="ss-input" type="text" placeholder="เช่น 120.50"
+                  value={masterForm.cost}
+                  onChange={e => updateMasterForm({ cost: e.target.value })} />
+              </div>
+              <div className="ss-form-row">
+                <label>Buying_Deal_Normal</label>
+                <input className="ss-input" type="text" placeholder="Buying_Deal_Normal"
+                  value={masterForm.buying_deal_normal}
+                  onChange={e => updateMasterForm({ buying_deal_normal: e.target.value })} />
+              </div>
+              <div className="ss-form-row">
+                <label>Buying_Deal_Free</label>
+                <input className="ss-input" type="text" placeholder="เช่น 10+1"
+                  value={masterForm.buying_deal_free}
+                  onChange={e => updateMasterForm({ buying_deal_free: e.target.value })} />
+              </div>
+              <div className="ss-form-row">
+                <label>Group</label>
+                <input className="ss-input" type="text" placeholder="Group"
+                  value={masterForm.group_name}
+                  onChange={e => updateMasterForm({ group_name: e.target.value })} />
+              </div>
+              <div className="ss-form-row">
+                <label>Group %</label>
+                <input className="ss-input" type="text" placeholder="เช่น 5%"
+                  value={masterForm.group_percent}
+                  onChange={e => updateMasterForm({ group_percent: e.target.value })} />
+              </div>
+              <div className="ss-form-row ss-form-row--full">
+                <label>SKU Name</label>
+                <input className="ss-input" type="text" placeholder="SKU Name"
+                  value={masterForm.sku_name}
+                  onChange={e => updateMasterForm({ sku_name: e.target.value })} />
+              </div>
+              {saveError && <div className="ss-form-error">{saveError}</div>}
+            </div>
+            <div className="dl-modal-footer">
+              <button className="ss-add-btn" onClick={saveMaster} disabled={saving}>
                 {saving ? 'กำลังบันทึก...' : '💾 บันทึก'}
               </button>
             </div>
