@@ -14,10 +14,9 @@ const ORDER_BRANCHES = ['SRC', 'KKL', 'SSS', 'SALE_ADMIN', 'Warehouse'] as const
  *  ⚠️ ไม่มี Warehouse (คลังเป็นผู้รับงาน ไม่ใช่ผู้ขอ) — ต่างจาก ORDER_BRANCHES ที่มี */
 const BACKORDER_BRANCHES = ['SRC', 'KKL', 'SSS', 'SALE_ADMIN'] as const;
 // STORE_BRANCH_CODES (สาขาหน้าร้าน 3 แห่ง ไม่รวม Sale Admin) ย้ายไป auth.ts แล้ว — ใช้ร่วมกับหน้าเอกสารค้าง
-/** โปรไฟล์ที่กดตรา "ยกเลิก" ใน popup Order ได้ — สาขาหน้าร้านเท่านั้น (ผู้ใช้สั่ง 2569-10-12 "เฉพาะรหัส SRC,KKL,SSS")
- *  ⚠️ จงใจไม่ใช้ BRANCH_PROFILE_CODES — ตัวนั้นรวม SALE_ADMIN ด้วย · Sale Admin ยังกดตรา 3 ขั้นของ Order ได้ตามปกติ
- *     แค่กดยกเลิกไม่ได้ · ปุ่มยกเลิกของ BackOrder ไม่เกี่ยวกับลิสต์นี้ (ยังใช้ isBranchUser ซึ่งรวม Sale Admin) */
-const ORDER_CANCEL_BRANCHES = STORE_BRANCH_CODES;
+/** โปรไฟล์ที่กดตรา "ยกเลิก" ใน popup Order ได้ — SRC/KKL/SSS + Sale Admin
+ *  (2569-10-12 ผู้ใช้สั่งเฉพาะ SRC/KKL/SSS · 2569-10-30 ผู้ใช้ขอให้ Sale Admin ทำได้เหมือนกัน) */
+const ORDER_CANCEL_BRANCHES = BRANCH_PROFILE_CODES;
 /** รหัสยืนยันงานที่ย้อนกลับไม่ได้ (ลบแถว / ล้างประวัติอัพเดท)
  *  ⚠️ อยู่ฝั่ง client เหมือน VITE_ADMIN_PASSWORD — เป็น gate กันกดพลาด ไม่ใช่ security จริง */
 const ADMIN_PASSWORD = '221900';

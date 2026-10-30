@@ -50,7 +50,7 @@
   1. ช่องค้นหา SKU (`lookupSku`/`handleSkuChange`) ใส่ `onlyP: true` ให้ `searchProductUnits()` — พิมพ์/กด Enter หา SKU ที่ไม่ใช่ P จะไม่มี suggestion ขึ้นเลย (ตรงข้ามกับ BackOrder ที่ใช้ `excludeP`)
   2. `saveOrder` เช็คซ้ำ `abc !== 'P'` (เมื่อพบใน Product Master) ก่อน insert เสมอ — กันพิมพ์ SKU เองตรงๆ โดยไม่ผ่านช่องค้นหาเลย ถ้าเจอว่าไม่ใช่ P จะไม่ insert และ error ชี้ไปเมนู BackOrder แทน (ข้อความเดียวกับที่ BackOrder ชี้กลับมา Order เวลาเจอ SKU เป็น P) · **SKU ที่หาไม่เจอใน Product Master ยังผ่านได้เป็น `BOTH` เหมือนเดิม** (ไม่บล็อกยาใหม่ที่ยังไม่มีในฐาน)
   - ผลคือ `recipient_department` ของ Order ใหม่ทุกใบมีได้แค่ `PURCHASING` หรือ `BOTH` เท่านั้น — ค่า `WAREHOUSE` เป็นได้แค่ข้อมูลเก่าก่อนวันที่นี้ (โค้ดอ่าน/แสดงผลค่านี้ได้ตามปกติ แค่ไม่มีทาง insert ใหม่แล้ว)
-- **popup Order มีปุ่ม "ยกเลิก" แล้ว (2569-10-12) — เฉพาะ SRC/KKL/SSS ไม่รวม Sale Admin** · ดูหัวข้อ "ยกเลิก Order" ใต้เมนู BackOrder (ใช้กลไกเดียวกัน)
+- **popup Order มีปุ่ม "ยกเลิก" แล้ว (2569-10-12) — SRC/KKL/SSS + Sale Admin (2569-10-30 ผู้ใช้ขอเพิ่ม Sale Admin)** · ดูหัวข้อ "ยกเลิก Order" ใต้เมนู BackOrder (ใช้กลไกเดียวกัน)
 
 ## ช่องค้นหา SKU ในฟอร์ม (Order + BackOrder) — `searchProductUnits()`
 
@@ -294,11 +294,11 @@ helper กลางตัวเดียวใช้ทั้ง 2 ฟอร์�
 - **BackOrder ไม่เรียก `setStampTick`** ในเส้นทางนี้ — ตัวนับเมนูย่อยอ่านจาก `ss_orders` อย่างเดียว สั่งนับใหม่จากฝั่ง BackOrder = สแกนตารางทิ้งเปล่า (Order เรียก — ดูหัวข้อถัดไป)
 - **race 2 คน:** `ss_backorders` ไม่มี realtime — สาขาอีกคนกดยกเลิกระหว่าง popup เปิดค้างได้ · `toggleOrderStep` จึงมี guard `if (isCancelled) return;` เป็นกันชนชั้นที่สองนอกเหนือจาก `disabled`
 
-### ยกเลิก Order — เฉพาะ SRC/KKL/SSS (2569-10-12)
+### ยกเลิก Order — SRC/KKL/SSS + Sale Admin (2569-10-12, เพิ่ม Sale Admin 2569-10-30)
 
 ปุ่ม **"ยกเลิก"** ใน popup 📋 รายละเอียด Order ตามคำสั่งผู้ใช้ "แบบเดียวกับ BackOrder เฉพาะรหัส SRC,KKL,SSS" · migration `202610120001_order_cancel.sql` เพิ่ม `cancelled_at timestamptz` + `cancel_reason text` ให้ `ss_orders` — **ชื่อ/ความหมายเดียวกับ `ss_backorders` เป๊ะ ฝั่งเว็บจึงใช้โค้ดชุดเดียวกัน** (`applyBackOrderCancel` เปลี่ยนชื่อเป็น `applyDetailCancel` แล้วยิงไป `selectedOrderTable` ไม่ hardcode ตาราง) · ทุกข้อของหัวข้อด้านบนใช้กับ Order ด้วย (สาเหตุบังคับกรอก · กดซ้ำ = คืนสถานะ · แบนเนอร์ทุกโปรไฟล์ · ชิปแดงในตาราง · แจ้งจัดซื้อ+คลัง · ห้ามเขียนทับ 3 คอลัมน์สถานะ)
 
-- **สิทธิ์ต่างจาก BackOrder** — `canCancelDetail`: BackOrder = `isBranchUser` (รวม Sale Admin เหมือนเดิม) · Order = `ORDER_CANCEL_BRANCHES` (`SRC/KKL/SSS`) · Sale Admin ยังกดตรา 3 ขั้นของ Order ได้ แค่ไม่มีปุ่มยกเลิก
+- **สิทธิ์ต่างจาก BackOrder** — `canCancelDetail`: BackOrder = `isBranchUser` (รวม Sale Admin เหมือนเดิม) · Order = `ORDER_CANCEL_BRANCHES` (= `BRANCH_PROFILE_CODES` = SRC/KKL/SSS/SALE_ADMIN ตั้งแต่ 2569-10-30 จึงเท่ากับ BackOrder)
   - ⚠️ **ห้ามเปลี่ยนเป็น `BRANCH_PROFILE_CODES`/`isBranchUser`** — Sale Admin จะได้ปุ่มทันที (นี่คือข้อยกเว้นของกฎ "ห้าม hardcode 3 สาขา" ที่ตั้งใจ — ผู้ใช้ระบุรหัสมาเอง)
 - **`isCancelled` ไม่มี `isBackOrderDetail` คู่แล้ว** — เดิมจำเป็นเพราะ `ss_orders` ไม่มีคอลัมน์ ตอนนี้มีครบทั้ง 2 ตาราง · ชิปแดงในตาราง gate ด้วย `isStampMenu` (เดิม `menu.id === 'backorder'`)
 - **ยกเลิกแล้วล็อกอะไรบ้าง:** ตรา 3 ขั้น `disabled` · ฟอร์มคลัง 3 ช่องถูกแทนด้วย `.ss-wh-locked` · **ฟอร์มจัดซื้อ 5 ช่องถูกแทนด้วยกล่องเดียวกัน** (ข้อนี้ BackOrder ไม่มีเพราะไม่มีฟอร์มจัดซื้อใน popup — ตัดสินใจล็อกให้เหมือนฟอร์มคลัง: ใบที่สาขายกเลิกแล้วไม่ควรมีใครทำงานต่อจนกว่าสาขาจะคืนสถานะ)
