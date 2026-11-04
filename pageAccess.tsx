@@ -110,20 +110,23 @@ export const usePageNotifications = () => useContext(PageNotificationContext);
 
 export type NavHandlers = Record<PageId, () => void>;
 
-// แถวปุ่มนำทาง (ใช้ร่วมทุกหน้า) — ซ่อนปุ่มของหน้าที่ถูกปิด ยกเว้นหน้าปัจจุบัน (กันปุ่ม active หาย)
+// แถวปุ่มนำทาง (ใช้ร่วมทุกหน้า) — แสดงครบทุกเมนู หน้าที่ถูกปิดใช้ปุ่ม disabled แบบจาง
 export function PageNavRow({ current, handlers }: { current: PageId; handlers: NavHandlers }) {
   const visible = usePageVisibility();
   const notifications = usePageNotifications();
   return (
     <div className="search-nav-row">
-      {PAGE_NAV.filter(p => visible[p.id] || p.id === current).map(p => (
+      {PAGE_NAV.map(p => (
         <button
           key={p.id}
-          className={`page-nav-card${p.id === current ? ' page-nav-card--active' : ''}`}
+          type="button"
+          className={`page-nav-card${p.id === current ? ' page-nav-card--active' : ''}${!visible[p.id] ? ' page-nav-card--disabled' : ''}`}
+          disabled={!visible[p.id]}
           onClick={handlers[p.id]}
-          title={p.title}
+          title={visible[p.id] ? p.title : `${p.title} · ยังไม่เปิดใช้งาน`}
+          aria-current={p.id === current ? 'page' : undefined}
         >
-          {!!notifications[p.id] && p.id !== current && (
+          {visible[p.id] && !!notifications[p.id] && p.id !== current && (
             <span className="page-nav-notification-dot" aria-label="มีข้อมูลอัปเดตใหม่" />
           )}
           <span className="page-nav-icon">{p.icon}</span>

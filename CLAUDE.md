@@ -118,8 +118,8 @@ Seven-page React app sharing the same `App.css` and Supabase project.
   - 🚨 **`branchNotSupported` ห้ามเอาออก** — ถ้าไม่กัน `activeBranch` จะ fallback เป็น `'SRC'` → effect เติมแถวร่างสร้างแถวติดสาขา SRC → พิมพ์ปุ๊บ `updateRow` มาร์ค `requested: true` ทันที = **ส่งใบเบิกในนามสาขาอื่นโดยสาขานั้นไม่รู้ตัว**
 - แถบผู้ใช้ + ปุ่มออกจากระบบ: `.app-userbar` fixed มุมขวาบน แสดงทุกหน้า (render ใน `App.tsx`)
 - ⚠️ รหัสอยู่ฝั่ง client (เหมือน `VITE_ADMIN_PASSWORD`) — เป็น gate ใช้งานภายใน ไม่ใช่ security จริง
-- ส่วนใหญ่ยังเป็น **gate เข้าใช้งาน** — ยังไม่จำกัดหน้าตามแผนก (การเปิด/ปิดหน้าใช้ `app_page_settings` ไม่ใช่โปรไฟล์)
-- **ข้อยกเว้นที่ผูกกับโปรไฟล์จริง มี 3 จุด:** (1) ปุ่ม "เลือกตามหมวด" หน้าป้ายราคา — ล็อกสาขาตาม `Profile.branch` และซ่อนทั้งปุ่มถ้า `branch === null` (2) **หน้าฉลากยา (2569-10-13)** — สาขา/ชื่อร้าน/เบอร์/**เภสัชกรท้ายฉลาก**ตามรหัสที่ล็อกอิน (SRC/KKL/SSS) ไม่มีปุ่มเลือกสาขาแล้ว · รหัสอื่น (Sale Admin / คลังสินค้า / จัดซื้อ) ดู/พิมพ์ฉลากไม่ได้ แต่ยังค้นหา/เพิ่ม/แก้ไขข้อมูลยาได้ — ดู [`druglabel/CLAUDE.md`](druglabel/CLAUDE.md) หัวข้อ "Branches" (3) **หน้าเอกสารค้าง (2569-10-27)** — SRC/KKL/SSS เห็นเฉพาะใบที่ตัวเองเป็นต้นทาง (SRC = คลัง Front Store เท่านั้น ใบของคลัง Warehouse สาขาเดียวกันขึ้นเป็น "คลังสินค้า") · คลังสินค้าเห็นทุกสาขา · **จัดซื้อ/Sale Admin ไม่เห็นปุ่ม Pending เลย (2569-10-27 — `effectiveVisibility` ใน `App.tsx` override ต่อโปรไฟล์ ไม่แตะ DB; `canSeeAll` ฝั่งจัดซื้อเลยไม่ถูกใช้แล้ว)**
+- ปุ่มนำทางมีสิทธิ์แยกตามโปรไฟล์แล้ว — ดูตารางในหัวข้อ Page Visibility; ปุ่มที่ใช้ไม่ได้แสดงจางแบบ 01 และใช้ native `disabled`
+- **ข้อยกเว้นที่ผูกกับโปรไฟล์จริง มี 3 จุด:** (1) ปุ่ม "เลือกตามหมวด" หน้าป้ายราคา — ล็อกสาขาตาม `Profile.branch` และซ่อนทั้งปุ่มถ้า `branch === null` (2) **หน้าฉลากยา (2569-10-13)** — สาขา/ชื่อร้าน/เบอร์/**เภสัชกรท้ายฉลาก**ตามรหัสที่ล็อกอิน (SRC/KKL/SSS) ไม่มีปุ่มเลือกสาขาแล้ว · รหัสอื่น (Sale Admin / คลังสินค้า / จัดซื้อ) ดู/พิมพ์ฉลากไม่ได้ แต่ยังค้นหา/เพิ่ม/แก้ไขข้อมูลยาได้ — ดู [`druglabel/CLAUDE.md`](druglabel/CLAUDE.md) หัวข้อ "Branches" (3) **หน้าเอกสารค้าง (2569-10-27)** — SRC/KKL/SSS เห็นเฉพาะใบที่ตัวเองเป็นต้นทาง (SRC = คลัง Front Store เท่านั้น ใบของคลัง Warehouse สาขาเดียวกันขึ้นเป็น "คลังสินค้า") · คลังสินค้าเห็นทุกสาขา · **จัดซื้อ/Sale Admin ใช้หน้า Pending ไม่ได้ (แสดงปุ่มแบบ disabled — `effectiveVisibility` ใน `App.tsx` override ต่อโปรไฟล์ ไม่แตะ DB; `canSeeAll` ฝั่งจัดซื้อเลยไม่ถูกใช้แล้ว)**
 
 ## Database (Supabase)
 
@@ -436,7 +436,7 @@ Each panel has a close (✕) button and includes product name in subheader.
 
 **ทางเดินข้อมูล:** เปิดหน้า / กด 🔄 / กลับมาที่แท็บ → RPC `request_pending_docs_refresh` → Agent ในร้านได้ยินทาง realtime (`pending_docs_sync`) → SELECT MSSQL → เทียบลายนิ้วมือ (`snapshotHash`) กับ `data_hash` บน Supabase → **เปลี่ยน:** RPC `replace_pending_transfers` → เว็บได้ realtime แล้วโหลดตารางใหม่ (~2-3 วิ) · **เหมือนเดิม:** RPC `mark_pending_docs_unchanged` ขยับแค่ `last_checked_at` เว็บไม่โหลดตารางซ้ำ
 
-- ปุ่มนำทาง **Pending** มีจุดแดง `.page-nav-notification-dot` เมื่อ snapshot ล่าสุดยังมีใบค้างส่ง: SRC/KKL/SSS นับเฉพาะ `from_branch` ของตัวเอง · คลังสินค้านับทุกสาขา · จัดซื้อ/Sale Admin ยังไม่เห็นปุ่มตามเดิม · `App.tsx` อ่านเฉพาะจำนวนจาก `pending_transfers` (HEAD) และส่งผ่าน `PageNotificationContext.pendingdocs` ให้แถบนำทางทุกหน้า · อัปเดตเมื่อ `pending_docs_sync` เปลี่ยน/ต่อ realtime ใหม่/กลับมาที่แท็บ และอ่านซ้ำทุก 1 นาทีขณะแท็บเปิด · **ไม่เรียก RPC ขอข้อมูลสดจาก Agent** · จุดหายเมื่อจำนวนเป็นศูนย์ ไม่ใช่เมื่อเปิดอ่าน (ซ่อนจุดขณะอยู่หน้า Pending เหมือนปุ่มอื่น)
+- ปุ่มนำทาง **Pending** มีจุดแดง `.page-nav-notification-dot` เมื่อ snapshot ล่าสุดยังมีใบค้างส่ง: SRC/KKL/SSS นับเฉพาะ `from_branch` ของตัวเอง · คลังสินค้านับทุกสาขา · จัดซื้อ/Sale Admin เห็นปุ่มแบบ disabled · `App.tsx` อ่านเฉพาะจำนวนจาก `pending_transfers` (HEAD) และส่งผ่าน `PageNotificationContext.pendingdocs` ให้แถบนำทางทุกหน้า · อัปเดตเมื่อ `pending_docs_sync` เปลี่ยน/ต่อ realtime ใหม่/กลับมาที่แท็บ และอ่านซ้ำทุก 1 นาทีขณะแท็บเปิด · **ไม่เรียก RPC ขอข้อมูลสดจาก Agent** · จุดหายเมื่อจำนวนเป็นศูนย์ ไม่ใช่เมื่อเปิดอ่าน (ซ่อนจุดขณะอยู่หน้า Pending เหมือนปุ่มอื่น)
 
 🚨 **ถาม MSSQL เฉพาะตอนมีคนเข้าหน้า Pending — ไม่มีรอบถามเอง ทั้งฝั่ง Agent และหน้าเว็บ** (ผู้ใช้สั่ง 2569-10-27: "ไม่เข้าหน้านี้ก็ไม่ต้องโหลด บางวันไม่ได้โอนเอกสารเลย") · ไม่มีใครเปิดหน้าทั้งวัน = 0 query · ประวัติ: เดิมหน้าที่เปิดค้างขอข้อมูลสดทุก 1 นาที (ป้ายหมุน+โหลดตารางทุกนาที) → รอบแรกของวันเดียวกันเปลี่ยนเป็น Agent ตรวจเองทุก 5 นาที → ผู้ใช้ขอให้ตัดรอบทิ้งทั้งหมด · **ห้ามใส่ `setInterval` ที่ทำให้ Agent ถาม MSSQL กลับมา** ไม่ว่าฝั่งไหน
 - Agent เริ่มทำงาน/ต่อ realtime ติด → ไม่ถาม MSSQL เว้นแต่มีคำขอค้าง (`unansweredRequestMs` — คนเปิดหน้าตอน Agent ปิด/รีสตาร์ท) · log `💤 ยังไม่มีคำขอ` = ปกติ
@@ -487,15 +487,26 @@ Each panel has a close (✕) button and includes product name in subheader.
 - `PageId` union + `currentPage` type import จาก `pageAccess.tsx` (ไม่ inline ใน App.tsx แล้ว)
 - เพิ่มหน้าใหม่: เพิ่มใน `PageId` union + `PAGE_NAV` array (`pageAccess.tsx` — `icon` ต้องเป็น JSX `<svg>` ห่อด้วย `<Svg>` helper ไม่ใช่ emoji), เพิ่ม prop `onGoXxx` + ส่งใน `handlers` ทุกหน้า, เพิ่ม row ใน `app_page_settings` (SQL), และเพิ่มการ render หน้าใน `App.tsx`
 
-## Page Visibility — เปิด/ปิดปุ่มแต่ละหน้า (ตั้งผ่าน SQL)
+## Page Visibility — สิทธิ์ปุ่มนำทางและค่าตั้งค่ากลาง
+
+สิทธิ์ที่ผู้ใช้กำหนดเฉพาะรหัส (ใช้แทนค่ากลางเดิมสำหรับ 5 รหัสนี้):
+
+| รหัส | ปุ่มที่เปิดใช้งาน | ปุ่มที่แสดงแบบ disabled 01 |
+|---|---|---|
+| SRC / KKL / SSS | ทุกปุ่ม | ไม่มี |
+| WAREHOUSE (คลังสินค้า) | Price / Stock / Outbound / Support / Pending | Label / Customer |
+| PURCHASING (จัดซื้อ) | Price / Stock / Support | Label / Customer / Pending / Outbound |
+
+- `effectiveVisibility` ใน `App.tsx` เป็นเงื่อนไขกลางสำหรับทั้งปุ่มและหน้าที่ render · หากสลับโปรไฟล์แล้วหน้าที่ค้างอยู่ไม่อนุญาต จะใช้หน้าแรกที่เปิดได้ทันที โดยไม่ mount หน้าที่ถูกปิดก่อน
+- **Sale Admin คงเงื่อนไขเดิม:** Pending ปิด และเมนูอื่นอิง `app_page_settings` เพราะผู้ใช้ยังไม่ได้ขอเปลี่ยนสิทธิ์รหัสนี้
 
 - 🔧 **หน้าจอสลับเปิด/ปิดถูกถอดออกแล้ว (2569-09-25 ตามคำขอผู้ใช้)** — เดิมอยู่ใน modal ปุ่มเฟือง ⚙️ ตอนนี้ modal นั้นเหลือแค่ `📤 Upload R05.106` (ดู Key files) · ตอนถอด ทั้ง 6 หน้าเป็น `visible=true` (เช็คจาก DB แล้ว) · หน้าที่ 7 `pendingdocs` (2569-10-27) เริ่มแบบ `visible=false` จาก `pending-docs-setup.sql` — เปิดหลัง Agent ในร้านใช้ได้จริง · ระบบ**ยังอ่าน**ค่าจากตารางตามเดิม เปลี่ยนค่าต้องใช้ SQL เช่น `update app_page_settings set visible = false, updated_at = now() where page_id = 'outbound';` · โค้ดหน้าจอเดิม (`togglePageVisible` + CSS `.page-toggle-*`) ดูได้จาก git history
 - เก็บสถานะใน Supabase ตาราง **`app_page_settings`** (`page_id` pk, `visible` bool) — ซิงค์ทุกเครื่อง · สร้างด้วย `page-settings-setup.sql`
-- `App.tsx`: fetch ตอน mount → `pageVisibility` state → `PageVisibilityContext.Provider` ครอบทั้งแอป (เว็บอ่านอย่างเดียว ไม่มีจุดเขียนตารางนี้แล้ว)
-- `PageNavRow` อ่าน `usePageVisibility()` → ซ่อนปุ่มหน้าที่ `visible=false` **ยกเว้นหน้าปัจจุบัน** (`|| p.id === current` กันปุ่ม active หาย)
+- `App.tsx`: fetch ตอน mount → `pageVisibility` state เป็นค่าพื้นฐานของรหัสที่ยังไม่ได้กำหนดสิทธิ์เฉพาะ → รวมสิทธิ์ใน `effectiveVisibility` → `PageVisibilityContext.Provider` ครอบทั้งแอป (เว็บอ่านอย่างเดียว ไม่มีจุดเขียนตารางนี้แล้ว)
+- `PageNavRow` อ่าน `usePageVisibility()` → **แสดงปุ่มครบทุกเมนู** · หน้าที่ `visible=false` ใช้ native `disabled` + `.page-nav-card--disabled` แบบ **01 จางแบบเรียบ** จาก `public/nav-disabled-designs.html` (`opacity: .34`) กด/โฟกัสไม่ได้ และไม่เปลี่ยนสีหรือยกตัวเมื่อ hover · ไม่แสดงจุดแจ้งเตือนบนปุ่ม disabled
 - หน้าปัจจุบันถูกปิดตอนโหลด → เด้งไปหน้าแรกที่เปิดอยู่
-- **fail-safe**: โหลดจาก Supabase ไม่ได้ → `DEFAULT_VISIBILITY` (เปิดทุกหน้า) — แอปใช้ได้ครบเสมอ
-- ⚠️ ต้องรัน `page-settings-setup.sql` ใน Supabase ก่อน ไม่งั้นอ่านค่าไม่ได้ → fallback เปิดทุกหน้า (แอปยังใช้ได้ครบทุกหน้า)
+- **fail-safe**: โหลดจาก Supabase ไม่ได้ → ใช้ `DEFAULT_VISIBILITY` เป็นค่าพื้นฐาน โดยยังบังคับสิทธิ์เฉพาะของโปรไฟล์ตามตารางข้างบน
+- ⚠️ ต้องรัน `page-settings-setup.sql` เพื่อใช้ค่าตั้งค่ากลางใน Supabase · การอ่านค่ากลางไม่สำเร็จไม่ทำให้ Label/Customer ของคลังสินค้า หรือ Label/Customer/Pending/Outbound ของจัดซื้อเปิดกลับมา
 
 ## Backup Files
 

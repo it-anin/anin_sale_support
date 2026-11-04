@@ -364,8 +364,28 @@ const App: React.FC = () => {
   const [locationStatus, setLocationStatus] = useState('');
   const [locationBusy, setLocationBusy] = useState(false);
   const locationFileRef = useRef<HTMLInputElement>(null);
-  const [currentPage, setCurrentPage] = useState<PageId>('pricetag');
+  const [requestedPage, setCurrentPage] = useState<PageId>('pricetag');
   const [authProfile, setAuthProfile] = useState<Profile | null>(loadAuthProfile);
+  const [pageVisibility, setPageVisibility] = useState<PageVisibility>(DEFAULT_VISIBILITY);
+  // รหัสที่ผู้ใช้กำหนดสิทธิ์แล้ว ใช้รายการนี้โดยตรงแทนค่าตั้งค่ากลางเดิม
+  const effectiveVisibility = useMemo<PageVisibility>(() => {
+    if ((STORE_BRANCH_CODES as readonly string[]).includes(authProfile?.id ?? '')) {
+      return { ...DEFAULT_VISIBILITY };
+    }
+    if (authProfile?.id === 'WAREHOUSE') {
+      return { ...DEFAULT_VISIBILITY, druglabel: false, customerhistory: false };
+    }
+    if (authProfile?.id === 'PURCHASING') {
+      return { ...DEFAULT_VISIBILITY, druglabel: false, customerhistory: false, pendingdocs: false, outbound: false };
+    }
+    // Sale Admin ยังใช้เงื่อนไขเดิม เพราะไม่ได้อยู่ในรายการสิทธิ์ที่ขอเปลี่ยน
+    return authProfile?.id === 'SALE_ADMIN' ? { ...pageVisibility, pendingdocs: false } : pageVisibility;
+  }, [pageVisibility, authProfile?.id]);
+  // สลับรหัสขณะค้างอยู่ในหน้าที่รหัสใหม่เปิดไม่ได้ → แสดงหน้าแรกที่อนุญาตทันที
+  // ไม่ mount หน้าที่ถูกปิดเพื่อรอ effect เปลี่ยนหน้าในภายหลัง
+  const currentPage = effectiveVisibility[requestedPage]
+    ? requestedPage
+    : (PAGE_NAV.find(page => effectiveVisibility[page.id])?.id ?? 'pricetag');
   const [saleSupportUnreadCount, setSaleSupportUnreadCount] = useState(0);
   // ตัวนับปุ่ม "🔔 อัพเดท" ของคลังสินค้าเท่านั้น (2569-08-18) — คนละแหล่งกับ saleSupportUnreadCount
   // ด้านบน (ปุ่ม "Order ใหม่" เดิม ยังอ่านจาก ss_orders เหมือนเดิม ไม่ได้ถูกแทนที่) จึงแยก effect ต่างหาก
@@ -698,8 +718,7 @@ const App: React.FC = () => {
 
   // ── เปิด/ปิดปุ่มแต่ละหน้า (app_page_settings, ซิงค์ผ่าน Supabase) ──
   // ⚠️ หน้าจอสลับเปิด/ปิดถูกถอดออกจาก modal ⚙️ แล้ว (2569-09-25 ตามคำขอผู้ใช้) แต่ยังอ่านค่าจาก DB อยู่
-  //    หน้าที่ visible=false ยังถูกซ่อนเหมือนเดิม — เปลี่ยนค่าต้องใช้ SQL (CLAUDE.md หัวข้อ Page Visibility)
-  const [pageVisibility, setPageVisibility] = useState<PageVisibility>(DEFAULT_VISIBILITY);
+  //    หน้าที่ visible=false แสดงเป็นปุ่มจางและกดไม่ได้ — เปลี่ยนค่าต้องใช้ SQL (CLAUDE.md หัวข้อ Page Visibility)
   // modal ⚙️ Admin — ใส่รหัส admin แล้วอัปโหลด R05.106 ด่วน (handleR05106Upload ด้านล่าง)
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [adminPw, setAdminPw] = useState('');
@@ -751,14 +770,13 @@ const App: React.FC = () => {
     setLocationStatus('');
   }, [authProfile?.id]);
 
-  // โหลดสถานะเปิด/ปิดหน้าจาก Supabase ตอน mount + เด้งออกจากหน้าที่ถูกปิด
+  // โหลดค่าตั้งค่ากลางสำหรับรหัสที่ยังไม่ได้กำหนดสิทธิ์เฉพาะ
   useEffect(() => {
     supabase.from('app_page_settings').select('page_id, visible').then(({ data, error }) => {
       if (error || !data) return;
       const map: PageVisibility = { ...DEFAULT_VISIBILITY };
       data.forEach((r) => { if (r.page_id in map) map[r.page_id as PageId] = !!r.visible; });
       setPageVisibility(map);
-      setCurrentPage(cur => (map[cur] ? cur : (PAGE_NAV.find(p => map[p.id])?.id ?? cur)));
     });
   }, []);
 
@@ -1612,15 +1630,6 @@ ${sheetsHtml}
     if (!previewBarcodeProduct) { setPreviewQrSrc(''); return; }
     generateQR(previewBarcodeProduct.barcode).then(setPreviewQrSrc);
   }, [previewBarcodeProduct, generateQR]);
-
-  // จัดซื้อ/Sale Admin ไม่เห็นปุ่มหน้า Pending (ผู้ใช้สั่ง 2569-10-27) — override ต่อโปรไฟล์ทับค่าจาก DB
-  // ⚠️ เป็น hook ต้องอยู่ก่อน early-return ด้านล่าง
-  const effectiveVisibility = useMemo<PageVisibility>(
-    () => (authProfile?.id === 'PURCHASING' || authProfile?.id === 'SALE_ADMIN')
-      ? { ...pageVisibility, pendingdocs: false }
-      : pageVisibility,
-    [pageVisibility, authProfile?.id],
-  );
 
   // Gate: ต้องล็อกอินก่อนเข้าใช้งานโปรแกรม
   if (!authProfile) {

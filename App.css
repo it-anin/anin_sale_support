@@ -232,7 +232,7 @@ body {
   50% { transform: scale(1.18); }
 }
 
-.page-nav-card:hover {
+.page-nav-card:hover:not(:disabled) {
   background: #fff;
   color: #2d6cad;
   transform: translateY(-3px);
@@ -245,8 +245,8 @@ body {
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.28);
   /*animation: buttonBounce 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);*/
 }
-.page-nav-card--disabled { opacity: .45; cursor: not-allowed; filter: grayscale(.35); }
-.page-nav-card--disabled:hover { transform: none; box-shadow: none; }
+/* แบบ 01 "จางแบบเรียบ" จาก public/nav-disabled-designs.html */
+.page-nav-card--disabled { opacity: .34; cursor: not-allowed; transition: none; }
 
 @keyframes buttonBounce {
   0% {

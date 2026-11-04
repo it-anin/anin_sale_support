@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>ANIN — ปุ่ม Disabled 10 แบบ</title>
+  <style>
+    :root {
+      --blue: #4891db;
+      --deep: #2d6cad;
+      --ink: #183b5b;
+      --muted: #708498;
+      --line: #dce6ef;
+      --paper: #f3f6fa;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: system-ui, -apple-system, 'Leelawadee UI', Tahoma, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    button { font: inherit; -webkit-tap-highlight-color: transparent; }
+    button:focus-visible { outline: 3px solid var(--deep); outline-offset: 4px; }
+    .sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+    .icon { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+    .masthead { background: #fff; border-bottom: 1px solid var(--line); }
+    .masthead-inner, main, .page-footer { max-width: 1400px; margin: auto; padding-left: 32px; padding-right: 32px; }
+    .masthead-inner { padding-top: 32px; padding-bottom: 34px; }
+    .brand-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 28px; }
+    .brand { font-size: 17px; font-weight: 850; letter-spacing: 2.5px; }
+    .brand span { color: var(--blue); }
+    .eyebrow { color: var(--muted); font-size: 10px; font-weight: 700; letter-spacing: 2px; }
+    .intro { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+    h1 { margin: 0; font-size: clamp(26px, 3.4vw, 42px); line-height: 1.4; letter-spacing: -1.2px; font-weight: 800; }
+    h1 span { color: var(--deep); }
+    .intro p { margin: 10px 0 0; max-width: 700px; font-size: 14px; color: var(--muted); line-height: 1.8; }
+    .edition { flex: none; text-align: right; padding-left: 24px; border-left: 1px solid var(--line); }
+    .edition strong { display: block; font-size: 66px; line-height: 1; font-weight: 750; color: var(--blue); letter-spacing: -5px; }
+    .edition span { display: block; margin-top: 10px; font-size: 11px; color: var(--muted); }
+    main { padding-top: 26px; padding-bottom: 28px; }
+    .controls { padding: 21px 24px; border: 1px solid var(--line); border-radius: 16px; background: #fff; }
+    .controls-top { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 8px; }
+    .controls h2 { margin: 0; font-size: 14px; font-weight: 750; }
+    .count { color: var(--deep); font-size: 12px; }
+    .controls p { margin: 5px 0 14px; color: var(--muted); font-size: 12px; line-height: 1.7; }
+    .menu-choices { display: flex; flex-wrap: wrap; gap: 8px; }
+    .menu-choice { display: inline-flex; align-items: center; gap: 7px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: #60778d; cursor: pointer; font-size: 12px; font-weight: 600; }
+    .menu-choice .icon { width: 15px; height: 15px; }
+    .menu-choice[aria-pressed="true"] { border-color: #9fc5ea; background: #eaf3fc; color: var(--deep); }
+    .menu-choice[aria-pressed="true"]::after { content: 'ปิด'; margin-left: 3px; font-size: 9px; font-weight: 750; padding: 1px 5px; border-radius: 4px; background: #d0e4f8; }
+    .menu-choice:hover { border-color: var(--blue); }
+    .compare-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px; margin: 23px 0 16px; }
+    .legend { display: flex; flex-wrap: wrap; gap: 17px; font-size: 11px; color: #5e7389; }
+    .legend span { display: inline-flex; align-items: center; gap: 6px; }
+    .swatch { width: 12px; height: 12px; border-radius: 3px; background: #8cb7e3; }
+    .swatch.current { background: #fff; border: 1px solid #aac1d8; box-shadow: 0 1px 3px #b1c6d9; }
+    .swatch.disabled { background: #d5dfe9; }
+    .preview-status { font-size: 11px; color: var(--muted); }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
+    .design { min-width: 0; border: 1px solid var(--line); border-radius: 16px; background: #fff; overflow: hidden; box-shadow: 0 3px 12px rgba(28, 63, 95, .035); }
+    .design.is-chosen { border-color: var(--blue); box-shadow: 0 0 0 2px rgba(72, 145, 219, .2); }
+    .design-head { display: flex; gap: 13px; align-items: flex-start; padding: 20px 22px 17px; }
+    .number { flex: none; margin-top: 2px; font-size: 15px; font-weight: 750; color: var(--blue); font-variant-numeric: tabular-nums; letter-spacing: -.5px; }
+    .design-title { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .design h2 { margin: 0; font-size: 16px; font-weight: 750; line-height: 1.5; }
+    .design-desc { margin: 5px 0 0; color: var(--muted); font-size: 11px; line-height: 1.7; }
+    .recommend { padding: 2px 6px; border-radius: 4px; background: #edf4fb; color: var(--deep); font-size: 9px; font-weight: 650; }
+    .stage { background: var(--blue); padding: 24px 15px; }
+    .nav-row { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+    .nav-card { position: relative; display: flex; align-items: center; justify-content: center; flex: 0 0 72px; width: 72px; height: 66px; border: 1px solid transparent; border-radius: 8px; padding: 0; background: rgba(255, 255, 255, .16); color: #fff; cursor: pointer; transition: background .18s, color .18s, transform .18s, box-shadow .18s; }
+    .tile-content { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+    .nav-label { font-size: 10px; font-weight: 600; letter-spacing: .1px; line-height: 1.3; }
+    .nav-card:hover:not(:disabled) { transform: translateY(-3px); color: var(--deep); background: #fff; box-shadow: 0 7px 15px rgba(23, 59, 95, .18); }
+    .nav-card:active:not(:disabled) { transform: translateY(-1px); }
+    .nav-card[aria-current="page"] { background: #fff; color: var(--deep); box-shadow: 0 5px 14px rgba(23, 59, 95, .22); }
+    .nav-card:focus-visible { outline-color: #fff; }
+    .nav-card:disabled { cursor: not-allowed; transform: none; transition: none; }
+
+    /* 01 — จางทั้งปุ่ม */
+    .style-1 .nav-card:disabled { opacity: .34; }
+    /* 02 — โปร่งใส เหลือกรอบบาง */
+    .style-2 .nav-card:disabled { background: transparent; border-color: rgba(255, 255, 255, .3); color: rgba(255, 255, 255, .48); }
+    /* 03 — แผ่นกระจกฝ้า */
+    .style-3 .nav-card:disabled { background: linear-gradient(145deg, rgba(255, 255, 255, .24), rgba(255, 255, 255, .06)); border-color: rgba(255, 255, 255, .21); color: rgba(255, 255, 255, .48); box-shadow: inset 0 1px rgba(255, 255, 255, .12); }
+    /* 04 — สีเทาแยกจากปุ่มปกติ */
+    .style-4 .nav-card:disabled { background: #cad6e2; border-color: #d7e1eb; color: #8093a7; }
+    /* 05 — จุดแม่กุญแจ */
+    .style-5 .nav-card:disabled { background: rgba(255, 255, 255, .07); border-color: rgba(255, 255, 255, .12); }
+    .style-5 .nav-card:disabled .tile-content { opacity: .42; }
+    .lock-badge { position: absolute; top: -5px; right: -5px; width: 22px; height: 22px; border: 3px solid var(--blue); border-radius: 50%; background: #e4eef9; color: #587b9e; display: grid; place-items: center; }
+    .lock-badge .icon { width: 10px; height: 10px; stroke-width: 2; }
+    /* 06 — เส้นประ */
+    .style-6 .nav-card:disabled { background: rgba(255, 255, 255, .03); border: 1px dashed rgba(255, 255, 255, .45); color: rgba(255, 255, 255, .46); }
+    /* 07 — เงายุบ */
+    .style-7 .nav-card:disabled { background: rgba(26, 70, 118, .17); color: rgba(255, 255, 255, .38); box-shadow: inset 2px 2px 5px rgba(20, 65, 109, .2), inset -1px -1px 2px rgba(255, 255, 255, .13); border-color: rgba(31, 83, 136, .08); }
+    /* 08 — ลายทแยง */
+    .style-8 .nav-card:disabled { color: rgba(255, 255, 255, .46); border-color: rgba(255, 255, 255, .16); background: repeating-linear-gradient(135deg, rgba(255, 255, 255, .12) 0, rgba(255, 255, 255, .12) 3px, rgba(255, 255, 255, .025) 3px, rgba(255, 255, 255, .025) 8px); }
+    /* 09 — แถบข้อความสถานะ */
+    .style-9 .nav-card:disabled { background: rgba(255, 255, 255, .06); color: rgba(255, 255, 255, .58); border-color: rgba(255, 255, 255, .16); }
+    .style-9 .nav-card:disabled .tile-content { transform: translateY(-6px); }
+    .disabled-note { position: absolute; bottom: 4px; left: 5px; right: 5px; border-radius: 3px; padding: 2px 0; background: rgba(30, 75, 124, .27); color: #dce9f8; font-size: 8px; font-weight: 650; line-height: 1.25; }
+    /* 10 — ป้ายเฉียงมุมบน */
+    .style-10 .nav-card:disabled { overflow: hidden; background: rgba(255, 255, 255, .08); border-color: rgba(255, 255, 255, .14); }
+    .style-10 .nav-card:disabled .tile-content { opacity: .38; }
+    .ribbon { position: absolute; top: 6px; right: -12px; width: 45px; padding: 2px 0; transform: rotate(42deg); background: #2c6095; color: #d9e8f7; text-align: center; font-size: 8px; line-height: 1.2; }
+
+    .design-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 20px; }
+    .style-name { color: #8a9bad; font-size: 10px; letter-spacing: .5px; }
+    .choose-btn { padding: 6px 11px; border: 1px solid var(--line); border-radius: 7px; background: #fff; color: var(--deep); font-size: 11px; font-weight: 650; cursor: pointer; }
+    .choose-btn:hover { background: #edf4fb; border-color: #accdec; }
+    .choose-btn[aria-pressed="true"] { background: var(--deep); border-color: var(--deep); color: #fff; }
+    .selection { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding: 18px 22px; margin-top: 24px; border: 1px solid #cfdfef; border-radius: 12px; background: #eaf2fa; }
+    .selection strong { font-size: 13px; font-weight: 700; }
+    .selection span { font-size: 11px; color: #66809b; }
+    .page-footer { padding-top: 2px; padding-bottom: 32px; font-size: 11px; line-height: 1.8; color: #8294a5; }
+    .page-footer strong { color: #5d7790; font-weight: 650; }
+    @media (max-width: 1279px) { .grid { grid-template-columns: 1fr; } }
+    @media (max-width: 600px) {
+      .masthead-inner, main, .page-footer { padding-left: 16px; padding-right: 16px; }
+      .masthead-inner { padding-top: 22px; padding-bottom: 24px; }
+      .brand-row { margin-bottom: 22px; }
+      .eyebrow { font-size: 8px; letter-spacing: 1px; }
+      .intro { gap: 12px; align-items: flex-start; }
+      h1 { font-size: 27px; letter-spacing: -.9px; }
+      .intro p { font-size: 12px; }
+      .edition { padding-left: 14px; margin-top: 5px; }
+      .edition strong { font-size: 46px; letter-spacing: -3px; }
+      .edition span { max-width: 62px; font-size: 9px; line-height: 1.6; }
+      .controls { padding: 16px; }
+      .menu-choice { padding: 7px 9px; font-size: 11px; gap: 5px; }
+      .menu-choice .icon { width: 13px; height: 13px; }
+      .compare-bar { margin-top: 19px; gap: 9px; }
+      .legend { font-size: 10px; gap: 12px; }
+      .design-head { padding: 17px 16px 14px; gap: 11px; }
+      .design h2 { font-size: 15px; }
+      .design-desc { font-size: 11px; }
+      .stage { padding: 22px 12px; }
+      .nav-row { gap: 10px 8px; }
+      .design-foot { padding: 12px 16px; }
+      .selection { padding: 16px; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; } }
+  </style>
+</head>
+<body>
+  <svg class="sprite" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <defs>
+      <symbol id="i-price" viewBox="0 0 24 24"><path d="m20.6 13.4-7.2 7.2a2 2 0 0 1-2.8 0L2 12V2h10l8.6 8.6a2 2 0 0 1 0 2.8Z"/><circle cx="7" cy="7" r="1.4"/></symbol>
+      <symbol id="i-label" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8ZM14 2v6h6M8 13h8M8 17h5"/></symbol>
+      <symbol id="i-stock" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16ZM3.3 7l8.7 5 8.7-5M12 22V12"/></symbol>
+      <symbol id="i-customer" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><circle cx="8.5" cy="10.2" r="2"/><path d="M14 9.5h4M14 13h4M5.2 16.6c.7-1.4 1.9-2.1 3.3-2.1s2.6.7 3.3 2.1"/></symbol>
+      <symbol id="i-outbound" viewBox="0 0 24 24"><path d="M1 5h13v11H1ZM14 9h4l3 3.2V16h-7Z"/><circle cx="6" cy="18.4" r="2"/><circle cx="17.5" cy="18.4" r="2"/></symbol>
+      <symbol id="i-support" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/></symbol>
+      <symbol id="i-pending" viewBox="0 0 24 24"><path d="M12 21H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h8l5 5v3M14 3v5h5"/><circle cx="17" cy="17" r="4"/><path d="M17 15.2V17l1.3 1"/></symbol>
+      <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></symbol>
+    </defs>
+  </svg>
+
+  <header class="masthead">
+    <div class="masthead-inner">
+      <div class="brand-row"><div class="brand">ANIN<span>.</span></div><div class="eyebrow">NAVIGATION / DESIGN STUDY</div></div>
+      <div class="intro">
+        <div><h1>เลือกสไตล์ปุ่ม <span>Disabled</span></h1><p>คงปุ่มทุกเมนูไว้ให้มองเห็น พร้อมแสดงสถานะว่าปุ่มใดยังใช้งานไม่ได้<br>เปรียบเทียบ 10 แบบบนพื้นฟ้าเดิม ก่อนกำหนดสิทธิ์ให้แต่ละรหัส</p></div>
+        <div class="edition"><strong>10</strong><span>แบบให้เลือก</span></div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="controls" aria-labelledby="controls-title">
+      <div class="controls-top"><h2 id="controls-title">ลองเลือกเมนูที่ต้องการปิดในตัวอย่าง</h2><span class="count" id="disabled-count" aria-live="polite"></span></div>
+      <p>เมนูที่เลือกจะกดไม่ได้เหมือนกันทั้ง 10 แบบ เพื่อให้เทียบดีไซน์ได้ง่าย</p>
+      <div class="menu-choices" id="menu-choices" role="group" aria-label="เลือกเมนูที่ปิดใช้งานในตัวอย่าง"></div>
+    </section>
+    <div class="compare-bar">
+      <div class="legend" aria-label="ความหมายของสถานะปุ่ม"><span><i class="swatch current" aria-hidden="true"></i>หน้าปัจจุบัน</span><span><i class="swatch" aria-hidden="true"></i>ใช้งานได้</span><span><i class="swatch disabled" aria-hidden="true"></i>ปิดใช้งาน</span></div>
+      <div class="preview-status" id="preview-status" role="status">กำลังดูตัวอย่างเมนู Price</div>
+    </div>
+    <div class="grid" id="designs"></div>
+    <div class="selection"><strong id="selected-design" aria-live="polite">ยังไม่ได้เลือกแบบ</strong><span>กด “เลือกแบบนี้” ใต้ดีไซน์ที่ต้องการ</span></div>
+    <noscript><p>กรุณาเปิดใช้งาน JavaScript เพื่อดูตัวอย่างทั้ง 10 แบบ</p></noscript>
+  </main>
+  <footer class="page-footer"><strong>ตัวอย่างสำหรับเลือกดีไซน์</strong> · ไฟล์นี้เปิดดูได้โดยไม่ต้องเชื่อมต่ออินเทอร์เน็ต<br>หลังเลือกหมายเลขแบบแล้ว จึงค่อยกำหนดเมนูที่เปิดให้แต่ละรหัสใช้งาน</footer>
+
+  <script>
+    const menus = [
+      { id: 'price', label: 'Price' }, { id: 'label', label: 'Label' },
+      { id: 'stock', label: 'Stock' }, { id: 'customer', label: 'Customer' },
+      { id: 'outbound', label: 'Outbound' }, { id: 'support', label: 'Support' },
+      { id: 'pending', label: 'Pending' },
+    ];
+    const designs = [
+      { title: 'จางแบบเรียบ', name: 'Soft fade', desc: 'ลดความทึบของปุ่มทั้งใบ เรียบและกลมกลืนกับแถบนำทาง', recommended: true },
+      { title: 'กรอบโปร่ง', name: 'Outline ghost', desc: 'เหลือเส้นขอบบางและพื้นโปร่ง ชื่อเมนูยังมองเห็นครบ' },
+      { title: 'กระจกฝ้า', name: 'Mist glass', desc: 'พื้นขาวฝ้าจาง ๆ เพิ่มมิติแบบนุ่มนวลในโทนฟ้าเดิม' },
+      { title: 'สีเทานุ่ม', name: 'Muted gray', desc: 'ใช้พื้นและไอคอนสีเทา แยกจากปุ่มที่ใช้งานได้ชัดเจน' },
+      { title: 'แม่กุญแจมุมปุ่ม', name: 'Tiny lock', desc: 'เพิ่มแม่กุญแจเล็กที่มุม บอกว่าเมนูนี้ยังไม่เปิดใช้งาน' },
+      { title: 'กรอบเส้นประ', name: 'Dashed outline', desc: 'เส้นประบาง ๆ สื่อถึงเมนูที่ยังอยู่ในสถานะพัก' },
+      { title: 'ยุบลงในพื้น', name: 'Inset card', desc: 'เงาด้านในทำให้ปุ่มดูยุบลง แทนปุ่มนูนที่พร้อมให้กด' },
+      { title: 'ลายทแยง', name: 'Quiet hatch', desc: 'เพิ่มลายทแยงจาง ๆ ให้แยกสถานะได้จากลวดลายด้วย' },
+      { title: 'แถบบอกสถานะ', name: 'Status strip', desc: 'มีข้อความ “ปิดใช้งาน” ใต้ชื่อเมนู บอกความหมายตรงไปตรงมา' },
+      { title: 'ป้ายเฉียงมุมบน', name: 'Corner ribbon', desc: 'ป้ายเล็กคำว่า “ปิด” ที่มุม โดยเก็บชื่อและไอคอนเมนูไว้' },
+    ];
+    const disabledMenus = new Set(['outbound', 'pending']);
+    let currentMenu = 'price';
+    let chosenDesign = null;
+    const icon = id => `<svg class="icon" aria-hidden="true"><use href="#i-${id}"></use></svg>`;
+
+    document.getElementById('menu-choices').innerHTML = menus.map(menu => `
+      <button class="menu-choice" type="button" data-menu="${menu.id}" aria-pressed="false">
+        ${icon(menu.id)}<span>${menu.label}</span>
+      </button>`).join('');
+
+    document.getElementById('designs').innerHTML = designs.map((design, index) => `
+      <section class="design style-${index + 1}" data-design="${index + 1}" aria-labelledby="design-${index + 1}">
+        <div class="design-head">
+          <span class="number">${String(index + 1).padStart(2, '0')}</span>
+          <div><div class="design-title"><h2 id="design-${index + 1}">${design.title}</h2>${design.recommended ? '<span class="recommend">เรียบที่สุด</span>' : ''}</div><p class="design-desc">${design.desc}</p></div>
+        </div>
+        <div class="stage"><div class="nav-row" role="group" aria-label="ตัวอย่างปุ่มนำทางแบบที่ ${index + 1}"></div></div>
+        <div class="design-foot"><span class="style-name">${design.name}</span><button type="button" class="choose-btn" data-choose="${index + 1}" aria-pressed="false">เลือกแบบนี้</button></div>
+      </section>`).join('');
+
+    function renderMenus() {
+      if (disabledMenus.has(currentMenu) || !currentMenu) currentMenu = menus.find(menu => !disabledMenus.has(menu.id))?.id ?? null;
+      document.querySelectorAll('.menu-choice').forEach(button => {
+        button.setAttribute('aria-pressed', String(disabledMenus.has(button.dataset.menu)));
+      });
+      document.getElementById('disabled-count').textContent = disabledMenus.size ? `ปิดอยู่ ${disabledMenus.size} จาก 7 เมนู` : 'เปิดใช้งานทุกเมนู';
+      document.getElementById('preview-status').textContent = currentMenu ? `กำลังดูตัวอย่างเมนู ${menus.find(menu => menu.id === currentMenu).label}` : 'ตัวอย่างเมื่อปิดใช้งานทุกเมนู';
+      document.querySelectorAll('.design').forEach(card => {
+        const number = Number(card.dataset.design);
+        card.querySelector('.nav-row').innerHTML = menus.map(menu => {
+          const disabled = disabledMenus.has(menu.id);
+          const marker = !disabled ? '' : number === 5 ? `<span class="lock-badge" aria-hidden="true">${icon('lock')}</span>` : number === 9 ? '<span class="disabled-note" aria-hidden="true">ปิดใช้งาน</span>' : number === 10 ? '<span class="ribbon" aria-hidden="true">ปิด</span>' : '';
+          return `<button class="nav-card" type="button" data-nav="${menu.id}" ${disabled ? 'disabled' : ''} ${currentMenu === menu.id ? 'aria-current="page"' : ''} aria-label="${menu.label}${disabled ? ' ปิดใช้งาน' : ''}" title="${menu.label}${disabled ? ' · ปิดใช้งานในตัวอย่างนี้' : ' · ทดลองเลือกเมนู'}"><span class="tile-content">${icon(menu.id)}<span class="nav-label">${menu.label}</span></span>${marker}</button>`;
+        }).join('');
+      });
+    }
+
+    document.getElementById('menu-choices').addEventListener('click', event => {
+      const button = event.target.closest('[data-menu]');
+      if (!button) return;
+      const menu = button.dataset.menu;
+      if (disabledMenus.has(menu)) disabledMenus.delete(menu); else disabledMenus.add(menu);
+      renderMenus();
+    });
+    document.getElementById('designs').addEventListener('click', event => {
+      const nav = event.target.closest('[data-nav]');
+      if (nav && !nav.disabled) {
+        const design = nav.closest('[data-design]').dataset.design;
+        currentMenu = nav.dataset.nav;
+        renderMenus();
+        document.querySelector(`[data-design="${design}"] [data-nav="${currentMenu}"]`).focus({ preventScroll: true });
+      }
+      const choose = event.target.closest('[data-choose]');
+      if (!choose) return;
+      chosenDesign = Number(choose.dataset.choose);
+      document.querySelectorAll('.design').forEach(card => {
+        const selected = Number(card.dataset.design) === chosenDesign;
+        card.classList.toggle('is-chosen', selected);
+        const button = card.querySelector('.choose-btn');
+        button.setAttribute('aria-pressed', String(selected));
+        button.textContent = selected ? '✓ เลือกแบบนี้แล้ว' : 'เลือกแบบนี้';
+      });
+      document.getElementById('selected-design').textContent = `แบบที่เลือก: ${String(chosenDesign).padStart(2, '0')} — ${designs[chosenDesign - 1].title}`;
+    });
+    renderMenus();
+  </script>
+</body>
+</html>
