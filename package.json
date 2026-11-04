@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "test:customer-upload": "node --test upload-customer-history.test.mjs",
     "test:pending-docs": "node --test pending-docs-agent.test.mjs",
-    "test:master-columns": "node --test masterColumns.test.mjs"
+    "test:master-columns": "node --test masterColumns.test.mjs",
+    "test:price-change-print": "node --test priceChangePrint.test.mjs"
   },
   "dependencies": {
     "@fontsource/inter": "^5.2.8",

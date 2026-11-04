@@ -4496,6 +4496,37 @@ body.ss-col-resizing { cursor: col-resize; user-select: none; }
   animation: pageNavNotificationPulse 1.8s ease-in-out infinite;
 }
 
+.price-change-batch-card {
+  margin-bottom: 8px;
+  border: 1px solid #dfe7ef;
+  border-radius: 11px;
+  background: #fff;
+}
+.price-change-batch-toggle {
+  margin-bottom: 0;
+  border: 0;
+}
+.price-change-batch-toggle:hover { box-shadow: none; transform: none; }
+.price-change-print-btn {
+  display: block;
+  margin: 0 12px 12px auto;
+  padding: 7px 12px;
+  border: 1px solid #b8d3ee;
+  border-radius: 8px;
+  background: #eaf3fc;
+  color: #2d6cad;
+  font: 700 12px 'Noto Sans Thai', sans-serif;
+  cursor: pointer;
+}
+.price-change-print-btn:hover:not(:disabled) { background: #2d6cad; color: #fff; }
+.price-change-print-btn:focus-visible { outline: 2px solid #4891db; outline-offset: 2px; }
+.price-change-print-btn:disabled { opacity: 0.55; cursor: wait; }
+.price-change-print-error {
+  margin-bottom: 12px;
+  color: #b04a3a;
+  font: 500 12px/1.5 'Noto Sans Thai', sans-serif;
+}
+
 /* รายการ SKU ในกลุ่ม batch ที่กางอยู่ — ย่อหน้าเข้าให้เห็นว่าเป็นลูกของการ์ดด้านบน */
 .price-change-rows {
   display: flex;

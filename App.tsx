@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import { flushSync } from 'react-dom';
 import * as XLSX from 'xlsx';
 import JsBarcode from 'jsbarcode';
 import QRCode from 'qrcode';
@@ -13,6 +14,7 @@ import { AnimatedLogoText } from './AnimatedLogo';
 import { SearchIcon } from './SearchIcon';
 import { LoginPage } from './LoginPage';
 import { parseR05106 } from './r05106';
+import { loadPriceChangePrintProducts } from './priceChangePrint';
 import { loadAuthProfile, saveAuthProfile, clearAuthProfile, BRANCH_PROFILE_CODES, type Profile } from './auth';
 import { PageVisibilityContext, PageNotificationContext, PageNavRow, PAGE_NAV, DEFAULT_VISIBILITY, type PageId, type PageVisibility, type NavHandlers } from './pageAccess';
 import './App.css';
@@ -335,6 +337,7 @@ const App: React.FC = () => {
   const [previewPriceProduct, setPreviewPriceProduct] = useState<Product | null>(null);
   const [previewBarcodeProduct, setPreviewBarcodeProduct] = useState<Product | null>(null);
   const [printSingle, setPrintSingle] = useState<SelectedProduct | null>(null);
+  const [printBatchProducts, setPrintBatchProducts] = useState<SelectedProduct[] | null>(null);
   const [lastUpdated, setLastUpdated] = useState<string>('');
   const [showCart, setShowCart] = useState(false);
   const [rowQty, setRowQty] = useState<Map<string, number>>(new Map());
@@ -387,6 +390,9 @@ const App: React.FC = () => {
   const [priceChangeLoading, setPriceChangeLoading] = useState(false);
   const [priceChangeError, setPriceChangeError] = useState('');
   const [openBatchId, setOpenBatchId] = useState<string | null>(null);
+  const [printingBatchId, setPrintingBatchId] = useState<string | null>(null);
+  const [priceChangePrintError, setPriceChangePrintError] = useState('');
+  const priceChangePrintBusy = useRef(false);
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
@@ -796,6 +802,7 @@ const App: React.FC = () => {
     setShowPriceChanges(true);
     setPriceChangeLoading(true);
     setPriceChangeError('');
+    setPriceChangePrintError('');
 
     const { data, error } = await supabase
       .from('price_change_log')
@@ -824,8 +831,7 @@ const App: React.FC = () => {
   };
 
   // กด "✓ รับทราบ" — จุดเดียวที่เคลียร์สถานะแจ้งเตือน (ผู้ใช้ยืนยันเอง ไม่ใช่ระบบเดาให้)
-  // ไม่ผูกกับปุ่มปริ้นจริงเพราะปุ่มนั้นปริ้นตามตะกร้า ไม่ได้ปริ้นตามรายการที่ราคาเปลี่ยน
-  // — ปริ้นไป 5 จาก 20 รายการแล้วเคลียร์หมด จะกลายเป็นลืมอีก 15 รายการ
+  // ไม่เคลียร์เมื่อกดพิมพ์: ผู้ใช้อาจยกเลิกหน้าต่างพิมพ์ หรือยังพิมพ์ไม่ครบทุกรอบ
   const confirmPriceChangesPrinted = async () => {
     const profileId = authProfile?.id;
     if (!profileId) return;
@@ -1483,6 +1489,27 @@ ${sheetsHtml}
     }, 50);
   };
 
+  const handlePrintPriceChangeBatch = async (batchId: string) => {
+    if (priceChangePrintBusy.current) return;
+    priceChangePrintBusy.current = true;
+    setPrintingBatchId(batchId);
+    setPriceChangePrintError('');
+    try {
+      const products = await loadPriceChangePrintProducts(supabase, batchId);
+      // ใช้ layout ป้ายราคาเดิม โดยไม่แทนที่ตะกร้าหรือจำนวนป้ายที่ผู้ใช้เลือกไว้
+      flushSync(() => setPrintBatchProducts(products));
+      await Promise.all(Array.from(document.querySelectorAll<HTMLImageElement>('.print-only img'))
+        .map(img => img.decode()));
+      window.print();
+    } catch (err) {
+      setPriceChangePrintError(err instanceof Error ? err.message : 'เตรียมป้ายราคาสำหรับพิมพ์ไม่สำเร็จ');
+    } finally {
+      setPrintBatchProducts(null);
+      setPrintingBatchId(null);
+      priceChangePrintBusy.current = false;
+    }
+  };
+
   const handlePrintSingle = useCallback(async (product: Product, qty: number) => {
     const qrSrc = await generateQR(product.barcode);
     const s = thermalSettings;
@@ -1631,21 +1658,37 @@ ${sheetsHtml}
               {!priceChangeLoading && priceChangeError && (
                 <div className="ss-notification-state ss-notification-state--error">{priceChangeError}</div>
               )}
+              {priceChangePrintError && (
+                <div className="price-change-print-error" role="alert">{priceChangePrintError}</div>
+              )}
               {!priceChangeLoading && !priceChangeError && priceChangeBatches.length === 0 && (
                 <div className="ss-notification-state">ยังไม่มีประวัติการปรับราคา</div>
               )}
               {!priceChangeLoading && priceChangeBatches.map(batch => (
                 <div key={batch.batchId}>
-                  <button
-                    className="ss-notification-item"
-                    onClick={() => setOpenBatchId(prev => (prev === batch.batchId ? null : batch.batchId))}
-                  >
-                    <strong>มีสินค้ารายการเปลี่ยน {batch.rows.length.toLocaleString()} รายการ</strong>
-                    <span className="ss-notification-time">
-                      {new Date(batch.changedAt).toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' })}
-                      <em>{openBatchId === batch.batchId ? 'ย่อ ▲' : 'ดูรายการ ▼'}</em>
-                    </span>
-                  </button>
+                  <div className="price-change-batch-card">
+                    <button
+                      type="button"
+                      className="ss-notification-item price-change-batch-toggle"
+                      aria-expanded={openBatchId === batch.batchId}
+                      onClick={() => setOpenBatchId(prev => (prev === batch.batchId ? null : batch.batchId))}
+                    >
+                      <strong>มีสินค้ารายการเปลี่ยน {batch.rows.length.toLocaleString()} รายการ</strong>
+                      <span className="ss-notification-time">
+                        {new Date(batch.changedAt).toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' })}
+                        <em>{openBatchId === batch.batchId ? 'ย่อ ▲' : 'ดูรายการ ▼'}</em>
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      className="price-change-print-btn"
+                      disabled={printingBatchId !== null}
+                      onClick={() => { void handlePrintPriceChangeBatch(batch.batchId); }}
+                      title="พิมพ์ป้ายราคาทุกรายการในรอบนี้ รายการละ 1 ป้าย โดยใช้ราคาปัจจุบัน"
+                    >
+                      {printingBatchId === batch.batchId ? 'กำลังเตรียมป้ายราคา…' : '🖨️ พิมพ์ SKU ทั้งหมด'}
+                    </button>
+                  </div>
                   {openBatchId === batch.batchId && (
                     <div className="price-change-rows">
                       {batch.rows.map(row => (
@@ -2358,9 +2401,9 @@ ${sheetsHtml}
 
       {/* Price Label Print Layout */}
       <div className="print-only">
-        {(printSingle ? [printSingle] : Array.from(selectedProducts.values())).flatMap(product =>
+        {(printBatchProducts ?? (printSingle ? [printSingle] : Array.from(selectedProducts.values()))).flatMap(product =>
           Array.from({ length: product.quantity }, (_, i) => (
-            <div key={`${product.sku}-${product.unit}-${i}`} className="label-print">
+            <div key={`${product.barcode}-${i}`} className="label-print">
               <div className="lbl-header">
                 {product.location && <div className="lbl-loc">{product.location}</div>}
                 <div className="lbl-logo">BIGYA</div>
