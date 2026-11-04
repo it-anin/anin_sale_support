@@ -15,7 +15,7 @@ import { SearchIcon } from './SearchIcon';
 import { LoginPage } from './LoginPage';
 import { parseR05106 } from './r05106';
 import { loadPriceChangePrintProducts } from './priceChangePrint';
-import { loadAuthProfile, saveAuthProfile, clearAuthProfile, BRANCH_PROFILE_CODES, type Profile } from './auth';
+import { loadAuthProfile, saveAuthProfile, clearAuthProfile, BRANCH_PROFILE_CODES, STORE_BRANCH_CODES, type Profile } from './auth';
 import { PageVisibilityContext, PageNotificationContext, PageNavRow, PAGE_NAV, DEFAULT_VISIBILITY, type PageId, type PageVisibility, type NavHandlers } from './pageAccess';
 import './App.css';
 
@@ -376,6 +376,7 @@ const App: React.FC = () => {
   // นับ "งานที่ยังรอคลังตัดสินใจ" ไม่ใช่ unread flag แบบ 2 ตัวข้างบน — ไม่ต้อง mark-as-read เลย
   // เพราะเลขจะลดเองตามธรรมชาติเมื่อคลังกดอนุมัติ/ของหมด ต่างสาขาไหนกดก็ไม่กระทบ (ดูทุกสาขาพร้อมกัน)
   const [outboundPendingCount, setOutboundPendingCount] = useState(0);
+  const [pendingDocsNotification, setPendingDocsNotification] = useState({ profileId: '', count: 0 });
 
   // ── แจ้งเตือนราคาเปลี่ยน หน้าป้ายราคา (2569-09-15) ──
   // ⚠️ ไม่ใช้ fan-out แบบ ss_branch_notification_events (1 แถวต่อผู้รับ) โดยตั้งใจ —
@@ -650,6 +651,50 @@ const App: React.FC = () => {
       document.removeEventListener('visibilitychange', refreshWhenVisible);
     };
   }, [authProfile?.id]);
+
+  // จุดแดง Pending = ยังมีใบโอนค้างส่ง ไม่ใช่สถานะอ่าน/ยังไม่อ่าน
+  // อ่าน snapshot บน Supabase เท่านั้น — ห้ามขอให้ Agent ถาม ProMaxx นอกหน้า Pending
+  useEffect(() => {
+    const profileId = authProfile?.id ?? '';
+    const branch = authProfile?.branch ?? '';
+    const isWarehouse = profileId === 'WAREHOUSE';
+    if (!isWarehouse && !(STORE_BRANCH_CODES as readonly string[]).includes(branch)) {
+      setPendingDocsNotification({ profileId, count: 0 });
+      return;
+    }
+    let cancelled = false;
+    let requestSeq = 0;
+
+    const loadPending = async () => {
+      const seq = ++requestSeq;
+      let query = supabase
+        .from('pending_transfers')
+        .select('sys_tran_no', { count: 'exact', head: true });
+      if (!isWarehouse) query = query.eq('from_branch', branch);
+      const { count, error } = await query;
+      if (cancelled || seq !== requestSeq || error) return;
+      setPendingDocsNotification({ profileId, count: count ?? 0 });
+    };
+
+    void loadPending();
+    // ฟังตารางสรุปแถวเดียว ไม่ฟัง pending_transfers ที่ถูกแทนที่ทีละหลายร้อยใบ
+    const channel = supabase
+      .channel(`pending-docs-nav-${profileId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'pending_docs_sync' }, () => { void loadPending(); })
+      .subscribe(status => { if (status === 'SUBSCRIBED') void loadPending(); });
+    const refreshWhenVisible = () => { if (document.visibilityState === 'visible') void loadPending(); };
+    window.addEventListener('focus', refreshWhenVisible);
+    document.addEventListener('visibilitychange', refreshWhenVisible);
+    const timer = window.setInterval(refreshWhenVisible, 60_000);
+
+    return () => {
+      cancelled = true;
+      void supabase.removeChannel(channel);
+      window.clearInterval(timer);
+      window.removeEventListener('focus', refreshWhenVisible);
+      document.removeEventListener('visibilitychange', refreshWhenVisible);
+    };
+  }, [authProfile?.id, authProfile?.branch]);
 
   // ── เปิด/ปิดปุ่มแต่ละหน้า (app_page_settings, ซิงค์ผ่าน Supabase) ──
   // ⚠️ หน้าจอสลับเปิด/ปิดถูกถอดออกจาก modal ⚙️ แล้ว (2569-09-25 ตามคำขอผู้ใช้) แต่ยังอ่านค่าจาก DB อยู่
@@ -1591,10 +1636,12 @@ ${sheetsHtml}
     salesupport: () => setCurrentPage('salesupport'),
     pendingdocs: () => setCurrentPage('pendingdocs'),
   };
+  // กันตัวนับของคนเดิมติดไปแสดงให้คนใหม่ระหว่างรอโหลดหลังสลับโปรไฟล์
+  const pendingDocsCount = pendingDocsNotification.profileId === authProfile.id ? pendingDocsNotification.count : 0;
 
   return (
     <PageVisibilityContext.Provider value={effectiveVisibility}>
-    <PageNotificationContext.Provider value={{ salesupport: saleSupportUnreadCount, outbound: outboundPendingCount, pricetag: priceChangeUnreadCount }}>
+    <PageNotificationContext.Provider value={{ salesupport: saleSupportUnreadCount, outbound: outboundPendingCount, pricetag: priceChangeUnreadCount, pendingdocs: pendingDocsCount }}>
     <div className="app-container">
       {/* แถบผู้ใช้ปัจจุบัน + ออกจากระบบ (แสดงทุกหน้า) */}
       <div className="app-userbar">
