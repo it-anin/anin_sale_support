@@ -420,7 +420,6 @@ export function PendingDocsPage({
                 onClick={() => setActiveTab(tab.key)}
               >
                 {tab.key === ALL_TAB ? tab.key : branchText(tab.key)}
-                <span className="stock-tab-count">{tab.count}</span>
               </button>
             ))}
           </div>
