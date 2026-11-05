@@ -128,7 +128,7 @@ export function LoginPage({ onLogin }: Props) {
       onLogin(profile);
     } else {
       setError(
-        password ? "รหัสผ่านไม่ถูกต้องสำหรับแผนกนี้" : "กรุณาใส่รหัสผ่าน",
+        password ? "รหัสผ่านไม่ถูกต้อง" : "กรุณาใส่รหัสผ่าน",
       );
       setPassword("");
       pwRef.current?.focus({ preventScroll: true });
@@ -192,7 +192,7 @@ export function LoginPage({ onLogin }: Props) {
                 {department.english}
               </span>
               <h2 id="guided-department-title">{department.label}</h2>
-              <p>ใส่รหัสผ่านเพื่อเข้าสู่พื้นที่ทำงาน</p>
+              <p>ใส่รหัสผ่าน</p>
               <form
                 onSubmit={(event) => {
                   event.preventDefault();
@@ -255,7 +255,7 @@ export function LoginPage({ onLogin }: Props) {
           {phase === "moving"
             ? `กำลังเปิด${department?.label ?? ""}`
             : phase === "password"
-              ? department?.label
+              ? "Forgot password? Contact support"
               : "ANIN / WORKSPACE"}
         </p>
       </main>
