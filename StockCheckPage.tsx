@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useRef, type ReactNode } from 'react';
 import { supabase } from './supabase';
 import { AnimatedLogoText } from './AnimatedLogo';
 import { PageNavRow } from './pageAccess';
 import { SearchIcon } from './SearchIcon';
+import { useStockSync } from './useStockSync';
 
 interface StockItem {
   branch: string;
@@ -32,58 +33,82 @@ export function StockCheckPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, on
   const [searching,    setSearching]    = useState(false);
   const [searched,     setSearched]     = useState(false);
   const [lastUploaded, setLastUploaded] = useState('');
+  const [loadError, setLoadError] = useState('');
+  const [searchVersion, setSearchVersion] = useState(0);
+  const searchSeqRef = useRef(0);
+  const sync = useStockSync();
 
+  // ระหว่างทยอยติดตั้ง Agent ยังแสดงชุด CSV เดิมได้; ไม่ค้างป้าย Loading เมื่ออ่านไม่ได้.
   useEffect(() => {
+    if (sync.available !== false) return;
     supabase
       .from('stock')
       .select('uploaded_at')
       .order('uploaded_at', { ascending: false })
       .limit(1)
-      .then(({ data }) => {
+      .then(({ data, error }) => {
         if (data?.[0]?.uploaded_at) {
           const d = new Date(data[0].uploaded_at);
-          setLastUploaded(d.toLocaleString('en-GB', { dateStyle: 'short', timeStyle: 'short' }));
-        }
+          setLastUploaded(d.toLocaleString('en-GB', { dateStyle: 'short', timeStyle: 'short', timeZone: 'Asia/Bangkok' }));
+        } else if (error) setLoadError('อ่านข้อมูลสต๊อคไม่สำเร็จ กรุณาลองอีกครั้ง');
       });
-  }, []);
+  }, [sync.available]);
 
-  const doSearch = useCallback(async (term: string, branch: string) => {
-    const q = term.trim();
-    if (!q) { setResults([]); setSearched(false); return; }
+  useEffect(() => {
+    // ยกเลิกผลเก่าทันทีที่เปลี่ยนคำค้น/คลัง แม้คำขอเก่ายังไม่เสร็จ.
+    const seq = ++searchSeqRef.current;
+    const q = search.trim();
+    if (!q) {
+      setResults([]); setSearched(false); setSearching(false); setLoadError('');
+      return;
+    }
     setSearching(true);
     setSearched(true);
-    const isNumeric = /^\d+$/.test(q);
-    const query = supabase
-      .from('stock')
-      .select('branch, sku, name, qty, unit, price')
-      .eq('branch', branch)
-      .order('sku')
-      .limit(300);
-    const { data, error } = await (isNumeric
-      ? query.ilike('sku', `${q}%`)
-      : query.ilike('name', `%${q}%`));
-    if (!error && data) {
-      setResults(data.map(r => ({
-        branch: r.branch ?? '',
-        sku:    r.sku    ?? '',
-        name:   r.name   ?? '',
-        qty:    r.qty    ?? '',
-        unit:   r.unit   ?? '',
-        price:  r.price  ?? '',
-      })));
-    }
-    setSearching(false);
-  }, []);
+    setResults([]);
+    setLoadError('');
+    const timer = window.setTimeout(async () => {
+      try {
+        const query = supabase.from('stock').select('branch, sku, name, qty, unit, price')
+          .eq('branch', activeTab).order('sku').limit(300);
+        const { data, error } = await (/^\d+$/.test(q)
+          ? query.ilike('sku', `${q}%`)
+          : query.ilike('name', `%${q}%`));
+        if (seq !== searchSeqRef.current) return;
+        if (error) throw error;
+        setResults((data ?? []).map(row => ({
+          branch: row.branch ?? '', sku: row.sku ?? '', name: row.name ?? '',
+          qty: row.qty ?? '', unit: row.unit ?? '', price: row.price ?? '',
+        })));
+      } catch {
+        if (seq !== searchSeqRef.current) return;
+        setLoadError('ค้นหาสต๊อคไม่สำเร็จ กรุณาลองอีกครั้ง');
+      } finally { if (seq === searchSeqRef.current) setSearching(false); }
+    }, 200);
+    return () => { window.clearTimeout(timer); ++searchSeqRef.current; };
+  }, [search, activeTab, sync.dataVersion, searchVersion]);
 
-  useEffect(() => {
-    if (search.trim()) doSearch(search, activeTab);
-    else { setResults([]); setSearched(false); }
-  }, [activeTab]);
-
-  useEffect(() => {
-    const t = setTimeout(() => doSearch(search, activeTab), 200);
-    return () => clearTimeout(t);
-  }, [search]);
+  const formatTime = (ms: number) => new Date(ms).toLocaleString('en-GB', {
+    dateStyle: 'short', timeStyle: 'medium', timeZone: 'Asia/Bangkok',
+  });
+  const shownAt = sync.dataMs !== null ? ` — แสดงข้อมูล ณ ${formatTime(sync.dataMs)}` : '';
+  let syncBadge: ReactNode;
+  if (sync.statusError) {
+    syncBadge = <span className="updated-badge pd-sync-badge--error">⚠️ {sync.statusError}{shownAt}</span>;
+  } else if (sync.agentSilent) {
+    syncBadge = <span className="updated-badge pd-sync-badge--warn">⚠️ เครื่องในร้านไม่ตอบ{shownAt}</span>;
+  } else if (sync.busy) {
+    syncBadge = <span className="updated-badge pd-sync-badge--busy"><span className="pd-spin" aria-hidden="true">🔄</span> กำลังดึงข้อมูลล่าสุด…</span>;
+  } else if (sync.agentError) {
+    syncBadge = <span className="updated-badge pd-sync-badge--error">❌ {sync.agentError}{shownAt}</span>;
+  } else if (sync.dataMs !== null) {
+    syncBadge = <span className="updated-badge" title={sync.successMs !== null ? `สต๊อคเปลี่ยนครั้งล่าสุด ${formatTime(sync.successMs)}` : undefined}>ข้อมูล ณ {formatTime(sync.dataMs)}</span>;
+  } else if (sync.available === false) {
+    syncBadge = <span className="updated-badge">{lastUploaded ? `Last Updated : ${lastUploaded}` : 'ยังไม่มีข้อมูลสต๊อค'}</span>;
+  } else if (sync.available) {
+    syncBadge = <span className="updated-badge pd-sync-badge--warn">ยังไม่มีข้อมูลจากเครื่องในร้าน</span>;
+  } else {
+    syncBadge = <span className="updated-badge updated-badge--loading">Loading...</span>;
+  }
 
   return (
     <div className="app-container">
@@ -91,10 +116,14 @@ export function StockCheckPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, on
         <div className="hero-content">
           <h1 className="logo-premium"><AnimatedLogoText text="CHECK STOCK" /></h1>
           <div className="tagline-row">
-            {lastUploaded
-              ? <span className="updated-badge">Last Updated : {lastUploaded}</span>
-              : <span className="updated-badge updated-badge--loading">Loading...</span>
-            }
+            {syncBadge}
+            {(sync.available || sync.statusError) && <button
+              type="button"
+              className="updated-badge pd-refresh-btn"
+              disabled={sync.busy && !sync.agentSilent}
+              onClick={() => { void sync.refresh(); }}
+              title="ขอข้อมูลล่าสุดจาก ProMaxx"
+            >🔄 ดึงข้อมูลล่าสุด</button>}
           </div>
           <PageNavRow current="stockcheck" handlers={{ pricetag: onGoPriceTag, druglabel: onGoDrugLabel, stockcheck: onGoStockCheck, customerhistory: onGoCustomerHistory, outbound: onGoOutbound, salesupport: onGoSaleSupport, pendingdocs: onGoPendingDocs }} />
         </div>
@@ -109,12 +138,15 @@ export function StockCheckPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, on
               placeholder="ค้นหา SKU หรือชื่อสินค้า..."
               value={search}
               onChange={e => setSearch(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') setSearchVersion(value => value + 1); }}
             />
-            <button className="search-btn-premium">
+            <button className="search-btn-premium" type="button" aria-label="ค้นหา" onClick={() => setSearchVersion(value => value + 1)}>
               {searching ? '⏳' : <SearchIcon />}
             </button>
           </div>
         </div>
+
+        {loadError && <div className="pd-load-error" role="alert">{loadError}</div>}
 
         {searched && <div className="stock-tabs">
           {TABS.map(tab => (
@@ -131,7 +163,7 @@ export function StockCheckPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, on
         {searched && (
           <div className="product-table-wrap stock-table-wrap">
             <div className="selected-table-header">
-              <span>{results.length} รายการ {results.length === 300 && '(แสดงสูงสุด 300)'}</span>
+              <span>{searching ? 'กำลังค้นหา…' : `${results.length} รายการ${results.length === 300 ? ' (แสดงสูงสุด 300)' : ''}`}</span>
             </div>
             <table className="product-table stock-table">
               <thead>
@@ -147,7 +179,7 @@ export function StockCheckPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, on
                 {results.length === 0 ? (
                   <tr>
                     <td colSpan={5} style={{ textAlign: 'center', padding: '2rem', color: '#999' }}>
-                      ไม่พบข้อมูล
+                      {searching ? 'กำลังค้นหา…' : loadError ? 'ไม่สามารถแสดงผลการค้นหาได้' : 'ไม่พบข้อมูล'}
                     </td>
                   </tr>
                 ) : (
