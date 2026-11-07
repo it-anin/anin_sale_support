@@ -3034,134 +3034,6 @@ body.pulse-b .cart-inline-btn.in-cart {
 }
 
 /* ─── Stock Check Page ─── */
-/* Porcelain Scan — แบบที่ 03 จาก stock-sync-badge-designs.html */
-.stock-hero { height: auto; }
-.tagline-row.stock-sync-row {
-  height: auto;
-  min-height: 76px;
-  margin-bottom: 12px;
-  flex-direction: column;
-  gap: 8px;
-  overflow: visible;
-  font-family: 'Noto Sans Thai', Tahoma, sans-serif;
-}
-.stock-sync-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  max-width: 100%;
-  padding: 6px;
-  border-radius: 13px;
-  background: #fff;
-  color: #377aaf;
-  box-shadow: 0 5px 13px #174e8624;
-}
-.stock-sync-stamp {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-  padding: 5px 8px;
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-}
-.stock-sync-caption { font-size: 9px; font-weight: 400; opacity: .78; }
-.stock-sync-date { margin-left: 3px; font: 500 10.5px 'Outfit', sans-serif; }
-.stock-sync-clock { font: 500 16px 'Outfit', sans-serif; letter-spacing: .2px; }
-.stock-sync-refresh {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  gap: 6px;
-  min-width: 126px;
-  min-height: 44px;
-  padding: 9px 11px;
-  border: 0;
-  border-radius: 9px;
-  background: #4b91d0;
-  color: #fff;
-  font: 500 10px 'Noto Sans Thai', Tahoma, sans-serif;
-  white-space: nowrap;
-  cursor: pointer;
-  transition: background .2s ease;
-}
-.stock-sync-refresh:hover:not(:disabled) { background: #347bb9; }
-.stock-sync-refresh:disabled { cursor: wait; }
-.stock-sync-refresh:focus-visible { outline: 3px solid #245e97; outline-offset: 3px; }
-.stock-sync-refresh svg, .stock-sync-feedback svg {
-  width: 14px;
-  height: 14px;
-  flex-shrink: 0;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.7;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-.stock-sync-scanner {
-  position: relative;
-  width: 13px;
-  height: 15px;
-  flex-shrink: 0;
-  overflow: hidden;
-  border: 1px solid #ffffff78;
-  border-radius: 2px;
-}
-.stock-sync-scanner::before {
-  content: '';
-  position: absolute;
-  height: 1px;
-  inset: 3px 3px auto;
-  background: #ffffff75;
-  box-shadow: 0 3px #ffffff75, 0 6px #ffffff75;
-}
-.stock-sync-scanner::after {
-  content: '';
-  position: absolute;
-  width: 100%;
-  height: 3px;
-  top: -3px;
-  left: 0;
-  background: #fff;
-  box-shadow: 0 0 7px #fff;
-  animation: stockScanPass 1.4s ease-in-out infinite;
-}
-@keyframes stockScanPass { 10% { top: -3px; } 90%, 100% { top: 100%; } }
-.stock-sync-check { animation: stockCheckPop .35s ease-out both; }
-@keyframes stockCheckPop { from { transform: scale(.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-.stock-sync-feedback {
-  display: flex;
-  align-items: flex-start;
-  gap: 6px;
-  max-width: 100%;
-  padding: 5px 10px;
-  border: 1px solid #e9ce91;
-  border-radius: 9px;
-  background: #fff4db;
-  color: #7a4810;
-  font-size: 11px;
-  line-height: 1.6;
-  text-align: left;
-  overflow-wrap: anywhere;
-}
-.stock-sync-feedback svg { margin-top: 2px; }
-.stock-sync-feedback--error { border-color: #edb4bf; background: #fff1f3; color: #9d2839; }
-.stock-sync-announcement {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-@media (prefers-reduced-motion: reduce) {
-  .stock-sync-scanner::after { animation: none; top: 50%; }
-  .stock-sync-check { animation: none; }
-  .stock-sync-refresh { transition: none; }
-}
-
 .stock-toolbar {
   display: flex;
   align-items: center;
@@ -3322,7 +3194,7 @@ body.pulse-b .cart-inline-btn.in-cart {
 .pd-refresh-btn:hover:not(:disabled) { background: rgba(255, 255, 255, 0.22); border-color: rgba(255, 255, 255, 0.45); transform: translateY(-1px); }
 .pd-refresh-btn:disabled { opacity: 0.5; cursor: default; }
 
-/* Pending Glass Loop — แบบ 01 จาก stock-sync-badge-designs.html */
+/* Glass Loop — แบบ 01 ใช้ร่วมหน้า Pending และ Stock */
 .pd-glass-hero { height: auto; }
 .tagline-row.pd-glass-row {
   height: auto;

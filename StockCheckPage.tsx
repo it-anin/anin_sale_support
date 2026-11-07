@@ -115,36 +115,36 @@ export function StockCheckPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, on
 
   return (
     <div className="app-container">
-      <div className="hero-header stock-hero">
+      <div className="hero-header pd-glass-hero">
         <div className="hero-content">
           <h1 className="logo-premium"><AnimatedLogoText text="CHECK STOCK" /></h1>
-          <div className="tagline-row stock-sync-row">
-            <div className="stock-sync-badge" data-state={syncState} aria-busy={syncLoading}>
-              <div className="stock-sync-stamp" title={sync.successMs !== null ? `สต๊อคเปลี่ยนครั้งล่าสุด ${formatTime(sync.successMs)}` : undefined}>
-                <span className="stock-sync-caption">ข้อมูล ณ <time className="stock-sync-date" dateTime={stampMs !== null ? new Date(stampMs).toISOString() : undefined}>
+          <div className="tagline-row pd-glass-row">
+            <div className="pd-glass-controls" data-state={syncState} aria-busy={syncLoading}>
+              <div className="pd-glass-stamp" title={sync.successMs !== null ? `สต๊อคเปลี่ยนครั้งล่าสุด ${formatTime(sync.successMs)}` : undefined}>
+                <span className="pd-glass-caption">ข้อมูล ณ <time className="pd-glass-date" dateTime={stampMs !== null ? new Date(stampMs).toISOString() : undefined}>
                   {stampMs !== null ? new Date(stampMs).toLocaleDateString('en-GB', { timeZone: 'Asia/Bangkok' }) : '—'}
                 </time></span>
-                <time className="stock-sync-clock" dateTime={stampMs !== null ? new Date(stampMs).toISOString() : undefined}>
+                <time className="pd-glass-clock" dateTime={stampMs !== null ? new Date(stampMs).toISOString() : undefined}>
                   {stampMs !== null ? new Date(stampMs).toLocaleTimeString('en-GB', { timeZone: 'Asia/Bangkok' }) : '--:--:--'}
                 </time>
               </div>
               {(sync.available !== false || sync.statusError) && <button
                 type="button"
-                className="stock-sync-refresh"
+                className="pd-glass-refresh"
                 disabled={initialLoading || (sync.busy && !sync.agentSilent)}
                 onClick={() => { void sync.refresh(); }}
                 title="ขอข้อมูลล่าสุดจาก ProMaxx"
               >
-                {syncLoading ? <span className="stock-sync-scanner" aria-hidden="true" /> : <svg className={refreshComplete ? 'stock-sync-check' : undefined} viewBox="0 0 24 24" aria-hidden="true">
+                {syncLoading ? <span className="pd-glass-loader" aria-hidden="true" /> : <svg className={refreshComplete ? 'pd-glass-check' : undefined} viewBox="0 0 24 24" aria-hidden="true">
                   {refreshComplete ? <path d="m5 12 4.5 4.5L19 7" /> : <><path d="M20 7v5h-5M4 17v-5h5" /><path d="M6.1 7a7 7 0 0 1 11.6-1.7L20 8M4 16l2.3 2.7A7 7 0 0 0 17.9 17" /></>}
                 </svg>}
                 <span>{refreshLabel}</span>
               </button>}
             </div>
-            <span className="stock-sync-announcement" role="status" aria-live="polite">{syncLoading
+            <span className="pd-glass-announcement" role="status" aria-live="polite">{syncLoading
               ? initialLoading ? 'กำลังอ่านสถานะสต๊อค' : 'กำลังดึงข้อมูลล่าสุด'
               : refreshComplete ? 'ตรวจข้อมูลล่าสุดสำเร็จ' : ''}</span>
-            {syncMessage && <div className={`stock-sync-feedback${syncFailed ? ' stock-sync-feedback--error' : ''}`} role="status" aria-live="polite">
+            {syncMessage && <div className={`pd-glass-feedback${syncFailed ? ' pd-glass-feedback--error' : ''}`} role="status" aria-live="polite">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 10 18H2L12 3Z" /><path d="M12 9v4m0 4h.01" /></svg>
               <span>{syncMessage}</span>
             </div>}
