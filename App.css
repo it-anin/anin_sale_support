@@ -3322,6 +3322,91 @@ body.pulse-b .cart-inline-btn.in-cart {
 .pd-refresh-btn:hover:not(:disabled) { background: rgba(255, 255, 255, 0.22); border-color: rgba(255, 255, 255, 0.45); transform: translateY(-1px); }
 .pd-refresh-btn:disabled { opacity: 0.5; cursor: default; }
 
+/* Pending Glass Loop — แบบ 01 จาก stock-sync-badge-designs.html */
+.pd-glass-hero { height: auto; }
+.tagline-row.pd-glass-row {
+  height: auto;
+  min-height: 59px;
+  flex-direction: column;
+  gap: 8px;
+  overflow: visible;
+  font-family: 'Noto Sans Thai', Tahoma, sans-serif;
+}
+.pd-glass-controls { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 9px; max-width: 100%; }
+.pd-glass-stamp, .pd-glass-refresh {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 37px;
+  border: 1px solid #ffffff58;
+  border-radius: 100px;
+  background: #ffffff18;
+  color: #fff;
+  box-shadow: inset 0 1px #ffffff12;
+  backdrop-filter: blur(8px);
+}
+.pd-glass-stamp { gap: 6px; padding: 10px 12px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pd-glass-caption { font-size: 9px; font-weight: 400; opacity: .78; }
+.pd-glass-date { margin-left: 3px; font: 500 10.5px 'Outfit', sans-serif; }
+.pd-glass-clock { font: 500 12px 'Outfit', sans-serif; letter-spacing: .2px; }
+.pd-glass-refresh {
+  gap: 6px;
+  min-width: 126px;
+  padding: 9px 11px;
+  flex-shrink: 0;
+  font: 500 10px 'Noto Sans Thai', Tahoma, sans-serif;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background .2s ease, transform .2s ease;
+}
+.pd-glass-refresh:hover:not(:disabled) { background: #ffffff29; transform: translateY(-1px); }
+.pd-glass-refresh:disabled { cursor: wait; }
+.pd-glass-refresh:focus-visible { outline: 3px solid #fff; outline-offset: 4px; }
+.pd-glass-refresh svg, .pd-glass-feedback svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.pd-glass-loader {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  border: 1.6px solid #ffffff42;
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: pendingGlassLoop .85s linear infinite;
+}
+@keyframes pendingGlassLoop { to { transform: rotate(360deg); } }
+.pd-glass-check { animation: pendingGlassCheck .35s ease-out both; }
+@keyframes pendingGlassCheck { from { transform: scale(.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.pd-glass-feedback {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  max-width: 100%;
+  padding: 5px 10px;
+  border: 1px solid #ffd666bf;
+  border-radius: 12px;
+  background: #ffc1073d;
+  color: #fff;
+  font-size: 11px;
+  line-height: 1.6;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.pd-glass-feedback svg { margin-top: 2px; }
+.pd-glass-feedback--error { border-color: #ffa8a8bf; background: #e33f4f52; }
+.pd-glass-announcement { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media (prefers-reduced-motion: reduce) {
+  .pd-glass-loader, .pd-glass-check { animation: none; }
+  .pd-glass-refresh { transition: none; }
+}
+
 /* popup รายการสินค้าในใบ — ตารางธรรมดา (auto layout) ไม่ใช้ .product-table จึงไม่ติดกับดัก fixed layout */
 .pd-items-modal { max-width: 720px; }
 /* หัว popup ติดด้านบนตอนเลื่อน — ใบจริงมีได้ถึง 162 รายการ และปิดได้ทาง ✕/Esc เท่านั้น ✕ จึงต้องไม่เลื่อนหายไปกับรายการ */

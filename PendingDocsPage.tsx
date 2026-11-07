@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef, type ReactNode } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { supabase } from './supabase';
 import { AnimatedLogoText } from './AnimatedLogo';
 import { PageNavRow } from './pageAccess';
@@ -140,6 +140,8 @@ export function PendingDocsPage({
   const statusVersionRef = useRef(-Infinity);
   const lastRequestRef = useRef(0);
   const fetchSeqRef = useRef(0);
+  const [refreshComplete, setRefreshComplete] = useState(false);
+  const wasUserWaiting = useRef(false);
 
   const fetchRows = useCallback(async () => {
     const seq = ++fetchSeqRef.current;
@@ -264,6 +266,15 @@ export function PendingDocsPage({
   const userWaiting = userRequestMs !== null && userRequestMs > answeredMs;
   const showError = !userWaiting && Boolean(status?.last_error) && errorMs !== null && errorMs > dataMs;
 
+  useEffect(() => {
+    const completed = wasUserWaiting.current && !userWaiting && Number.isFinite(dataMs) && !showError && !agentSilent;
+    wasUserWaiting.current = userWaiting;
+    setRefreshComplete(completed);
+    if (!completed) return;
+    const timer = window.setTimeout(() => setRefreshComplete(false), 1800);
+    return () => window.clearTimeout(timer);
+  }, [userWaiting, dataMs, showError, agentSilent]);
+
   // นับ 15 วิตั้งแต่เริ่มรอ (คำขอของใครก็ได้) — คำขอใหม่ระหว่างที่ยังรออยู่ไม่เริ่มนับใหม่
   // ไม่งั้นตอนเครื่องในร้านดับ ป้ายจะสลับ "กำลังดึง…" ↔ "ไม่ตอบ" ทุกครั้งที่มีคำขอเหมือนกำลังทำงานอยู่
   useEffect(() => {
@@ -316,48 +327,47 @@ export function PendingDocsPage({
 
   const today = bangkokToday();
   const lastDataText = Number.isFinite(dataMs) ? formatSyncTime(dataMs) : null;
-  const shownAt = lastDataText ? ` — แสดงข้อมูล ณ ${lastDataText}` : '';
   const changedTitle = successMs !== null ? `รายการเอกสารเปลี่ยนครั้งล่าสุด ${formatSyncTime(successMs)}` : undefined;
-
-  let syncBadge: ReactNode;
-  if (!status) {
-    syncBadge = <span className="updated-badge updated-badge--loading">Loading...</span>;
-  } else if (waiting && agentSilent) {
-    syncBadge = <span className="updated-badge pd-sync-badge--warn">⚠️ เครื่องในร้านไม่ตอบ{shownAt}</span>;
-  } else if (userWaiting) {
-    syncBadge = (
-      <span className="updated-badge pd-sync-badge--busy">
-        <span className="pd-spin" aria-hidden="true">🔄</span> กำลังดึงข้อมูลล่าสุด…
-      </span>
-    );
-  } else if (showError) {
-    syncBadge = <span className="updated-badge pd-sync-badge--error">❌ {status.last_error}{shownAt}</span>;
-  } else if (lastDataText) {
-    syncBadge = <span className="updated-badge" title={changedTitle}>ข้อมูล ณ {lastDataText}</span>;
-  } else {
-    syncBadge = <span className="updated-badge pd-sync-badge--warn">ยังไม่มีข้อมูลจากเครื่องในร้าน</span>;
-  }
+  const glassLoading = userWaiting && !(waiting && agentSilent);
+  const glassState = glassLoading ? 'loading' : refreshComplete ? 'success' : 'idle';
+  const syncMessage = waiting && agentSilent ? 'เครื่องในร้านไม่ตอบ กรุณาลองอีกครั้ง'
+    : userWaiting ? '' : showError ? status?.last_error : status && !lastDataText ? 'ยังไม่มีข้อมูลจากเครื่องในร้าน' : '';
 
   const heroHeader = (
-    <div className="hero-header">
+    <div className="hero-header pd-glass-hero">
       <div className="hero-content">
         <h1 className="logo-premium"><AnimatedLogoText text="PENDING DOCS" /></h1>
-        <div className="tagline-row">
+        <div className="tagline-row pd-glass-row">
           {!notSupported && (
             <>
-              {syncBadge}
-              <button
-                type="button"
-                className="updated-badge pd-refresh-btn"
-                onClick={() => {
-                  lastRequestRef.current = 0; // คนกดเองส่งเสมอ (ฝั่ง Supabase ยังกันถี่ 10 วิ)
-                  void requestRefresh(false);
-                }}
-                disabled={userWaiting && !agentSilent}
-                title="ขอข้อมูลล่าสุดจาก ProMaxx"
-              >
-                🔄 ดึงข้อมูลล่าสุด
-              </button>
+              <div className="pd-glass-controls" data-state={glassState} aria-busy={glassLoading}>
+                <span className="pd-glass-stamp" title={changedTitle}>
+                  {lastDataText ? <>
+                    <span className="pd-glass-caption">ข้อมูล ณ <time className="pd-glass-date" dateTime={new Date(dataMs).toISOString()}>{new Date(dataMs).toLocaleDateString('en-GB', { timeZone: 'Asia/Bangkok' })}</time></span>
+                    <time className="pd-glass-clock" dateTime={new Date(dataMs).toISOString()}>{new Date(dataMs).toLocaleTimeString('en-GB', { timeZone: 'Asia/Bangkok' })}</time>
+                  </> : <span className="pd-glass-caption">{status ? 'ยังไม่มีข้อมูลล่าสุด' : 'กำลังอ่านสถานะ…'}</span>}
+                </span>
+                <button
+                  type="button"
+                  className="pd-glass-refresh"
+                  onClick={() => {
+                    lastRequestRef.current = 0; // คนกดเองส่งเสมอ (ฝั่ง Supabase ยังกันถี่ 10 วิ)
+                    void requestRefresh(false);
+                  }}
+                  disabled={userWaiting && !agentSilent}
+                  title="ขอข้อมูลล่าสุดจาก ProMaxx"
+                >
+                  {glassLoading ? <span className="pd-glass-loader" aria-hidden="true" /> : <svg className={refreshComplete ? 'pd-glass-check' : undefined} viewBox="0 0 24 24" aria-hidden="true">
+                    {refreshComplete ? <path d="m5 12 4.5 4.5L19 7" /> : <><path d="M20 7v5h-5M4 17v-5h5" /><path d="M6.1 7a7 7 0 0 1 11.6-1.7L20 8M4 16l2.3 2.7A7 7 0 0 0 17.9 17" /></>}
+                  </svg>}
+                  <span>{glassLoading ? 'กำลังดึงข้อมูล…' : refreshComplete ? 'อัปเดตแล้ว' : 'ดึงข้อมูลล่าสุด'}</span>
+                </button>
+              </div>
+              <span className="pd-glass-announcement" role="status" aria-live="polite">{glassLoading ? 'กำลังดึงข้อมูลล่าสุด' : refreshComplete ? 'ตรวจข้อมูลล่าสุดสำเร็จ' : ''}</span>
+              {syncMessage && <div className={`pd-glass-feedback${showError ? ' pd-glass-feedback--error' : ''}`} role="status" aria-live="polite">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 10 18H2L12 3Z" /><path d="M12 9v4m0 4h.01" /></svg>
+                <span>{syncMessage}</span>
+              </div>}
             </>
           )}
         </div>
