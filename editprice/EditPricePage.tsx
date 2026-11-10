@@ -74,9 +74,9 @@ function FileUploadZone({ kind, file, busy, error, onFile }: {
   );
 }
 
-function ComparisonTable({ rows, checked, selected, onCheck, onSelect }: {
-  rows: ComparisonRow[]; checked: Set<string>; selected: Set<string>;
-  onCheck: (id: string) => void; onSelect: (id: string) => void;
+function ComparisonTable({ rows, checked, selected, exportSkus, onCheck, onSelect, onSelectSku }: {
+  rows: ComparisonRow[]; checked: Set<string>; selected: Set<string>; exportSkus: Set<string>;
+  onCheck: (id: string) => void; onSelect: (id: string) => void; onSelectSku: (sku: string) => void;
 }) {
   const [scrollTop, setScrollTop] = useState(0);
   const viewport = useRef<HTMLDivElement>(null);
@@ -93,7 +93,7 @@ function ComparisonTable({ rows, checked, selected, onCheck, onSelect }: {
       tabIndex={0} role="region" aria-label="ตารางเปรียบเทียบราคา เลื่อนเพื่อดูรายการเพิ่มเติม">
       <table className="ep-table" aria-label="ผลเปรียบเทียบราคา" aria-rowcount={rows.length + 1}>
         <thead><tr>
-          <th scope="col">ตรวจแล้ว</th><th scope="col">เลือก</th><th scope="col">SKU</th><th scope="col" className="ep-name">ชื่อสินค้า</th><th scope="col">หน่วย</th>
+          <th scope="col">ตรวจแล้ว</th><th scope="col">เลือก SKU</th><th scope="col">SKU</th><th scope="col" className="ep-name">ชื่อสินค้า</th><th scope="col">หน่วย</th>
           <th scope="col">ทุนเก่า</th><th scope="col">ทุนใหม่</th>
           {([0, 1, 5] as const).map(level => <th scope="col" key={level} colSpan={2}>ระดับ {level} · เก่า / ใหม่</th>)}
         </tr></thead>
@@ -101,12 +101,16 @@ function ComparisonTable({ rows, checked, selected, onCheck, onSelect }: {
           {start > 0 && <tr aria-hidden="true" className="ep-spacer"><td colSpan={13} style={{ height: start * rowHeight }} /></tr>}
           {rows.slice(start, end).map((row, index) => (
             <tr key={row.id} aria-rowindex={start + index + 2} className={selected.has(row.id) ? 'ep-row--selected' : ''}
-              onClick={() => onSelect(row.id)}>
+              tabIndex={0} onClick={() => onSelect(row.id)} onKeyDown={event => {
+                if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) {
+                  event.preventDefault();
+                  onSelect(row.id);
+                }
+              }}>
               <td onClick={event => event.stopPropagation()}><input type="checkbox" checked={checked.has(row.id)}
                 aria-label={`ตรวจแล้ว ${row.sku} ${row.unit}`} onChange={() => onCheck(row.id)} /></td>
-              <td onClick={event => event.stopPropagation()}><input type="checkbox" checked={selected.has(row.id)}
-                aria-label={`เลือก ${row.sku} ${row.unit}`} onChange={() => onSelect(row.id)}
-                disabled={selected.size >= 10 && !selected.has(row.id)} /></td>
+              <td onClick={event => event.stopPropagation()}><input type="checkbox" checked={exportSkus.has(row.sku)}
+                aria-label={`เลือก SKU ${row.sku} สำหรับ TXT (${row.unit})`} onChange={() => onSelectSku(row.sku)} /></td>
               <td>{row.sku}</td><td className="ep-name" title={row.name}>{row.name}</td><td title={row.unit}>{row.unit}</td>
               <td className="ep-old">{formatPrice(row.oldCost)}</td><td className="ep-new">{formatPrice(row.newCost)}</td>
               {([0, 1, 5] as const).map(level => <PriceCells key={level} row={row} level={level} />)}
@@ -192,12 +196,15 @@ export function EditPricePage({ handlers }: { handlers: NavHandlers }) {
   const [filter, setFilter] = useState<CompareFilter>('mismatch');
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [exportSkus, setExportSkus] = useState<Set<string>>(new Set());
   const [checked, setChecked] = useState(loadChecklist);
   const [selectedLevel, setSelectedLevel] = useState<PriceLevel>(0);
   const [error, setError] = useState('');
   const [exports, setExports] = useState<ExportEntry[]>([]);
   const [missingUnitWarning, setMissingUnitWarning] = useState<{ rows: MissingMasterUnit[]; canContinue: boolean } | null>(null);
   const rows = useMemo(() => result ? filterRows(result, filter, search) : [], [result, filter, search]);
+  const allRows = useMemo(() => result ? result.products.flatMap(product => product.rows) : [], [result]);
+  const skuExportRows = useMemo(() => allRows.filter(row => exportSkus.has(row.sku)), [allRows, exportSkus]);
   const selectedRows = useMemo(() => rows.filter(row => selected.has(row.id)), [rows, selected]);
   const units = useMemo(() => Array.from(new Set(rows.map(row => row.unit))).sort((a, b) => a.localeCompare(b, 'th')), [rows]);
   const busy = loading.master || loading.promaxx || comparing;
@@ -214,6 +221,7 @@ export function EditPricePage({ handlers }: { handlers: NavHandlers }) {
     setResult(null);
     setMissingUnitWarning(null);
     setSelected(new Set());
+    setExportSkus(new Set());
     setError('');
     try {
       if (!/\.(xlsx|xls|csv)$/i.test(file.name)) throw new Error('กรุณาเลือกไฟล์ .xlsx, .xls หรือ .csv');
@@ -261,6 +269,7 @@ export function EditPricePage({ handlers }: { handlers: NavHandlers }) {
       setFilter('mismatch');
       setSearch('');
       setSelected(new Set());
+      setExportSkus(new Set());
       setStep('compare');
     } catch (cause) {
       setResult(null);
@@ -281,19 +290,32 @@ export function EditPricePage({ handlers }: { handlers: NavHandlers }) {
     });
   }
 
+  function toggleExportSku(sku: string) {
+    setExportSkus(previous => {
+      const next = new Set(previous);
+      if (next.has(sku)) next.delete(sku);
+      else next.add(sku);
+      return next;
+    });
+  }
+
+  function selectFilteredSkus() {
+    setExportSkus(previous => new Set([...previous, ...rows.map(row => row.sku)]));
+  }
+
   function recordExport(filename: string, count: number) {
     setError('');
     setExports(previous => [{ filename, count, time: new Date().toLocaleTimeString('th-TH', { timeZone: 'Asia/Bangkok' }) }, ...previous].slice(0, 30));
   }
 
-  function exportText(level: PriceLevel, options: ExportOptions = {}) {
-    const text = buildPosText(rows, level, options);
+  function exportText(level: PriceLevel, options: ExportOptions = {}, sourceRows = rows) {
+    const text = buildPosText(sourceRows, level, options);
     if (!text) { setError('ไม่มีรายการทุนเพิ่มขึ้นที่มีราคาสำหรับระดับและหน่วยที่เลือก'); return; }
-    const prefix = options.baseUnitOnly ? 'BASE_UNIT_' : options.unit === undefined ? '' : options.unit.replace(/[\\/:*?"<>|\x00-\x1f]/g, '_') + '_';
+    const prefix = options.skus !== undefined ? 'SELECTED_' : options.baseUnitOnly ? 'BASE_UNIT_' : options.unit === undefined ? '' : options.unit.replace(/[\\/:*?"<>|\x00-\x1f]/g, '_') + '_';
     const filename = `${prefix}ราคาระดับ ${level}.txt`;
     try {
       saveDownload(new Blob([text], { type: 'text/plain;charset=utf-8' }), filename);
-      recordExport(filename, posExportRows(rows, level, options).length);
+      recordExport(filename, posExportRows(sourceRows, level, options).length);
     } catch { setError('ดาวน์โหลดไม่สำเร็จ กรุณาลองอีกครั้ง'); }
   }
 
@@ -322,11 +344,11 @@ export function EditPricePage({ handlers }: { handlers: NavHandlers }) {
     </div>
   );
 
-  function exportButtons(options: ExportOptions, base = false) {
+  function exportButtons(options: ExportOptions, base = false, sourceRows = rows) {
     return PRICE_LEVELS.map(level => {
-      const count = posExportRows(rows, level, options).length;
+      const count = posExportRows(sourceRows, level, options).length;
       return <button type="button" key={level} className={`ep-button${base ? ' ep-button--green' : ''}`}
-        disabled={count === 0} onClick={() => exportText(level, options)}>
+        disabled={count === 0} onClick={() => exportText(level, options, sourceRows)}>
         ระดับ {level} <span className="ep-button-count">{count.toLocaleString()}</span>
       </button>;
     });
@@ -387,9 +409,25 @@ export function EditPricePage({ handlers }: { handlers: NavHandlers }) {
             </div>}
             {filterControls}
 
+            <section className="ep-sku-export" aria-labelledby="ep-sku-export-title">
+              <div className="ep-panel-heading">
+                <div><h3 id="ep-sku-export-title">ส่งออก TXT เฉพาะ SKU ที่เลือก</h3>
+                  <p role="status">เลือก {exportSkus.size.toLocaleString()} SKU · รวม {skuExportRows.length.toLocaleString()} แถว (ทุกหน่วย)</p></div>
+                <div className="ep-inline-actions">
+                  {step === 'compare' && <button type="button" className="ep-button ep-button--secondary" disabled={rows.length === 0}
+                    onClick={selectFilteredSkus}>เลือก SKU ตามตัวกรอง</button>}
+                  <button type="button" className="ep-button ep-button--secondary" disabled={exportSkus.size === 0}
+                    onClick={() => setExportSkus(new Set())}>ล้าง SKU ที่เลือก</button>
+                </div>
+              </div>
+              <p className="ep-hint">ติ๊กช่อง “เลือก SKU” ในตารางเพื่อรวมทุกหน่วยของ SKU นั้น รายการที่เลือกคงอยู่เมื่อเปลี่ยนตัวกรองหรือค้นหา · TXT ใช้เฉพาะทุนใหม่มากกว่าทุนเก่าและมีราคาของระดับนั้น</p>
+              <div className="ep-export-buttons">{exportButtons({ skus: exportSkus }, false, allRows)}</div>
+            </section>
+
             {step === 'compare' ? <>
-              <p className="ep-hint">ตัวกรองใช้สถานะรวมต่อ SKU · คลิกแถวเพื่อเลือกได้สูงสุด 10 แถว · ช่อง “ตรวจแล้ว” จำไว้เมื่อเปิดใช้งานครั้งถัดไป</p>
-              <ComparisonTable rows={rows} checked={checked} selected={selected} onCheck={toggleCheck} onSelect={toggleSelect} />
+              <p className="ep-hint">ตัวกรองใช้สถานะรวมต่อ SKU · คลิกแถวหรือกด Enter เพื่อดูเทียบใน Selected Results ได้สูงสุด 10 แถว · ช่อง “ตรวจแล้ว” จำไว้เมื่อเปิดใช้งานครั้งถัดไป</p>
+              <ComparisonTable rows={rows} checked={checked} selected={selected} exportSkus={exportSkus}
+                onCheck={toggleCheck} onSelect={toggleSelect} onSelectSku={toggleExportSku} />
               {selected.size > 0 && <div className="ep-selected">
                 <div className="ep-panel-heading"><h3>Selected Results · เลือก {selected.size}/10 แถว</h3>
                   <div className="ep-inline-actions"><label>ระดับราคา <select aria-label="ระดับราคา Selected Results" value={selectedLevel}
@@ -403,7 +441,7 @@ export function EditPricePage({ handlers }: { handlers: NavHandlers }) {
                 </table></div>}
               </div>}
             </> : <>
-              <div className="ep-export-note">ส่งออกเฉพาะแถวตามตัวกรองและคำค้นด้านบน · TXT ใช้เฉพาะรายการทุนใหม่มากกว่าทุนเก่า · Excel รวมทุกแถวที่กรองได้</div>
+              <div className="ep-export-note">ปุ่มส่งออกด้านล่างใช้แถวตามตัวกรองและคำค้นด้านบน · TXT ใช้เฉพาะรายการทุนใหม่มากกว่าทุนเก่า · Excel รวมทุกแถวที่กรองได้</div>
               <div className="ep-export-group"><h3>TXT แยกตามระดับราคา</h3><p>SKU, ราคาใหม่ และระดับราคา คั่นด้วย Tab · UTF-8 BOM · ทศนิยม 2 ตำแหน่ง</p>
                 <div className="ep-export-buttons">{exportButtons({})}</div>
               </div>

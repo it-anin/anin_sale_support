@@ -198,10 +198,12 @@ export function priceAtLevel(row: ComparisonRow, level: PriceLevel, kind: 'old' 
 export interface ExportOptions {
   unit?: string;
   baseUnitOnly?: boolean;
+  skus?: ReadonlySet<string>;
 }
 
 export function posExportRows(rows: ComparisonRow[], level: PriceLevel, options: ExportOptions = {}): ComparisonRow[] {
   return rows.filter(row => row.newCost !== null && row.oldCost !== null && row.newCost > row.oldCost
+    && (options.skus === undefined || options.skus.has(row.sku))
     && (options.unit === undefined || row.unit === options.unit)
     && (!options.baseUnitOnly || row.unit === row.baseUnit)
     && priceAtLevel(row, level, 'new') !== null);
