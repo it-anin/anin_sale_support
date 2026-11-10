@@ -130,6 +130,16 @@ async function main() {
   // อัพโหลด Supabase
   const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
+  // เมื่อย้ายมาใช้ Agent แล้ว ห้าม CSV รุ่นนี้เขียนทับ snapshot / hash ของ Agent.
+  // ถ้ายังไม่ติดตั้ง stock_sync ให้ทำงานแบบเดิม; error อื่นต้องหยุดก่อนลบข้อมูล.
+  const { error: agentStatusError } = await supabase.from('stock_sync').select('id').eq('id', 1).maybeSingle();
+  if (agentStatusError && !['42P01', 'PGRST205'].includes(agentStatusError.code)) {
+    throw new Error(`ตรวจสถานะ Stock Agent ไม่สำเร็จ: ${agentStatusError.message}`);
+  }
+  if (!agentStatusError) {
+    throw new Error('Stock ใช้ Agent แล้ว — หยุด Task Upload CSV เดิม และใช้ stock-agent.mjs');
+  }
+
   const { error: delErr } = await supabase.from('stock').delete().neq('id', 0);
   if (delErr) { console.error('❌ ลบข้อมูลเก่าไม่สำเร็จ:', delErr.message); process.exit(1); }
 
