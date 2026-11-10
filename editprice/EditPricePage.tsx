@@ -4,7 +4,7 @@ import { AnimatedLogoText } from '../AnimatedLogo';
 import { PageNavRow, type NavHandlers } from '../pageAccess';
 import {
   buildPosText, cellText, compareSheets, filterRows, findMissingMasterUnits, formatPrice, posExportRows, priceAtLevel,
-  PM, PRICE_LEVELS, reportRows, type CompareFilter, type ComparisonResult, type ComparisonRow, type MissingMasterUnit,
+  PRICE_LEVELS, reportRows, resolveMasterColumns, type CompareFilter, type ComparisonResult, type ComparisonRow, type MissingMasterUnit,
   type ExportOptions, type PriceLevel, type SheetRows,
 } from './engine';
 import './EditPricePage.css';
@@ -60,7 +60,7 @@ function FileUploadZone({ kind, file, busy, error, onFile }: {
       onDragLeave={() => setDragging(false)} onDrop={drop}>
       <span className="ep-file-number">ไฟล์ {kind === 'master' ? '1' : '2'}</span>
       <h3>{title}</h3>
-      <p>{kind === 'master' ? 'ทุนใหม่จากคอลัมน์ K และหน่วยจากคอลัมน์ J' : 'ทุนเก่าและราคาขายระดับ 0 / 1 / 4 / 5'}</p>
+      <p>{kind === 'master' ? 'ทุนใหม่จากคอลัมน์ ทุนซื้อ และหน่วยจาก PURCHASE_UNIT' : 'ทุนเก่าและราคาขายระดับ 0 / 1 / 4 / 5'}</p>
       <div className="ep-file-detail" aria-live="polite">
         {busy ? 'กำลังอ่านไฟล์…' : file ? <><strong>{file.name}</strong><span>{file.count.toLocaleString()} แถวข้อมูล</span></> : <><strong>ลากไฟล์มาวางที่นี่</strong><span>รองรับ .xlsx, .xls, .csv · อ่านเฉพาะชีตแรก</span></>}
       </div>
@@ -125,7 +125,7 @@ function PriceCells({ row, level }: { row: ComparisonRow; level: 0 | 1 | 5 }) {
 
 function MissingUnitRows({ rows }: { rows: MissingMasterUnit[] }) {
   return <>
-    <div className="ep-missing-unit-list" tabIndex={0} role="region" aria-label="รายการที่ไม่มีหน่วย เลื่อนเพื่อดูเพิ่มเติม"><table className="ep-mini-table" aria-label="รายการที่ไม่มีหน่วยในคอลัมน์ J">
+    <div className="ep-missing-unit-list" tabIndex={0} role="region" aria-label="รายการที่ไม่มีหน่วย เลื่อนเพื่อดูเพิ่มเติม"><table className="ep-mini-table" aria-label="รายการที่ไม่มีหน่วยในคอลัมน์ PURCHASE_UNIT">
       <thead><tr><th>SKU</th><th>ชื่อสินค้า</th></tr></thead>
       <tbody>{rows.slice(0, 100).map((row, index) => <tr key={`${row.sku}:${index}`}><td>{row.sku}</td><td>{row.name || '-'}</td></tr>)}</tbody>
     </table></div>
@@ -166,11 +166,11 @@ function MissingUnitDialog({ rows, canContinue, onCancel, onCompare }: {
     <div className="ep-missing-unit-body">
       <div className="ep-missing-unit-heading">
         <span className="ep-missing-unit-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m12 3 10 18H2L12 3Z" /><path d="M12 9v4m0 4h.01" /></svg></span>
-        <div><h2 id="ep-missing-unit-title">พบรายการที่ไม่มีหน่วยในคอลัมน์ J</h2><p>Product Master · {rows.length.toLocaleString()} รายการ</p></div>
+        <div><h2 id="ep-missing-unit-title">พบรายการที่ไม่มีหน่วยในคอลัมน์ PURCHASE_UNIT</h2><p>Product Master · {rows.length.toLocaleString()} รายการ</p></div>
       </div>
       <p id="ep-missing-unit-description">{canContinue
         ? 'กด “เปรียบเทียบราคา” เพื่อข้ามเฉพาะรายการเหล่านี้และเปรียบเทียบรายการที่มีหน่วยต่อ หรือกด “ยกเลิก” เพื่อกลับไปแก้ไขไฟล์'
-        : 'ทุกรายการไม่มีหน่วยในคอลัมน์ J จึงไม่มีข้อมูลสำหรับเปรียบเทียบ กรุณายกเลิกเพื่อแก้ไขไฟล์ Product Master'}</p>
+        : 'ทุกรายการไม่มีหน่วยในคอลัมน์ PURCHASE_UNIT จึงไม่มีข้อมูลสำหรับเปรียบเทียบ กรุณายกเลิกเพื่อแก้ไขไฟล์ Product Master'}</p>
       <MissingUnitRows rows={rows} />
     </div>
     <div className="ep-missing-unit-actions">
@@ -222,9 +222,11 @@ export function EditPricePage({ handlers }: { handlers: NavHandlers }) {
       if (!firstSheet) throw new Error('ไฟล์นี้ไม่มีชีตข้อมูล');
       // raw:false คงรูปแบบรหัสสินค้าที่มีเลขศูนย์นำหน้า ส่วนราคาจะแปลงด้วย parseNum
       const rows = XLSX.utils.sheet_to_json<unknown[]>(firstSheet, { header: 1, defval: '', raw: false, blankrows: false });
-      const lastColumn = kind === 'master' ? 10 : 7;
-      if (rows.length < 2 || (rows[0]?.length ?? 0) <= lastColumn) {
-        throw new Error(`ต้องมีหัวตารางและข้อมูลถึงคอลัมน์ ${kind === 'master' ? 'K' : 'H'} กรุณาตรวจชนิดไฟล์`);
+      if (rows.length < 2) throw new Error('ต้องมีหัวตารางและข้อมูลสินค้า กรุณาตรวจชนิดไฟล์');
+      if (kind === 'master') {
+        resolveMasterColumns(rows[0]);
+      } else if ((rows[0]?.length ?? 0) <= 7) {
+        throw new Error('ต้องมีหัวตารางและข้อมูลถึงคอลัมน์ H กรุณาตรวจชนิดไฟล์');
       }
       const count = rows.slice(1).filter(row => row.some(value => cellText(value))).length;
       if (versions.current[kind] === version) setFiles(previous => ({ ...previous, [kind]: { name: file.name, rows, count } }));
@@ -241,9 +243,10 @@ export function EditPricePage({ handlers }: { handlers: NavHandlers }) {
     if (!skipMissingUnits) {
       const missing = findMissingMasterUnits(files.master.rows);
       if (missing.length > 0) {
+        const columns = resolveMasterColumns(files.master.rows[0]);
         setMissingUnitWarning({
           rows: missing,
-          canContinue: files.master.rows.slice(1).some(row => !!cellText(row[PM.SKU]) && !!cellText(row[PM.UNIT])),
+          canContinue: files.master.rows.slice(1).some(row => !!cellText(row[columns.SKU]) && !!cellText(row[columns.UNIT])),
         });
         return;
       }
@@ -354,7 +357,7 @@ export function EditPricePage({ handlers }: { handlers: NavHandlers }) {
               busy={loading[kind] || comparing} error={fileErrors[kind]} onFile={file => { void upload(kind, file); }} />)}
           </div>
           <details className="ep-format-help"><summary>รูปแบบคอลัมน์ของไฟล์</summary>
-            <p><strong>Product Master:</strong> A = SKU, B = ชื่อสินค้า, C = หน่วยฐาน, J = หน่วยทุนใหม่, K = ทุนใหม่</p>
+            <p><strong>Product Master:</strong> SKU = SKU, ชื่อสินค้า = NAME, หน่วยฐาน = BASE_UNIT, หน่วยทุนใหม่ = PURCHASE_UNIT, ทุนใหม่ = ทุนซื้อ · สลับลำดับคอลัมน์ได้ และไม่แยกตัวพิมพ์เล็ก–ใหญ่</p>
             <p><strong>R05.105:</strong> B = SKU, E = หน่วย, F = ระดับราคา (0/1/4/5), G = ราคาเก่าระดับ 0, H = ราคาเก่าระดับ 1/5 หรือทุนเก่าระดับ 4</p>
           </details>
           <div className="ep-upload-footer"><span>ไฟล์ที่เลือกจะไม่ถูกอัปโหลดไปยังฐานข้อมูล</span>
@@ -378,7 +381,7 @@ export function EditPricePage({ handlers }: { handlers: NavHandlers }) {
               {step === 'compare' && <button type="button" className="ep-button" onClick={() => setStep('export')}>ไปหน้า Export →</button>}
             </div>
             {result.skippedMissingUnits.length > 0 && <div className="ep-skipped-warning" role="status">
-              <strong>ข้าม {result.skippedMissingUnits.length.toLocaleString()} รายการที่ไม่มีหน่วยในคอลัมน์ J</strong>
+              <strong>ข้าม {result.skippedMissingUnits.length.toLocaleString()} รายการที่ไม่มีหน่วยในคอลัมน์ PURCHASE_UNIT</strong>
               <p>ผลเปรียบเทียบและไฟล์ส่งออกใช้เฉพาะรายการที่มีหน่วย</p>
               <details><summary>ดูรายการที่ข้าม</summary><MissingUnitRows rows={result.skippedMissingUnits} /></details>
             </div>}
@@ -404,7 +407,7 @@ export function EditPricePage({ handlers }: { handlers: NavHandlers }) {
               <div className="ep-export-group"><h3>TXT แยกตามระดับราคา</h3><p>SKU, ราคาใหม่ และระดับราคา คั่นด้วย Tab · UTF-8 BOM · ทศนิยม 2 ตำแหน่ง</p>
                 <div className="ep-export-buttons">{exportButtons({})}</div>
               </div>
-              <div className="ep-export-group"><h3>BASE_UNIT · เฉพาะหน่วยฐาน</h3><p>หน่วยตรงกับคอลัมน์ C ของ Product Master</p>
+              <div className="ep-export-group"><h3>BASE_UNIT · เฉพาะหน่วยฐาน</h3><p>หน่วยตรงกับคอลัมน์ BASE_UNIT ของ Product Master</p>
                 <div className="ep-export-buttons">{exportButtons({ baseUnitOnly: true }, true)}</div>
               </div>
               <details className="ep-unit-exports"><summary>TXT แยกตามหน่วย ({units.length.toLocaleString()} หน่วย)</summary>
