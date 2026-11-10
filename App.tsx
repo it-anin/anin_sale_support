@@ -5,6 +5,7 @@ import JsBarcode from 'jsbarcode';
 import QRCode from 'qrcode';
 import { supabase } from './supabase';
 import { DrugLabelPage } from './druglabel/DrugLabelPage';
+import { EditPricePage } from './editprice/EditPricePage';
 import { StockCheckPage } from './StockCheckPage';
 import { CustomerHistoryPage } from './CustomerHistoryPage';
 import { OutboundPage } from './OutboundPage';
@@ -16,7 +17,7 @@ import { LoginPage } from './LoginPage';
 import { parseR05106 } from './r05106';
 import { loadPriceChangePrintProducts } from './priceChangePrint';
 import { loadAuthProfile, saveAuthProfile, clearAuthProfile, BRANCH_PROFILE_CODES, STORE_BRANCH_CODES, type Profile } from './auth';
-import { PageVisibilityContext, PageNotificationContext, PageNavRow, PAGE_NAV, DEFAULT_VISIBILITY, type PageId, type PageVisibility, type NavHandlers } from './pageAccess';
+import { PageVisibilityContext, PageNotificationContext, PurchasingNavigationContext, PageNavRow, PAGE_NAV, DEFAULT_VISIBILITY, type PageId, type PageVisibility, type NavHandlers } from './pageAccess';
 import './App.css';
 
 // Types
@@ -376,10 +377,12 @@ const App: React.FC = () => {
       return { ...DEFAULT_VISIBILITY, druglabel: false, customerhistory: false };
     }
     if (authProfile?.id === 'PURCHASING') {
-      return { ...DEFAULT_VISIBILITY, druglabel: false, customerhistory: false, pendingdocs: false, outbound: false };
+      return { ...DEFAULT_VISIBILITY, editprice: true, druglabel: false, customerhistory: false, pendingdocs: false, outbound: false };
     }
     // Sale Admin ยังใช้เงื่อนไขเดิม เพราะไม่ได้อยู่ในรายการสิทธิ์ที่ขอเปลี่ยน
-    return authProfile?.id === 'SALE_ADMIN' ? { ...pageVisibility, pendingdocs: false } : pageVisibility;
+    return authProfile?.id === 'SALE_ADMIN'
+      ? { ...pageVisibility, editprice: false, pendingdocs: false }
+      : { ...pageVisibility, editprice: false };
   }, [pageVisibility, authProfile?.id]);
   // สลับรหัสขณะค้างอยู่ในหน้าที่รหัสใหม่เปิดไม่ได้ → แสดงหน้าแรกที่อนุญาตทันที
   // ไม่ mount หน้าที่ถูกปิดเพื่อรอ effect เปลี่ยนหน้าในภายหลัง
@@ -1651,6 +1654,7 @@ ${sheetsHtml}
   return (
     <PageVisibilityContext.Provider value={effectiveVisibility}>
     <PageNotificationContext.Provider value={{ salesupport: saleSupportUnreadCount, outbound: outboundPendingCount, pricetag: priceChangeUnreadCount, pendingdocs: pendingDocsCount }}>
+    <PurchasingNavigationContext.Provider value={authProfile.id === 'PURCHASING' ? () => setCurrentPage('editprice') : null}>
     <div className="app-container">
       {/* แถบผู้ใช้ปัจจุบัน + ออกจากระบบ (แสดงทุกหน้า) */}
       <div className="app-userbar">
@@ -2206,6 +2210,10 @@ ${sheetsHtml}
       </div>
       )}{/* end pricetag page */}
 
+      {currentPage === 'editprice' && authProfile.id === 'PURCHASING' && (
+        <EditPricePage handlers={navHandlers} />
+      )}
+
       {/* Drug Label Page */}
       {currentPage === 'druglabel' && (
         <DrugLabelPage
@@ -2295,7 +2303,7 @@ ${sheetsHtml}
       )}
 
       {/* Footer Actions */}
-      <div className="footer-actions">
+      {currentPage !== 'editprice' && <div className="footer-actions">
         {currentPage === 'pricetag' && totalItems > 0 && (
           <>
             <button className="print-action-btn" onClick={handlePrint}>
@@ -2315,7 +2323,7 @@ ${sheetsHtml}
             </button>
           </>
         )}
-      </div>
+      </div>}
 
       {/* QR Settings Modal */}
       {showQrSettings && (
@@ -2608,6 +2616,7 @@ ${sheetsHtml}
         </div>
       )}
     </div>
+    </PurchasingNavigationContext.Provider>
     </PageNotificationContext.Provider>
     </PageVisibilityContext.Provider>
   );

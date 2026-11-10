@@ -15,7 +15,8 @@
     "test:repair-agents": "node repair-promaxx-agents.test.mjs",
     "test:master-columns": "node --test masterColumns.test.mjs",
     "test:price-change-print": "node --test priceChangePrint.test.mjs",
-    "test:department-login": "node --test departmentLogin.test.mjs"
+    "test:department-login": "node --test departmentLogin.test.mjs",
+    "test:edit-price": "node --test editprice/*.test.mjs"
   },
   "dependencies": {
     "@fontsource/inter": "^5.2.8",

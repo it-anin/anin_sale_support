@@ -4,6 +4,7 @@ import { createContext, useContext, type ReactNode } from 'react';
 export type PageId =
   | 'pricetag'
   | 'druglabel'
+  | 'editprice'
   | 'stockcheck'
   | 'customerhistory'
   | 'outbound'
@@ -35,6 +36,12 @@ const IconLabel = (
     <path d="M14 2v6h6" />
     <path d="M8 13h8" />
     <path d="M8 17h5" />
+  </Svg>
+);
+const IconEditPrice = (
+  <Svg>
+    <path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+    <path d="m16 3 5 5M10 14l-1 4 4-1L22 8a2.1 2.1 0 0 0-5-5Z" />
   </Svg>
 );
 const IconBox = (
@@ -88,12 +95,20 @@ export const PAGE_NAV: PageNavDef[] = [
   { id: 'pendingdocs',     icon: IconDocClock, label: 'Pending', title: 'เอกสารที่ยังไม่กดส่ง' },
 ];
 
+const EDIT_PRICE_NAV: PageNavDef = {
+  id: 'editprice', icon: IconEditPrice, label: 'Edit Price', title: 'เปรียบเทียบและปรับราคา',
+};
+
+// ทุกหน้าใช้ context เดียวกัน เพื่อแทนช่อง Label เฉพาะรหัสจัดซื้อ
+export const PurchasingNavigationContext = createContext<(() => void) | null>(null);
+
 export type PageVisibility = Record<PageId, boolean>;
 
-// ค่าเริ่มต้น: เปิดทุกหน้า (fail-safe — ถ้าโหลดค่าจาก Supabase ไม่ได้ ยังใช้ได้ครบ)
+// ค่าเริ่มต้น: เปิดหน้าเดิมทั้งหมด ส่วน Edit Price เปิดเฉพาะ PURCHASING ใน App
 export const DEFAULT_VISIBILITY: PageVisibility = {
   pricetag: true,
   druglabel: true,
+  editprice: false,
   stockcheck: true,
   customerhistory: true,
   outbound: true,
@@ -108,21 +123,23 @@ export type PageNotifications = Partial<Record<PageId, boolean | number>>;
 export const PageNotificationContext = createContext<PageNotifications>({});
 export const usePageNotifications = () => useContext(PageNotificationContext);
 
-export type NavHandlers = Record<PageId, () => void>;
+export type NavHandlers = Record<Exclude<PageId, 'editprice'>, () => void>;
 
 // แถวปุ่มนำทาง (ใช้ร่วมทุกหน้า) — แสดงครบทุกเมนู หน้าที่ถูกปิดใช้ปุ่ม disabled แบบจาง
 export function PageNavRow({ current, handlers }: { current: PageId; handlers: NavHandlers }) {
   const visible = usePageVisibility();
   const notifications = usePageNotifications();
+  const onGoEditPrice = useContext(PurchasingNavigationContext);
+  const pages = PAGE_NAV.map(page => page.id === 'druglabel' && onGoEditPrice ? EDIT_PRICE_NAV : page);
   return (
     <div className="search-nav-row">
-      {PAGE_NAV.map(p => (
+      {pages.map(p => (
         <button
           key={p.id}
           type="button"
           className={`page-nav-card${p.id === current ? ' page-nav-card--active' : ''}${!visible[p.id] ? ' page-nav-card--disabled' : ''}`}
           disabled={!visible[p.id]}
-          onClick={handlers[p.id]}
+          onClick={p.id === 'editprice' ? onGoEditPrice ?? undefined : handlers[p.id]}
           title={visible[p.id] ? p.title : `${p.title} · ยังไม่เปิดใช้งาน`}
           aria-current={p.id === current ? 'page' : undefined}
         >

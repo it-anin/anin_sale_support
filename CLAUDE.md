@@ -540,7 +540,9 @@ Each panel has a close (✕) button and includes product name in subheader.
 |---|---|---|
 | SRC / KKL / SSS | ทุกปุ่ม | ไม่มี |
 | WAREHOUSE (คลังสินค้า) | Price / Stock / Outbound / Support / Pending | Label / Customer |
-| PURCHASING (จัดซื้อ) | Price / Stock / Support | Label / Customer / Pending / Outbound |
+| PURCHASING (จัดซื้อ) | Price / Edit Price / Stock / Support | Customer / Pending / Outbound |
+
+เพิ่ม 2569-11-10: `PURCHASING` เห็น **Edit Price** แทน Label ในช่องเดิม เปิดหน้า `editprice` ได้โดยเฉพาะรหัสนี้ผ่าน `PurchasingNavigationContext` + `effectiveVisibility` รหัสอื่นคงปุ่มและสิทธิ์ Label เดิม ไม่เพิ่มแถวใน `app_page_settings` เพราะเป็นสิทธิ์เฉพาะรหัสและประมวลผลไฟล์บนเครื่อง รายละเอียด: [`docs/edit-price.md`](docs/edit-price.md)
 
 - `effectiveVisibility` ใน `App.tsx` เป็นเงื่อนไขกลางสำหรับทั้งปุ่มและหน้าที่ render · หากสลับโปรไฟล์แล้วหน้าที่ค้างอยู่ไม่อนุญาต จะใช้หน้าแรกที่เปิดได้ทันที โดยไม่ mount หน้าที่ถูกปิดก่อน
 - **Sale Admin คงเงื่อนไขเดิม:** Pending ปิด และเมนูอื่นอิง `app_page_settings` เพราะผู้ใช้ยังไม่ได้ขอเปลี่ยนสิทธิ์รหัสนี้
