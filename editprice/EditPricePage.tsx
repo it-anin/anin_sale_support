@@ -74,9 +74,9 @@ function FileUploadZone({ kind, file, busy, error, onFile }: {
   );
 }
 
-function ComparisonTable({ rows, checked, selected, exportSkus, onCheck, onSelect, onSelectSku }: {
-  rows: ComparisonRow[]; checked: Set<string>; selected: Set<string>; exportSkus: Set<string>;
-  onCheck: (id: string) => void; onSelect: (id: string) => void; onSelectSku: (sku: string) => void;
+function ComparisonTable({ rows, checked, selected, exportRowIds, onCheck, onSelect, onSelectExportRow }: {
+  rows: ComparisonRow[]; checked: Set<string>; selected: Set<string>; exportRowIds: Set<string>;
+  onCheck: (id: string) => void; onSelect: (id: string) => void; onSelectExportRow: (id: string) => void;
 }) {
   const [scrollTop, setScrollTop] = useState(0);
   const viewport = useRef<HTMLDivElement>(null);
@@ -93,7 +93,7 @@ function ComparisonTable({ rows, checked, selected, exportSkus, onCheck, onSelec
       tabIndex={0} role="region" aria-label="ตารางเปรียบเทียบราคา เลื่อนเพื่อดูรายการเพิ่มเติม">
       <table className="ep-table" aria-label="ผลเปรียบเทียบราคา" aria-rowcount={rows.length + 1}>
         <thead><tr>
-          <th scope="col">ตรวจแล้ว</th><th scope="col">เลือก SKU</th><th scope="col">SKU</th><th scope="col" className="ep-name">ชื่อสินค้า</th><th scope="col">หน่วย</th>
+          <th scope="col">ตรวจแล้ว</th><th scope="col">เลือกหน่วย</th><th scope="col">SKU</th><th scope="col" className="ep-name">ชื่อสินค้า</th><th scope="col">หน่วย</th>
           <th scope="col">ทุนเก่า</th><th scope="col">ทุนใหม่</th>
           {([0, 1, 5] as const).map(level => <th scope="col" key={level} colSpan={2}>ระดับ {level} · เก่า / ใหม่</th>)}
         </tr></thead>
@@ -109,8 +109,8 @@ function ComparisonTable({ rows, checked, selected, exportSkus, onCheck, onSelec
               }}>
               <td onClick={event => event.stopPropagation()}><input type="checkbox" checked={checked.has(row.id)}
                 aria-label={`ตรวจแล้ว ${row.sku} ${row.unit}`} onChange={() => onCheck(row.id)} /></td>
-              <td onClick={event => event.stopPropagation()}><input type="checkbox" checked={exportSkus.has(row.sku)}
-                aria-label={`เลือก SKU ${row.sku} สำหรับ TXT (${row.unit})`} onChange={() => onSelectSku(row.sku)} /></td>
+              <td onClick={event => event.stopPropagation()}><input type="checkbox" checked={exportRowIds.has(row.id)}
+                aria-label={`เลือกสำหรับ TXT ${row.sku} ${row.unit}`} onChange={() => onSelectExportRow(row.id)} /></td>
               <td>{row.sku}</td><td className="ep-name" title={row.name}>{row.name}</td><td title={row.unit}>{row.unit}</td>
               <td className="ep-old">{formatPrice(row.oldCost)}</td><td className="ep-new">{formatPrice(row.newCost)}</td>
               {([0, 1, 5] as const).map(level => <PriceCells key={level} row={row} level={level} />)}
@@ -196,7 +196,7 @@ export function EditPricePage({ handlers }: { handlers: NavHandlers }) {
   const [filter, setFilter] = useState<CompareFilter>('mismatch');
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [exportSkus, setExportSkus] = useState<Set<string>>(new Set());
+  const [exportRowIds, setExportRowIds] = useState<Set<string>>(new Set());
   const [checked, setChecked] = useState(loadChecklist);
   const [selectedLevel, setSelectedLevel] = useState<PriceLevel>(0);
   const [error, setError] = useState('');
@@ -204,7 +204,7 @@ export function EditPricePage({ handlers }: { handlers: NavHandlers }) {
   const [missingUnitWarning, setMissingUnitWarning] = useState<{ rows: MissingMasterUnit[]; canContinue: boolean } | null>(null);
   const rows = useMemo(() => result ? filterRows(result, filter, search) : [], [result, filter, search]);
   const allRows = useMemo(() => result ? result.products.flatMap(product => product.rows) : [], [result]);
-  const skuExportRows = useMemo(() => allRows.filter(row => exportSkus.has(row.sku)), [allRows, exportSkus]);
+  const selectedExportRows = useMemo(() => allRows.filter(row => exportRowIds.has(row.id)), [allRows, exportRowIds]);
   const selectedRows = useMemo(() => rows.filter(row => selected.has(row.id)), [rows, selected]);
   const units = useMemo(() => Array.from(new Set(rows.map(row => row.unit))).sort((a, b) => a.localeCompare(b, 'th')), [rows]);
   const busy = loading.master || loading.promaxx || comparing;
@@ -221,7 +221,7 @@ export function EditPricePage({ handlers }: { handlers: NavHandlers }) {
     setResult(null);
     setMissingUnitWarning(null);
     setSelected(new Set());
-    setExportSkus(new Set());
+    setExportRowIds(new Set());
     setError('');
     try {
       if (!/\.(xlsx|xls|csv)$/i.test(file.name)) throw new Error('กรุณาเลือกไฟล์ .xlsx, .xls หรือ .csv');
@@ -269,7 +269,7 @@ export function EditPricePage({ handlers }: { handlers: NavHandlers }) {
       setFilter('mismatch');
       setSearch('');
       setSelected(new Set());
-      setExportSkus(new Set());
+      setExportRowIds(new Set());
       setStep('compare');
     } catch (cause) {
       setResult(null);
@@ -290,17 +290,17 @@ export function EditPricePage({ handlers }: { handlers: NavHandlers }) {
     });
   }
 
-  function toggleExportSku(sku: string) {
-    setExportSkus(previous => {
+  function toggleExportRow(id: string) {
+    setExportRowIds(previous => {
       const next = new Set(previous);
-      if (next.has(sku)) next.delete(sku);
-      else next.add(sku);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   }
 
-  function selectFilteredSkus() {
-    setExportSkus(previous => new Set([...previous, ...rows.map(row => row.sku)]));
+  function selectFilteredExportRows() {
+    setExportRowIds(previous => new Set([...previous, ...rows.map(row => row.id)]));
   }
 
   function recordExport(filename: string, count: number) {
@@ -311,7 +311,7 @@ export function EditPricePage({ handlers }: { handlers: NavHandlers }) {
   function exportText(level: PriceLevel, options: ExportOptions = {}, sourceRows = rows) {
     const text = buildPosText(sourceRows, level, options);
     if (!text) { setError('ไม่มีรายการทุนเพิ่มขึ้นที่มีราคาสำหรับระดับและหน่วยที่เลือก'); return; }
-    const prefix = options.skus !== undefined ? 'SELECTED_' : options.baseUnitOnly ? 'BASE_UNIT_' : options.unit === undefined ? '' : options.unit.replace(/[\\/:*?"<>|\x00-\x1f]/g, '_') + '_';
+    const prefix = options.rowIds !== undefined ? 'SELECTED_' : options.baseUnitOnly ? 'BASE_UNIT_' : options.unit === undefined ? '' : options.unit.replace(/[\\/:*?"<>|\x00-\x1f]/g, '_') + '_';
     const filename = `${prefix}ราคาระดับ ${level}.txt`;
     try {
       saveDownload(new Blob([text], { type: 'text/plain;charset=utf-8' }), filename);
@@ -409,25 +409,25 @@ export function EditPricePage({ handlers }: { handlers: NavHandlers }) {
             </div>}
             {filterControls}
 
-            <section className="ep-sku-export" aria-labelledby="ep-sku-export-title">
+            <section className="ep-selection-export" aria-labelledby="ep-selection-export-title">
               <div className="ep-panel-heading">
-                <div><h3 id="ep-sku-export-title">ส่งออก TXT เฉพาะ SKU ที่เลือก</h3>
-                  <p role="status">เลือก {exportSkus.size.toLocaleString()} SKU · รวม {skuExportRows.length.toLocaleString()} แถว (ทุกหน่วย)</p></div>
+                <div><h3 id="ep-selection-export-title">ส่งออก TXT เฉพาะหน่วยที่เลือก</h3>
+                  <p role="status">เลือก {selectedExportRows.length.toLocaleString()} รายการ</p></div>
                 <div className="ep-inline-actions">
                   {step === 'compare' && <button type="button" className="ep-button ep-button--secondary" disabled={rows.length === 0}
-                    onClick={selectFilteredSkus}>เลือก SKU ตามตัวกรอง</button>}
-                  <button type="button" className="ep-button ep-button--secondary" disabled={exportSkus.size === 0}
-                    onClick={() => setExportSkus(new Set())}>ล้าง SKU ที่เลือก</button>
+                    onClick={selectFilteredExportRows}>เลือกหน่วยตามตัวกรอง</button>}
+                  <button type="button" className="ep-button ep-button--secondary" disabled={exportRowIds.size === 0}
+                    onClick={() => setExportRowIds(new Set())}>ล้างหน่วยที่เลือก</button>
                 </div>
               </div>
-              <p className="ep-hint">ติ๊กช่อง “เลือก SKU” ในตารางเพื่อรวมทุกหน่วยของ SKU นั้น รายการที่เลือกคงอยู่เมื่อเปลี่ยนตัวกรองหรือค้นหา · TXT ใช้เฉพาะทุนใหม่มากกว่าทุนเก่าและมีราคาของระดับนั้น</p>
-              <div className="ep-export-buttons">{exportButtons({ skus: exportSkus }, false, allRows)}</div>
+              <p className="ep-hint">ติ๊กช่อง “เลือกหน่วย” เพื่อส่งออกเฉพาะแถว SKU และหน่วยนั้น รายการที่เลือกคงอยู่เมื่อเปลี่ยนตัวกรองหรือค้นหา · TXT ใช้เฉพาะทุนใหม่มากกว่าทุนเก่าและมีราคาของระดับนั้น</p>
+              <div className="ep-export-buttons">{exportButtons({ rowIds: exportRowIds }, false, allRows)}</div>
             </section>
 
             {step === 'compare' ? <>
               <p className="ep-hint">ตัวกรองใช้สถานะรวมต่อ SKU · คลิกแถวหรือกด Enter เพื่อดูเทียบใน Selected Results ได้สูงสุด 10 แถว · ช่อง “ตรวจแล้ว” จำไว้เมื่อเปิดใช้งานครั้งถัดไป</p>
-              <ComparisonTable rows={rows} checked={checked} selected={selected} exportSkus={exportSkus}
-                onCheck={toggleCheck} onSelect={toggleSelect} onSelectSku={toggleExportSku} />
+              <ComparisonTable rows={rows} checked={checked} selected={selected} exportRowIds={exportRowIds}
+                onCheck={toggleCheck} onSelect={toggleSelect} onSelectExportRow={toggleExportRow} />
               {selected.size > 0 && <div className="ep-selected">
                 <div className="ep-panel-heading"><h3>Selected Results · เลือก {selected.size}/10 แถว</h3>
                   <div className="ep-inline-actions"><label>ระดับราคา <select aria-label="ระดับราคา Selected Results" value={selectedLevel}
