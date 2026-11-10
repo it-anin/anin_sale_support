@@ -110,42 +110,58 @@ test('TXT exports use filtered rows, increased costs, optional unit/base restric
   assert.equal(posExportRows(rows, 0).length, 2);
 });
 
-test('selected SKU TXT includes every eligible unit of the exact chosen SKU and preserves export restrictions', () => {
+test('selected TXT exports only the chosen SKU/unit row and preserves export restrictions', () => {
   const result = compare([master('00123', 'กล่อง', 1250, 'แผง'), master('123', 'กล่อง', 1500)], [
     ...oldUnit('00123', 'กล่อง', 1000, 2000, 1800, 1500), ...oldUnit('00123', 'แผง', 100, 200, 180, 150),
     ...oldUnit('123', 'กล่อง', 1000, 2000),
   ]);
   const rows = filterRows(result, 'all', '');
-  const options = { skus: new Set(['00123']) };
+  const strip = rows.find(row => row.sku === '00123' && row.unit === 'แผง');
+  const options = { rowIds: new Set([strip.id]) };
   assert.deepEqual(posExportRows(rows, 0, options).map(row => [row.sku, row.unit]), [
-    ['00123', 'กล่อง'], ['00123', 'แผง'],
+    ['00123', 'แผง'],
   ]);
-  assert.equal(buildPosText(rows, 0, options), '\uFEFF00123\t2,500.00\t0\r\n00123\t250.00\t0\r\n');
+  assert.equal(buildPosText(rows, 0, options), '\uFEFF00123\t250.00\t0\r\n');
   assert.equal(buildPosText(rows, 1, { ...options, baseUnitOnly: true }), '\uFEFF00123\t225.00\t1\r\n');
-  assert.equal(buildPosText(rows, 4, { ...options, unit: 'กล่อง' }), '\uFEFF00123\t1,250.00\t4\r\n');
+  assert.equal(buildPosText(rows, 4, options), '\uFEFF00123\t125.00\t4\r\n');
+  assert.equal(buildPosText(rows, 4, { ...options, unit: 'กล่อง' }), '');
   assert.equal(buildPosText(rows, 5, { ...options, unit: 'แผง' }), '\uFEFF00123\t188.00\t5\r\n');
 });
 
-test('empty or unknown SKU selection never exports all rows, and selection keeps missing/unchanged/decreased cost rules', () => {
+test('two units of the same SKU can be selected separately and removing one keeps the other selected', () => {
+  const result = compare([master('A', 'กล่อง', 120), master('B', 'แผง', 30)], [
+    ...oldUnit('A', 'กล่อง', 100, 200), ...oldUnit('A', 'แผง', 10, 20), ...oldUnit('B', 'แผง', 10, 20),
+  ]);
+  const rows = filterRows(result, 'all', '');
+  const [box, strip] = rows;
+  const rowIds = new Set([box.id, strip.id]);
+  assert.equal(buildPosText(rows, 0, { rowIds }), '\uFEFFA\t240.00\t0\r\nA\t24.00\t0\r\n');
+  rowIds.delete(box.id);
+  assert.equal(buildPosText(rows, 0, { rowIds }), '\uFEFFA\t24.00\t0\r\n');
+  assert.equal(rowIds.has(strip.id), true);
+});
+
+test('empty or unknown row selection never exports all rows, and selection keeps missing/unchanged/decreased cost rules', () => {
   const result = compare([
     master('UP', 'กล่อง', 120), master('DOWN', 'กล่อง', 80), master('SAME', 'กล่อง', 100), master('MISSING', 'กล่อง', 120),
   ], [
     ...oldUnit('UP', 'กล่อง', 100, 200), ...oldUnit('DOWN', 'กล่อง', 100, 200), ...oldUnit('SAME', 'กล่อง', 100, 200),
   ]);
   const rows = filterRows(result, 'all', '');
-  assert.equal(buildPosText(rows, 0, { skus: new Set() }), '');
-  assert.equal(buildPosText(rows, 0, { skus: new Set(['UNKNOWN']) }), '');
-  assert.equal(buildPosText(rows, 0, { skus: new Set(['DOWN', 'SAME', 'MISSING']) }), '');
-  assert.equal(buildPosText(rows, 1, { skus: new Set(['UP']) }), '');
-  assert.equal(buildPosText(rows, 4, { skus: new Set(['UP', 'DOWN', 'SAME', 'MISSING']) }), '\uFEFFUP\t120.00\t4\r\n');
+  const idsFor = skus => new Set(rows.filter(row => skus.includes(row.sku)).map(row => row.id));
+  assert.equal(buildPosText(rows, 0, { rowIds: new Set() }), '');
+  assert.equal(buildPosText(rows, 0, { rowIds: new Set(['UNKNOWN']) }), '');
+  assert.equal(buildPosText(rows, 0, { rowIds: idsFor(['DOWN', 'SAME', 'MISSING']) }), '');
+  assert.equal(buildPosText(rows, 1, { rowIds: idsFor(['UP']) }), '');
+  assert.equal(buildPosText(rows, 4, { rowIds: idsFor(['UP', 'DOWN', 'SAME', 'MISSING']) }), '\uFEFFUP\t120.00\t4\r\n');
   assert.equal(buildPosText(rows, 0), '\uFEFFUP\t240.00\t0\r\n');
 });
 
-test('selected SKU export supports more than ten SKUs, independently of the analysis row limit', () => {
+test('selected unit export supports more than ten rows, independently of the analysis row limit', () => {
   const skus = Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(5, '0'));
   const result = compare(skus.map(sku => master(sku, 'กล่อง', 120)), skus.flatMap(sku => oldUnit(sku, 'กล่อง', 100, 200)));
   const rows = filterRows(result, 'all', '');
-  const lines = buildPosText(rows, 0, { skus: new Set(skus.slice(0, 11)) }).slice(1).trimEnd().split('\r\n');
+  const lines = buildPosText(rows, 0, { rowIds: new Set(rows.slice(0, 11).map(row => row.id)) }).slice(1).trimEnd().split('\r\n');
   assert.equal(lines.length, 11);
   assert.deepEqual(lines.map(line => line.split('\t')[0]), skus.slice(0, 11));
 });
