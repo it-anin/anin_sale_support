@@ -1258,6 +1258,9 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
   const [uploadingSupplier, setUploadingSupplier] = useState(false);
   const [productSearch, setProductSearch] = useState('');
   const [productQuery, setProductQuery] = useState('');
+  // คำค้นหาในตาราง Order / BackOrder แยกกัน และไม่ปนกับ Products
+  const [orderSearch, setOrderSearch] = useState({ order: '', backorder: '' });
+  const [orderQuery, setOrderQuery] = useState({ order: '', backorder: '' });
   // กรอง ABC — Set ว่าง = ไม่กรอง แสดงทุกรายการ
   const [abcFilter, setAbcFilter] = useState<Set<string>>(new Set());
   // ค่า ABC ที่มีจริงในตาราง (โหลดครั้งเดียว) — null = ยังไม่โหลด
@@ -1311,6 +1314,8 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
   const [notificationTarget, setNotificationTarget] = useState<{ menuId: MenuId; recordId: string } | null>(null);
 
   const menu = MENUS.find(m => m.id === activeMenu)!;
+  const activeOrderQuery = activeMenu === 'order' ? orderQuery.order
+    : activeMenu === 'backorder' ? orderQuery.backorder : '';
   const isBranchUser = (BRANCH_PROFILE_CODES as readonly string[]).includes(userBranch ?? '');
   // SRC และ Sale Admin เห็น Order/BackOrder ร่วมกัน — ใช้ชุดเดียวกันทั้งตาราง ตัวนับ และป้ายสถานะ
   const visibleBranches = useMemo(
@@ -1506,6 +1511,11 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
     setActiveMenu(targetMenu);
     const canOpenRecord = !!event.record_id && !event.title.startsWith('ลบข้อมูล');
     if (targetMenu === 'products' && canOpenRecord) setProductSearch(event.record_id!);
+    if ((targetMenu === 'order' || targetMenu === 'backorder') && canOpenRecord) {
+      // เปิดรายการจากแจ้งเตือนได้ แม้คำค้นหาเดิมจะไม่ตรงกับรายการนั้น
+      setOrderSearch(prev => ({ ...prev, [targetMenu]: '' }));
+      setOrderQuery(prev => ({ ...prev, [targetMenu]: '' }));
+    }
     if (canOpenRecord) setNotificationTarget({ menuId: targetMenu, recordId: event.record_id! });
   };
 
@@ -1596,6 +1606,15 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
     const t = setTimeout(() => setProductQuery(productSearch.trim()), 250);
     return () => clearTimeout(t);
   }, [productSearch]);
+
+  // หน่วง 250ms เหมือน Products — ค้นหาที่ server ก่อน limit 500
+  useEffect(() => {
+    const t = setTimeout(() => setOrderQuery({
+      order: orderSearch.order.trim(),
+      backorder: orderSearch.backorder.trim(),
+    }), 250);
+    return () => clearTimeout(t);
+  }, [orderSearch]);
 
   // โหลดรายการค่า ABC ที่มีจริง + จำนวน — ยิงครั้งเดียวตอนเข้าเมนู Products
   // ดึงเฉพาะคอลัมน์ abc (สั้นมาก) วนทีละ 1000 เพราะ PostgREST ไม่มี DISTINCT
@@ -1788,6 +1807,12 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
       if (menu.id === 'products' && productQuery) {
         query = query.or(`sku.ilike.${productQuery}%,name.ilike.%${productQuery}%,sku_name.ilike.%${productQuery}%`);
       }
+      if ((menu.id === 'order' || menu.id === 'backorder') && activeOrderQuery) {
+        // quote ค่าในเงื่อนไข PostgREST เพื่อค้นชื่อที่มี comma / วงเล็บ / เครื่องหมายคำพูดได้
+        const skuPattern = JSON.stringify(`${activeOrderQuery}%`);
+        const namePattern = JSON.stringify(`%${activeOrderQuery}%`);
+        query = query.or(`sku.ilike.${skuPattern},product_name.ilike.${namePattern}`);
+      }
       // Products เริ่มต้นโชว์ 20 รายการ, ค้นหาหรือกรอง ABC แล้วโชว์สูงสุด 500
       // (กรอง ABC = ผู้ใช้ตั้งใจไล่ดูทั้งกลุ่ม ถ้าเหลือ 20 จะไม่เห็นของที่กรองมา)
       const limit = menu.id === 'products'
@@ -1835,7 +1860,7 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
       setLoading(false);
     })();
     return () => { cancelled = true; };
-  }, [menu.table, menu.id, refreshKey, productQuery, abcFilter, isBranchUser, visibleBranches, isPurchasing]);
+  }, [menu.table, menu.id, refreshKey, productQuery, activeOrderQuery, abcFilter, isBranchUser, visibleBranches, isPurchasing]);
 
   // กดประวัติที่ผูกกับรายการ → ไปเมนูนั้นและเปิดรายละเอียดเมื่อโหลดแถวพบ
   useEffect(() => {
@@ -3329,6 +3354,18 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
           <div className="ss-panel ss-panel-anim" key={activeMenu}>
             <div className="ss-panel-toolbar">
               <span className="ss-panel-title"><span className="ss-menu-icon">{menu.icon}</span> {menu.label} · {loading ? 'กำลังโหลด...' : `${visibleRows.length} รายการ`}</span>
+              {(activeMenu === 'order' || activeMenu === 'backorder') && (
+                <div className="ss-search-center">
+                  <input className="ss-input ss-search-input" type="text"
+                    aria-label={`ค้นหา ${menu.label} ตาม SKU หรือชื่อสินค้า`}
+                    placeholder="🔍 ค้นหา SKU หรือชื่อสินค้า..."
+                    value={orderSearch[activeMenu]}
+                    onChange={e => {
+                      const value = e.target.value;
+                      setOrderSearch(prev => ({ ...prev, [activeMenu]: value }));
+                    }} />
+                </div>
+              )}
               {activeMenu !== 'products' && (
                 <div className="ss-toolbar-btns">
                   {activeMenu === 'order' && (

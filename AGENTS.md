@@ -35,6 +35,15 @@
 - แก้ Price: รัน `npm run test:price-agent` และ `npm run build`; แก้ helper ร่วมให้รัน Pending และ Stock tests เพิ่ม ตรวจ navigation ของ Edit Price หลังรวมโค้ด App; ใช้ DB/browser fixtures ในเครื่อง ไม่อัปโหลดข้อมูลจริงเพื่อทดสอบ
 - ประเมินโควต้าตามกฎแผนฟรีด้านล่าง คิว Agent ทุก 10 วินาที × 30 วัน = 259,200 requests ตัวอย่าง JSON คิว 43 bytes ≈ 11.15 MB เฉพาะ response body ไม่รวม headers/Realtimes/เว็บ/Stock/Pending; status เว็บสมมติ 1 KiB ทุกนาที × 30 วัน ≈ 44.24 MB ต่อแท็บที่เปิดตลอด ตัวเลขนี้เป็น **สมมติฐาน ไม่ใช่ Usage จริง** ยังยืนยันยอดรวมปัจจุบันไม่ได้เมื่อไม่มีสิทธิ์ Dashboard/API
 
+## SaleSupport — ช่องค้นหา Order / BackOrder (2026-11-10, Asia/Bangkok)
+
+- อ่าน [`docs/salesupport.md`](docs/salesupport.md) ก่อนแก้ `SaleSupportPage.tsx`; ช่องค้นหาใน toolbar ของ Order และ BackOrder เปิดให้ทั้ง 6 โปรไฟล์ ใช้รูปแบบเดียวกับ Products (`ss-search-center` / `ss-search-input`)
+- ค้น `sku` แบบขึ้นต้น หรือ `product_name` แบบมีคำอยู่ส่วนใดก็ได้ด้วย `ilike` หน่วง 250ms; กรองในคำสั่งอ่านตารางก่อน `limit 500` เพื่อค้นรายการเก่าได้ ไม่กรองเฉพาะแถวที่โหลดไว้ในเบราว์เซอร์
+- `orderSearch` / `orderQuery` เก็บคำค้นแยก Order กับ BackOrder และไม่ปนกับ Products; ล้างคำค้นแล้วคืนรายการปกติ ค่าใน `.or()` ต้อง quote/escape เพื่อรองรับชื่อสินค้าที่มี comma วงเล็บ และเครื่องหมายคำพูด
+- รักษาขอบเขตข้อมูลล่าสุด: SRC กับ Sale Admin ใช้ `visibleBranches = ['SRC', 'SALE_ADMIN']` ร่วมกัน; KKL/SSS เห็นเฉพาะสาขาตัวเอง; จัดซื้อยังกรองผู้รับ Order `PURCHASING`/`BOTH` และดู BackOrder ทุกสาขา; คลังเห็นทุกใบ คำค้นต้องใช้ร่วมกับตัวกรองเหล่านี้ ไม่แทนที่ตัวกรองสิทธิ์
+- ตัวกรองสถานะ 3 ขั้นของ Order กรองต่อจากผลค้นหาได้; ตัวนับเมนูย่อยยังนับงานค้างทั้งหมดตามสิทธิ์ เปิดรายการจากประวัติแจ้งเตือนต้องล้างคำค้นของเมนูปลายทางทันที
+- ตรวจด้วย `npm run build` และเบราว์เซอร์ที่จำลอง API ครบ 6 รหัส: SKU/ชื่อสินค้า ตัวพิมพ์เล็กใหญ่ อักขระพิเศษ ไม่พบผล ล้างคำค้น จำคำค้นแยกเมนู รายการเก่านอก 500 แถว และการใช้ร่วมกับตัวกรองสถานะ/ขอบเขตสาขา
+
 ## Edit Price — เพิ่มและเผยแพร่ 2026-11-10 (Asia/Bangkok)
 
 ระบบเปรียบเทียบทุนและคำนวณราคาขายใหม่จาก Product Master กับ R05.105 (ชื่อเดิมบน Card: Promaxx) อยู่ใน `editprice/` คู่มือและรายละเอียดรูปแบบไฟล์: [`docs/edit-price.md`](docs/edit-price.md) และหัวข้อ Edit Price ใน [`CLAUDE.md`](CLAUDE.md) โค้ดฟีเจอร์เผยแพร่ครั้งแรกด้วย commit `4fd749f` บน https://anin-label.vercel.app/

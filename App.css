@@ -4665,7 +4665,7 @@ body.ss-col-resizing { cursor: col-resize; user-select: none; }
 .price-change-arrow .is-up   { color: #b33b31; }
 .price-change-arrow .is-down { color: #2e8b47; }
 
-/* ช่องค้นหา toolbar (เมนู Products) */
+/* ช่องค้นหา toolbar (เมนู Products / Order / BackOrder) */
 .ss-panel-toolbar { position: relative; }
 .ss-search-center {
   margin-left: 16px;
