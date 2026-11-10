@@ -4,6 +4,42 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 > 📌 **เอกสารนี้ถูกย่อ (2569-08-18)** — รายละเอียด deep-dive ของบางฟีเจอร์ถูกย้ายออกไปเป็นไฟล์แยก อ่านเมื่อจำเป็นแทนที่จะโหลดทุกเซสชัน: [`docs/database.md`](docs/database.md) (ตาราง/CSV-XLSX format), [`docs/salesupport.md`](docs/salesupport.md) (หน้า Sale Support), [`druglabel/CLAUDE.md`](druglabel/CLAUDE.md) (หน้าฉลากยา — โหลดอัตโนมัติเมื่อทำงานในโฟลเดอร์นั้น) ไม่มีเนื้อหาใดถูกลบ แค่ย้ายที่เก็บ
 
+## Supabase Free Plan — โควต้าและการแจ้งเตือน
+
+**ผู้ใช้กำหนดวันที่ 2026-11-07 (Asia/Bangkok): ใช้แผนฟรีเป็นค่าเริ่มต้น และแจ้งเตือนเมื่อคาดว่าการใช้งาน/การเปลี่ยนแปลงจะเกินโควต้าฟรี** ให้ใช้กฎฉบับเต็มใน [AGENTS.md](AGENTS.md) ร่วมกับหัวข้อนี้ กฎนี้เป็นแนวทางแจ้งเตือนของผู้ช่วยระหว่างทำงาน ไม่ได้ติดตั้งระบบตรวจ Usage/ส่งแจ้งเตือนอัตโนมัติในเว็บหรือ Agent
+
+| ทรัพยากร | โควต้าฟรี ณ วันที่บันทึก |
+| --- | --- |
+| พื้นที่ฐานข้อมูล | 500 MB ต่อโครงการ รวมตาราง/index เป็นพื้นที่ที่ใช้อยู่ ไม่ใช่โควต้าเขียนรายเดือน |
+| Uncached Egress | 5 GB ต่อรอบบิล ใช้ร่วมกันใน organization รวมทุกบริการ |
+| Cached Egress | 5 GB แยกต่อรอบบิล; ห้ามรวมเป็น 10 GB สำหรับ Database API |
+| Realtime Messages | 2,000,000 ข้อความต่อรอบบิล |
+| Realtime Peak Connections | 200 การเชื่อมต่อพร้อมกัน ไม่ใช่จำนวน channels |
+| Database API requests | ไม่จำกัดจำนวนครั้ง แต่ยังมีข้อจำกัดทรัพยากร/อัตราการใช้งาน/timeout |
+| File Storage | 1 GB แยกจากฐานข้อมูล |
+| Edge Function Invocations | 500,000 ครั้งต่อรอบบิล; Stock ใช้ Database RPC ไม่ใช้ส่วนนี้ |
+
+**หลักประเมิน:** ตรวจราคา/แผนจริงล่าสุดและรอบบิลจาก Dashboard ก่อนตัดสินใจ รวม Stock + Pending + หน้า/บอทอื่นและโครงการอื่นตามขอบเขตโควต้า เมื่อเข้าถึง [Usage](https://supabase.com/dashboard/org/_/usage) ไม่ได้ให้ระบุว่ายังยืนยันยอดรวมปัจจุบันไม่ได้ ห้ามนำค่าประมาณมาอ้างเป็นยอดใช้จริง คาดการณ์สิ้นรอบจาก `ยอดใช้แล้ว + (usage ต่อวันหลังเปลี่ยน × วันที่เหลือ)` ส่วน database ประเมินพื้นที่รวมข้อมูล/index/ประวัติ และ connections ประเมิน peak พร้อมกัน
+
+**เกณฑ์แจ้งเตือนภายในโปรเจกต์:**
+
+- ยอดจริงหรือยอดคาดการณ์ **≥80%**: เตือนล่วงหน้าพร้อมตัวเลขและสมมติฐาน
+- ยอดคาดการณ์ **≥100%**: แจ้งชัดเจนก่อนขั้นตอนที่เพิ่มการใช้งาน บอกทรัพยากร โควต้า ยอดใช้แล้ว ส่วนเพิ่ม ยอดรวม/เปอร์เซ็นต์ ช่วงเวลา และแนวทางลด เช่น limit/debounce, ลด polling, แถวสรุป Realtime, delta writes
+- เกณฑ์นี้ตั้งในโปรเจกต์ ไม่ใช่เกณฑ์แจ้งเตือนของ Supabase การเตือน 80% ไม่ได้บังคับขออนุมัติทุกงาน ดำเนินงานที่ได้รับอนุญาตและวิธีที่อยู่ในโควต้าต่อได้ อย่าอัปเกรดแผน/ซื้อ add-on/ตั้งค่าให้มีค่าใช้จ่ายเอง
+- ประเมินเมื่อเพิ่ม polling/refresh, query ก้อนใหญ่, subscriptions/publications, ประวัติ snapshot, import/export, backup หรือโหลดทดสอบจริง งาน UI/CSS ที่ไม่เพิ่มการรับส่ง/การเชื่อมต่อไม่ต้องเตือนซ้ำโดยไม่มีเหตุใหม่
+- คงความถูกต้องของข้อมูล: ห้ามตัดสินค้า/จำกัดประวัติ ProMaxx จนยอดคงเหลือผิดเพื่อประหยัดโควต้า
+
+**Stock Agent — ข้อมูลวัดและสมมติฐานวันที่ 2026-11-07:**
+
+- Stock มี **19,541 รายการ**; ตัวอย่างผลค้นหา 300 รายการจากคลังสินค้า = JSON **44,898 bytes (~44.9 KB)**; status ทั้งแถว **327 bytes**; poll เฉพาะ `refresh_requested_at` **61 bytes** เป็นขนาด JSON ไม่บีบอัด ไม่รวม overhead/ทราฟฟิกทั้งหมด ไม่ใช่ขนาดฐานข้อมูลหรือยอด Usage จริง
+- Agent เปิด 24 ชั่วโมง × 30 วัน เช็กคำขอทุก 30 วินาที = **86,400 requests** และ response body รวม **~5.3 MB**; ไม่มีคำขอใหม่ก็ไม่ถาม MSSQL
+- โหลดผลค้นหาขนาดตัวอย่างรวมทุกเครื่อง 100 ครั้ง/วัน × 30 วัน = **134.7 MB (~2.7% ของ 5 GB)** ต้องรวมการโหลดผลค้นหาซ้ำเมื่อข้อมูลเปลี่ยนด้วย
+- รีเฟรช 100 รอบ/วัน × 30 วัน มีผู้รับหน้า Stock 10 แท็บ + Stock Agent 1 ตัวในทุกเหตุการณ์: `2 × (10 + 1) × 100 × 30` = **66,000 messages (~3.3% ของ 2 ล้าน)** ไม่รวมฟีเจอร์อื่น/เหตุการณ์เพิ่มเติม
+- Hash เหมือนเดิมส่งเพียง hash/สถานะ; เปลี่ยนแล้วส่ง snapshot เต็มเข้า RPC แต่ SQL เขียนเฉพาะ delta ใน transaction เดียว เก็บชุดปัจจุบัน ไม่เพิ่มเต็มชุดทุกครั้ง
+- Upload เข้าไม่ตัด Egress ตามขนาด upload แต่ response/ผลค้นหา/Realtime ที่ส่งออกยังนับ และการเขียนยังใช้ทรัพยากรฐานข้อมูล; Realtime publish เฉพาะ `stock_sync` ไม่ใช่สินค้าหลายหมื่นแถว ปกติสองเหตุการณ์ต่อรอบ (คำขอ + ผลลัพธ์) คูณจำนวนผู้รับรวม Agent
+
+อ้างอิง: [Pricing](https://supabase.com/pricing), [Egress](https://supabase.com/docs/guides/platform/manage-your-usage/egress), [Realtime Messages](https://supabase.com/docs/guides/platform/manage-your-usage/realtime-messages), [Realtime Peak Connections](https://supabase.com/docs/guides/platform/manage-your-usage/realtime-peak-connections)
+
 ## Commands
 
 ```bash
@@ -59,7 +95,12 @@ Seven-page React app sharing the same `App.css` and Supabase project.
 
 **Key files — เช็คสต๊อค (Stock Check):**
 - `StockCheckPage.tsx` — stock check page: search-first query, branch tabs, table display
-- `upload-stock.mjs` — Node.js script: reads CSV → uploads to Supabase `stock` table (ใช้กับ Task Scheduler)
+- `useStockSync.ts` — ขอ Stock สดเมื่อเปิดหน้า/รีเฟรช/กลับมาแท็บ; ฟัง `stock_sync` แล้วโหลดผลค้นหาใหม่เฉพาะ `last_success_at` เปลี่ยน
+- `stock-agent.mjs` — on-demand SELECT ProMaxx ตามสูตร R01.102; ใช้ config/read-only guard/warehouse map จาก Pending; ไม่ถาม MSSQL ตามรอบ
+- `stock-sync-setup.sql` — `stock_sync` (`sync_version=2`) + RPC ขอข้อมูล (10 วิ / auto 2 นาที) + atomic delta (service_role เท่านั้น) + unique `(branch,sku)` + realtime เฉพาะ status; `stock-sync-setup.test.mjs` ทดสอบ PostgreSQL จำลองด้วย PGlite (`npm run test:stock-sync`)
+- `stock-agent.test.mjs` — mapping/decimal/hash/RPC และ query จริงบน fixture (`npm run test:stock-agent`)
+- `run-pending-docs-agent.bat` → `promaxx-agents.mjs` — ใช้ Task Pending เดิมเปิด Pending+Stock และรีสตาร์ทแยกกัน ใช้ `.env` เดียว; `วิธีติดตั้ง-agent-สต๊อค.md` อธิบายการอัปเดต; ต้องหยุด Task Stock CSV เดิมก่อนเริ่ม Agent และไม่รัน Task `run-stock-agent.bat` ซ้ำ
+- `upload-stock.mjs` — CSV รุ่นเดิม; ปฏิเสธเขียนเมื่อพบ `stock_sync` เพื่อไม่ทับ snapshot ของ Agent
 - `run-upload-stock.bat` — batch wrapper สำหรับ Task Scheduler: แสดง progress บนหน้าจอ ปิดอัตโนมัติเมื่อเสร็จ
 - `stock-setup.sql` — SQL สำหรับสร้างตาราง `stock` ใน Supabase
 - `วิธีติดตั้ง-task-scheduler.md` — คู่มือตั้งค่า Task Scheduler แบบ step-by-step
@@ -90,7 +131,7 @@ Seven-page React app sharing the same `App.css` and Supabase project.
 **Key files — ตรวจสอบเอกสารค้าง (Pending Docs, เพิ่ม 2569-10-27):**
 - `PendingDocsPage.tsx` — ใบโอนสินค้าออกที่สาขายังไม่กด "ส่ง" ใน ProMaxx: ตาราง + popup รายการสินค้า, ป้ายสถานะการซิงค์, ปุ่ม 🔄
 - `pending-docs-agent.mjs` — **Agent รันค้างในเครื่องที่ร้าน** อ่าน MSSQL ของ ProMaxx (SELECT อย่างเดียว) → Supabase · `--dry-run` / `--once` / `--print-sql`
-- `pending-docs-agent.test.mjs` — unit tests (`npm run test:pending-docs`) · `run-pending-docs-agent.bat` — wrapper วนเปิดใหม่ให้ Task Scheduler (ต้องเป็น CRLF)
+- `pending-docs-agent.test.mjs` — unit tests (`npm run test:pending-docs`) · `run-pending-docs-agent.bat` — wrapper ของ Task เดิม เรียก `promaxx-agents.mjs` เปิด Pending+Stock (ต้องเป็น CRLF); ทดสอบการเปิด/รีสตาร์ท/ปิด subprocess ด้วย `npm run test:promaxx-agents`
 - `pending-docs-setup.sql` — ตาราง `pending_transfers` + `pending_docs_sync` + RPC 3 ตัว + realtime + แถว `app_page_settings` แบบซ่อน
 - `วิธีติดตั้ง-agent-เอกสารค้าง.md` — คู่มือติดตั้งทีละขั้น (SSMS → Supabase → `.env` → login อ่านอย่างเดียว → Task Scheduler)
 
@@ -471,6 +512,10 @@ Each panel has a close (✕) button and includes product name in subheader.
 
 ## Stock Check — Search Behavior
 
+- ซิงค์แบบ Pending: อ่าน MSSQL เฉพาะเมื่อเปิดหน้า/กดรีเฟรช/กลับมาแท็บที่ข้อมูลเก่ากว่า 2 นาที; เปิดค้างไม่ถามตามรอบ ใช้สูตร R01.102 ทุกประวัติ ไม่จำกัดวัน; หน่วย/ราคาใช้หน่วยฐานและ CF_PRICE ของรายงาน; เก็บยอดศูนย์/ติดลบ
+- เวลา query จำกัด 60 วิ; ป้ายเว็บรอ 75 วิ ถ้าล้ม/ชุดว่างเก็บ snapshot เดิม; เหมือนเดิมขยับแค่ `last_checked_at`; เปลี่ยนใช้ RPC เดิม `replace_stock_snapshot` เทียบและเขียนเฉพาะ delta+สถานะใน transaction เดียว (ห้ามกลับไป delete-all/insert-all: เคย timeout ที่ 19,541 แถว); แถวเดิมที่ไม่เปลี่ยนรักษา id/uploaded_at; `last_error_at` ใช้เวลา DB ผ่าน RPC
+- Stock Agent มี lock แบบ named pipe/abstract socket กันเปิดซ้ำในเครื่องเดียวกันข้ามโฟลเดอร์ (ไม่มี TCP/API) และ log ใส่ PID; ก่อนอัปเดตต้อง End Task/ปิด Agent รุ่นเก่าทุกตัวแล้วรัน SQL ตั้ง sync_version=2 ก่อนเปิดใหม่; ตัวใหม่ไม่เริ่ม MSSQL หาก schema ยังเป็นรุ่นเก่า
+- ก่อนติดตั้ง `stock-sync-setup.sql` หน้าเว็บอ่าน Stock CSV เดิมต่อได้; Supabase mode ใหม่ต้องหยุด uploader เก่าที่เครื่องจริงด้วย (แค่แก้ repo ไม่หยุด Task รุ่นเก่าที่กำลังรัน)
 - Search-first: ไม่โหลดข้อมูลทั้งหมดตอน mount — query Supabase เมื่อพิมพ์เท่านั้น
 - Numeric input → `sku ILIKE 'term%'` (prefix match — ขึ้นต้นด้วย)
 - Text input → `name ILIKE '%term%'` (contains)
