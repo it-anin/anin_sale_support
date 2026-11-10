@@ -1312,6 +1312,13 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
 
   const menu = MENUS.find(m => m.id === activeMenu)!;
   const isBranchUser = (BRANCH_PROFILE_CODES as readonly string[]).includes(userBranch ?? '');
+  // SRC และ Sale Admin เห็น Order/BackOrder ร่วมกัน — ใช้ชุดเดียวกันทั้งตาราง ตัวนับ และป้ายสถานะ
+  const visibleBranches = useMemo(
+    () => userBranch === 'SRC' || userBranch === 'SALE_ADMIN'
+      ? ['SRC', 'SALE_ADMIN']
+      : userBranch ? [userBranch] : [],
+    [userBranch],
+  );
   // เมนูที่โปรไฟล์นี้เห็น — ใช้ทั้งกับ sidebar และเป็น whitelist ตอนเปิดจากลิงก์แจ้งเตือน
   const currentRole: MenuRole = isBranchUser ? 'branch' : isWarehouse ? 'warehouse' : 'purchasing';
   const visibleMenus = useMemo(
@@ -1659,7 +1666,7 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
           .select('arrived_branch, customer_notified, delivered, pickup_date, cancelled_at');
         // ⚠️ ต้องกรองให้ตรงกับ query ของตารางเป๊ะ ๆ ไม่งั้นเลขบนเมนูย่อยจะนับแถวที่ผู้ใช้มองไม่เห็น
         //    แล้วกดกรองไปตารางว่าง (คลังไม่กรอง เพราะเห็น Order ทุกใบ)
-        if (isBranchUser) q = q.eq('branch', userBranch);
+        if (isBranchUser) q = q.in('branch', visibleBranches);
         else if (isPurchasing) q = q.in('recipient_department', ['PURCHASING', 'BOTH']);
         const { data, error } = await q.range(from, from + 999);
         if (error || !data) return;      // นับไม่ได้ก็ไม่ต้องโชว์ badge
@@ -1687,7 +1694,7 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
       setStepCounts(next);
     })();
     return () => { cancelled = true; };
-  }, [refreshKey, stampTick, isBranchUser, userBranch, isPurchasing]);
+  }, [refreshKey, stampTick, isBranchUser, visibleBranches, isPurchasing]);
 
   // ยอดรวมทั้ง 3 ขั้น — 0 = ไม่มีอะไรค้าง ซ่อนเมนูย่อยทิ้งทั้งชุด
   const totalStepPending = ORDER_STEPS.reduce((n, s) => n + (stepCounts[s.key]?.pending ?? 0), 0);
@@ -1766,17 +1773,15 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
       let query = supabase.from(menu.table).select('*');
       // ilike แบบไม่มี wildcard = เท่ากันโดยไม่สนตัวพิมพ์เล็ก-ใหญ่
       if (menu.filter) query = query.ilike(menu.filter.column, menu.filter.value);
-      // สาขาเห็น Order ของตัวเองทั้งหมด; คลัง/จัดซื้อเห็นเฉพาะ Order ที่ส่งให้แผนกตน
-      // ค่า BOTH ใช้กับข้อมูลเก่าก่อนมีช่องเลือกผู้รับ เพื่อไม่ให้รายการเดิมหาย
+      // SRC/Sale Admin เห็น Order และ BackOrder ของกันและกัน · สาขาอื่นเห็นของตัวเอง
       // กรองที่ server ไม่ใช่ฝั่ง client เพื่อไม่ให้ limit 500 ถูกกินโดยแถวของสาขาอื่น
-      if (menu.id === 'order' && isBranchUser) query = query.eq('branch', userBranch);
+      if ((menu.id === 'order' || menu.id === 'backorder') && isBranchUser) query = query.in('branch', visibleBranches);
       // ⚠️ คลังสินค้าเห็น Order **ทุกใบ** ไม่กรองตามผู้รับ — เพราะคลังเป็นคนกรอก Inbound / Outbound /
       //    เลขโอนสินค้า ให้ทุกใบไม่ว่าจะเป็นของจัดซื้อ (ABC = P) หรือของคลังเอง
       //    จัดซื้อยังกรองอยู่เพราะดูแลเฉพาะ ABC = P · BOTH คือข้อมูลเก่าก่อนมีการแยกผู้รับ
       else if (menu.id === 'order' && isPurchasing) query = query.in('recipient_department', ['PURCHASING', 'BOTH']);
-      // BackOrder: สาขา/Sale Admin เห็นเฉพาะของตัวเอง · คลัง+จัดซื้อไม่กรอง เห็นทุกสาขา
+      // BackOrder: คลัง+จัดซื้อไม่กรอง เห็นทุกสาขา
       // (จัดซื้อเข้าเมนูนี้ได้แล้ว 2569-08-19 แต่ดูอย่างเดียว แก้แถวไม่ได้ — ดู isBackOrderDetail ใน popup)
-      if (menu.id === 'backorder' && isBranchUser) query = query.eq('branch', userBranch);
       if (menu.id === 'products' && abcFilter.size > 0) {
         query = query.in('abc', [...abcFilter]);
       }
@@ -1830,7 +1835,7 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
       setLoading(false);
     })();
     return () => { cancelled = true; };
-  }, [menu.table, menu.id, refreshKey, productQuery, abcFilter, isBranchUser, userBranch, isPurchasing]);
+  }, [menu.table, menu.id, refreshKey, productQuery, abcFilter, isBranchUser, visibleBranches, isPurchasing]);
 
   // กดประวัติที่ผูกกับรายการ → ไปเมนูนั้นและเปิดรายละเอียดเมื่อโหลดแถวพบ
   useEffect(() => {
@@ -2950,7 +2955,7 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
   const showOutboundAlert = (row: Record<string, unknown>) =>
     isBranchUser
     && isStampMenu
-    && String(row.branch ?? '') === userBranch
+    && visibleBranches.includes(String(row.branch ?? ''))
     && !row.cancelled_at
     && !!String(row.outbound_date ?? '').trim()
     && !stepDone(String(row.arrived_branch ?? ''));

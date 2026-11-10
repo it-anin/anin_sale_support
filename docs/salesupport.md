@@ -33,17 +33,17 @@
 - `isBranchUser` = `BRANCH_PROFILE_CODES.includes(userBranch)` (import จาก `auth.ts`) = **`SRC`/`KKL`/`SSS`/`SALE_ADMIN`** — ⚠️ **ห้าม hardcode 3 สาขากลับมา** เดิมรายชื่อนี้ซ้ำอยู่ 5 จุดคนละไฟล์ เพิ่มโปรไฟล์ทีต้องไล่แก้ครบทุกจุด ตกจุดไหนก็พังเงียบคนละแบบ
 - ยุบเป็น `currentRole: MenuRole` (`'branch' | 'warehouse' | 'purchasing' | 'saleadmin'`) → `visibleMenus` กรอง `MENU_DISPLAY_ORDER` ด้วย `MenuDef.roles` (ไม่ใส่ `roles` = ทุกโปรไฟล์เห็น)
   - ⚠️ `visibleMenus` ยังเป็น **whitelist ตอนเปิดจากลิงก์แจ้งเตือน** (`openNotificationEvent`) ด้วย — ไม่งั้นลิงก์จะพาไปเมนูที่ถูกซ่อน แล้วออกไม่ได้เพราะไม่มีปุ่มใน sidebar
-  - **Sale Admin นับเป็น role `branch` เต็มตัว** — เคยมี role `'saleadmin'` แยกไว้ซ่อนเมนู BackOrder ตอนเพิ่มโปรไฟล์ (2569-08-19 เช้า) แต่**ถอดออกแล้ว**ตอนบ่ายที่ผู้ใช้ขอเปิดเมนูนั้นให้ใช้ได้ · ทุกอย่างเดินตาม `isBranchUser` (ล็อกช่องสาขาในฟอร์ม, `.eq('branch', userBranch)`, `notifyPurchasingUpdate`/`notifyWarehouseUpdate`)
+  - **Sale Admin นับเป็น role `branch` เต็มตัว** — เคยมี role `'saleadmin'` แยกไว้ซ่อนเมนู BackOrder ตอนเพิ่มโปรไฟล์ (2569-08-19 เช้า) แต่**ถอดออกแล้ว**ตอนบ่ายที่ผู้ใช้ขอเปิดเมนูนั้นให้ใช้ได้ · ทุกอย่างเดินตาม `isBranchUser` (ล็อกช่องสาขาในฟอร์ม, กรองตารางด้วย `visibleBranches`, `notifyPurchasingUpdate`/`notifyWarehouseUpdate`)
 - **`branchCodeLabel(code)`** (จาก `auth.ts`) = จุดเดียวที่แปลงรหัส DB → ชื่อที่ผู้ใช้เห็น (`SALE_ADMIN` → `Sale Admin`) อ่านจาก `PROFILES.label` ตรงๆ ไม่มี map ซ้ำ · เรียกที่ **`formatCell`** (ครอบทุกตาราง **และ popup รายละเอียด** เพราะ popup เรนเดอร์ผ่าน `formatCell` เหมือนกัน), option ของ dropdown สาขาทุกฟอร์ม, ป้าย `.ss-branch-locked-value`, และ `notificationRecipientLabel`
 
-## เมนู Order — สาขาเห็นเฉพาะของตัวเอง
+## เมนู Order — SRC กับ Sale Admin เห็นข้อมูลของกันและกัน
 
-`isBranchUser` → เติม `.eq('branch', userBranch)` ในทั้ง **2 query** ที่แตะ `ss_orders` · คลัง/จัดซื้อเห็นทุกสาขาเพราะดูแลให้ทั้งหมด
+`isBranchUser` → เติม `.in('branch', visibleBranches)` ในทั้ง **2 query** ที่แตะ `ss_orders` · `visibleBranches` ของ SRC และ Sale Admin = `['SRC', 'SALE_ADMIN']` (ผู้ใช้สั่ง 2569-11-10) · KKL/SSS เห็นเฉพาะสาขาตัวเอง · คลังเห็นทุกสาขา ส่วนจัดซื้อยังกรองผู้รับ `PURCHASING`/`BOTH` ตามเดิม
 
 1. query ตาราง (effect หลัก) — กรองที่ server ไม่ใช่ฝั่ง client ไม่งั้น `limit 500` จะถูกกินโดยแถวของสาขาอื่น
 2. query นับเมนูย่อย 3 ขั้น — ⚠️ **ต้องกรองให้ตรงกัน** ไม่งั้นเลขบน badge จะนับรวมสาขาที่ผู้ใช้มองไม่เห็น แล้วกดกรองแล้วตารางว่าง
 - **ไม่มีป้ายบอกว่าถูกกรอง** — เคยใส่ `🔒 สาขา X` ใน toolbar แล้วผู้ใช้ให้เอาออกเพราะรก (2569-08-13) อย่าใส่กลับ
-- เช็ค `row.branch === userBranch` ใน `showOutboundAlert()` ซ้ำซ้อนกับ query แล้ว — เก็บไว้เป็นกันชนโดยตั้งใจ
+- เช็ค `visibleBranches.includes(String(row.branch ?? ''))` ใน `showOutboundAlert()` ซ้ำซ้อนกับ query แล้ว — เก็บไว้เป็นกันชนโดยตั้งใจ และรองรับรายการที่ SRC/Sale Admin เห็นร่วมกัน
 - ฟอร์ม ➕ New Order **ล็อกสาขาตามรหัสที่ล็อกอินแล้ว** (`.ss-branch-locked-value` ไอคอน 🔒 แก้ไม่ได้) — เดิม default เป็น `SRC` ทำให้ KKL/SSS สร้าง Order ผิดสาขาแล้วมองไม่เห็นทันที · คลัง/จัดซื้อยังเลือก dropdown ได้ตามปกติ
 - ผู้รับ Order ตัดสิน**อัตโนมัติจาก `product_master.abc` ของ SKU ที่กรอก** ตอนกดบันทึก (`saveOrder`): `P` → `PURCHASING` · หา SKU ไม่เจอใน Product Master → `BOTH` (ไม่ทราบ ABC กันออเดอร์ไม่มีใครเห็นเลย) — ไม่มีช่องให้เลือกแผนกในฟอร์มแล้ว
 - ⚠️ **New Order เฉพาะยา Pre (`ABC = P`) เท่านั้น — บังคับจริงตั้งแต่ 2569-08-17** ไม่ใช่แค่ข้อความหัวป็อปอัพ "(เฉพาะยา Pre เท่านั้น)" เฉยๆ (ก่อนหน้านี้ช่องค้นหายังเจอ SKU ทุก ABC และ `saveOrder` ยัง route ABC ที่ไม่ใช่ P ไป `WAREHOUSE` ได้ ขัดกับข้อความหัวป็อปอัพ) — ล็อก 2 ชั้น:
@@ -242,7 +242,7 @@ helper กลางตัวเดียวใช้ทั้ง 2 ฟอร์�
   - แต่ยัง**เพิ่มแถวแทนสาขาได้เหมือนคลัง** เพราะปุ่ม ➕ Add BackOrder ไม่มี role gate (แบบเดียวกับ ➕ New Order) · เคสนี้ `notifyPurchasingUpdate`/`notifyWarehouseUpdate` เงียบทั้งคู่ (guard `isBranchUser`) เหลือแต่ `notifyBranchUpdate` แจ้งสาขาเจ้าของแถว — สมเหตุสมผลและตรงกับพฤติกรรมของคลังที่มีมาก่อน
   - 🚨 **ห้ามปล่อยให้จัดซื้อตกไป `else` ของ popup** — จะได้ปุ่มตรา 3 ขั้นซึ่งเป็นงานสาขา และ `applyStepChange` **ไม่มี role guard ข้างในเลย** (ทั้งไฟล์คุมสิทธิ์ตราประทับด้วยการซ่อนปุ่มล้วน ๆ) จัดซื้อจึงกดเปลี่ยนสถานะได้จริงถ้าปุ่มโผล่
 - `BACKORDER_BRANCHES` = `SRC/KKL/SSS/SALE_ADMIN` (ไม่มี `Warehouse` — คลังเป็นผู้รับงานไม่ใช่ผู้ขอ) ต้องตรงกับ CHECK ของ `ss_backorders.branch` เป๊ะ ๆ
-- สาขา/Sale Admin เห็นเฉพาะของตัวเอง (`.eq('branch', userBranch)` ใน query) · คลัง+จัดซื้อเห็นทุกสาขา จึงมีคอลัมน์ `Branch` ในตารางไว้แยกว่าแถวไหนของใคร
+- SRC/Sale Admin เห็นข้อมูลของกันและกัน (`.in('branch', visibleBranches)` ใน query เช่นเดียวกับ Order) · KKL/SSS เห็นเฉพาะสาขาตัวเอง · คลัง+จัดซื้อเห็นทุกสาขา จึงมีคอลัมน์ `Branch` ในตารางไว้แยกว่าแถวไหนของใคร
 
 **⚠️ มี 2 คอลัมน์ตัวเลขคนละที่มา อย่าสลับกัน** (ตั้งชื่อตามคำสั่งผู้ใช้ 2569-08-15):
 
@@ -409,7 +409,7 @@ pill/โมดัลกลางจอ โผล่เฉพาะตอนก�
 `showOutboundAlert(row)` — ต้องครบ 4 ข้อ:
 1. `isBranchUser` (SRC / KKL / SSS เท่านั้น — คลังกับจัดซื้อไม่เห็น ไม่ใช่คนรับของ)
 2. `isStampMenu` = `activeMenu === 'order' || 'backorder'` — ตัวแปรร่วมของทั้ง 2 ป้าย ใช้ได้เพราะ `ss_backorders` มี `outbound_date` + 3 คอลัมน์สถานะ ชื่อเดียวกับ `ss_orders`
-3. `row.branch === userBranch` — **เฉพาะออเดอร์ของสาขาตัวเอง** เป็นกันชนซ้ำกับ query (ทั้ง Order และ BackOrder กรองสาขาที่ server ให้อยู่แล้ว) เก็บไว้เผื่อวันหลังเลิกกรอง
+3. `visibleBranches.includes(String(row.branch ?? ''))` — **เฉพาะออเดอร์ในสาขาที่มองเห็น** (SRC/Sale Admin เห็นร่วมกัน · KKL/SSS เฉพาะสาขาตัวเอง) เป็นกันชนซ้ำกับ query (ทั้ง Order และ BackOrder กรองสาขาที่ server ให้อยู่แล้ว) เก็บไว้เผื่อวันหลังเลิกกรอง
 4. `outbound_date` มีค่า **และ** `arrived_branch` ยังไม่ done (`!stepDone(...)`)
 5. `!row.cancelled_at` — ใบที่สาขายกเลิกแล้ว (Order/BackOrder) ไม่มีป้าย เพราะตรา "ของถึงสาขา" ถูกล็อก ป้ายจะชวนไปกดสิ่งที่กดไม่ได้
 
