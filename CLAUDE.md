@@ -46,6 +46,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 npm run dev       # Start dev server (http://localhost:5200, LAN: http://192.168.x.x:5200)
 npm run build     # TypeScript compile + Vite build
 npm run preview   # Preview production build
+npm run test:edit-price # สูตรเปรียบเทียบ/ส่งออกและปุ่มนำทาง Edit Price
 npx vercel --prod # Deploy to Vercel (ปกติไม่ต้องรัน — ดูด้านล่าง)
 ```
 
@@ -58,8 +59,9 @@ npx vercel --prod # Deploy to Vercel (ปกติไม่ต้องรัน
 
 ## Architecture
 
-Seven-page React app sharing the same `App.css` and Supabase project.  
-`currentPage` state in `App.tsx`: `'pricetag' | 'druglabel' | 'stockcheck' | 'customerhistory' | 'outbound' | 'salesupport' | 'pendingdocs'`
+React app with eight page IDs and seven navigation buttons per profile. The purchasing-only `editprice` page replaces the `druglabel` navigation slot. Existing pages share `App.css` and Supabase; Edit Price adds scoped CSS and processes files locally.
+
+`currentPage` state in `App.tsx`: `'pricetag' | 'druglabel' | 'editprice' | 'stockcheck' | 'customerhistory' | 'outbound' | 'salesupport' | 'pendingdocs'`
 
 **Key files — ป้ายราคา (Price Tag):**
 - `App.tsx` — entire price-tag app: types, state, Supabase fetch, search, QR generation, print logic, JSX + page switcher
@@ -92,6 +94,13 @@ Seven-page React app sharing the same `App.css` and Supabase project.
 - `druglabel/fit.ts` — `fitLabelBodySize()` ลดขนาดเนื้อหาฉลาก (เริ่ม 9.5pt ตัวหนา) ให้พอดี 65 มม. — วัดบน Preview แล้วส่งค่าให้ตัวพิมพ์ ดูรายละเอียดใน `druglabel/CLAUDE.md`
 
 > รายละเอียด schema/languages/branches/print/delete/auto-translate/rate-limit เต็มอยู่ใน [`druglabel/CLAUDE.md`](druglabel/CLAUDE.md) (โหลดอัตโนมัติเมื่อทำงานในโฟลเดอร์นี้)
+
+**Key files — เปรียบเทียบและปรับราคา (Edit Price):**
+- `editprice/EditPricePage.tsx` — Data Upload / Compare & Analyze / Export, อ่านชีตแรก, ตารางแสดงเฉพาะแถวที่มองเห็น, เลือกเทียบสูงสุด 10 แถว, checklist และดาวน์โหลด
+- `editprice/EditPricePage.css` — CSS ใต้ `.edit-price-page` รวม layout มือถือและแถบนำทางที่เลื่อนได้
+- `editprice/engine.ts` — `PM`/`PR` mapping, `compareSheets`, `filterRows`, `posExportRows`, `buildPosText`, `reportRows` เป็น logic ที่ไม่ผูกกับ React
+- `editprice/engine.test.mjs` / `editprice/navigation.test.mjs` — สูตร/หน่วย/ค่าว่าง/ส่งออกและการแทนช่อง Label เฉพาะจัดซื้อ (`npm run test:edit-price`)
+- [`docs/edit-price.md`](docs/edit-price.md) — วิธีใช้ รูปแบบคอลัมน์ สูตร และเงื่อนไขส่งออก รายละเอียดข้อควรระวังดูหัวข้อ Edit Price ด้านล่าง
 
 **Key files — เช็คสต๊อค (Stock Check):**
 - `StockCheckPage.tsx` — stock check page: search-first query, branch tabs, table display
@@ -138,6 +147,28 @@ Seven-page React app sharing the same `App.css` and Supabase project.
 > รายละเอียด/hazard ดูหัวข้อ "Pending Docs — ตรวจสอบเอกสารค้าง" ด้านล่าง
 
 **Design galleries (public/*.html):** ไฟล์ HTML เลือกดีไซน์ (เปิดผ่าน dev server เช่น `/outbound-btn-designs.html`) — ใช้เทียบแบบก่อนใส่จริง ไม่ได้ import เข้าแอป
+
+## Edit Price — เปรียบเทียบทุนและคำนวณราคาขายใหม่ (เพิ่ม 2569-11-10)
+
+- **สิทธิ์:** เฉพาะ `PURCHASING` เห็น Edit Price แทน Label ในช่องเดิมทุกหน้า รหัสอื่นคง Label และสิทธิ์เดิม `App.tsx` เปิด `effectiveVisibility.editprice` เฉพาะจัดซื้อและตรวจรหัสซ้ำก่อน render; `DEFAULT_VISIBILITY.editprice` เป็น `false` เสมอ รหัสอื่นต้องเปิดหน้านี้ไม่ได้แม้ค่าตั้งค่ากลางเก่าจะมี `editprice: true`
+- **Navigation:** `PurchasingNavigationContext` ส่ง callback จาก App ให้ `PageNavRow` แทน `druglabel` ด้วย `EDIT_PRICE_NAV` เฉพาะจัดซื้อ ไม่เพิ่มปุ่มที่แปด ไม่แก้ Label ใน `PAGE_NAV` กลาง และไม่เพิ่ม row ใน `app_page_settings`; `NavHandlers` ยังเป็นเมนูปกติผ่าน `Exclude<PageId, 'editprice'>` เมื่อ logout/login เป็นรหัสอื่นขณะอยู่ Edit Price ต้องกลับไปหน้าที่รหัสใหม่เปิดได้โดยไม่ mount Edit Price ก่อน
+- **Workflow:** เลือก Product Master + Promaxx → Compare Prices → กรอง/ค้นหา/ตรวจราคา → Export รองรับ `.xlsx` / `.xls` / `.csv` อ่านเฉพาะชีตแรก แถวแรกเป็นหัวตาราง อ่านด้วย `XLSX.read(buffer, { type: 'array', raw: true })` และแปลงชีตด้วย `sheet_to_json(..., { raw: false })` เพื่อรักษา SKU ที่มีเลขศูนย์นำหน้าทั้ง CSV และรูปแบบเซลล์ Excel
+
+| ไฟล์ | คอลัมน์ที่ใช้ |
+| --- | --- |
+| Product Master | A = SKU, B = ชื่อสินค้า, C = หน่วยฐาน, J = หน่วยทุนใหม่, K = ทุนใหม่ |
+| Promaxx | B = SKU, E = หน่วย, F = ระดับ 0/1/4/5, G = ราคาเก่าระดับ 0, H = ราคาเก่าระดับ 1/5 หรือทุนเก่าระดับ 4 |
+
+- **สูตร:** หน่วย J ใช้ทุน K โดยตรง หน่วยอื่นใช้ `(ทุน K / ทุนเก่าระดับ 4 ของหน่วย J) × ทุนเก่าของหน่วยนั้น` ราคาใหม่ระดับ 0/1/5 ใช้ `(ทุนใหม่ของหน่วย / ทุนเก่าของหน่วย) × ราคาเก่าของระดับ` แล้ว `Math.round` เป็นจำนวนเต็ม ระดับ 4 ใช้ทุนใหม่; ห้ามใช้ C เป็นทุนสำรอง
+- **ข้อมูลไม่ครบ:** ค่าว่าง ตัวหารศูนย์ และผลไม่จำกัดเป็น `null` แสดง `-` แต่ราคา `0` เป็นค่าที่ใช้ได้ ถ้าไม่พบหน่วย J ใน Promaxx จะเพิ่มแถวนั้นพร้อมทุน K และไม่เดาทุนของหน่วยอื่น Product Master ต้องมีทุนใหม่หนึ่งแถวต่อ SKU; SKU ซ้ำหรือไม่มีหน่วย J จะแจ้งข้อผิดพลาด
+- **ผลและการเลือก:** ค่าเริ่มต้นกรอง “ไม่ตรง”; สถานะคิดรวมทั้ง SKU จากราคา 0/1/5 ต่างเกิน 0.001 ตัวเลข Matched คือ SKU ที่พบและราคาไม่ต่างกัน ค้นหาด้วย SKU/ชื่อ/หน่วย เลือกเทียบได้สูงสุด 10 แถวและเลือกระดับ 0/1/4/5 ใน Selected Results; checklist “ตรวจแล้ว” แยกจากการเลือกแถว
+- **ส่งออก:** ทุกปุ่มใช้แถวตามตัวกรองและคำค้น ไม่ใช้การเลือกแถวหรือ checklist จำกัดผล TXT ใช้เฉพาะทุนใหม่ > ทุนเก่าและมีราคาในระดับนั้น แยกได้ตามระดับ 0/1/4/5, หน่วย หรือ BASE_UNIT ที่ตรงคอลัมน์ C; Excel รวมทุกแถวตามตัวกรอง รวมทุนลดและ SKU ที่ไม่พบ TXT เป็น UTF-8 BOM, CRLF, `SKU<TAB>ราคา<TAB>ระดับ`, มีคอมมาหลักพันและทศนิยม 2 ตำแหน่ง; Excel ชื่อ `Price_Comparison_Report.xlsx` มีชีตเดียว
+- **ข้อมูลในเครื่อง:** ไฟล์ ผลคำนวณ แถวที่เลือก และ Export Log อยู่ในหน่วยความจำของหน้า เปลี่ยนหน้า/รีเฟรชต้องเลือกไฟล์ใหม่ เก็บถาวรเฉพาะ checklist ด้วย key `price-compare-row-checklist` ไม่ส่งไฟล์หรือราคาไป Supabase ไม่เพิ่มตาราง/RPC/Storage/polling/Realtime; เปลี่ยนไฟล์เมื่อใดต้องล้างผลเดิมเพื่อกันส่งออกข้อมูลเก่า
+- **UI:** ตารางแสดงเฉพาะแถวที่มองเห็น CSS ต้องอยู่ใต้ `.edit-price-page` เพื่อไม่กระทบหน้าอื่น หน้า Edit Price ไม่แสดงแถบ Footer Actions ของการพิมพ์ป้าย แถบนำทางบนมือถือเลื่อนแนวนอนได้
+
+**ตรวจสอบและเผยแพร่:** โค้ดฟีเจอร์ commit `4fd749f` ส่งขึ้น `master` และ Vercel เผยแพร่ที่ https://anin-label.vercel.app/ เมื่อ 2026-11-10 (Asia/Bangkok) ก่อนเผยแพร่ `npm run build` และ `node --test *.test.mjs editprice/*.test.mjs` ผ่าน 123 รายการ; เบราว์เซอร์ในเครื่องผ่าน 15 กลุ่มตรวจ รวม 6 รหัส, การสลับบัญชี, CSV/XLSX/XLS, ไฟล์ดาวน์โหลด, checklist หลังรีเฟรช, ตาราง 1,500 SKU และมือถือ 390px เว็บจริงตรวจ Vercel success, HTTP 200, ข้อความฟีเจอร์ใน JS และ CSS ตรงกับ build แล้ว
+
+เมื่อแก้สูตร/อ่านไฟล์/ส่งออกหรือ navigation ให้รัน `npm run test:edit-price` + `npm run build` และตรวจสิทธิ์รหัสอื่นที่เกี่ยวข้อง หากแก้เฉพาะเอกสารให้ตรวจเนื้อหา ลิงก์ภายใน และ `git diff --check` รายละเอียดการใช้งานและชื่อไฟล์ส่งออกอยู่ใน [`docs/edit-price.md`](docs/edit-price.md)
 
 ## Login / Auth (ล็อกอินแยกแผนก)
 
@@ -346,6 +377,7 @@ Cart and scan history survive browser close / power loss — no need to re-scan 
 | `scannedHistory` | `[string, Product][]` | ประวัติสินค้าที่สแกนบาร์โค้ด |
 | `thermalSettings` | object | qrSize / fontSize / skuSize |
 | `qrSettings` | object | QR sheet settings |
+| `price-compare-row-checklist` | `string[]` | ID ของแถว Edit Price ที่ตรวจแล้ว (`JSON.stringify([sku, unit])`); ไม่เก็บไฟล์ ราคา แถวที่เลือก หรือ Export Log |
 
 > ⚠️ **`outboundItems` เลิกใช้แล้ว** (2569-08-18) — หน้าเบิกด่วนย้ายไปเก็บ Supabase ตาราง `outbound_requests` แทน (ดูหัวข้อ "Quick Outbound" ด้านล่าง) เพราะ localStorage ผูกกับเบราว์เซอร์เดียว ทำให้คลังสินค้า/จัดซื้อไม่เห็นข้อมูลที่สาขาลง
 
@@ -528,9 +560,10 @@ Each panel has a close (✕) button and includes product name in subheader.
 ## Page Navigation
 
 - ปุ่มนำทางทุกหน้าใช้ component กลาง `<PageNavRow current=... handlers=... />` จาก `pageAccess.tsx` (เดิม hardcode 6 ปุ่ม `.page-nav-card` ซ้ำทุกไฟล์ — ย้ายมารวมที่ `PAGE_NAV` config)
-- ทุกหน้ารับ props ครบชุด: `onGoPriceTag`, `onGoDrugLabel`, `onGoStockCheck`, `onGoCustomerHistory`, `onGoOutbound`, `onGoSaleSupport`, `onGoPendingDocs` → ประกอบเป็น object `handlers` ส่งให้ `PageNavRow`
+- หน้าเดิมรับ props ครบชุด: `onGoPriceTag`, `onGoDrugLabel`, `onGoStockCheck`, `onGoCustomerHistory`, `onGoOutbound`, `onGoSaleSupport`, `onGoPendingDocs` → ประกอบเป็น object `handlers` ส่งให้ `PageNavRow`; `EditPricePage` รับ `handlers: NavHandlers` จาก App โดยตรง
 - `PageId` union + `currentPage` type import จาก `pageAccess.tsx` (ไม่ inline ใน App.tsx แล้ว)
-- เพิ่มหน้าใหม่: เพิ่มใน `PageId` union + `PAGE_NAV` array (`pageAccess.tsx` — `icon` ต้องเป็น JSX `<svg>` ห่อด้วย `<Svg>` helper ไม่ใช่ emoji), เพิ่ม prop `onGoXxx` + ส่งใน `handlers` ทุกหน้า, เพิ่ม row ใน `app_page_settings` (SQL), และเพิ่มการ render หน้าใน `App.tsx`
+- เพิ่มหน้าทั่วไป: เพิ่มใน `PageId` union + `PAGE_NAV` array (`pageAccess.tsx` — `icon` ต้องเป็น JSX `<svg>` ห่อด้วย `<Svg>` helper ไม่ใช่ emoji), เพิ่ม prop `onGoXxx` + ส่งใน `handlers` ทุกหน้า, เพิ่ม row ใน `app_page_settings` (SQL), และเพิ่มการ render หน้าใน `App.tsx`
+- **Edit Price เป็นข้อยกเว้น:** มี `PageId = 'editprice'` แต่ไม่เพิ่มใน `PAGE_NAV` หรือ `app_page_settings` ใช้ `PurchasingNavigationContext` แทนช่อง Label เฉพาะจัดซื้อ `NavHandlers` ไม่รวม `editprice`; อย่าเพิ่ม prop `onGoEditPrice` ให้ทุกหน้าหรือเพิ่มปุ่มซ้ำ
 
 ## Page Visibility — สิทธิ์ปุ่มนำทางและค่าตั้งค่ากลาง
 
@@ -538,7 +571,7 @@ Each panel has a close (✕) button and includes product name in subheader.
 
 | รหัส | ปุ่มที่เปิดใช้งาน | ปุ่มที่แสดงแบบ disabled 01 |
 |---|---|---|
-| SRC / KKL / SSS | ทุกปุ่ม | ไม่มี |
+| SRC / KKL / SSS | Price / Label / Stock / Customer / Outbound / Support / Pending | ไม่มี |
 | WAREHOUSE (คลังสินค้า) | Price / Stock / Outbound / Support / Pending | Label / Customer |
 | PURCHASING (จัดซื้อ) | Price / Edit Price / Stock / Support | Customer / Pending / Outbound |
 
