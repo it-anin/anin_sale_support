@@ -3840,6 +3840,27 @@ body.pulse-b .cart-inline-btn.in-cart {
 /* ปุ่มเลือกไฟล์ R05.106 — ดีไซน์ "File Card" (แบบที่ 7 จาก public/r05106-upload-btn-designs.html, 2569-09-25)
    <label> ห่อ <input type=file> ที่ซ่อนแบบยังโฟกัสได้ → กด Tab มาแล้ว Enter/Space เลือกไฟล์ได้
    ⚠️ ห้ามกลับไปใช้ attribute hidden กับ input (display:none = กด Tab ไม่ถึงเลย แบบปุ่มเดิม) */
+.price-refresh-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border: 1px solid #cfe0f2;
+  border-radius: 999px;
+  background: #edf5fd;
+  color: #2d6cad;
+  font: 600 14px 'Noto Sans Thai', sans-serif;
+  cursor: pointer;
+  transition: background .15s, box-shadow .15s;
+}
+.price-refresh-badge:hover:not(:disabled) { background: #deedfc; box-shadow: 0 3px 10px #2d6cad1a; }
+.price-refresh-badge:focus-visible { outline: 3px solid #4891db80; outline-offset: 3px; }
+.price-refresh-badge:disabled { cursor: default; opacity: .65; }
+.price-refresh-badge svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.price-refresh-status { min-height: 20px; margin: 8px 0 22px; color: #687e94; font-size: 12px; }
+.price-refresh-status.is-error { color: #c0392b; }
+
 .r05106-card {
   position: relative;
   display: flex;

@@ -13,6 +13,7 @@
     "test:stock-sync": "node --test stock-sync-setup.test.mjs",
     "test:promaxx-agents": "node --test promaxx-agents.test.mjs",
     "test:repair-agents": "node repair-promaxx-agents.test.mjs",
+    "test:price-agent": "node --test price-agent.test.mjs priceCache.test.mjs price-agent-sql.test.mjs",
     "test:master-columns": "node --test masterColumns.test.mjs",
     "test:price-change-print": "node --test priceChangePrint.test.mjs",
     "test:department-login": "node --test departmentLogin.test.mjs",

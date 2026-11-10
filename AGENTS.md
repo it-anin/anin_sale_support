@@ -2,6 +2,39 @@
 
 คำแนะนำสำหรับผู้ช่วยที่ทำงานใน repository นี้ อ่าน `CLAUDE.md` ในส่วนที่เกี่ยวข้องกับงานร่วมด้วย และรักษางานเดิมที่ผู้ใช้กำลังทำอยู่
 
+## Price Agent — R05.106 (2026-11-10, Asia/Bangkok)
+
+หน้า **Price** พิมพ์ป้ายราคาจาก R05.106 ส่วนหน้า **Edit Price** ของจัดซื้อใช้ R05.105 เพื่อเปรียบเทียบราคา เป็นคนละฟีเจอร์และคนละรายงาน รักษาสิทธิ์และ mapping ของแต่ละหน้าไว้
+
+### เวลาและคำขอที่ทำให้อ่าน MSSQL
+
+- `price-agent.mjs` อ่าน MSSQL **วันละครั้งเวลา 08:00 น. ตามเวลาไทย** หรือเมื่อกด **Admin → ใส่รหัส → Badge ดึงข้อมูลล่าสุด** เท่านั้น ไม่กลับไปอ่านทุก 60 วินาที; `PRICE_POLL_SECONDS` เลิกใช้แล้ว
+- ปุ่ม Price การเปิดหน้า การกลับมา focus และการเริ่ม Agent นอกเวลา ไม่ทำให้ SELECT MSSQL เว้นแต่มีคำขอ Admin ค้างอยู่ รอบที่พลาดเพราะ Agent ปิดตอน 08:00 รอวันถัดไปหรือให้ผู้ใช้กด Badge
+- Agent ตรวจนาฬิกาทุกวินาทีและคิว **Supabase** ทุก 10 วินาทีเพื่อเก็บตก Realtime; เว็บอ่านสถานะทุก 60 วินาทีและทุก 3 วินาทีระหว่างรอ อย่าแปลง timer เหล่านี้เป็นการถาม ProMaxx
+- `createPriceJobs` ทำงานทีละรอบและยุบคำขอซ้ำ; `claim_price_scheduled_run` จองรอบรายวันใน DB ก่อน SELECT ป้องกันเปิดซ้ำ/รีสตาร์ทแล้วดึงซ้ำ รักษาการปฏิเสธเหตุการณ์เก่าและ high-water mark ของคำขอที่เสร็จแล้ว
+- ผลผิดพลาดต้องบันทึก completion ด้วย อย่าวน SELECT คำขอเดิมหลังล้มเหลว `createPriceFailureReporter` ลองส่งผลผิดพลาดเข้า Supabase ใหม่ได้โดยไม่ทำ SELECT ซ้ำ
+
+### ข้อมูลและสิทธิ์ที่ต้องรักษา
+
+- MSSQL ของ ProMaxx ใช้ **SELECT อย่างเดียว** ไม่สร้าง/แก้ table, view, index, trigger, procedure หรือ Change Tracking ค่าเชื่อมต่อและด่าน SELECT-only อยู่ `mssql-readonly.mjs`; Pending re-export API เดิมเพื่อให้ Stock ใช้ต่อได้
+- SQL อ้างอิง R05.106.REP: ราคา `ITEMBARCODE.FMLPRICE`, หน่วย/ตัวคูณจับคู่ `ITEMUNIT` ด้วย `SYSITEMID` + `SYSUNITID`, หมวด `ITEMGROUPL1.GROUPNAME`, ตัด `DEPOSIT`/`DEPOSIT-NV`, กรอง `FShowOnReport = 1` เก็บทุกหน่วยบรรจุและเลขศูนย์นำหน้าของ barcode
+- Hash เหมือนเดิมส่งเฉพาะ hash/สถานะ เปลี่ยนแล้วส่ง snapshot เต็มเข้า RPC แต่ `swap_products_from_import()` แก้เฉพาะแถวที่ต่าง/เพิ่ม/หายโดยใช้ **barcode** เป็นคีย์ แถวเดิมคง ID และ `updated_at`; อย่าเปลี่ยนกลับเป็นล้างทั้งตาราง
+- เรียก `log_price_changes()` ก่อนแก้สินค้าภายใน transaction เดียวกับ staging/swap/status; คง API เดิมสำหรับ `upload_products_from_web` ห้ามนำ swap SQL รุ่นเก่าจากบอท CSV มารันทับ
+- ปฏิเสธผลว่าง ข้อมูลหดเกิน 20% หรือ barcode/SKU ผิด/ซ้ำขัดกัน โดยเก็บข้อมูลเดิมไว้ ไม่ข้ามด่านนี้อัตโนมัติ
+- `price_sync` เป็นแถวสรุปเดียวที่ publish สำหรับข้อมูล Price ไม่ publish สินค้าหรือ log ทีละแถว `data_version` เปลี่ยนเมื่อข้อมูลสินค้าเปลี่ยนเท่านั้น คำขอ/heartbeat/completion ที่ข้อมูลเท่าเดิมไม่ทำให้เว็บโหลดสินค้าซ้ำ
+- `request_price_refresh()` เปิดให้เว็บคิวงานผ่าน Admin gate เดิม: ค้างได้หนึ่งคำขอและ throttle คำขอใหม่ 10 วินาที RPC นี้ไม่เขียนสินค้า ส่วน sync/claim/completion เป็น `service_role` เท่านั้น ห้ามส่ง service key หรือรหัส MSSQL ผ่าน `VITE_*`
+- `usePriceSync.ts` ต้องฟังสถานะข้ามการสลับหน้า `priceCache.ts` อัปเดตตะกร้า ประวัติสแกน และ preview โดยคงจำนวนป้าย/ชั้นวาง และไม่ลบสินค้าที่ผู้ใช้เพิ่มระหว่างรอ request
+
+### การติดตั้งและการตรวจสอบ
+
+- อ่าน [`วิธีติดตั้ง-agent-ราคา.md`](วิธีติดตั้ง-agent-ราคา.md) และ [`docs/database.md`](docs/database.md) ก่อนแก้ flow นี้ ติดตั้ง `price-agent-setup.sql` ใน **Supabase SQL Editor** ไม่ใช่ SSMS แล้วรีสตาร์ท Agent; SQL เป็น additive/idempotent และเก็บข้อมูลเดิม
+- `node price-agent.mjs --print-sql` และ `--help` ต้องใช้ได้ก่อน `npm install` โดยไม่ต้องมี credentials และไม่ต่อ DB ส่วน `--dry-run` อ่าน MSSQL อย่างเดียว; `--once` เป็นคำสั่งซิงค์โดยผู้ดูแลนอกตารางเวลาได้
+- เครื่องร้านต้องมี `price-agent.mjs` และ `mssql-readonly.mjs` ข้าง `.env`/`package.json`; wrapper `run-price-agent.bat` ต้อง checkout เป็น CRLF ตาม `.gitattributes` อย่า commit `.env`, log หรือชุด ZIP ติดตั้ง
+- แยกการส่งโค้ดสามส่วนให้ชัด: merge/push เพื่อให้เครื่องร้าน `git pull` ได้, Vercel deploy เว็บสำหรับ Badge, และ SQL/Agent บนเครื่องร้าน อย่าบอกว่าพร้อมใช้จริงทั้งหมดเพียงเพราะทดสอบใน workspace หรือยังไม่ได้ push ไฟล์
+- `promaxx-agents.mjs` เดิมดูแล Stock + Pending เท่านั้น Price ใช้ wrapper ของตัวเอง ห้ามเปลี่ยน schedule/launcher/สิทธิ์ของสองหน้าเดิมตามไปด้วยโดยไม่ได้อยู่ในงานที่ผู้ใช้ขอ
+- แก้ Price: รัน `npm run test:price-agent` และ `npm run build`; แก้ helper ร่วมให้รัน Pending และ Stock tests เพิ่ม ตรวจ navigation ของ Edit Price หลังรวมโค้ด App; ใช้ DB/browser fixtures ในเครื่อง ไม่อัปโหลดข้อมูลจริงเพื่อทดสอบ
+- ประเมินโควต้าตามกฎแผนฟรีด้านล่าง คิว Agent ทุก 10 วินาที × 30 วัน = 259,200 requests ตัวอย่าง JSON คิว 43 bytes ≈ 11.15 MB เฉพาะ response body ไม่รวม headers/Realtimes/เว็บ/Stock/Pending; status เว็บสมมติ 1 KiB ทุกนาที × 30 วัน ≈ 44.24 MB ต่อแท็บที่เปิดตลอด ตัวเลขนี้เป็น **สมมติฐาน ไม่ใช่ Usage จริง** ยังยืนยันยอดรวมปัจจุบันไม่ได้เมื่อไม่มีสิทธิ์ Dashboard/API
+
 ## Edit Price — เพิ่มและเผยแพร่ 2026-11-10 (Asia/Bangkok)
 
 ระบบเปรียบเทียบทุนและคำนวณราคาขายใหม่จาก Product Master กับ R05.105 (ชื่อเดิมบน Card: Promaxx) อยู่ใน `editprice/` คู่มือและรายละเอียดรูปแบบไฟล์: [`docs/edit-price.md`](docs/edit-price.md) และหัวข้อ Edit Price ใน [`CLAUDE.md`](CLAUDE.md) โค้ดฟีเจอร์เผยแพร่ครั้งแรกด้วย commit `4fd749f` บน https://anin-label.vercel.app/
