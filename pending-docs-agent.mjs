@@ -28,6 +28,8 @@ import { createHash } from 'crypto';
 import { readFileSync, appendFileSync, existsSync, statSync, renameSync } from 'fs';
 import { resolve } from 'path';
 import { pathToFileURL } from 'url';
+import { readEnvValue, buildMssqlConfig, assertReadOnlySql } from './mssql-readonly.mjs';
+export { readEnvValue, buildMssqlConfig, assertReadOnlySql };
 
 // ─── CONFIG ───────────────────────────────────────────────
 const SUPABASE_URL = 'https://eogqnedbdpjuptwlqudn.supabase.co';
@@ -118,16 +120,6 @@ ORDER BY TRANS.TRANDATE, TRANS.TRANNO, TRANDETAILITEM.ORDINARY
 // ─── ค่าจาก .env ───────────────────────────────────────────
 // อ่าน env ก่อน ถ้าไม่มีลองอ่านจากไฟล์ .env ข้างสคริปต์ (ไฟล์เดียวกับที่ upload-stock.mjs ใช้)
 // ⚠️ ห้ามตั้งชื่อขึ้นต้น VITE_ — Vite จะฝังค่าลงไฟล์ JS ของเว็บที่ใครก็เปิดอ่านได้
-export function readEnvValue(text, name) {
-  const m = String(text ?? '').match(new RegExp(`^\\s*${name}\\s*=(.*)$`, 'm'));
-  if (!m) return null;
-  let value = m[1].trim();
-  if (value.length >= 2 && (value[0] === '"' || value[0] === "'") && value.endsWith(value[0])) {
-    value = value.slice(1, -1);
-  }
-  return value || null;
-}
-
 let envFileText;
 function getEnv(name) {
   if (process.env[name]) return process.env[name].trim();
@@ -157,54 +149,7 @@ export function loadConfig(env = getEnv, { requireSupabase = true } = {}) {
   };
 }
 
-export function buildMssqlConfig(env) {
-  const instanceName = env('MSSQL_INSTANCE');
-  const port = Number.parseInt(env('MSSQL_PORT') ?? '', 10);
-  const tdsVersion = env('MSSQL_TDS_VERSION');
-  const config = {
-    server: env('MSSQL_SERVER'),
-    database: env('MSSQL_DATABASE'),
-    user: env('MSSQL_USER'),
-    password: env('MSSQL_PASSWORD'),
-    connectionTimeout: 15_000,
-    requestTimeout: QUERY_TIMEOUT_MS,
-    // pool เล็ก — SQL Server Express ใช้ทรัพยากรร่วมกับ POS ทุกสาขา และ Agent ถามทีละคำสั่งอยู่แล้ว
-    pool: { max: 2, min: 0, idleTimeoutMillis: 60_000 },
-    options: {
-      // SQL Server รุ่นเก่า (2008/2012) ที่มีแต่ TLS 1.0 → ตั้ง MSSQL_ENCRYPT=false
-      encrypt: String(env('MSSQL_ENCRYPT') ?? 'true').toLowerCase() !== 'false',
-      trustServerCertificate: true,           // SQL Server ในร้านใช้ cert ที่สร้างเอง
-      appName: 'anin-pending-docs-agent',     // ชื่อที่เห็นใน Activity Monitor ของ SSMS
-    },
-  };
-  // Express ส่วนใหญ่ติดตั้งเป็น named instance (เช่น SQLEXPRESS) — หาพอร์ตผ่าน SQL Server Browser
-  if (instanceName) config.options.instanceName = instanceName;
-  else if (Number.isFinite(port)) config.port = port;
-  if (tdsVersion) config.options.tdsVersion = tdsVersion;
-  return config;
-}
 // ──────────────────────────────────────────────────────────
-
-// 🚨 ด่านสุดท้ายก่อนส่งคำสั่งเข้า MSSQL — ยอมให้เฉพาะ SELECT คำสั่งเดียว
-// กันคนแก้ TRANSFER_SQL ในอนาคตแล้วเผลอใส่คำสั่งเขียน (ตัว login web_readonly ก็บล็อกซ้ำอีกชั้น)
-const WRITE_KEYWORDS = /\b(INSERT|UPDATE|DELETE|MERGE|DROP|ALTER|CREATE|TRUNCATE|EXEC|EXECUTE|GRANT|REVOKE|DENY|INTO|BACKUP|RESTORE|DBCC|SHUTDOWN|KILL)\b/i;
-
-export function assertReadOnlySql(text) {
-  const code = String(text ?? '')
-    .replace(/\/\*[\s\S]*?\*\//g, ' ')
-    .replace(/--[^\r\n]*/g, ' ');
-  if (!/^\s*SELECT\b/i.test(code)) {
-    throw new Error('🚨 ส่งได้เฉพาะคำสั่ง SELECT — MSSQL ของ ProMaxx ห้ามเขียนเด็ดขาด');
-  }
-  if (code.includes(';')) {
-    throw new Error('🚨 ห้ามมีหลายคำสั่งใน SQL เดียว (พบเครื่องหมาย ;)');
-  }
-  const found = code.match(WRITE_KEYWORDS);
-  if (found) {
-    throw new Error(`🚨 พบคำสั่ง ${found[1].toUpperCase()} — MSSQL ของ ProMaxx ห้ามเขียน/สร้างอะไรเด็ดขาด`);
-  }
-  return text;
-}
 
 // ช่อง char ของ ProMaxx เติมช่องว่างท้ายมาจนเต็มความยาว — ตัดทิ้งก่อนเก็บ/แสดง
 export function cleanText(raw) {

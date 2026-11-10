@@ -59,6 +59,8 @@ npx vercel --prod # Deploy to Vercel (ปกติไม่ต้องรัน
 
 ## Architecture
 
+**Price Agent update (2026-11-10):** `price-agent.mjs` reads MSSQL R05.106 **only at 08:00 Asia/Bangkok once daily, or on an explicit Admin badge request** (`request_price_refresh`). `PRICE_POLL_SECONDS` is retired. Startup/navigation/focus/idle status polling never query MSSQL. Daily claims and manual completions persist in `price_sync`; failed attempts do not repeatedly SELECT. `usePriceSync.ts` observes status and provides the Admin badge action; `priceCache.ts` refreshes saved products without losing quantities/locations. Install/re-run `price-agent-setup.sql`, restart the Agent, and follow `วิธีติดตั้ง-agent-ราคา.md`. The shared `swap_products_from_import()` performs an atomic barcode diff and preserves `log_price_changes()`. Stop the legacy R05.106 writer and never re-run its old swap SQL over this version. Historical full-table swap descriptions below are superseded. Stock/Pending keep their existing behavior. Tests: `npm run test:price-agent`.
+
 React app with eight page IDs and seven navigation buttons per profile. The purchasing-only `editprice` page replaces the `druglabel` navigation slot. Existing pages share `App.css` and Supabase; Edit Price adds scoped CSS and processes files locally.
 
 `currentPage` state in `App.tsx`: `'pricetag' | 'druglabel' | 'editprice' | 'stockcheck' | 'customerhistory' | 'outbound' | 'salesupport' | 'pendingdocs'`

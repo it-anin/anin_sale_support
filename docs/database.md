@@ -4,6 +4,16 @@
 
 ## Products (`products` table)
 
+### Price MSSQL Agent (2026-11-10)
+
+`price-agent.mjs` replaces the scheduled R05.106 CSV export/upload for Price. It SELECTs the seven report fields from MSSQL once daily at **08:00 Asia/Bangkok**, or for an explicit **Admin → ดึงข้อมูลล่าสุด** badge request. Normal startup, navigation, focus and idle polls never query MSSQL. `PRICE_POLL_SECONDS` is retired. The Agent compares a durable hash through `mark_price_unchanged`; changed snapshots use the service-role-only `sync_price_products` RPC. Setup: `price-agent-setup.sql`; installation: `วิธีติดตั้ง-agent-ราคา.md`.
+
+The setup changes the existing `swap_products_from_import()` entry point to diff by barcode. It calls `log_price_changes()` before mutations, preserves IDs/timestamps of unchanged rows, and commits staging, products, notifications and `price_sync` together. CSV/web callers retain the integer return contract and invalidate the Agent hash when products change. Only `price_sync` is published; `data_version` changes only when products change. `usePriceSync` observes status across navigation and refreshes searches, category lists and saved products on a new version.
+
+Only the Admin badge calls `request_price_refresh()` (the existing client-side Admin gate). This minimal definer RPC queues one outstanding request globally and throttles new requests to 10 seconds; it cannot update products. Agent-only RPCs acknowledge success atomically with the hash/snapshot through explicit overloads with `p_request_id`, or durably record failure via `complete_price_refresh`. The Agent observes requests via Realtime plus a 10-second Supabase-only queue poll. Jobs are serialized and repeated/stale status events cannot repeat a SELECT. `claim_price_scheduled_run` persists each day's claim before the daily query, preventing duplicates after restart. Missed daily runs are not caught up outside 08:00; explicit pending Admin requests are caught up on startup. Failed MSSQL attempts wait for another Admin request/the next daily run rather than polling MSSQL again.
+
+Stop the old scheduled R05.106 writer before enabling this Agent. Do not re-run the old bot's `products-import-swap.sql` over this version. The historical CSV/swap descriptions below describe the system before Agent installation; the CSV parser and column contract remain applicable.
+
 **Table: `products`** (barcode, sku, name, unit, price, category, updated_at)
 - RLS: `public read` (SELECT) + `public write` (ALL)
 - Search: queries Supabase directly — NOT client-side filter

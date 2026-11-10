@@ -15,6 +15,8 @@ import { AnimatedLogoText } from './AnimatedLogo';
 import { SearchIcon } from './SearchIcon';
 import { LoginPage } from './LoginPage';
 import { parseR05106 } from './r05106';
+import { usePriceSync } from './usePriceSync';
+import { loadCurrentPriceRows, currentPriceProduct, refreshPriceMap } from './priceCache';
 import { loadPriceChangePrintProducts } from './priceChangePrint';
 import { loadAuthProfile, saveAuthProfile, clearAuthProfile, BRANCH_PROFILE_CODES, STORE_BRANCH_CODES, type Profile } from './auth';
 import { PageVisibilityContext, PageNotificationContext, PurchasingNavigationContext, PageNavRow, PAGE_NAV, DEFAULT_VISIBILITY, type PageId, type PageVisibility, type NavHandlers } from './pageAccess';
@@ -367,6 +369,14 @@ const App: React.FC = () => {
   const locationFileRef = useRef<HTMLInputElement>(null);
   const [requestedPage, setCurrentPage] = useState<PageId>('pricetag');
   const [authProfile, setAuthProfile] = useState<Profile | null>(loadAuthProfile);
+  // Mounted across page changes. The Price button only changes the visible page.
+  const {
+    dataVersion: priceDataVersion, updatedAt: priceUpdatedAt, available: priceSyncAvailable,
+    requestRefresh: requestPriceRefresh, refreshing: priceRefreshing, refreshMessage: priceRefreshMessage,
+    refreshError: priceRefreshError,
+  } = usePriceSync(!!authProfile);
+  const priceUpdatedAtRef = useRef(priceUpdatedAt);
+  priceUpdatedAtRef.current = priceUpdatedAt;
   const [pageVisibility, setPageVisibility] = useState<PageVisibility>(DEFAULT_VISIBILITY);
   // รหัสที่ผู้ใช้กำหนดสิทธิ์แล้ว ใช้รายการนี้โดยตรงแทนค่าตั้งค่ากลางเดิม
   const effectiveVisibility = useMemo<PageVisibility>(() => {
@@ -790,12 +800,18 @@ const App: React.FC = () => {
       .select('updated_at')
       .order('updated_at', { ascending: false })
       .limit(1);
-    if (data && data[0]?.updated_at) {
-      const d = new Date(data[0].updated_at);
-      setLastUpdated(d.toLocaleString('en-GB', { dateStyle: 'short', timeStyle: 'short' }));
+    const timestamps = [data?.[0]?.updated_at, priceUpdatedAtRef.current].filter(Boolean) as string[];
+    if (timestamps.length) {
+      const d = new Date(Math.max(...timestamps.map(value => Date.parse(value))));
+      setLastUpdated(d.toLocaleString('en-GB', { dateStyle: 'short', timeStyle: 'short', timeZone: 'Asia/Bangkok' }));
     }
   }, []);
   useEffect(() => { void fetchLastUpdated(); }, [fetchLastUpdated]);
+  useEffect(() => {
+    if (priceUpdatedAt) setLastUpdated(new Date(priceUpdatedAt).toLocaleString('en-GB', {
+      dateStyle: 'short', timeStyle: 'short', timeZone: 'Asia/Bangkok',
+    }));
+  }, [priceUpdatedAt]);
 
   // ── อัปโหลด R05.106 ด่วน (2569-09-25) — ราคาเปลี่ยนเร่งด่วน ไม่รอบอทรอบ 08:30 ──
   // ⚠️ ไม่เขียน products ตรง ๆ — ส่งทั้งไฟล์ให้ RPC upload_products_from_web ซึ่งลง staging
@@ -1128,7 +1144,7 @@ const App: React.FC = () => {
     };
     const timer = setTimeout(doSearch, 150);
     return () => { clearTimeout(timer); controller.abort(); };
-  }, [searchTerm]);
+  }, [searchTerm, priceDataVersion]);
 
   // จัดรหัสชั้นวางเป็นกลุ่มตามตัวอักษร — 488 รหัสของ SRC ยุบเหลือ 27 ปุ่ม
   const locationGroups = useMemo(() => {
@@ -1246,18 +1262,20 @@ const App: React.FC = () => {
     setHiddenKeys(new Set());
   }, []);
 
-  const loadSelection = useCallback(async (sel: CatSelection, branch: string) => {
+  const loadSelection = useCallback(async (sel: CatSelection, branch: string, refresh = false) => {
     const token = ++categoryReqRef.current;
-    setShowCategoryMenu(false);
-    setShowLocationMenu(false);
-    setShowCart(false);
-    setActiveSel(sel);
-    setCategoryProducts([]);
+    if (!refresh) {
+      setShowCategoryMenu(false);
+      setShowLocationMenu(false);
+      setShowCart(false);
+      setActiveSel(sel);
+      setCategoryProducts([]);
+      setHiddenKeys(new Set());
+      setSearchInput('');
+      setSearchTerm('');
+    }
     setCategoryError('');
     setCategoryLoading(true);
-    setHiddenKeys(new Set());
-    setSearchInput('');
-    setSearchTerm('');
 
     const PAGE = 1000;                 // Supabase db-max-rows default
     const acc: Product[] = [];
@@ -1304,11 +1322,41 @@ const App: React.FC = () => {
           ? 'schema ไม่ตรง — รัน product-category-setup.sql ใน Supabase ก่อน'
           : (e instanceof Error ? e.message : String(e))
       );
-      setActiveSel(null);
+      if (!refresh) setActiveSel(null);
     } finally {
       if (token === categoryReqRef.current) setCategoryLoading(false);
     }
   }, []);
+
+  // Refresh visible/saved products when a committed SQL snapshot changes.
+  // Deliberately driven by the data version, independent of navigation/cart edits.
+  useEffect(() => {
+    if (!priceDataVersion) return;
+    setCategoryCounts(null);
+    const branch = authProfile?.branch;
+    if (activeSel && branch) void loadSelection(activeSel, branch, true);
+    const saved = [...selectedProducts.values(), ...scannedHistory.values()];
+    if (previewPriceProduct) saved.push(previewPriceProduct);
+    if (previewBarcodeProduct) saved.push(previewBarcodeProduct);
+    const requested = new Set(saved.map(product => product.barcode));
+    if (!requested.size) return;
+    let cancelled = false;
+    let retry: ReturnType<typeof setTimeout>;
+    const refresh = async () => {
+      try {
+        const fresh = await loadCurrentPriceRows(supabase, [...requested]);
+        if (cancelled) return;
+        setSelectedProducts(previous => refreshPriceMap(previous, fresh, requested));
+        setScannedHistory(previous => refreshPriceMap(previous, fresh, requested));
+        setPreviewPriceProduct(previous => previous && currentPriceProduct(previous, fresh, requested));
+        setPreviewBarcodeProduct(previous => previous && currentPriceProduct(previous, fresh, requested));
+      } catch {
+        if (!cancelled) retry = setTimeout(() => { void refresh(); }, 5_000);
+      }
+    };
+    void refresh();
+    return () => { cancelled = true; clearTimeout(retry); };
+  }, [priceDataVersion]);
 
   // รหัสชั้นวางทั้งหมดของสาขา — ยิงตอนเปิด dropdown, cache ทั้ง session
   // PostgREST ไม่มี DISTINCT เลยต้องวนอ่านทีละ 1000 (ดึงคอลัมน์เดียว payload เล็ก)
@@ -1660,7 +1708,7 @@ ${sheetsHtml}
       <div className="app-userbar">
         <span className="app-userbar-icon">{authProfile.icon}</span>
         <span className="app-userbar-name">{authProfile.label}</span>
-        <button className="app-userbar-gear" onClick={() => { setShowAdminModal(true); setAdminPw(''); setAdminVerified(false); setAdminPwError(false); setUploadStatus(''); }} title="Admin — อัปโหลด R05.106">⚙️</button>
+        <button className="app-userbar-gear" onClick={() => { setShowAdminModal(true); setAdminPw(''); setAdminVerified(false); setAdminPwError(false); setUploadStatus(''); }} title="Admin — ดึงข้อมูลราคา / อัปโหลด R05.106">⚙️</button>
         <button className="app-userbar-logout" onClick={handleLogout} title="ออกจากระบบ">ออกจากระบบ</button>
       </div>
 
@@ -2585,13 +2633,30 @@ ${sheetsHtml}
                 </div>
               ) : (
                 <>
+                  <h3 className="page-settings-section-title">อัปเดตข้อมูลราคา</h3>
+                  <p className="page-settings-section-sub">อัตโนมัติทุกวันเวลา 08:00 น. ตามเวลาไทย</p>
+                  <button
+                    type="button"
+                    className="price-refresh-badge"
+                    onClick={() => { void requestPriceRefresh(); }}
+                    disabled={uploadBusy || priceRefreshing || priceSyncAvailable !== true}
+                    aria-busy={priceRefreshing}
+                  >
+                    {priceRefreshing ? <span className="r05106-spin" aria-hidden="true" /> : (
+                      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5" /><path d="M6.1 7a7 7 0 0 1 11.6-1L20 9M4 15l2.3 3A7 7 0 0 0 18 17" /></svg>
+                    )}
+                    {priceRefreshing ? 'กำลังดึงข้อมูล…' : 'ดึงข้อมูลล่าสุด'}
+                  </button>
+                  <div className={`price-refresh-status${priceRefreshError && !priceRefreshing ? ' is-error' : ''}`} role="status" aria-live="polite">
+                    {priceRefreshMessage || (priceSyncAvailable === false ? 'ระบบดึงข้อมูลยังไม่พร้อมใช้งาน' : 'ดึงรายงานล่าสุดได้ทันทีเมื่อต้องการ')}
+                  </div>
                   <h3 className="page-settings-section-title">📤 Upload R05.106</h3>
                   <p className="page-settings-section-sub">สำหรับอัปเดตราคาระหว่างวัน</p>
                   {/* ปุ่มเลือกไฟล์ดีไซน์ "File Card" — แบบที่ 7 จาก public/r05106-upload-btn-designs.html (2569-09-25)
                       บรรทัดล่างบอกเวลาของข้อมูลชุดที่อยู่ในระบบ (lastUpdated ตัวเดียวกับ badge) ให้เห็นก่อนกดแทนที่
                       ระหว่างอัปโหลดบรรทัดนั้นแสดง uploadStatus แทน และซ่อนกล่องสถานะด้านล่างไว้ (ไม่งั้นข้อความซ้ำ 2 ที่) */}
                   <label className={`r05106-card${uploadBusy ? ' is-busy' : ''}`}>
-                    <input type="file" accept=".csv,text/csv" disabled={uploadBusy} onChange={handleR05106Upload} />
+                    <input type="file" accept=".csv,text/csv" disabled={uploadBusy || priceRefreshing} onChange={handleR05106Upload} />
                     <span className="r05106-card-doc" aria-hidden="true">
                       <svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" /><path d="M14 3v5h5" /></svg>
                       <span className="r05106-card-tag">CSV</span>
@@ -2608,7 +2673,6 @@ ${sheetsHtml}
                   {uploadStatus && !uploadBusy && (
                     <div style={{ marginTop: 12, fontSize: 13, whiteSpace: 'pre-line', color: uploadStatus.startsWith('❌') ? '#c0392b' : '#2d3a48' }}>{uploadStatus}</div>
                   )}
-                  <p className="page-settings-hint">►►► อัปโหลดอัตโนมัติประจำทุกวันเวลา 7:55 </p>
                 </>
               )}
             </div>
