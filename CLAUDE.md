@@ -47,6 +47,7 @@ npm run dev       # Start dev server (http://localhost:5200, LAN: http://192.168
 npm run build     # TypeScript compile + Vite build
 npm run preview   # Preview production build
 npm run test:edit-price # สูตรเปรียบเทียบ/ส่งออกและปุ่มนำทาง Edit Price
+npm run test:price-agent # Price Agent, cache และ SQL/RLS/คิวงานใน PostgreSQL จำลอง
 npx vercel --prod # Deploy to Vercel (ปกติไม่ต้องรัน — ดูด้านล่าง)
 ```
 
@@ -68,6 +69,11 @@ React app with eight page IDs and seven navigation buttons per profile. The purc
 **Key files — ป้ายราคา (Price Tag):**
 - `App.tsx` — entire price-tag app: types, state, Supabase fetch, search, QR generation, print logic, JSX + page switcher
 - `App.css` — all styles for all pages including `@media print` rules
+- `price-agent.mjs` — MSSQL R05.106 เวลา 08:00 Asia/Bangkok หรือคำขอจาก Badge Admin; คำสั่ง `--print-sql` / `--help` ใช้ได้ก่อนติดตั้ง dependencies
+- `mssql-readonly.mjs` — ค่าเชื่อมต่อ, อ่าน `.env`, และ SELECT-only guard ร่วม; Pending re-export helper เดิมให้ Stock ใช้ต่อ
+- `price-agent-setup.sql` — `price_sync`, คิว Admin/claim รายวัน และ incremental `swap_products_from_import()`; รันใน Supabase แล้วรีสตาร์ท Agent
+- `usePriceSync.ts` / `priceCache.ts` — รับสถานะข้ามหน้า รีเฟรชเฉพาะเมื่อ version เปลี่ยน และคงจำนวนป้าย/ชั้นวางของสินค้าที่เลือก
+- `run-price-agent.bat` / `วิธีติดตั้ง-agent-ราคา.md` — เปิด Price Agent แยกจาก launcher Stock/Pending; BAT ต้องเป็น CRLF
 - `AnimatedLogo.tsx` — `AnimatedLogoText` component: letter-by-letter blur-in logo animation (ใช้ในทุกหน้า)
 - `supabase.ts` — shared Supabase client (root dir, not src/)
 - `pageAccess.tsx` — `PageId`/`PAGE_NAV` config + `PageVisibilityContext` + `usePageVisibility` + `<PageNavRow>` (ปุ่มนำทางกลาง ใช้ทุกหน้า, รู้สถานะเปิด/ปิดหน้า)
@@ -78,11 +84,11 @@ React app with eight page IDs and seven navigation buttons per profile. The purc
 - `main.tsx` — React entry point
 - `index.html` — HTML shell
 - `.env` — VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, VITE_ADMIN_PASSWORD
-> ⛔ **repo นี้ไม่อัปโหลด R05.106 แล้ว (2569-09-06)** — `upload-products.mjs` + เทส + `products-import-swap.sql` ย้ายไป repo **[it-anin/botr05106](https://github.com/it-anin/botr05106)** ซึ่งเป็นบอท Python ที่ export ไฟล์นี้จาก ProMaxx เอง (บอท 1 ตัว = 1 โปรเจกต์จบ เหมือน `bot-export` / `Bot-Customer`)
-> **ปุ่ม `Upload R05.106` + Admin panel + ปุ่ม 💻 ถูกตัดออกจาก `App.tsx` แล้ว** พร้อม `handleFileUpload`, `PRODUCT_CSV_COLUMNS`, `resolveProductCsvColumns`, `colLetter`, state `isAdmin`/`adminPassword`/`adminVerified`/`uploadStatus`, CSS `.admin-trigger` และ dependency `papaparse` — เหตุผลคือ 2 ทางเขียนตาราง `products` ตัวเดียวกันเสี่ยง**อัปโหลดซ้ำซ้อน** และต้องคอยซิงค์ mapping คอลัมน์ข้าม repo · ตอนนี้เหลือ implementation เดียวในโลก
-> **อัปโหลดด้วยมือ** → ที่เครื่องบอท: `node upload-products.mjs --file <path>` หรือ `.\tools\run_and_upload.ps1 -SkipExport`
+> **ทางหลักตั้งแต่ 2026-11-10:** Price Agent อ่าน MSSQL โดยตรงเวลา 08:00 น. หรือ Admin กด **ดึงข้อมูลล่าสุด**; หยุด Task R05.106 ของบอท CSV เดิมเมื่อเปิดใช้ ไม่กระทบ Stock/Pending · ก่อนหน้านี้ย้าย uploader CSV ไป [it-anin/botr05106](https://github.com/it-anin/botr05106) เมื่อ 2026-09-06 ซึ่งเป็นประวัติระบบ ไม่ใช่ตัวเขียนประจำหลังเปิด Agent ใหม่
 > 🔄 **ยกเว้นอัปโหลดด่วนด้วยมือ (2569-09-25)** — ปุ่มเฟือง ⚙️ → รหัส admin → modal `⚙️ Admin` → `📤 Upload R05.106` (**ไม่มีปุ่มแยกบน hero** — ผู้ใช้ให้รวมเข้า modal admin · modal ปิดได้ทาง ✕ เท่านั้น **ห้ามใส่ onClick ปิดที่ overlay กลับมา** กันลากเมาส์ออกนอกกล่องแล้ว modal หาย · ปุ่มเลือกไฟล์ดีไซน์ **File Card** แบบที่ 7 + ปุ่มปลดล็อกหน้าใส่รหัสดีไซน์ **3D Tile** แบบที่ 9 จาก `public/r05106-upload-btn-designs.html` + ปุ่มปิด ✕ ทั้ง 2 หน้าดีไซน์ **Mini 3D Tile** แบบที่ 7 จาก `public/admin-close-btn-designs.html` — class `.page-settings-close` ไม่ใช่ `.modal-close` ตัวกลาง) · **ไม่ใช่ implementation ที่ 2**: ส่งแถวให้ RPC `upload_products_from_web` ซึ่งจบที่ **`swap_products_from_import()` ตัวเดียวกับบอท** → แจ้งเตือนราคาเปลี่ยนทำงาน · parser อยู่ `r05106.ts` (ลอกจากบอท — ProMaxx เปลี่ยนหัวคอลัมน์ต้องแก้ 2 ที่) · กลไกกันชนบอท / ไฟล์หด / timeout 3 วิ ดู [`docs/database.md`](docs/database.md) หัวข้อ "อัปโหลดด่วนจากหน้าเว็บ"
-> ⚠️ badge **Last Updated** ยังอยู่ (อ่าน `max(updated_at)` จาก `products` — อัปโหลดด่วนสำเร็จแล้ว refetch เอง)
+> **Admin ปัจจุบัน:** ใส่รหัสเดิมแล้วกด Badge **ดึงข้อมูลล่าสุด** เพื่อคิว MSSQL ทันที มีสถานะรอ/สำเร็จ/ผิดพลาดและกันกดซ้ำ ปุ่มอัปโหลด CSV ยังอยู่ · Admin ใช้ client-side gate เดิม ไม่ใช่ Supabase Auth · badge **Last Updated** ใช้ `price_sync.last_success_at` พร้อม fallback `max(products.updated_at)` แสดงเวลาไทย; heartbeat ที่ข้อมูลเท่าเดิมไม่ขยับเวลาข้อมูล
+
+> **การส่งขึ้นระบบ:** branch หลักจริงชื่อ `master` และ Vercel deploy หลัง push/merge การแก้ไฟล์ใน workspace หรือส่ง ZIP ไปเครื่องร้านอย่างเดียวยังไม่ deploy Badge บนเว็บ; SQL ต้องติดตั้งและ Agent ต้องเปิดบนเครื่องร้านด้วย `--print-sql` ที่ผ่านยืนยันเพียงว่าไฟล์/SELECT พร้อม ยังไม่ได้ยืนยันการเชื่อมต่อ MSSQL หรือการซิงค์จริง ดู `AGENTS.md` สำหรับข้อกำหนดและค่าประมาณโควต้า
 
 **Key files — ฉลากยา (Drug Label):**
 - `druglabel/DrugLabelPage.tsx` — main page: search, preview, add/edit/delete modals, print, admin unlock
@@ -203,10 +209,11 @@ React app with eight page IDs and seven navigation buttons per profile. The purc
 
 | Table | RLS | จุดเสี่ยงสูงสุด |
 |---|---|---|
-| `products` (barcode, sku, name, unit, price, category, base_multiple, updated_at) | public read + write | **ทุกทางเขียนต้องจบที่ `swap_products_from_import()`** — ประจำคือ `upload-products.mjs` ใน [it-anin/botr05106](https://github.com/it-anin/botr05106) ที่รันต่อท้ายบอท export ด้วย **staging + RPC swap** · ด่วนคือ ⚙️ Admin → Upload R05.106 ผ่าน RPC `upload_products_from_web` · **ห้ามเขียน `products` ตรงจากเว็บ** (ข้ามแจ้งเตือนราคา + ไม่ atomic) · RLS ยังเปิด `public write` ไว้เฉย ๆ ปิดได้ถ้าต้องการ (RPC เป็น security definer ไม่กระทบ) |
+| `products` (barcode, sku, name, unit, price, category, base_multiple, updated_at) | public read + write | **ทุกทางเขียนจบที่ `swap_products_from_import()`** — Price Agent ผ่าน `sync_price_products`, CSV ด่วนผ่าน `upload_products_from_web`; เทียบ barcode แล้วแก้เฉพาะแถวที่เปลี่ยนใน transaction เดียว คง ID/เวลาแถวเดิมและแจ้งเตือนราคา ห้ามเขียนตรงจากเว็บหรือรัน swap รุ่นเก่าทับ |
+| `price_sync` (id=1, data_hash, data_version, row_count, timestamps, request/completion IDs, last_scheduled_date) | **anon read-only** | เว็บคิวงานได้ผ่าน `request_price_refresh()` เท่านั้น; Agent-only RPC ทำ claim/sync/completion คง `data_version` เมื่อข้อมูลไม่เปลี่ยน Publish แถวสรุปนี้สำหรับ Price; ไม่ publish สินค้า |
 | `product_category` (sku, branch, category_no, category_name, location, uploaded_at) — PK `(sku, branch)` | public read + write | Upload ใช้ **mark-and-sweep** (upsert ทุกแถวก่อน แล้วค่อย sweep แถวเก่า) — sweep ต้องรันหลัง upsert ครบทุก chunk เสมอ ไม่งั้นข้อมูลหายกลางทาง · `branch` มีแค่ `SRC/KKL/SSS` (ไม่มีคลังสินค้า) |
-| `price_change_log` (batch_id, changed_at, barcode, sku, name, unit, old_price, new_price, base_multiple) | **anon read-only** (ต่างจากตาราง `ss_*`) | เขียนโดย `log_price_changes()` (security definer) ที่ `swap_products_from_import()` เรียก**ก่อน** `delete from products` เท่านั้น — 🚨 re-run `products-import-swap.sql` จาก repo บอทจะลบบรรทัดนั้นทิ้งเงียบ ๆ · คีย์เทียบคือ **`barcode`** ไม่ใช่ sku |
-| `price_change_seen` (profile_id pk, last_seen_at, last_batch_at) | public read + write | watermark "อ่านถึงไหน" รายโปรไฟล์ — 6 แถวตลอดกาล ไม่ fan-out · realtime publish **ตารางนี้เท่านั้น** ไม่ publish `price_change_log` |
+| `price_change_log` (batch_id, changed_at, barcode, sku, name, unit, old_price, new_price, base_multiple) | **anon read-only** (ต่างจากตาราง `ss_*`) | `log_price_changes()` ทำก่อนแก้/เพิ่ม/ลบ `products` ใน transaction เดียวกับ swap คีย์เทียบคือ **barcode**; ห้ามลบ hook นี้หรือใช้ `updated_at` แทนการเทียบราคา |
+| `price_change_seen` (profile_id pk, last_seen_at, last_batch_at) | public read + write | watermark "อ่านถึงไหน" รายโปรไฟล์ — 6 แถว ไม่ fan-out · แจ้งเตือนราคา publish ตารางนี้ ส่วนการรีเฟรชสินค้า publish `price_sync`; ไม่ publish `price_change_log` |
 | `stock` (id, branch, sku, name, qty, unit, price, uploaded_at) | read-only (ไม่มี public write) | อัปโหลดผ่าน `upload-stock.mjs` + service_role key เท่านั้น ไม่มีเว็บ UI |
 | `outbound_requests` (branch, sku, barcode, name, unit, qty, requested/requested_at, approved/approved_at, out_of_stock, request_date, document_no, location, entered_at) | public read + write | สาขา/คลังสินค้า/จัดซื้อใช้ร่วมกัน (ดูหัวข้อ "Quick Outbound" ด้านล่าง) — `stock_qty` **ไม่เก็บในตาราง** ดึงสดจาก `stock` แบบเดียวกับ BackOrder |
 | `customer_history` (id, purchase_date, phone, first_name, last_name, sku, product_name, dedupe_key, uploaded_at) | read-only (ไม่มี public write) | มี PII (เบอร์โทร/ชื่อลูกค้า) · upload เป็น incremental ผ่าน `upload-customer-history.mjs` |

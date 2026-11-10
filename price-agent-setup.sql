@@ -255,7 +255,7 @@ grant execute on function public.claim_price_scheduled_run(date) to service_role
 alter table public.products_import add column if not exists created_at timestamptz;
 alter table public.products_import alter column created_at set default now();
 
--- One notification per committed snapshot, not one per product.
+-- Publish summary status updates only, never one event per product.
 do $$
 begin
   if exists (select 1 from pg_publication where pubname = 'supabase_realtime')
