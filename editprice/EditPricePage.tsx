@@ -3,8 +3,8 @@ import * as XLSX from 'xlsx';
 import { AnimatedLogoText } from '../AnimatedLogo';
 import { PageNavRow, type NavHandlers } from '../pageAccess';
 import {
-  buildPosText, cellText, compareSheets, filterRows, formatPrice, posExportRows, priceAtLevel,
-  PRICE_LEVELS, reportRows, type CompareFilter, type ComparisonResult, type ComparisonRow,
+  buildPosText, cellText, compareSheets, filterRows, findMissingMasterUnits, formatPrice, posExportRows, priceAtLevel,
+  PM, PRICE_LEVELS, reportRows, type CompareFilter, type ComparisonResult, type ComparisonRow, type MissingMasterUnit,
   type ExportOptions, type PriceLevel, type SheetRows,
 } from './engine';
 import './EditPricePage.css';
@@ -43,7 +43,7 @@ function FileUploadZone({ kind, file, busy, error, onFile }: {
 }) {
   const [dragging, setDragging] = useState(false);
   const input = useRef<HTMLInputElement>(null);
-  const title = kind === 'master' ? 'Product Master' : 'Promaxx';
+  const title = kind === 'master' ? 'Product Master' : 'R05.105';
   const pick = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = '';
@@ -123,6 +123,63 @@ function PriceCells({ row, level }: { row: ComparisonRow; level: 0 | 1 | 5 }) {
   return <><td className="ep-old">{formatPrice(row.oldPrices[level])}</td><td className="ep-new">{formatPrice(row.newPrices[level])}</td></>;
 }
 
+function MissingUnitRows({ rows }: { rows: MissingMasterUnit[] }) {
+  return <>
+    <div className="ep-missing-unit-list" tabIndex={0} role="region" aria-label="รายการที่ไม่มีหน่วย เลื่อนเพื่อดูเพิ่มเติม"><table className="ep-mini-table" aria-label="รายการที่ไม่มีหน่วยในคอลัมน์ J">
+      <thead><tr><th>SKU</th><th>ชื่อสินค้า</th></tr></thead>
+      <tbody>{rows.slice(0, 100).map((row, index) => <tr key={`${row.sku}:${index}`}><td>{row.sku}</td><td>{row.name || '-'}</td></tr>)}</tbody>
+    </table></div>
+    {rows.length > 100 && <p className="ep-hint">แสดง 100 รายการแรกจาก {rows.length.toLocaleString()} รายการที่ไม่มีหน่วย</p>}
+  </>;
+}
+
+function MissingUnitDialog({ rows, canContinue, onCancel, onCompare }: {
+  rows: MissingMasterUnit[]; canContinue: boolean; onCancel: () => void; onCompare: () => void;
+}) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const cancelRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    const previousOverflow = document.body.style.overflow;
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    dialog.showModal();
+    cancelRef.current?.focus({ preventScroll: true });
+    document.body.style.overflow = 'hidden';
+    return () => {
+      dialog.close();
+      document.body.style.overflow = previousOverflow;
+      if (previousFocus?.isConnected && !previousFocus.matches(':disabled')) previousFocus.focus({ preventScroll: true });
+    };
+  }, []);
+  return <dialog ref={dialogRef} className="ep-missing-unit-dialog" role="alertdialog" aria-modal="true"
+    aria-labelledby="ep-missing-unit-title" aria-describedby="ep-missing-unit-description"
+    onCancel={event => { event.preventDefault(); onCancel(); }}
+    onKeyDown={event => {
+      if (event.key !== 'Tab') return;
+      const elements = event.currentTarget.querySelectorAll<HTMLElement>('button:not(:disabled), [tabindex="0"]');
+      const first = elements[0];
+      const last = elements[elements.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    }}>
+    <div className="ep-missing-unit-body">
+      <div className="ep-missing-unit-heading">
+        <span className="ep-missing-unit-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m12 3 10 18H2L12 3Z" /><path d="M12 9v4m0 4h.01" /></svg></span>
+        <div><h2 id="ep-missing-unit-title">พบรายการที่ไม่มีหน่วยในคอลัมน์ J</h2><p>Product Master · {rows.length.toLocaleString()} รายการ</p></div>
+      </div>
+      <p id="ep-missing-unit-description">{canContinue
+        ? 'กด “เปรียบเทียบราคา” เพื่อข้ามเฉพาะรายการเหล่านี้และเปรียบเทียบรายการที่มีหน่วยต่อ หรือกด “ยกเลิก” เพื่อกลับไปแก้ไขไฟล์'
+        : 'ทุกรายการไม่มีหน่วยในคอลัมน์ J จึงไม่มีข้อมูลสำหรับเปรียบเทียบ กรุณายกเลิกเพื่อแก้ไขไฟล์ Product Master'}</p>
+      <MissingUnitRows rows={rows} />
+    </div>
+    <div className="ep-missing-unit-actions">
+      <button ref={cancelRef} type="button" className="ep-button ep-button--secondary" autoFocus onClick={onCancel}>ยกเลิก</button>
+      <button type="button" className="ep-button" disabled={!canContinue} onClick={onCompare}>เปรียบเทียบราคา</button>
+    </div>
+  </dialog>;
+}
+
 export function EditPricePage({ handlers }: { handlers: NavHandlers }) {
   const [step, setStep] = useState<Step>('upload');
   const [files, setFiles] = useState<Record<FileKind, UploadedSheet | null>>({ master: null, promaxx: null });
@@ -139,6 +196,7 @@ export function EditPricePage({ handlers }: { handlers: NavHandlers }) {
   const [selectedLevel, setSelectedLevel] = useState<PriceLevel>(0);
   const [error, setError] = useState('');
   const [exports, setExports] = useState<ExportEntry[]>([]);
+  const [missingUnitWarning, setMissingUnitWarning] = useState<{ rows: MissingMasterUnit[]; canContinue: boolean } | null>(null);
   const rows = useMemo(() => result ? filterRows(result, filter, search) : [], [result, filter, search]);
   const selectedRows = useMemo(() => rows.filter(row => selected.has(row.id)), [rows, selected]);
   const units = useMemo(() => Array.from(new Set(rows.map(row => row.unit))).sort((a, b) => a.localeCompare(b, 'th')), [rows]);
@@ -154,6 +212,7 @@ export function EditPricePage({ handlers }: { handlers: NavHandlers }) {
     setFiles(previous => ({ ...previous, [kind]: null }));
     setFileErrors(previous => ({ ...previous, [kind]: '' }));
     setResult(null);
+    setMissingUnitWarning(null);
     setSelected(new Set());
     setError('');
     try {
@@ -176,14 +235,25 @@ export function EditPricePage({ handlers }: { handlers: NavHandlers }) {
     }
   }
 
-  async function compare() {
+  async function compare(skipMissingUnits = false) {
     if (!files.master || !files.promaxx || busy) return;
-    setComparing(true);
     setError('');
+    if (!skipMissingUnits) {
+      const missing = findMissingMasterUnits(files.master.rows);
+      if (missing.length > 0) {
+        setMissingUnitWarning({
+          rows: missing,
+          canContinue: files.master.rows.slice(1).some(row => !!cellText(row[PM.SKU]) && !!cellText(row[PM.UNIT])),
+        });
+        return;
+      }
+    }
+    setMissingUnitWarning(null);
+    setComparing(true);
     await new Promise<void>(resolve => window.setTimeout(resolve, 0));
     const start = performance.now();
     try {
-      setResult(compareSheets(files.master.rows, files.promaxx.rows));
+      setResult(compareSheets(files.master.rows, files.promaxx.rows, { skipMissingUnits }));
       setElapsed(performance.now() - start);
       setFilter('mismatch');
       setSearch('');
@@ -285,7 +355,7 @@ export function EditPricePage({ handlers }: { handlers: NavHandlers }) {
           </div>
           <details className="ep-format-help"><summary>รูปแบบคอลัมน์ของไฟล์</summary>
             <p><strong>Product Master:</strong> A = SKU, B = ชื่อสินค้า, C = หน่วยฐาน, J = หน่วยทุนใหม่, K = ทุนใหม่</p>
-            <p><strong>Promaxx:</strong> B = SKU, E = หน่วย, F = ระดับราคา (0/1/4/5), G = ราคาเก่าระดับ 0, H = ราคาเก่าระดับ 1/5 หรือทุนเก่าระดับ 4</p>
+            <p><strong>R05.105:</strong> B = SKU, E = หน่วย, F = ระดับราคา (0/1/4/5), G = ราคาเก่าระดับ 0, H = ราคาเก่าระดับ 1/5 หรือทุนเก่าระดับ 4</p>
           </details>
           <div className="ep-upload-footer"><span>ไฟล์ที่เลือกจะไม่ถูกอัปโหลดไปยังฐานข้อมูล</span>
             <button type="button" className="ep-button" disabled={!files.master || !files.promaxx || busy} onClick={() => { void compare(); }}>
@@ -299,14 +369,19 @@ export function EditPricePage({ handlers }: { handlers: NavHandlers }) {
             {[
               ['Total', result.total], ['Matched', result.matched - result.mismatched],
               ['Mismatched', result.mismatched], ['Not Found', result.notFound],
-              ['Promaxx Records', result.promaxxRecords], ['Process Time', `${elapsed.toFixed(0)} ms`],
+              ['R05.105 Records', result.promaxxRecords], ['Process Time', `${elapsed.toFixed(0)} ms`],
             ].map(([label, value]) => <div className="ep-stat" key={label}><span>{label}</span><strong>{typeof value === 'number' ? value.toLocaleString() : value}</strong></div>)}
           </div>
           <section className="ep-panel">
             <div className="ep-panel-heading"><div><h2>{step === 'compare' ? 'ผลเปรียบเทียบราคา' : 'ส่งออกผลเปรียบเทียบ'}</h2>
-              <p>Product Master: {files.master?.name} · Promaxx: {files.promaxx?.name}</p></div>
+              <p>Product Master: {files.master?.name} · R05.105: {files.promaxx?.name}</p></div>
               {step === 'compare' && <button type="button" className="ep-button" onClick={() => setStep('export')}>ไปหน้า Export →</button>}
             </div>
+            {result.skippedMissingUnits.length > 0 && <div className="ep-skipped-warning" role="status">
+              <strong>ข้าม {result.skippedMissingUnits.length.toLocaleString()} รายการที่ไม่มีหน่วยในคอลัมน์ J</strong>
+              <p>ผลเปรียบเทียบและไฟล์ส่งออกใช้เฉพาะรายการที่มีหน่วย</p>
+              <details><summary>ดูรายการที่ข้าม</summary><MissingUnitRows rows={result.skippedMissingUnits} /></details>
+            </div>}
             {filterControls}
 
             {step === 'compare' ? <>
@@ -354,6 +429,8 @@ export function EditPricePage({ handlers }: { handlers: NavHandlers }) {
           </section>
         </>}
       </main>
+      {missingUnitWarning && <MissingUnitDialog rows={missingUnitWarning.rows} canContinue={missingUnitWarning.canContinue}
+        onCancel={() => setMissingUnitWarning(null)} onCompare={() => { void compare(true); }} />}
     </div>
   );
 }

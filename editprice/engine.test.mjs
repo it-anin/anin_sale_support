@@ -6,7 +6,7 @@ import { transformWithEsbuild } from 'vite';
 
 const path = fileURLToPath(new URL('./engine.ts', import.meta.url));
 const { code } = await transformWithEsbuild(readFileSync(path, 'utf8'), path, { loader: 'ts' });
-const { compareSheets, filterRows, buildPosText, posExportRows, reportRows, parseNum } =
+const { compareSheets, filterRows, findMissingMasterUnits, buildPosText, posExportRows, reportRows, parseNum } =
   await import(`data:text/javascript;base64,${Buffer.from(code).toString('base64')}`);
 
 const masterHeader = ['SKU', 'NAME', 'BASE_UNIT', '', '', '', '', '', '', 'UNIT', 'COST'];
@@ -125,8 +125,56 @@ test('rejects empty, malformed and ambiguous master files before generating pric
   const validMaster = [masterHeader, master('A', 'กล่อง', 100)];
   const validOld = [promaxxHeader, ...oldUnit('A', 'กล่อง', 100, 200)];
   assert.throws(() => compareSheets([], validOld), /Product Master/);
-  assert.throws(() => compareSheets(validMaster, [['SKU'], ['A']]), /Promaxx/);
+  assert.throws(() => compareSheets(validMaster, [['SKU'], ['A']]), /R05\.105/);
   assert.throws(() => compareSheets([masterHeader, master('A', '', 100)], validOld), /คอลัมน์ J/);
   assert.throws(() => compareSheets([masterHeader, master('A', 'กล่อง', 100), master('A', 'กล่อง', 150)], validOld), /SKU A ซ้ำ/);
-  assert.throws(() => compareSheets(validMaster, [promaxxHeader, ['', 'A', '', '', 'กล่อง', '9', 100, 100]]), /ไม่พบข้อมูล Promaxx/);
+  assert.throws(() => compareSheets(validMaster, [promaxxHeader, ['', 'A', '', '', 'กล่อง', '9', 100, 100]]), /ไม่พบข้อมูล R05\.105/);
+});
+
+test('preflight finds every empty J value with an SKU, including whitespace, without inventing a unit from C', () => {
+  const rows = [masterHeader,
+    master('00001', '', 120, 'กล่อง', 'ยารายการหนึ่ง'), master('B', '  ', 100),
+    master('C', null, 100), master('D', undefined, 100), master('VALID', 'กล่อง', 120),
+    master('', '', 100),
+  ];
+  assert.deepEqual(findMissingMasterUnits(rows), [
+    { sku: '00001', name: 'ยารายการหนึ่ง' }, { sku: 'B', name: 'ยา B' },
+    { sku: 'C', name: 'ยา C' }, { sku: 'D', name: 'ยา D' },
+  ]);
+  assert.deepEqual(findMissingMasterUnits([]), []);
+  assert.deepEqual(findMissingMasterUnits([masterHeader, master('VALID', 'กล่อง', 120)]), []);
+});
+
+test('missing J rows are skipped only with explicit consent, and never enter totals or TXT/Excel exports', () => {
+  const masters = [masterHeader, master('MISSING', '', 999), master('VALID', 'กล่อง', 120)];
+  const oldRows = [promaxxHeader, ...oldUnit('MISSING', 'กล่อง', 100, 200), ...oldUnit('VALID', 'กล่อง', 100, 200)];
+  assert.throws(() => compareSheets(masters, oldRows), /คอลัมน์ J/);
+  assert.throws(() => compareSheets(masters, oldRows, { skipMissingUnits: false }), /คอลัมน์ J/);
+  const result = compareSheets(masters, oldRows, { skipMissingUnits: true });
+  assert.equal(result.total, 1);
+  assert.equal(result.matched, 1);
+  assert.equal(result.mismatched, 1);
+  assert.equal(result.notFound, 0);
+  assert.deepEqual(result.skippedMissingUnits, [{ sku: 'MISSING', name: 'ยา MISSING' }]);
+  const rows = filterRows(result, 'all', '');
+  assert.equal(buildPosText(rows, 0), '\uFEFFVALID\t240.00\t0\r\n');
+  assert.deepEqual(reportRows(rows).map(row => row['รหัสสินค้า']), ['VALID']);
+});
+
+test('skips only invalid rows of a repeated SKU and still rejects duplicate rows that both have J', () => {
+  const oldRows = [promaxxHeader, ...oldUnit('A', 'กล่อง', 100, 200)];
+  const result = compareSheets([masterHeader, master('A', '', 999), master('A', 'กล่อง', 120)], oldRows, { skipMissingUnits: true });
+  assert.equal(result.total, 1);
+  assert.equal(result.products[0].rows[0].newCost, 120);
+  assert.equal(result.skippedMissingUnits.length, 1);
+  assert.throws(() => compareSheets([masterHeader, master('A', 'กล่อง', 120), master('A', 'กล่อง', 150)], oldRows,
+    { skipMissingUnits: true }), /SKU A ซ้ำ/);
+});
+
+test('cannot return an empty comparison if every product is missing J, while a complete file has no skipped rows', () => {
+  const oldRows = [promaxxHeader, ...oldUnit('A', 'กล่อง', 100, 200)];
+  assert.throws(() => compareSheets([masterHeader, master('A', ' ', 120)], oldRows, { skipMissingUnits: true }),
+    /ไม่มีรายการที่มีหน่วยในคอลัมน์ J/);
+  const result = compareSheets([masterHeader, master('A', 'กล่อง', 120)], oldRows);
+  assert.deepEqual(result.skippedMissingUnits, []);
 });

@@ -82,11 +82,34 @@
 .edit-price-page .ep-export-log li { display: flex; gap: 16px; flex-wrap: wrap; padding: 10px 0; font-size: 12px; border-bottom: 1px solid #edf1f5; }
 .edit-price-page .ep-export-log time { color: #7b8b9c; }
 .edit-price-page .ep-export-log strong { font-weight: 500; flex: 1; min-width: 160px; overflow-wrap: anywhere; }
-.edit-price-page button:focus-visible, .edit-price-page input:focus-visible, .edit-price-page select:focus-visible, .edit-price-page summary:focus-visible, .edit-price-page .ep-table-scroll:focus-visible { outline: 2px solid #357fca; outline-offset: 3px; }
+.edit-price-page .ep-skipped-warning { margin-bottom: 18px; padding: 14px 16px; border: 1px solid #efd89f; border-radius: 8px; background: #fffaee; color: #805a1c; font-size: 13px; line-height: 1.7; }
+.edit-price-page .ep-skipped-warning > p { margin-top: 3px; }
+.edit-price-page .ep-skipped-warning summary { margin-top: 8px; }
+.edit-price-page .ep-missing-unit-dialog { width: min(660px, calc(100vw - 32px)); max-height: calc(100dvh - 40px); margin: auto; padding: 0; overflow: auto; border: 0; border-radius: 16px; background: #fff; color: #2d3a48; box-shadow: 0 24px 80px #14283c40; font: inherit; }
+.edit-price-page .ep-missing-unit-dialog::backdrop { background: #14283c88; }
+.edit-price-page .ep-missing-unit-body { padding: 26px; }
+.edit-price-page .ep-missing-unit-heading { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
+.edit-price-page .ep-missing-unit-heading h2 { font-size: 19px; }
+.edit-price-page .ep-missing-unit-heading p { margin-top: 5px; color: #718093; font-size: 13px; }
+.edit-price-page .ep-missing-unit-icon { display: flex; flex-shrink: 0; align-items: center; justify-content: center; width: 48px; height: 48px; background: #fff3d5; border-radius: 12px; }
+.edit-price-page .ep-missing-unit-icon svg { width: 27px; height: 27px; fill: none; stroke: #b47b16; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.edit-price-page #ep-missing-unit-description { font-size: 14px; line-height: 1.8; color: #607184; }
+.edit-price-page .ep-missing-unit-list { max-height: 250px; margin-top: 16px; overflow: auto; border: 1px solid #e1e7ee; border-radius: 8px; }
+.edit-price-page .ep-missing-unit-list .ep-mini-table { table-layout: fixed; white-space: normal; }
+.edit-price-page .ep-missing-unit-list th { position: sticky; top: 0; }
+.edit-price-page .ep-missing-unit-list th:first-child { width: 115px; }
+.edit-price-page .ep-missing-unit-list td { overflow-wrap: anywhere; }
+.edit-price-page .ep-missing-unit-actions { display: flex; justify-content: flex-end; gap: 12px; padding: 18px 26px; border-top: 1px solid #e9eef3; background: #f9fbfd; }
+.edit-price-page button:focus-visible, .edit-price-page input:focus-visible, .edit-price-page select:focus-visible, .edit-price-page summary:focus-visible, .edit-price-page .ep-table-scroll:focus-visible, .edit-price-page .ep-missing-unit-list:focus-visible { outline: 2px solid #357fca; outline-offset: 3px; }
 @media (max-width: 900px) {
   .edit-price-page .ep-summary { grid-template-columns: repeat(3, 1fr); }
 }
 @media (max-width: 640px) {
+  .edit-price-page .ep-missing-unit-body { padding: 20px 16px; }
+  .edit-price-page .ep-missing-unit-heading { align-items: flex-start; }
+  .edit-price-page .ep-missing-unit-heading h2 { font-size: 17px; }
+  .edit-price-page .ep-missing-unit-actions { padding: 16px; }
+  .edit-price-page .ep-missing-unit-actions .ep-button { flex: 1; }
   .edit-price-page .search-nav-row { justify-content: flex-start; overflow-x: auto; scrollbar-width: none; }
   .edit-price-page .search-nav-row::-webkit-scrollbar { display: none; }
   .edit-price-page .ep-main { padding: 20px 12px 40px; }

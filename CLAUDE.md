@@ -96,9 +96,9 @@ React app with eight page IDs and seven navigation buttons per profile. The purc
 > รายละเอียด schema/languages/branches/print/delete/auto-translate/rate-limit เต็มอยู่ใน [`druglabel/CLAUDE.md`](druglabel/CLAUDE.md) (โหลดอัตโนมัติเมื่อทำงานในโฟลเดอร์นี้)
 
 **Key files — เปรียบเทียบและปรับราคา (Edit Price):**
-- `editprice/EditPricePage.tsx` — Data Upload / Compare & Analyze / Export, อ่านชีตแรก, ตารางแสดงเฉพาะแถวที่มองเห็น, เลือกเทียบสูงสุด 10 แถว, checklist และดาวน์โหลด
+- `editprice/EditPricePage.tsx` — Data Upload / Compare & Analyze / Export, Card ไฟล์ 2 ชื่อ R05.105, Popup ยืนยันข้ามแถวที่ J ว่าง, อ่านชีตแรก, ตารางแสดงเฉพาะแถวที่มองเห็น, เลือกเทียบสูงสุด 10 แถว, checklist และดาวน์โหลด
 - `editprice/EditPricePage.css` — CSS ใต้ `.edit-price-page` รวม layout มือถือและแถบนำทางที่เลื่อนได้
-- `editprice/engine.ts` — `PM`/`PR` mapping, `compareSheets`, `filterRows`, `posExportRows`, `buildPosText`, `reportRows` เป็น logic ที่ไม่ผูกกับ React
+- `editprice/engine.ts` — `PM`/`PR` mapping, `findMissingMasterUnits`, `compareSheets`, `filterRows`, `posExportRows`, `buildPosText`, `reportRows` เป็น logic ที่ไม่ผูกกับ React
 - `editprice/engine.test.mjs` / `editprice/navigation.test.mjs` — สูตร/หน่วย/ค่าว่าง/ส่งออกและการแทนช่อง Label เฉพาะจัดซื้อ (`npm run test:edit-price`)
 - [`docs/edit-price.md`](docs/edit-price.md) — วิธีใช้ รูปแบบคอลัมน์ สูตร และเงื่อนไขส่งออก รายละเอียดข้อควรระวังดูหัวข้อ Edit Price ด้านล่าง
 
@@ -152,15 +152,17 @@ React app with eight page IDs and seven navigation buttons per profile. The purc
 
 - **สิทธิ์:** เฉพาะ `PURCHASING` เห็น Edit Price แทน Label ในช่องเดิมทุกหน้า รหัสอื่นคง Label และสิทธิ์เดิม `App.tsx` เปิด `effectiveVisibility.editprice` เฉพาะจัดซื้อและตรวจรหัสซ้ำก่อน render; `DEFAULT_VISIBILITY.editprice` เป็น `false` เสมอ รหัสอื่นต้องเปิดหน้านี้ไม่ได้แม้ค่าตั้งค่ากลางเก่าจะมี `editprice: true`
 - **Navigation:** `PurchasingNavigationContext` ส่ง callback จาก App ให้ `PageNavRow` แทน `druglabel` ด้วย `EDIT_PRICE_NAV` เฉพาะจัดซื้อ ไม่เพิ่มปุ่มที่แปด ไม่แก้ Label ใน `PAGE_NAV` กลาง และไม่เพิ่ม row ใน `app_page_settings`; `NavHandlers` ยังเป็นเมนูปกติผ่าน `Exclude<PageId, 'editprice'>` เมื่อ logout/login เป็นรหัสอื่นขณะอยู่ Edit Price ต้องกลับไปหน้าที่รหัสใหม่เปิดได้โดยไม่ mount Edit Price ก่อน
-- **Workflow:** เลือก Product Master + Promaxx → Compare Prices → กรอง/ค้นหา/ตรวจราคา → Export รองรับ `.xlsx` / `.xls` / `.csv` อ่านเฉพาะชีตแรก แถวแรกเป็นหัวตาราง อ่านด้วย `XLSX.read(buffer, { type: 'array', raw: true })` และแปลงชีตด้วย `sheet_to_json(..., { raw: false })` เพื่อรักษา SKU ที่มีเลขศูนย์นำหน้าทั้ง CSV และรูปแบบเซลล์ Excel
+- **Workflow:** เลือก Product Master + R05.105 → Compare Prices → กรอง/ค้นหา/ตรวจราคา → Export รองรับ `.xlsx` / `.xls` / `.csv` อ่านเฉพาะชีตแรก แถวแรกเป็นหัวตาราง อ่านด้วย `XLSX.read(buffer, { type: 'array', raw: true })` และแปลงชีตด้วย `sheet_to_json(..., { raw: false })` เพื่อรักษา SKU ที่มีเลขศูนย์นำหน้าทั้ง CSV และรูปแบบเซลล์ Excel ชื่อไฟล์ 2 เปลี่ยนจาก Promaxx เป็น **R05.105** ทั้ง Card/ปุ่ม/ข้อความที่อ้างถึงไฟล์นี้ แต่ชื่อ state ภายใน `promaxx` และ mapping คงเดิม
 
 | ไฟล์ | คอลัมน์ที่ใช้ |
 | --- | --- |
 | Product Master | A = SKU, B = ชื่อสินค้า, C = หน่วยฐาน, J = หน่วยทุนใหม่, K = ทุนใหม่ |
-| Promaxx | B = SKU, E = หน่วย, F = ระดับ 0/1/4/5, G = ราคาเก่าระดับ 0, H = ราคาเก่าระดับ 1/5 หรือทุนเก่าระดับ 4 |
+| R05.105 | B = SKU, E = หน่วย, F = ระดับ 0/1/4/5, G = ราคาเก่าระดับ 0, H = ราคาเก่าระดับ 1/5 หรือทุนเก่าระดับ 4 |
 
 - **สูตร:** หน่วย J ใช้ทุน K โดยตรง หน่วยอื่นใช้ `(ทุน K / ทุนเก่าระดับ 4 ของหน่วย J) × ทุนเก่าของหน่วยนั้น` ราคาใหม่ระดับ 0/1/5 ใช้ `(ทุนใหม่ของหน่วย / ทุนเก่าของหน่วย) × ราคาเก่าของระดับ` แล้ว `Math.round` เป็นจำนวนเต็ม ระดับ 4 ใช้ทุนใหม่; ห้ามใช้ C เป็นทุนสำรอง
-- **ข้อมูลไม่ครบ:** ค่าว่าง ตัวหารศูนย์ และผลไม่จำกัดเป็น `null` แสดง `-` แต่ราคา `0` เป็นค่าที่ใช้ได้ ถ้าไม่พบหน่วย J ใน Promaxx จะเพิ่มแถวนั้นพร้อมทุน K และไม่เดาทุนของหน่วยอื่น Product Master ต้องมีทุนใหม่หนึ่งแถวต่อ SKU; SKU ซ้ำหรือไม่มีหน่วย J จะแจ้งข้อผิดพลาด
+- **ข้อมูลไม่ครบ:** ค่าว่าง ตัวหารศูนย์ และผลไม่จำกัดเป็น `null` แสดง `-` แต่ราคา `0` เป็นค่าที่ใช้ได้ ถ้า J มีหน่วยแต่ไม่พบหน่วยนั้นใน R05.105 จะเพิ่มแถวนั้นพร้อมทุน K และไม่เดาทุนของหน่วยอื่น Product Master ต้องมีทุนใหม่หนึ่งแถวต่อ SKU; แถวที่มีหน่วยและ SKU ซ้ำยังแจ้งข้อผิดพลาด
+- **คอลัมน์ J ว่าง:** `findMissingMasterUnits` ตรวจเฉพาะแถวที่มี SKU แล้วเปิด native `<dialog>` ก่อนเริ่มคำนวณ มีปุ่ม **ยกเลิก** (ไม่เริ่มเปรียบเทียบ) และ **เปรียบเทียบราคา** (ข้ามเฉพาะแถวที่ J ว่าง รวมช่องว่างล้วน แล้วเปรียบเทียบแถวที่เหลือ) ไม่เดาหน่วยจาก C/ไฟล์ 2 และไม่ข้ามทั้ง SKU หากยังมีแถวที่มีหน่วยของ SKU นั้น `compareSheets` ยังคงปฏิเสธ J ว่างเป็นค่าเริ่มต้น; ส่ง `skipMissingUnits: true` หลังผู้ใช้ยืนยันเท่านั้น หากไม่มีรายการที่มีหน่วยเหลือ ปุ่มเปรียบเทียบใน Popup ถูกปิดพร้อมคำอธิบาย
+- **รายการที่ข้าม:** เก็บใน `ComparisonResult.skippedMissingUnits` และแสดงจำนวน/รายการทั้งหน้า Compare และ Export ยอดและไฟล์ส่งออกไม่รวมแถวเหล่านี้ Popup และตารางรายการที่ข้ามแสดง 100 รายการแรกพร้อมระบุยอดทั้งหมดเมื่อเกิน 100; Escape ทำงานเหมือนยกเลิกและคืนโฟกัสให้ปุ่มเดิม เปลี่ยนไฟล์ต้องล้าง Popup เดิมด้วย
 - **ผลและการเลือก:** ค่าเริ่มต้นกรอง “ไม่ตรง”; สถานะคิดรวมทั้ง SKU จากราคา 0/1/5 ต่างเกิน 0.001 ตัวเลข Matched คือ SKU ที่พบและราคาไม่ต่างกัน ค้นหาด้วย SKU/ชื่อ/หน่วย เลือกเทียบได้สูงสุด 10 แถวและเลือกระดับ 0/1/4/5 ใน Selected Results; checklist “ตรวจแล้ว” แยกจากการเลือกแถว
 - **ส่งออก:** ทุกปุ่มใช้แถวตามตัวกรองและคำค้น ไม่ใช้การเลือกแถวหรือ checklist จำกัดผล TXT ใช้เฉพาะทุนใหม่ > ทุนเก่าและมีราคาในระดับนั้น แยกได้ตามระดับ 0/1/4/5, หน่วย หรือ BASE_UNIT ที่ตรงคอลัมน์ C; Excel รวมทุกแถวตามตัวกรอง รวมทุนลดและ SKU ที่ไม่พบ TXT เป็น UTF-8 BOM, CRLF, `SKU<TAB>ราคา<TAB>ระดับ`, มีคอมมาหลักพันและทศนิยม 2 ตำแหน่ง; Excel ชื่อ `Price_Comparison_Report.xlsx` มีชีตเดียว
 - **ข้อมูลในเครื่อง:** ไฟล์ ผลคำนวณ แถวที่เลือก และ Export Log อยู่ในหน่วยความจำของหน้า เปลี่ยนหน้า/รีเฟรชต้องเลือกไฟล์ใหม่ เก็บถาวรเฉพาะ checklist ด้วย key `price-compare-row-checklist` ไม่ส่งไฟล์หรือราคาไป Supabase ไม่เพิ่มตาราง/RPC/Storage/polling/Realtime; เปลี่ยนไฟล์เมื่อใดต้องล้างผลเดิมเพื่อกันส่งออกข้อมูลเก่า

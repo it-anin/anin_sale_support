@@ -34,6 +34,17 @@ export interface ComparisonResult {
   mismatched: number;
   notFound: number;
   promaxxRecords: number;
+  skippedMissingUnits: MissingMasterUnit[];
+}
+
+export interface MissingMasterUnit {
+  sku: string;
+  name: string;
+}
+
+export function findMissingMasterUnits(rows: SheetRows): MissingMasterUnit[] {
+  return rows.slice(1).filter(row => cellText(row[PM.SKU]) && !cellText(row[PM.UNIT]))
+    .map(row => ({ sku: cellText(row[PM.SKU]), name: cellText(row[PM.NAME]) }));
 }
 
 export function cellText(value: unknown): string {
@@ -63,12 +74,12 @@ function costRatio(newCost: Amount, oldCost: Amount, price: Amount): Amount {
   return Number.isFinite(value) ? value : null;
 }
 
-export function compareSheets(masterRows: SheetRows, promaxxRows: SheetRows): ComparisonResult {
+export function compareSheets(masterRows: SheetRows, promaxxRows: SheetRows, options: { skipMissingUnits?: boolean } = {}): ComparisonResult {
   if (masterRows.length < 2 || (masterRows[0]?.length ?? 0) <= PM.COST) {
     throw new Error('Product Master ต้องมีหัวตารางและข้อมูลถึงคอลัมน์ K (ทุนใหม่)');
   }
   if (promaxxRows.length < 2 || (promaxxRows[0]?.length ?? 0) <= PR.OTHER_PRICE) {
-    throw new Error('Promaxx ต้องมีหัวตารางและข้อมูลถึงคอลัมน์ H');
+    throw new Error('R05.105 ต้องมีหัวตารางและข้อมูลถึงคอลัมน์ H');
   }
 
   const oldProducts = new Map<string, Map<string, Record<PriceLevel, Amount>>>();
@@ -87,20 +98,27 @@ export function compareSheets(masterRows: SheetRows, promaxxRows: SheetRows): Co
     prices[level as PriceLevel] = parseNum(row[level === 0 ? PR.LV0_PRICE : PR.OTHER_PRICE]);
   }
   if (oldProducts.size === 0) {
-    throw new Error('ไม่พบข้อมูล Promaxx ที่มี SKU (B), หน่วย (E) และระดับราคา 0/1/4/5 (F)');
+    throw new Error('ไม่พบข้อมูล R05.105 ที่มี SKU (B), หน่วย (E) และระดับราคา 0/1/4/5 (F)');
   }
 
   const products: ComparisonProduct[] = [];
+  const skippedMissingUnits: MissingMasterUnit[] = [];
   const masterSkus = new Set<string>();
   for (const [index, row] of masterRows.slice(1).entries()) {
     const sku = cellText(row[PM.SKU]);
     if (!sku) continue;
+    const sourceUnit = cellText(row[PM.UNIT]);
+    if (!sourceUnit) {
+      if (options.skipMissingUnits) {
+        skippedMissingUnits.push({ sku, name: cellText(row[PM.NAME]) });
+        continue;
+      }
+      throw new Error(`Product Master แถว ${index + 2} (SKU ${sku}) ไม่มีหน่วยในคอลัมน์ J`);
+    }
     if (masterSkus.has(sku)) {
       throw new Error(`Product Master มี SKU ${sku} ซ้ำที่แถว ${index + 2} กรุณาให้เหลือทุนใหม่หนึ่งรายการต่อ SKU`);
     }
     masterSkus.add(sku);
-    const sourceUnit = cellText(row[PM.UNIT]);
-    if (!sourceUnit) throw new Error(`Product Master แถว ${index + 2} (SKU ${sku}) ไม่มีหน่วยในคอลัมน์ J`);
     const newCost = parseNum(row[PM.COST]);
     const oldUnits = oldProducts.get(sku);
     const referenceOldCost = oldUnits?.get(sourceUnit)?.[4] ?? null;
@@ -129,12 +147,14 @@ export function compareSheets(masterRows: SheetRows, promaxxRows: SheetRows): Co
       rows,
     });
   }
-  if (products.length === 0) throw new Error('ไม่พบรหัสสินค้าในคอลัมน์ A ของ Product Master');
+  if (products.length === 0) throw new Error(skippedMissingUnits.length
+    ? 'ไม่มีรายการที่มีหน่วยในคอลัมน์ J สำหรับเปรียบเทียบ กรุณาแก้ไขไฟล์ Product Master'
+    : 'ไม่พบรหัสสินค้าในคอลัมน์ A ของ Product Master');
   const matched = products.filter(product => product.matched).length;
   return {
     products, total: products.length, matched,
     mismatched: products.filter(product => product.isMismatch).length,
-    notFound: products.length - matched, promaxxRecords,
+    notFound: products.length - matched, promaxxRecords, skippedMissingUnits,
   };
 }
 
