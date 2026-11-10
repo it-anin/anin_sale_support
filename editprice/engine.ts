@@ -3,10 +3,28 @@ export type PriceLevel = 0 | 1 | 4 | 5;
 export type CompareFilter = 'mismatch' | 'all' | 'matched' | 'notfound';
 type Amount = number | null;
 
-// ตำแหน่งคอลัมน์ตาม Product Master และ Promaxx ใน PROJECT-OVERVIEW.md
-export const PM = { SKU: 0, NAME: 1, BASE_UNIT: 2, UNIT: 9, COST: 10 } as const;
+// Product Master จับคู่จากชื่อหัวคอลัมน์ ส่วน R05.105 ยังอ่านตามตำแหน่งเดิม
+const MASTER_HEADERS = { SKU: 'SKU', NAME: 'NAME', BASE_UNIT: 'BASE_UNIT', UNIT: 'PURCHASE_UNIT', COST: 'ทุนซื้อ' } as const;
+type MasterColumns = Record<keyof typeof MASTER_HEADERS, number>;
 export const PR = { SKU: 1, UNIT: 4, LEVEL: 5, LV0_PRICE: 6, OTHER_PRICE: 7 } as const;
 export const PRICE_LEVELS: PriceLevel[] = [0, 1, 4, 5];
+
+export function resolveMasterColumns(headers: unknown[]): MasterColumns {
+  const normalized = headers.map(header => cellText(header).toUpperCase());
+  const columns = {} as MasterColumns;
+  const missing: string[] = [];
+  const duplicates: string[] = [];
+  for (const key of Object.keys(MASTER_HEADERS) as (keyof MasterColumns)[]) {
+    const name = MASTER_HEADERS[key];
+    const index = normalized.indexOf(name);
+    if (index < 0) missing.push(name);
+    else if (normalized.indexOf(name, index + 1) >= 0) duplicates.push(name);
+    else columns[key] = index;
+  }
+  if (missing.length) throw new Error(`Product Master ไม่พบคอลัมน์ที่จำเป็น: ${missing.join(', ')}`);
+  if (duplicates.length) throw new Error(`Product Master มีชื่อคอลัมน์ซ้ำ: ${duplicates.join(', ')}`);
+  return columns;
+}
 
 export interface ComparisonRow {
   id: string;
@@ -43,8 +61,10 @@ export interface MissingMasterUnit {
 }
 
 export function findMissingMasterUnits(rows: SheetRows): MissingMasterUnit[] {
-  return rows.slice(1).filter(row => cellText(row[PM.SKU]) && !cellText(row[PM.UNIT]))
-    .map(row => ({ sku: cellText(row[PM.SKU]), name: cellText(row[PM.NAME]) }));
+  if (rows.length === 0) return [];
+  const columns = resolveMasterColumns(rows[0]);
+  return rows.slice(1).filter(row => cellText(row[columns.SKU]) && !cellText(row[columns.UNIT]))
+    .map(row => ({ sku: cellText(row[columns.SKU]), name: cellText(row[columns.NAME]) }));
 }
 
 export function cellText(value: unknown): string {
@@ -75,9 +95,10 @@ function costRatio(newCost: Amount, oldCost: Amount, price: Amount): Amount {
 }
 
 export function compareSheets(masterRows: SheetRows, promaxxRows: SheetRows, options: { skipMissingUnits?: boolean } = {}): ComparisonResult {
-  if (masterRows.length < 2 || (masterRows[0]?.length ?? 0) <= PM.COST) {
-    throw new Error('Product Master ต้องมีหัวตารางและข้อมูลถึงคอลัมน์ K (ทุนใหม่)');
+  if (masterRows.length < 2) {
+    throw new Error('Product Master ต้องมีหัวตารางและข้อมูลสินค้า');
   }
+  const columns = resolveMasterColumns(masterRows[0]);
   if (promaxxRows.length < 2 || (promaxxRows[0]?.length ?? 0) <= PR.OTHER_PRICE) {
     throw new Error('R05.105 ต้องมีหัวตารางและข้อมูลถึงคอลัมน์ H');
   }
@@ -105,21 +126,21 @@ export function compareSheets(masterRows: SheetRows, promaxxRows: SheetRows, opt
   const skippedMissingUnits: MissingMasterUnit[] = [];
   const masterSkus = new Set<string>();
   for (const [index, row] of masterRows.slice(1).entries()) {
-    const sku = cellText(row[PM.SKU]);
+    const sku = cellText(row[columns.SKU]);
     if (!sku) continue;
-    const sourceUnit = cellText(row[PM.UNIT]);
+    const sourceUnit = cellText(row[columns.UNIT]);
     if (!sourceUnit) {
       if (options.skipMissingUnits) {
-        skippedMissingUnits.push({ sku, name: cellText(row[PM.NAME]) });
+        skippedMissingUnits.push({ sku, name: cellText(row[columns.NAME]) });
         continue;
       }
-      throw new Error(`Product Master แถว ${index + 2} (SKU ${sku}) ไม่มีหน่วยในคอลัมน์ J`);
+      throw new Error(`Product Master แถว ${index + 2} (SKU ${sku}) ไม่มีหน่วยในคอลัมน์ PURCHASE_UNIT`);
     }
     if (masterSkus.has(sku)) {
       throw new Error(`Product Master มี SKU ${sku} ซ้ำที่แถว ${index + 2} กรุณาให้เหลือทุนใหม่หนึ่งรายการต่อ SKU`);
     }
     masterSkus.add(sku);
-    const newCost = parseNum(row[PM.COST]);
+    const newCost = parseNum(row[columns.COST]);
     const oldUnits = oldProducts.get(sku);
     const referenceOldCost = oldUnits?.get(sourceUnit)?.[4] ?? null;
     const unitNames = new Set(oldUnits?.keys());
@@ -135,8 +156,8 @@ export function compareSheets(masterRows: SheetRows, promaxxRows: SheetRows, opt
         newPrices[level] = price === null ? null : Math.round(price);
       }
       return {
-        id: JSON.stringify([sku, unit]), sku, name: cellText(row[PM.NAME]),
-        baseUnit: cellText(row[PM.BASE_UNIT]), unit, oldCost, newCost: newCostUnit,
+        id: JSON.stringify([sku, unit]), sku, name: cellText(row[columns.NAME]),
+        baseUnit: cellText(row[columns.BASE_UNIT]), unit, oldCost, newCost: newCostUnit,
         oldPrices, newPrices,
       };
     });
@@ -148,8 +169,8 @@ export function compareSheets(masterRows: SheetRows, promaxxRows: SheetRows, opt
     });
   }
   if (products.length === 0) throw new Error(skippedMissingUnits.length
-    ? 'ไม่มีรายการที่มีหน่วยในคอลัมน์ J สำหรับเปรียบเทียบ กรุณาแก้ไขไฟล์ Product Master'
-    : 'ไม่พบรหัสสินค้าในคอลัมน์ A ของ Product Master');
+    ? 'ไม่มีรายการที่มีหน่วยในคอลัมน์ PURCHASE_UNIT สำหรับเปรียบเทียบ กรุณาแก้ไขไฟล์ Product Master'
+    : 'ไม่พบรหัสสินค้าในคอลัมน์ SKU ของ Product Master');
   const matched = products.filter(product => product.matched).length;
   return {
     products, total: products.length, matched,
@@ -177,10 +198,12 @@ export function priceAtLevel(row: ComparisonRow, level: PriceLevel, kind: 'old' 
 export interface ExportOptions {
   unit?: string;
   baseUnitOnly?: boolean;
+  skus?: ReadonlySet<string>;
 }
 
 export function posExportRows(rows: ComparisonRow[], level: PriceLevel, options: ExportOptions = {}): ComparisonRow[] {
   return rows.filter(row => row.newCost !== null && row.oldCost !== null && row.newCost > row.oldCost
+    && (options.skus === undefined || options.skus.has(row.sku))
     && (options.unit === undefined || row.unit === options.unit)
     && (!options.baseUnitOnly || row.unit === row.baseUnit)
     && priceAtLevel(row, level, 'new') !== null);
