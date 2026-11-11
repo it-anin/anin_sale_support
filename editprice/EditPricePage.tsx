@@ -31,7 +31,6 @@ const ICONS = {
   upload: <><path d="M12 16V3m-5 5 5-5 5 5M4 15v5h16v-5" /></>,
   download: <><path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5" /></>,
   search: <><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></>,
-  clock: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>,
   check: <path d="m5 12 4 4L19 6" />,
   info: <><circle cx="12" cy="12" r="9" /><path d="M12 11v6m0-10h.01" /></>,
   arrow: <path d="M4 12h16m-5-5 5 5-5 5" />,
@@ -236,7 +235,6 @@ export function EditPricePage({ handlers }: { handlers: NavHandlers }) {
   const fileVersion = useRef(0);
   const [result, setResult] = useState<ComparisonResult | null>(null);
   const [comparing, setComparing] = useState(false);
-  const [elapsed, setElapsed] = useState(0);
   const [filter, setFilter] = useState<CompareFilter>('mismatch');
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -335,10 +333,8 @@ export function EditPricePage({ handlers }: { handlers: NavHandlers }) {
     setMissingUnitWarning(null);
     setComparing(true);
     await new Promise<void>(resolve => window.setTimeout(resolve, 0));
-    const start = performance.now();
     try {
       setResult(compareSheets(files.master.rows, files.promaxx.rows, { skipMissingUnits }));
-      setElapsed(performance.now() - start);
       setFilter('mismatch');
       setSearch('');
       setSelected(new Set());
@@ -431,10 +427,6 @@ export function EditPricePage({ handlers }: { handlers: NavHandlers }) {
         </div>
       </header>
       <main className="ep-main">
-        <div className="ep-intro"><div><h2>ทุกระดับราคา ในมุมมองเดียว</h2>
-          <p>ทุนและราคาขาย 0 / 1 / 5 แยกคอลัมน์เก่า–ใหม่ พร้อมเลือกหน่วยและส่งออกในหน้าเดียว</p></div>
-          <span className="ep-session"><Icon name="clock" />{result ? `คำนวณแล้ว · ${elapsed.toFixed(0)} ms` : 'ประมวลผลบนเครื่องของคุณ'}</span>
-        </div>
         {error && <div className="ep-error ep-error--banner" role="alert">{error}</div>}
 
         <section className="ep-sources" aria-label="ข้อมูลสำหรับเปรียบเทียบราคา">
