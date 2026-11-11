@@ -43,11 +43,12 @@
 .edit-price-page .ep-format-help p { margin: 9px 0; line-height: 1.9; }
 .edit-price-page .ep-matrix-header { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 16px; align-items: stretch; margin-bottom: 22px; }
 .edit-price-page .ep-summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-.edit-price-page .ep-stat { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px; border: 1px solid var(--ep-line); border-radius: 8px; }
-.edit-price-page .ep-stat > span { color: var(--ep-muted); font-size: 10px; }
+.edit-price-page .ep-stat { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding: 13px; border: 1px solid #e1ebf1; border-radius: 10px; background: #fff; }
+.edit-price-page .ep-stat > span { color: var(--ep-muted); font-size: 11px; line-height: 1.45; }
 .edit-price-page .ep-stat > div { display: flex; align-items: baseline; gap: 5px; }
-.edit-price-page .ep-stat strong { color: var(--ep-accent); font-size: 26px; font-weight: 600; line-height: 1.3; font-variant-numeric: tabular-nums; }
-.edit-price-page .ep-stat small { color: var(--ep-muted); font-size: 8px; }
+.edit-price-page .ep-stat strong { color: var(--ep-accent); font-size: 24px; font-weight: 700; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.edit-price-page .ep-stat small { color: #8296a5; font-size: 10px; }
+.edit-price-page .ep-stat .ep-stat-waiting { color: #7d92a1; font-size: 11px; font-weight: 500; line-height: 1.45; }
 .edit-price-page .ep-stat--mismatch strong { color: #ab743e; }
 .edit-price-page .ep-stat--matched strong { color: #3e8573; }
 .edit-price-page .ep-stat--notfound strong { color: #8b7a91; }
@@ -163,7 +164,6 @@
   .edit-price-page .ep-processing { flex-direction: row; align-items: center; border-left: 0; border-top: 1px solid var(--ep-line); padding: 12px 0 0; }
   .edit-price-page .ep-processing > .ep-button { min-width: 220px; }
   .edit-price-page .ep-matrix-header { grid-template-columns: 250px minmax(0, 1fr); }
-  .edit-price-page .ep-stat { flex-direction: column; align-items: flex-start; gap: 4px; }
   .edit-price-page .ep-level-button { padding: 10px; gap: 7px; }
   .edit-price-page .ep-export-bottom { align-items: stretch; flex-direction: column; gap: 6px; }
   .edit-price-page .ep-export-bottom p { max-width: none; }
@@ -194,8 +194,7 @@
   .edit-price-page .ep-processing { align-items: stretch; flex-direction: column; gap: 10px; }
   .edit-price-page .ep-processing > .ep-button { width: 100%; min-width: 0; }
   .edit-price-page .ep-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .edit-price-page .ep-stat { flex-direction: column; align-items: flex-start; gap: 4px; padding: 10px; }
-  .edit-price-page .ep-stat > span { font-size: 9px; }
+  .edit-price-page .ep-stat { gap: 10px; padding: 10px; }
   .edit-price-page .ep-stat strong { font-size: 22px; }
   .edit-price-page .ep-export-panel { padding: 11px; gap: 9px; }
   .edit-price-page .ep-export-scope:has(label:nth-child(2)) { grid-template-columns: minmax(0, 1fr); }

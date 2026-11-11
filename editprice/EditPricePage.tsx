@@ -432,7 +432,9 @@ export function EditPricePage({ handlers }: { handlers: NavHandlers }) {
               ['สินค้าทั้งหมด', result?.total, 'all'], ['ราคาไม่ตรง', result?.mismatched, 'mismatch'],
               ['ราคาตรง', result ? result.matched - result.mismatched : undefined, 'matched'], ['ไม่พบใน R05.105', result?.notFound, 'notfound'],
             ] as const).map(([label, value, kind]) => <div className={`ep-stat ep-stat--${kind}`} key={kind}>
-              <span>{label}</span><div><strong>{value === undefined ? '—' : value.toLocaleString()}</strong><small>SKU</small></div>
+              <span>{label}</span>{value === undefined
+                ? <div className="ep-stat-waiting">รอเปรียบเทียบ</div>
+                : <div><strong>{value.toLocaleString()}</strong><small>SKU</small></div>}
             </div>)}
           </section>
           <section className="ep-export-panel" aria-label="ส่งออกไฟล์">
