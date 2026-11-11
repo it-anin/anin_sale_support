@@ -223,7 +223,7 @@
   .edit-price-page .ep-processing { align-items: stretch; flex-direction: column; gap: 10px; }
   .edit-price-page .ep-processing > .ep-button { width: 100%; min-width: 0; }
   .edit-price-page .ep-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .edit-price-page .ep-stat { flex-direction: row; align-items: center; padding: 10px; }
+  .edit-price-page .ep-stat { flex-direction: column; align-items: flex-start; gap: 4px; padding: 10px; }
   .edit-price-page .ep-stat > span { font-size: 9px; }
   .edit-price-page .ep-stat strong { font-size: 22px; }
   .edit-price-page .ep-export-panel { padding: 11px; gap: 9px; }
