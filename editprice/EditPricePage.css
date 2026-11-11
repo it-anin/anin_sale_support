@@ -8,27 +8,12 @@
   font-family: 'Inter', 'Noto Sans Thai', sans-serif; font-size: 13px; line-height: 1.6;
 }
 .edit-price-page * { box-sizing: border-box; }
-.edit-price-page h1, .edit-price-page h2, .edit-price-page h3, .edit-price-page p { margin: 0; }
-.edit-price-page button, .edit-price-page input, .edit-price-page select { font: inherit; }
-.edit-price-page button { cursor: pointer; }
-.edit-price-page button:disabled { opacity: .42; cursor: default; }
-.edit-price-page button:focus-visible, .edit-price-page input:focus-visible, .edit-price-page select:focus-visible,
-.edit-price-page summary:focus-visible, .edit-price-page [tabindex]:focus-visible { outline: 3px solid #79a7d3; outline-offset: 3px; }
+.edit-price-page :where(.ep-main, .ep-missing-unit-dialog) :is(h1, h2, h3, p) { margin: 0; }
+.edit-price-page :where(.ep-main, .ep-missing-unit-dialog) :is(button, input, select) { font: inherit; }
+.edit-price-page :where(.ep-main, .ep-missing-unit-dialog) button { cursor: pointer; }
+.edit-price-page :where(.ep-main, .ep-missing-unit-dialog) button:disabled { opacity: .42; cursor: default; }
+.edit-price-page :where(.ep-main, .ep-missing-unit-dialog) :is(button, input, select, summary, [tabindex]):focus-visible { outline: 3px solid #79a7d3; outline-offset: 3px; }
 .edit-price-page .ep-icon { width: 18px; height: 18px; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-width: 1.65; stroke-linecap: round; stroke-linejoin: round; vertical-align: middle; }
-.edit-price-page .ep-app-header { background: #fff; border-bottom: 1px solid var(--ep-line); }
-.edit-price-page .ep-header-inner { max-width: 1488px; margin: auto; padding: 18px 32px 12px; }
-.edit-price-page .ep-brand { display: flex; align-items: center; gap: 12px; min-height: 34px; padding-right: 230px; }
-.edit-price-page .ep-brand-icon { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 8px; background: var(--ep-soft); color: var(--ep-accent); }
-.edit-price-page .ep-brand h1 { font-size: 18px; font-weight: 600; letter-spacing: -.6px; white-space: nowrap; }
-.edit-price-page .ep-brand-divider { color: #c0cedd; font-size: 21px; font-weight: 400; }
-.edit-price-page .ep-brand-caption { font-size: 10px; color: var(--ep-muted); letter-spacing: .7px; white-space: nowrap; }
-.edit-price-page .search-nav-row { max-width: none; width: 100%; height: auto; min-height: 0; margin: 12px 0 0; padding: 0 0 3px; gap: 6px; justify-content: flex-start; overflow-x: auto; flex-wrap: nowrap; scrollbar-width: thin; }
-.edit-price-page .page-nav-card { width: auto; height: 38px; min-width: 82px; padding: 8px 12px; flex-direction: row; gap: 7px; border: 1px solid transparent; border-radius: 6px; background: #fff; color: var(--ep-muted); box-shadow: none; transform: none; }
-.edit-price-page .page-nav-card:hover:not(:disabled) { background: #f4f8fc; color: var(--ep-accent); transform: none; box-shadow: none; }
-.edit-price-page .page-nav-card--active { background: var(--ep-soft); border-color: #ccdeed; color: var(--ep-accent); }
-.edit-price-page .page-nav-icon { width: 17px; height: 17px; display: flex; align-items: center; justify-content: center; }
-.edit-price-page .page-nav-icon svg { width: 17px; height: 17px; }
-.edit-price-page .page-nav-label { color: inherit; font: inherit; font-size: 11px; }
 .edit-price-page .ep-main { width: calc(100% - 48px); max-width: 1440px; margin: 24px auto 0; padding: 26px; background: #fff; border: 1px solid var(--ep-line); border-radius: 12px; box-shadow: 0 5px 22px #23476a05; }
 .edit-price-page .ep-intro { display: flex; justify-content: space-between; align-items: center; gap: 20px; margin-bottom: 22px; }
 .edit-price-page .ep-intro h2 { font-size: 25px; font-weight: 600; letter-spacing: -.7px; line-height: 1.4; }
@@ -190,7 +175,6 @@
 }
 @media (max-width: 900px) {
   .edit-price-page .ep-main { width: calc(100% - 32px); padding: 20px; margin-top: 16px; }
-  .edit-price-page .ep-header-inner { padding-left: 20px; padding-right: 20px; }
   .edit-price-page .ep-intro { align-items: flex-start; flex-direction: column; gap: 8px; }
   .edit-price-page .ep-matrix-header { grid-template-columns: minmax(0, 1fr); }
   .edit-price-page .ep-summary { grid-template-columns: repeat(4, minmax(0, 1fr)); }
@@ -199,11 +183,7 @@
 }
 @media (max-width: 640px) {
   .edit-price-page { padding-bottom: 14px; }
-  .edit-price-page .ep-header-inner { padding: 64px 16px 10px; }
-  .edit-price-page .ep-brand { gap: 9px; padding-right: 0; }
-  .edit-price-page .ep-brand h1 { font-size: 17px; }
-  .edit-price-page .ep-brand-caption { font-size: 8px; }
-  .edit-price-page .page-nav-card { min-width: 75px; padding: 7px 10px; }
+  .edit-price-page .hero-header .search-nav-row { overflow-x: auto; justify-content: flex-start; scrollbar-width: thin; height: 88px; min-height: 88px; padding: 6px 0 16px; margin: -6px auto -16px; }
   .edit-price-page .ep-main { width: calc(100% - 24px); padding: 16px; border-radius: 9px; margin-top: 12px; }
   .edit-price-page .ep-intro { margin-bottom: 18px; }
   .edit-price-page .ep-intro h2 { font-size: 22px; }

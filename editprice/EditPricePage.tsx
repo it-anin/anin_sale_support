@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type DragEvent } from 'react';
 import * as XLSX from 'xlsx';
+import { AnimatedLogoText } from '../AnimatedLogo';
 import { PageNavRow, type NavHandlers } from '../pageAccess';
 import { supabase } from '../supabase';
 import { loadProductMaster } from './productMaster';
@@ -422,10 +423,10 @@ export function EditPricePage({ handlers }: { handlers: NavHandlers }) {
 
   return (
     <div className="edit-price-page" data-design="14">
-      <header className="ep-app-header">
-        <div className="ep-header-inner">
-          <div className="ep-brand"><span className="ep-brand-icon"><Icon name="tag" /></span><h1>Edit Price</h1>
-            <span className="ep-brand-divider">/</span><span className="ep-brand-caption">PRICE MANAGEMENT</span></div>
+      <header className="hero-header">
+        <div className="hero-content">
+          <h1 className="logo-premium"><AnimatedLogoText text="EDIT PRICE" /></h1>
+          <div className="tagline-row"><p className="tagline">เปรียบเทียบทุนและคำนวณราคาขายใหม่</p></div>
           <PageNavRow current="editprice" handlers={handlers} />
         </div>
       </header>
