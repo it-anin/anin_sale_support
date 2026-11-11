@@ -7,7 +7,7 @@ import { BRANCH_PROFILE_CODES, STORE_BRANCH_CODES, branchCodeLabel } from './aut
 import { MasterUploadNotice, type ViewportRect } from './MasterUploadNotice';
 import { MasterRejectNotice } from './MasterRejectNotice';
 import { MasterUploadProgress, type MasterUploadRun } from './MasterUploadProgress';
-import { MASTER_HEADER_MAP, diffMasterHeaders, readMasterHeaderCells, type MasterColumnDiff } from './masterColumns';
+import { mapMasterUploadHeaders, masterUploadHeaderIssue, readMasterHeaderCells, type MasterColumnDiff } from './masterColumns';
 
 const ORDER_BRANCHES = ['SRC', 'KKL', 'SSS', 'SALE_ADMIN', 'Warehouse'] as const;
 /** ผู้ลงรายการ BackOrder — ต้องตรงกับ CHECK ของ ss_backorders.branch เป๊ะ ๆ
@@ -2477,12 +2477,12 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
       const wb = XLSX.read(await file.arrayBuffer());
       const ws = wb.Sheets[wb.SheetNames[0]];
       if (!ws) throw new Error('ไม่พบชีทข้อมูลในไฟล์');
-      // ตรวจโครงคอลัมน์ก่อนอ่านแถวข้อมูล (ผู้ใช้สั่ง 2569-10-29: ไฟล์มีคอลัมน์ เพิ่ม/เปลี่ยน/ลบ → อัปโหลดไม่ได้ ขึ้น popup)
+      // ตรวจหัวมาตรฐานก่อนอ่านแถว: อนุญาตคอลัมน์เพิ่ม แต่หัวมาตรฐานที่หายหรือเปลี่ยนยังถูกดีดกลับ
       // ไม่ตรง = เปิด popup ไฟล์ถูกดีดกลับแล้วจบเลย — ยังไม่ query product_master ไม่เปิดการ์ดอัปโหลด ไม่เขียนอะไรลง DB
       // ⚠️ แถวหัวว่างทั้งแถว (ชีทว่าง) ไม่เข้าด่านนี้ — ปล่อยให้ 'ไฟล์ไม่มีข้อมูล' / 'ไม่พบคอลัมน์ SKU' ด้านล่างตอบตามเดิม
       // ⚠️ return ใน try ยังผ่าน finally ด้านล่าง (ปิดสถานะกำลังตรวจ + เคลียร์ค่า input) — เลือกไฟล์เดิมซ้ำแล้วต้องเตือนซ้ำได้
       const headerCells = readMasterHeaderCells(ws);
-      const columnDiff = headerCells.some(c => c.text !== '') ? diffMasterHeaders(headerCells) : null;
+      const columnDiff = headerCells.some(c => c.text !== '') ? masterUploadHeaderIssue(headerCells) : null;
       if (columnDiff) {
         setMasterReject({ fileName: file.name, diff: columnDiff });
         return;
@@ -2491,11 +2491,7 @@ export function SaleSupportPage({ onGoPriceTag, onGoDrugLabel, onGoStockCheck, o
       if (rows.length === 0) throw new Error('ไฟล์ไม่มีข้อมูล');
 
       const headers = Object.keys(rows[0]);
-      const headerToCol = new Map<string, string>();
-      for (const h of headers) {
-        const hit = MASTER_HEADER_MAP.find(([re]) => re.test(h.trim()));
-        if (hit && ![...headerToCol.values()].includes(hit[1])) headerToCol.set(h, hit[1]);
-      }
+      const headerToCol = mapMasterUploadHeaders(headers);
       if (![...headerToCol.values()].includes('sku')) {
         throw new Error(`ไม่พบคอลัมน์ SKU ในไฟล์ (หัวคอลัมน์ที่เจอ: ${headers.slice(0, 8).join(', ')}...)`);
       }

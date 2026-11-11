@@ -12,6 +12,7 @@ const { code } = await transformWithEsbuild(readFileSync(tsPath, 'utf8'), tsPath
 const {
   MASTER_HEADER_MAP, MASTER_STANDARD_HEADERS, MASTER_NO_HEADER_LABEL,
   diffMasterHeaders, masterColumnKinds, normalizeHeader, readMasterHeaderCells,
+  mapMasterUploadHeaders, masterUploadHeaderIssue,
 } = await import(`data:text/javascript;base64,${Buffer.from(code).toString('base64')}`);
 
 /** แถวหัวคอลัมน์ของไฟล์จริง Product_Master_1.xlsx (ผู้ใช้ส่งให้ตรวจ 2569-10-29 · Sheet1 · A1:P3737 · 16 คอลัมน์) เรียงตามไฟล์
@@ -77,6 +78,49 @@ test('เพิ่มคอลัมน์ท้ายไฟล์ / แทร�
   const middle = [...STANDARD.slice(0, 4), 'Remark', ...STANDARD.slice(4)];
   assert.deepEqual(diffMasterHeaders(headerRow(middle)),
     { added: [{ name: 'Remark', cell: 'E1' }], changed: [], removed: [] });
+});
+
+test('อัปโหลดได้เมื่อเพิ่มคอลัมน์ และยังปฏิเสธเมื่อหัวมาตรฐานหายหรือเปลี่ยน', () => {
+  assert.equal(masterUploadHeaderIssue(headerRow(['Remark', ...STANDARD, 'ABC'])), null);
+  const changed = [...STANDARD];
+  changed.splice(changed.indexOf('ทุนซื้อ'), 1, 'ทุนล่าสุด');
+  assert.deepEqual(masterUploadHeaderIssue(headerRow(changed)), {
+    added: [], changed: [{ from: 'ทุนซื้อ', to: 'ทุนล่าสุด', cell: 'K1' }], removed: [],
+  });
+  const missingAndExtra = without(STANDARD, 'ทุนซื้อ');
+  missingAndExtra.push('Remark', 'Other');
+  const issue = masterUploadHeaderIssue(headerRow(missingAndExtra));
+  assert.ok(issue.changed.some(c => c.from === 'ทุนซื้อ') || issue.removed.includes('ทุนซื้อ'));
+  assert.deepEqual(issue.added, []);
+});
+
+test('ไฟล์ xlsx มีคอลัมน์เพิ่มชื่อคล้ายคอลัมน์เดิมและชื่อซ้ำ: นำเข้าเฉพาะค่ามาตรฐาน', () => {
+  const headers = ['ทุนซื้อเดิม', 'Multiply Size', 'Distributor', ...STANDARD, 'SKU', 'Remark'];
+  const values = ['999', '999', 'ignored', ...STANDARD.map(h => ({ SKU: '00123', Name: 'สินค้า', MULTIPLY: '12', 'ทุนซื้อ': '25' })[h] ?? 'value'), 'wrong-sku', 'note'];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([headers, values]), 'Sheet1');
+  const read = XLSX.read(XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' }), { type: 'buffer' });
+  const sheet = read.Sheets.Sheet1;
+  assert.equal(masterUploadHeaderIssue(readMasterHeaderCells(sheet)), null);
+  const [row] = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+  const mapping = mapMasterUploadHeaders(Object.keys(row));
+  const imported = Object.fromEntries([...mapping].map(([header, col]) => [col, row[header]]));
+  assert.equal(imported.sku, '00123');
+  assert.equal(imported.name, 'สินค้า');
+  assert.equal(imported.multiply, '12');
+  assert.equal(imported.cost, '25');
+  assert.ok(!('distributor' in imported));
+  assert.equal(mapping.size, 13);
+});
+
+test('จับคู่หัวมาตรฐานที่สลับลำดับและรูปแบบตัวพิมพ์โดยไม่ใช้คอลัมน์ส่วนเกิน', () => {
+  const headers = ['purchase_unit_old', ...[...STANDARD].reverse().map(h => `  ${h.toLowerCase()}  `)];
+  assert.equal(masterUploadHeaderIssue(headerRow(headers)), null);
+  const mapping = mapMasterUploadHeaders(headers);
+  assert.equal(mapping.get('  purchase_unit  '), 'purchase_unit');
+  assert.equal(mapping.get('  sku  '), 'sku');
+  assert.equal(mapping.has('purchase_unit_old'), false);
+  assert.equal(mapping.size, 13);
 });
 
 test('มี Distributor / Distributor Name ในไฟล์ → นับเป็น "เพิ่ม" (ไฟล์จริงไม่มีสองช่องนี้ ระบบเติมจากไฟล์ Supplier เอง)', () => {

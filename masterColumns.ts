@@ -1,14 +1,13 @@
 import type { WorkSheet } from 'xlsx';
 
 /** โครงคอลัมน์ของไฟล์ Product Master — เรื่องหัวคอลัมน์ของไฟล์อยู่ที่ไฟล์นี้ที่เดียว (2569-10-29)
- *  ผู้ใช้สั่ง: "อัปโหลด Product Master เพิ่มการตรวจคอลัมน์ไฟล์ .xlsx — ถ้าไฟล์มี เพิ่ม/เปลี่ยน/ลบ คอลัมน์
- *  ให้ขึ้น popup แจ้งว่าไม่สามารถอัปโหลดได้" → handleMasterFile (SaleSupportPage.tsx) เรียก diffMasterHeaders
+ *  ไฟล์ต้องมีหัวมาตรฐานครบ แต่มีคอลัมน์อื่นเพิ่มได้และจะไม่นำเข้าข้อมูลคอลัมน์เหล่านั้น
  *  ก่อนอ่านแถวข้อมูล และก่อนแตะตาราง product_master · popup คือ MasterRejectNotice.tsx
  *  ⚠️ ไฟล์นี้ import 'xlsx' แค่ type (ไม่มีโค้ดตอนรัน) เพื่อให้ masterColumns.test.mjs โหลดไปเทสได้ตรง ๆ */
 
 // จับคู่หัวคอลัมน์ในไฟล์ Product_Master → คอลัมน์ในตาราง (เรียงจากเฉพาะเจาะจงก่อน)
 // ย้ายมาจาก SaleSupportPage.tsx (ไม่เปลี่ยนค่า) — ตัวนี้ใช้ "อ่านไฟล์" (หลวม: ชื่อใกล้เคียงก็จับคู่ได้) · ส่วนตัวตรวจด้านล่างเข้มกว่า:
-// หัวคอลัมน์ต้องตรงมาตรฐานครบและห้ามมีเกิน (ยังไม่สนตัวพิมพ์/เว้นวรรค) — ต่อให้ regex จับคู่ได้ ชื่อที่ไม่อยู่ในมาตรฐานก็ถูกดีดกลับ
+// นำเข้าเฉพาะหัวที่ตรงมาตรฐาน แม้ regex จะจับคู่ชื่ออื่นได้
 export const MASTER_HEADER_MAP: [RegExp, string][] = [
   [/^sku[\s_]*name$/i,      'sku_name'],
   [/^sku$/i,                'sku'],
@@ -29,7 +28,7 @@ export const MASTER_HEADER_MAP: [RegExp, string][] = [
   [/^distributor$/i,        'distributor'],
 ];
 
-/** หัวคอลัมน์มาตรฐานของไฟล์ Product Master — ไฟล์ต้องมีครบ "และมีแค่นี้" ไม่งั้นถูกดีดกลับ (เพิ่ม/เปลี่ยน/ลบ)
+/** หัวคอลัมน์มาตรฐานของไฟล์ Product Master — ไฟล์ต้องมีครบ แต่มีคอลัมน์อื่นเพิ่มได้
  *  ตรงกับแถวหัวของไฟล์จริง Product_Master_1.xlsx ที่ผู้ใช้ส่งให้ตรวจ 2569-10-29 (Sheet1 · A1:P3737 · 16 คอลัมน์)
  *  ใช้ตัวพิมพ์ตามไฟล์จริง (MULTIPLY / SUPPLIER / PURCHASE_UNIT / Buying_deal_normal ...) เพราะ popup แสดงชื่อพวกนี้ในรายการ "ลบ"/"เปลี่ยน"
  *  ⚠️ เรียงตามลำดับคอลัมน์ในไฟล์จริง — ลำดับไม่มีผลต่อการผ่าน/ไม่ผ่าน (ไม่ตรวจลำดับ) แต่มีผลต่อการจับคู่ "เปลี่ยนชื่อ":
@@ -70,6 +69,22 @@ export const normalizeHeader = (s: string) => cleanText(s).normalize('NFKC').toL
 
 interface ExpectedColumn { name: string; key: string }
 const EXPECTED: ExpectedColumn[] = MASTER_STANDARD_HEADERS.map(name => ({ name, key: normalizeHeader(name) }));
+
+/** จับคู่เฉพาะหัวมาตรฐานกับตาราง แม้คอลัมน์เพิ่มเติมจะตรง regex แบบหลวมก็ตาม */
+export function mapMasterUploadHeaders(headers: string[]): Map<string, string> {
+  const headerToCol = new Map<string, string>();
+  const used = new Set<string>();
+  for (const header of headers) {
+    const standard = EXPECTED.find(e => e.key === normalizeHeader(header));
+    if (!standard) continue;
+    const hit = MASTER_HEADER_MAP.find(([re]) => re.test(standard.name));
+    if (hit && !used.has(hit[1])) {
+      headerToCol.set(header, hit[1]);
+      used.add(hit[1]);
+    }
+  }
+  return headerToCol;
+}
 
 // ── ที่อยู่เซลล์ (A1) — เขียนเองแทน XLSX.utils เพื่อไม่ต้อง import xlsx ตอนรัน ──
 const decodeCol = (letters: string) => letters.split('').reduce((n, ch) => n * 26 + ch.charCodeAt(0) - 64, 0) - 1;
@@ -188,6 +203,12 @@ export function diffMasterHeaders(cells: MasterHeaderCell[]): MasterColumnDiff |
     changed: changed.sort(byAt).map(({ from, to, cell }) => ({ from, to, cell })),
     removed: removed.sort(byAt).map(r => r.name),
   };
+}
+
+/** คอลัมน์ส่วนเกินไม่ขัดขวางการอัปโหลด แต่หัวมาตรฐานที่หายหรือเปลี่ยนยังต้องแจ้ง */
+export function masterUploadHeaderIssue(cells: MasterHeaderCell[]): MasterColumnDiff | null {
+  const diff = diffMasterHeaders(cells);
+  return diff && (diff.changed.length || diff.removed.length) ? { ...diff, added: [] } : null;
 }
 
 /** คำในหัว popup "ไฟล์มี … คอลัมน์ ไม่สามารถอัปโหลดได้" — ตามชนิดที่พบจริง เช่น "เพิ่ม/เปลี่ยน" · ครบสามชนิดเป็น "เพิ่ม/เปลี่ยน/ลบ" */
