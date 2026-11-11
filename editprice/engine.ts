@@ -202,8 +202,7 @@ export interface ExportOptions {
 }
 
 export function posExportRows(rows: ComparisonRow[], level: PriceLevel, options: ExportOptions = {}): ComparisonRow[] {
-  return rows.filter(row => row.newCost !== null && row.oldCost !== null && row.newCost > row.oldCost
-    && (options.rowIds === undefined || options.rowIds.has(row.id))
+  return rows.filter(row => (options.rowIds === undefined || options.rowIds.has(row.id))
     && (options.unit === undefined || row.unit === options.unit)
     && (!options.baseUnitOnly || row.unit === row.baseUnit)
     && priceAtLevel(row, level, 'new') !== null);

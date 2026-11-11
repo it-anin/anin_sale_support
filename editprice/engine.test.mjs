@@ -51,7 +51,7 @@ test('missing reference unit keeps its supplied cost without inventing costs for
   assert.equal(crate.newCost, 1200);
   assert.equal(crate.oldCost, null);
   assert.equal(crate.newPrices[0], null);
-  assert.equal(buildPosText([box, crate], 4), '');
+  assert.equal(buildPosText([box, crate], 4), '\uFEFFA\t1,200.00\t4\r\n');
 });
 
 test('zero divisors, blank values, and non-finite amounts produce null while zero prices remain valid', () => {
@@ -94,20 +94,21 @@ test('rounds prices to whole numbers and tolerates differences up to 0.001', () 
   assert.equal(result.products[1].rows[0].newPrices[0], 126);
 });
 
-test('TXT exports use filtered rows, increased costs, optional unit/base restrictions, BOM, tabs, CRLF and commas', () => {
+test('TXT exports include increased, decreased and unchanged costs with unit/base restrictions and the required format', () => {
   const result = compare([
     master('UP', 'กล่อง', 1250, 'แผง'), master('DOWN', 'กล่อง', 80), master('SAME', 'กล่อง', 100),
   ], [
     ...oldUnit('UP', 'กล่อง', 1000, 2000, 1800, 1500), ...oldUnit('UP', 'แผง', 100, 200, 180, 150),
-    ...oldUnit('DOWN', 'กล่อง', 100, 200), ...oldUnit('SAME', 'กล่อง', 100, 200),
+    ...oldUnit('DOWN', 'กล่อง', 100, 200, 180, 150), ...oldUnit('SAME', 'กล่อง', 100, 200, 180, 150),
   ]);
   const rows = filterRows(result, 'all', '');
-  assert.equal(buildPosText(rows, 0), '\uFEFFUP\t2,500.00\t0\r\nUP\t250.00\t0\r\n');
-  assert.equal(buildPosText(rows, 4, { unit: 'กล่อง' }), '\uFEFFUP\t1,250.00\t4\r\n');
-  assert.equal(buildPosText(rows, 1, { baseUnitOnly: true }), '\uFEFFUP\t225.00\t1\r\n');
+  assert.equal(buildPosText(rows, 0), '\uFEFFUP\t2,500.00\t0\r\nUP\t250.00\t0\r\nDOWN\t160.00\t0\r\nSAME\t200.00\t0\r\n');
+  assert.equal(buildPosText(rows, 4, { unit: 'กล่อง' }), '\uFEFFUP\t1,250.00\t4\r\nDOWN\t80.00\t4\r\nSAME\t100.00\t4\r\n');
+  assert.equal(buildPosText(rows, 1, { baseUnitOnly: true }), '\uFEFFUP\t225.00\t1\r\nDOWN\t144.00\t1\r\nSAME\t180.00\t1\r\n');
   assert.equal(buildPosText(rows, 5, { unit: 'แผง' }), '\uFEFFUP\t188.00\t5\r\n');
-  assert.equal(buildPosText(filterRows(result, 'all', 'DOWN'), 0), '');
-  assert.equal(posExportRows(rows, 0).length, 2);
+  assert.equal(buildPosText(rows, 5, { unit: 'กล่อง' }), '\uFEFFUP\t1,875.00\t5\r\nDOWN\t120.00\t5\r\nSAME\t150.00\t5\r\n');
+  assert.equal(buildPosText(filterRows(result, 'all', 'DOWN'), 0), '\uFEFFDOWN\t160.00\t0\r\n');
+  assert.equal(posExportRows(rows, 0).length, 4);
 });
 
 test('selected TXT exports only the chosen SKU/unit row and preserves export restrictions', () => {
@@ -141,7 +142,7 @@ test('two units of the same SKU can be selected separately and removing one keep
   assert.equal(rowIds.has(strip.id), true);
 });
 
-test('empty or unknown row selection never exports all rows, and selection keeps missing/unchanged/decreased cost rules', () => {
+test('empty or unknown selection never exports all rows, while reduced and unchanged costs export when their price exists', () => {
   const result = compare([
     master('UP', 'กล่อง', 120), master('DOWN', 'กล่อง', 80), master('SAME', 'กล่อง', 100), master('MISSING', 'กล่อง', 120),
   ], [
@@ -151,10 +152,34 @@ test('empty or unknown row selection never exports all rows, and selection keeps
   const idsFor = skus => new Set(rows.filter(row => skus.includes(row.sku)).map(row => row.id));
   assert.equal(buildPosText(rows, 0, { rowIds: new Set() }), '');
   assert.equal(buildPosText(rows, 0, { rowIds: new Set(['UNKNOWN']) }), '');
-  assert.equal(buildPosText(rows, 0, { rowIds: idsFor(['DOWN', 'SAME', 'MISSING']) }), '');
+  assert.equal(buildPosText(rows, 0, { rowIds: idsFor(['DOWN', 'SAME', 'MISSING']) }), '\uFEFFDOWN\t160.00\t0\r\nSAME\t200.00\t0\r\n');
   assert.equal(buildPosText(rows, 1, { rowIds: idsFor(['UP']) }), '');
-  assert.equal(buildPosText(rows, 4, { rowIds: idsFor(['UP', 'DOWN', 'SAME', 'MISSING']) }), '\uFEFFUP\t120.00\t4\r\n');
-  assert.equal(buildPosText(rows, 0), '\uFEFFUP\t240.00\t0\r\n');
+  assert.equal(buildPosText(rows, 4, { rowIds: idsFor(['UP', 'DOWN', 'SAME', 'MISSING']) }), '\uFEFFUP\t120.00\t4\r\nDOWN\t80.00\t4\r\nSAME\t100.00\t4\r\nMISSING\t120.00\t4\r\n');
+  assert.equal(buildPosText(rows, 0), '\uFEFFUP\t240.00\t0\r\nDOWN\t160.00\t0\r\nSAME\t200.00\t0\r\n');
+});
+
+test('exports all three selected screenshot rows even though two units have lower costs', () => {
+  const result = compare([
+    master('100008', 'กล่อง', 468.66), master('100016', '10แผง', 147.27, 'แผง'),
+  ], [
+    ...oldUnit('100008', 'กล่อง', 359.52, 402, 370),
+    ...oldUnit('100016', 'แผง', 15.88, 22, 17.5), ...oldUnit('100016', '10แผง', 158.76, 199, 170),
+  ]);
+  const rows = filterRows(result, 'all', '');
+  const rowIds = new Set(rows.map(row => row.id));
+  assert.equal(posExportRows(rows, 0, { rowIds }).length, 3);
+  assert.equal(buildPosText(rows, 0, { rowIds }), '\uFEFF100008\t524.00\t0\r\n100016\t20.00\t0\r\n100016\t185.00\t0\r\n');
+  assert.equal(buildPosText(rows, 1, { rowIds }), '\uFEFF100008\t482.00\t1\r\n100016\t16.00\t1\r\n100016\t158.00\t1\r\n');
+  assert.equal(posExportRows(rows, 4, { rowIds }).length, 3);
+  assert.equal(buildPosText(rows, 5, { rowIds }), '');
+});
+
+test('level 4 exports zero or supplied new costs without requiring any old cost', () => {
+  const result = compare([master('ZERO', 'กล่อง', 0), master('NEW', 'กล่อง', 80), master('BLANK', 'กล่อง', '')],
+    oldUnit('ZERO', 'กล่อง', 0, 100));
+  const rows = filterRows(result, 'all', '');
+  assert.equal(buildPosText(rows, 4), '\uFEFFZERO\t0.00\t4\r\nNEW\t80.00\t4\r\n');
+  assert.equal(buildPosText(rows, 0), '');
 });
 
 test('selected unit export supports more than ten rows, independently of the analysis row limit', () => {

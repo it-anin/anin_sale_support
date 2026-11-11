@@ -310,7 +310,7 @@ export function EditPricePage({ handlers }: { handlers: NavHandlers }) {
 
   function exportText(level: PriceLevel, options: ExportOptions = {}, sourceRows = rows) {
     const text = buildPosText(sourceRows, level, options);
-    if (!text) { setError('ไม่มีรายการทุนเพิ่มขึ้นที่มีราคาสำหรับระดับและหน่วยที่เลือก'); return; }
+    if (!text) { setError('ไม่มีรายการที่มีราคาใหม่สำหรับระดับและหน่วยที่เลือก'); return; }
     const prefix = options.rowIds !== undefined ? 'SELECTED_' : options.baseUnitOnly ? 'BASE_UNIT_' : options.unit === undefined ? '' : options.unit.replace(/[\\/:*?"<>|\x00-\x1f]/g, '_') + '_';
     const filename = `${prefix}ราคาระดับ ${level}.txt`;
     try {
@@ -420,7 +420,7 @@ export function EditPricePage({ handlers }: { handlers: NavHandlers }) {
                     onClick={() => setExportRowIds(new Set())}>ล้างหน่วยที่เลือก</button>
                 </div>
               </div>
-              <p className="ep-hint">ติ๊กช่อง “เลือกหน่วย” เพื่อส่งออกเฉพาะแถว SKU และหน่วยนั้น รายการที่เลือกคงอยู่เมื่อเปลี่ยนตัวกรองหรือค้นหา · TXT ใช้เฉพาะทุนใหม่มากกว่าทุนเก่าและมีราคาของระดับนั้น</p>
+              <p className="ep-hint">ติ๊กช่อง “เลือกหน่วย” เพื่อส่งออกเฉพาะแถว SKU และหน่วยนั้น รายการที่เลือกคงอยู่เมื่อเปลี่ยนตัวกรองหรือค้นหา · TXT ส่งออกได้ทั้งทุนเพิ่ม ทุนลด และทุนเท่าเดิม โดยใช้ราคาใหม่ของระดับที่เลือก</p>
               <div className="ep-export-buttons">{exportButtons({ rowIds: exportRowIds }, false, allRows)}</div>
             </section>
 
@@ -441,7 +441,7 @@ export function EditPricePage({ handlers }: { handlers: NavHandlers }) {
                 </table></div>}
               </div>}
             </> : <>
-              <div className="ep-export-note">ปุ่มส่งออกด้านล่างใช้แถวตามตัวกรองและคำค้นด้านบน · TXT ใช้เฉพาะรายการทุนใหม่มากกว่าทุนเก่า · Excel รวมทุกแถวที่กรองได้</div>
+              <div className="ep-export-note">ปุ่มส่งออกด้านล่างใช้แถวตามตัวกรองและคำค้นด้านบน · TXT ส่งออกทุกรายการที่มีราคาใหม่ของระดับนั้น รวมทุนเพิ่ม ทุนลด และทุนเท่าเดิม · Excel รวมทุกแถวที่กรองได้</div>
               <div className="ep-export-group"><h3>TXT แยกตามระดับราคา</h3><p>SKU, ราคาใหม่ และระดับราคา คั่นด้วย Tab · UTF-8 BOM · ทศนิยม 2 ตำแหน่ง</p>
                 <div className="ep-export-buttons">{exportButtons({})}</div>
               </div>
