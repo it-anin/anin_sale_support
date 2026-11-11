@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type DragEvent } from 'react';
 import * as XLSX from 'xlsx';
-import { AnimatedLogoText } from '../AnimatedLogo';
 import { PageNavRow, type NavHandlers } from '../pageAccess';
 import { supabase } from '../supabase';
 import { loadProductMaster } from './productMaster';
@@ -10,9 +9,12 @@ import {
   type ExportOptions, type PriceLevel, type SheetRows,
 } from './engine';
 import './EditPricePage.css';
+import '@fontsource/inter/400.css';
+import '@fontsource/inter/500.css';
+import '@fontsource/inter/600.css';
 
 type FileKind = 'master' | 'promaxx';
-type Step = 'upload' | 'compare' | 'export';
+type ExportScope = 'selected' | 'filtered' | 'base' | 'unit';
 interface UploadedSheet { name: string; rows: SheetRows; count: number }
 interface ExportEntry { filename: string; count: number; time: string }
 const CHECKLIST_KEY = 'price-compare-row-checklist';
@@ -20,6 +22,23 @@ const FILTERS: { id: CompareFilter; label: string }[] = [
   { id: 'mismatch', label: 'ไม่ตรง' }, { id: 'all', label: 'ทั้งหมด' },
   { id: 'matched', label: 'ตรง' }, { id: 'notfound', label: 'ไม่พบ' },
 ];
+
+const ICONS = {
+  tag: <><path d="M20 13 13 20a2 2 0 0 1-3 0L3 13V3h10l7 7a2 2 0 0 1 0 3Z" /><circle cx="8" cy="8" r="1" /></>,
+  file: <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" /><path d="M14 2v6h6M8 12h8M8 16h8" /></>,
+  refresh: <><path d="M20 7v5h-5M4 17v-5h5" /><path d="M6 7a7 7 0 0 1 12-1l2 3M4 15l2 3a7 7 0 0 0 12-1" /></>,
+  upload: <><path d="M12 16V3m-5 5 5-5 5 5M4 15v5h16v-5" /></>,
+  download: <><path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5" /></>,
+  search: <><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></>,
+  clock: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>,
+  check: <path d="m5 12 4 4L19 6" />,
+  info: <><circle cx="12" cy="12" r="9" /><path d="M12 11v6m0-10h.01" /></>,
+  arrow: <path d="M4 12h16m-5-5 5 5-5 5" />,
+};
+
+function Icon({ name }: { name: keyof typeof ICONS }) {
+  return <svg className="ep-icon" viewBox="0 0 24 24" aria-hidden="true">{ICONS[name]}</svg>;
+}
 
 function loadChecklist(): Set<string> {
   try {
@@ -39,12 +58,13 @@ function saveDownload(blob: Blob, filename: string) {
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-function FileUploadZone({ file, busy, error, onFile }: {
-  file: UploadedSheet | null; busy: boolean; error: string;
+function FileUploadZone({ file, loading, disabled, error, onFile }: {
+  file: UploadedSheet | null; loading: boolean; disabled: boolean; error: string;
   onFile: (file: File) => void;
 }) {
   const [dragging, setDragging] = useState(false);
   const input = useRef<HTMLInputElement>(null);
+  const busy = loading || disabled;
   const title = 'R05.105';
   const pick = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -57,18 +77,20 @@ function FileUploadZone({ file, busy, error, onFile }: {
     if (!busy && event.dataTransfer.files[0]) onFile(event.dataTransfer.files[0]);
   };
   return (
-    <div className={`ep-upload${dragging ? ' ep-upload--dragging' : ''}${file ? ' ep-upload--ready' : ''}`}
+    <div className={`ep-upload${dragging ? ' ep-upload--dragging' : ''}${file ? ' ep-upload--ready' : ''}`} aria-busy={loading}
       onDragOver={event => { event.preventDefault(); if (!busy) setDragging(true); }}
       onDragLeave={() => setDragging(false)} onDrop={drop}>
-      <span className="ep-file-number">ข้อมูล 2 · ไฟล์</span>
-      <h3>{title}</h3>
-      <p>ทุนเก่าและราคาขายระดับ 0 / 1 / 4 / 5</p>
+      <div className="ep-source-heading"><span className="ep-source-icon"><Icon name="file" /></span>
+        <div><h3>{title}</h3><p>ไฟล์ราคาและทุนเดิม</p></div>
+        {file && <span className="ep-source-ready" title="อ่านไฟล์เรียบร้อย"><Icon name="check" /></span>}
+      </div>
       <div className="ep-file-detail" aria-live="polite">
-        {busy ? 'กำลังอ่านไฟล์…' : file ? <><strong>{file.name}</strong><span>{file.count.toLocaleString()} แถวข้อมูล</span></> : <><strong>ลากไฟล์มาวางที่นี่</strong><span>รองรับ .xlsx, .xls, .csv · อ่านเฉพาะชีตแรก</span></>}
+        {loading ? <strong>กำลังอ่านไฟล์…</strong> : file ? <><strong>{file.name}</strong><span>{file.count.toLocaleString()} แถวข้อมูล</span></> : <><strong>เลือกไฟล์หรือลากมาวางที่นี่</strong><span>.xlsx / .xls / .csv</span></>}
       </div>
       <input ref={input} type="file" accept=".xlsx,.xls,.csv" aria-label={`อัปโหลด ${title}`}
         onChange={pick} disabled={busy} hidden />
       <button type="button" className="ep-button ep-button--secondary" disabled={busy} onClick={() => input.current?.click()}>
+        <Icon name="upload" />
         {file ? 'เปลี่ยนไฟล์' : 'เลือกไฟล์'} {title}
       </button>
       {error && <p className="ep-error" role="alert">{error}</p>}
@@ -76,20 +98,20 @@ function FileUploadZone({ file, busy, error, onFile }: {
   );
 }
 
-function ProductMasterSource({ file, busy, error, onReload }: {
-  file: UploadedSheet | null; busy: boolean; error: string; onReload: () => void;
+function ProductMasterSource({ file, loading, disabled, error, onReload }: {
+  file: UploadedSheet | null; loading: boolean; disabled: boolean; error: string; onReload: () => void;
 }) {
-  return <div className={`ep-upload${file ? ' ep-upload--ready' : ''}`} aria-busy={busy}>
-    <span className="ep-file-number">ข้อมูล 1 · SaleSupport</span>
-    <h3>Product Master</h3>
-    <p>ใช้ข้อมูลเดียวกับปุ่มอัปโหลด Product Master ในหน้า SaleSupport</p>
+  return <div className={`ep-upload${file ? ' ep-upload--ready' : ''}`} aria-busy={loading}>
+    <div className="ep-source-heading"><span className="ep-source-icon"><Icon name="file" /></span>
+      <div><h3>Product Master</h3><p>ข้อมูลร่วมจาก SaleSupport</p></div>
+      {file && <span className="ep-source-ready" title="โหลดข้อมูลเรียบร้อย"><Icon name="check" /></span>}
+    </div>
     <div className="ep-file-detail" aria-live="polite">
-      {busy ? <strong>กำลังโหลด Product Master…</strong> : file
-        ? <><strong>{file.count.toLocaleString()} รายการสินค้า</strong><span>ทุนซื้อและหน่วยจัดซื้อจาก Product Master</span></>
+      {loading ? <strong>กำลังโหลด Product Master…</strong> : file
+        ? <><strong>{file.count.toLocaleString()} รายการสินค้า</strong><span>ใช้ข้อมูลเดียวกับการอัปโหลดใน SaleSupport</span></>
         : <strong>ยังไม่มีข้อมูลสำหรับเปรียบเทียบ</strong>}
     </div>
-    <button type="button" className="ep-button ep-button--secondary" disabled={busy} onClick={onReload}>โหลดข้อมูลล่าสุด</button>
-    <p>อัปโหลดหรือแก้ไขข้อมูลที่หน้า SaleSupport แล้วกดโหลดข้อมูลล่าสุด</p>
+    <button type="button" className="ep-button ep-button--secondary" disabled={loading || disabled} onClick={onReload}><Icon name="refresh" />โหลดข้อมูลล่าสุด</button>
     {error && <p className="ep-error" role="alert">{error}</p>}
   </div>;
 }
@@ -120,7 +142,8 @@ function ComparisonTable({ rows, checked, selected, exportRowIds, onCheck, onSel
         <tbody>
           {start > 0 && <tr aria-hidden="true" className="ep-spacer"><td colSpan={13} style={{ height: start * rowHeight }} /></tr>}
           {rows.slice(start, end).map((row, index) => (
-            <tr key={row.id} aria-rowindex={start + index + 2} className={selected.has(row.id) ? 'ep-row--selected' : ''}
+            <tr key={row.id} aria-rowindex={start + index + 2}
+              className={`${selected.has(row.id) ? 'ep-row--selected' : ''}${exportRowIds.has(row.id) ? ' ep-row--export' : ''}`}
               tabIndex={0} onClick={() => onSelect(row.id)} onKeyDown={event => {
                 if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) {
                   event.preventDefault();
@@ -205,7 +228,6 @@ function MissingUnitDialog({ rows, canContinue, onCancel, onCompare }: {
 }
 
 export function EditPricePage({ handlers }: { handlers: NavHandlers }) {
-  const [step, setStep] = useState<Step>('upload');
   const [files, setFiles] = useState<Record<FileKind, UploadedSheet | null>>({ master: null, promaxx: null });
   const [loading, setLoading] = useState<Record<FileKind, boolean>>({ master: true, promaxx: false });
   const [fileErrors, setFileErrors] = useState({ master: '', promaxx: '' });
@@ -222,6 +244,8 @@ export function EditPricePage({ handlers }: { handlers: NavHandlers }) {
   const [selectedLevel, setSelectedLevel] = useState<PriceLevel>(0);
   const [error, setError] = useState('');
   const [exports, setExports] = useState<ExportEntry[]>([]);
+  const [exportScope, setExportScope] = useState<ExportScope>('selected');
+  const [exportUnit, setExportUnit] = useState('');
   const [missingUnitWarning, setMissingUnitWarning] = useState<{ rows: MissingMasterUnit[]; canContinue: boolean } | null>(null);
   const rows = useMemo(() => result ? filterRows(result, filter, search) : [], [result, filter, search]);
   const allRows = useMemo(() => result ? result.products.flatMap(product => product.rows) : [], [result]);
@@ -229,6 +253,11 @@ export function EditPricePage({ handlers }: { handlers: NavHandlers }) {
   const selectedRows = useMemo(() => rows.filter(row => selected.has(row.id)), [rows, selected]);
   const units = useMemo(() => Array.from(new Set(rows.map(row => row.unit))).sort((a, b) => a.localeCompare(b, 'th')), [rows]);
   const busy = loading.master || loading.promaxx || comparing;
+  const activeExportUnit = units.includes(exportUnit) ? exportUnit : units[0] ?? '';
+  const exportOptions: ExportOptions = exportScope === 'selected' ? { rowIds: exportRowIds }
+    : exportScope === 'base' ? { baseUnitOnly: true } : exportScope === 'unit' ? { unit: activeExportUnit } : {};
+  const exportSourceRows = exportScope === 'selected' ? allRows : rows;
+  const reviewedCount = allRows.filter(row => checked.has(row.id)).length;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -313,7 +342,6 @@ export function EditPricePage({ handlers }: { handlers: NavHandlers }) {
       setSearch('');
       setSelected(new Set());
       setExportRowIds(new Set());
-      setStep('compare');
     } catch (cause) {
       setResult(null);
       setError(cause instanceof Error ? cause.message : 'เปรียบเทียบไม่สำเร็จ กรุณาตรวจรูปแบบไฟล์');
@@ -375,145 +403,154 @@ export function EditPricePage({ handlers }: { handlers: NavHandlers }) {
     } catch { setError('สร้างไฟล์ Excel ไม่สำเร็จ กรุณาลองอีกครั้ง'); }
   }
 
+  const filterCounts: Record<CompareFilter, number> = {
+    all: result?.total ?? 0, mismatch: result?.mismatched ?? 0,
+    matched: result ? result.matched - result.mismatched : 0, notfound: result?.notFound ?? 0,
+  };
   const filterControls = (
     <div className="ep-filters">
       <div className="ep-filter-buttons" aria-label="ตัวกรองผลเปรียบเทียบ">
-        {FILTERS.map(item => <button type="button" key={item.id} aria-pressed={filter === item.id}
-          className={`ep-filter${filter === item.id ? ' ep-filter--active' : ''}`} onClick={() => setFilter(item.id)}>{item.label}</button>)}
+        {FILTERS.map(item => <button type="button" key={item.id} aria-pressed={filter === item.id} disabled={!result}
+          aria-label={item.label} className={`ep-filter${filter === item.id ? ' ep-filter--active' : ''}`}
+          onClick={() => setFilter(item.id)}>{item.label}<span>{filterCounts[item.id].toLocaleString()}</span></button>)}
       </div>
-      <input className="ep-search" type="search" value={search} onChange={event => setSearch(event.target.value)}
-        placeholder="ค้นหา SKU, ชื่อสินค้า หรือหน่วย" aria-label="ค้นหาผลเปรียบเทียบ" />
-      <span className="ep-row-count" aria-live="polite">{rows.length.toLocaleString()} แถว</span>
+      <label className="ep-search-wrap"><Icon name="search" /><input className="ep-search" type="search" value={search}
+        disabled={!result} onChange={event => setSearch(event.target.value)}
+        placeholder="ค้นหา SKU, ชื่อสินค้า หรือหน่วย" aria-label="ค้นหาผลเปรียบเทียบ" /></label>
     </div>
   );
 
-  function exportButtons(options: ExportOptions, base = false, sourceRows = rows) {
-    return PRICE_LEVELS.map(level => {
-      const count = posExportRows(sourceRows, level, options).length;
-      return <button type="button" key={level} className={`ep-button${base ? ' ep-button--green' : ''}`}
-        disabled={count === 0} onClick={() => exportText(level, options, sourceRows)}>
-        ระดับ {level} <span className="ep-button-count">{count.toLocaleString()}</span>
-      </button>;
-    });
-  }
-
   return (
-    <div className="edit-price-page">
-      <header className="hero-header">
-        <div className="hero-content">
-          <h1 className="logo-premium"><AnimatedLogoText text="Edit Price" /></h1>
-          <div className="tagline-row"><p className="tagline">เปรียบเทียบทุนและคำนวณราคาขายใหม่</p></div>
+    <div className="edit-price-page" data-design="14">
+      <header className="ep-app-header">
+        <div className="ep-header-inner">
+          <div className="ep-brand"><span className="ep-brand-icon"><Icon name="tag" /></span><h1>Edit Price</h1>
+            <span className="ep-brand-divider">/</span><span className="ep-brand-caption">PRICE MANAGEMENT</span></div>
           <PageNavRow current="editprice" handlers={handlers} />
         </div>
       </header>
       <main className="ep-main">
-        <nav className="ep-steps" aria-label="ขั้นตอน Edit Price">
-          {([{ id: 'upload', label: '1. Data Upload' }, { id: 'compare', label: '2. Compare & Analyze' }, { id: 'export', label: '3. Export' }] as const).map(item => (
-            <button type="button" key={item.id} aria-pressed={step === item.id} className={`ep-step${step === item.id ? ' ep-step--active' : ''}`}
-              disabled={item.id !== 'upload' && !result} onClick={() => { setStep(item.id); setError(''); }}>{item.label}</button>
-          ))}
-        </nav>
+        <div className="ep-intro"><div><h2>ทุกระดับราคา ในมุมมองเดียว</h2>
+          <p>ทุนและราคาขาย 0 / 1 / 5 แยกคอลัมน์เก่า–ใหม่ พร้อมเลือกหน่วยและส่งออกในหน้าเดียว</p></div>
+          <span className="ep-session"><Icon name="clock" />{result ? `คำนวณแล้ว · ${elapsed.toFixed(0)} ms` : 'ประมวลผลบนเครื่องของคุณ'}</span>
+        </div>
         {error && <div className="ep-error ep-error--banner" role="alert">{error}</div>}
 
-        {step === 'upload' && <section className="ep-panel" aria-label="อัปโหลดข้อมูลราคา">
-          <div className="ep-panel-heading"><div><h2>ข้อมูลสำหรับเปรียบเทียบราคา</h2><p>ใช้ Product Master จากหน้า SaleSupport แล้วเลือกไฟล์ R05.105 เพื่อคำนวณราคา</p></div></div>
+        <section className="ep-sources" aria-label="ข้อมูลสำหรับเปรียบเทียบราคา">
           <div className="ep-upload-grid">
-            <ProductMasterSource file={files.master} busy={loading.master || comparing} error={fileErrors.master}
+            <ProductMasterSource file={files.master} loading={loading.master} disabled={comparing} error={fileErrors.master}
               onReload={() => setMasterReload(previous => previous + 1)} />
-            <FileUploadZone file={files.promaxx} busy={loading.promaxx || comparing} error={fileErrors.promaxx}
+            <FileUploadZone file={files.promaxx} loading={loading.promaxx} disabled={comparing} error={fileErrors.promaxx}
               onFile={file => { void upload(file); }} />
           </div>
-          <details className="ep-format-help"><summary>รูปแบบคอลัมน์ของไฟล์</summary>
-            <p><strong>Product Master:</strong> ใช้รหัสสินค้า ชื่อสินค้า หน่วยฐาน หน่วยจัดซื้อ และทุนซื้อจากข้อมูลที่อัปโหลดในหน้า SaleSupport</p>
-            <p><strong>R05.105:</strong> B = SKU, E = หน่วย, F = ระดับราคา (0/1/4/5), G = ราคาเก่าระดับ 0, H = ราคาเก่าระดับ 1/5 หรือทุนเก่าระดับ 4</p>
-          </details>
-          <div className="ep-upload-footer"><span>ไฟล์ R05.105 และผลคำนวณอยู่บนเครื่องของคุณ</span>
+          <div className="ep-processing">
+            <div role="status"><strong>{comparing ? 'กำลังคำนวณราคา…' : result ? 'คำนวณราคาเรียบร้อย'
+              : files.master && files.promaxx ? 'ข้อมูลพร้อมเปรียบเทียบ' : 'เตรียมข้อมูลสำหรับเปรียบเทียบ'}</strong>
+              <small>{files.master && files.promaxx
+                ? `${files.master.count.toLocaleString()} SKU · ${files.promaxx.count.toLocaleString()} แถว R05.105 · 4 ระดับราคา`
+                : 'ใช้ Product Master จาก SaleSupport แล้วเลือกไฟล์ R05.105'}</small></div>
             <button type="button" className="ep-button" disabled={!files.master || !files.promaxx || busy} onClick={() => { void compare(); }}>
-              {comparing ? 'กำลังเปรียบเทียบ…' : 'เปรียบเทียบราคา (Compare Prices)'}
+              <Icon name="refresh" />{comparing ? 'กำลังเปรียบเทียบ…' : result ? 'คำนวณราคาใหม่' : 'เปรียบเทียบราคา'}
             </button>
           </div>
-        </section>}
+        </section>
+        <details className="ep-format-help"><summary>รูปแบบข้อมูลและไฟล์ที่รองรับ</summary>
+          <p><strong>Product Master:</strong> ใช้รหัสสินค้า ชื่อสินค้า หน่วยฐาน หน่วยจัดซื้อ และทุนซื้อจากข้อมูลที่อัปโหลดในหน้า SaleSupport หากแก้ไขข้อมูลแล้วให้กดโหลดข้อมูลล่าสุด</p>
+          <p><strong>R05.105:</strong> รองรับ .xlsx / .xls / .csv อ่านเฉพาะชีตแรก แถวแรกเป็นหัวตาราง · B = SKU, E = หน่วย, F = ระดับราคา (0/1/4/5), G = ราคาเก่าระดับ 0, H = ราคาเก่าระดับ 1/5 หรือทุนเก่าระดับ 4</p>
+        </details>
 
-        {result && step !== 'upload' && <>
-          <div className="ep-summary" aria-label="สรุปผลเปรียบเทียบ">
-            {[
-              ['Total', result.total], ['Matched', result.matched - result.mismatched],
-              ['Mismatched', result.mismatched], ['Not Found', result.notFound],
-              ['R05.105 Records', result.promaxxRecords], ['Process Time', `${elapsed.toFixed(0)} ms`],
-            ].map(([label, value]) => <div className="ep-stat" key={label}><span>{label}</span><strong>{typeof value === 'number' ? value.toLocaleString() : value}</strong></div>)}
-          </div>
-          <section className="ep-panel">
-            <div className="ep-panel-heading"><div><h2>{step === 'compare' ? 'ผลเปรียบเทียบราคา' : 'ส่งออกผลเปรียบเทียบ'}</h2>
-              <p>Product Master: {files.master?.name} · R05.105: {files.promaxx?.name}</p></div>
-              {step === 'compare' && <button type="button" className="ep-button" onClick={() => setStep('export')}>ไปหน้า Export →</button>}
-            </div>
-            {result.skippedMissingUnits.length > 0 && <div className="ep-skipped-warning" role="status">
-              <strong>ข้าม {result.skippedMissingUnits.length.toLocaleString()} รายการที่ไม่มีหน่วยในคอลัมน์ PURCHASE_UNIT</strong>
-              <p>ผลเปรียบเทียบและไฟล์ส่งออกใช้เฉพาะรายการที่มีหน่วย</p>
-              <details><summary>ดูรายการที่ข้าม</summary><MissingUnitRows rows={result.skippedMissingUnits} /></details>
-            </div>}
-            {filterControls}
-
-            <section className="ep-selection-export" aria-labelledby="ep-selection-export-title">
-              <div className="ep-panel-heading">
-                <div><h3 id="ep-selection-export-title">ส่งออก TXT เฉพาะหน่วยที่เลือก</h3>
-                  <p role="status">เลือก {selectedExportRows.length.toLocaleString()} รายการ</p></div>
-                <div className="ep-inline-actions">
-                  {step === 'compare' && <button type="button" className="ep-button ep-button--secondary" disabled={rows.length === 0}
-                    onClick={selectFilteredExportRows}>เลือกหน่วยตามตัวกรอง</button>}
-                  <button type="button" className="ep-button ep-button--secondary" disabled={exportRowIds.size === 0}
-                    onClick={() => setExportRowIds(new Set())}>ล้างหน่วยที่เลือก</button>
-                </div>
-              </div>
-              <p className="ep-hint">ติ๊กช่อง “เลือกหน่วย” เพื่อส่งออกเฉพาะแถว SKU และหน่วยนั้น รายการที่เลือกคงอยู่เมื่อเปลี่ยนตัวกรองหรือค้นหา · TXT ส่งออกได้ทั้งทุนเพิ่ม ทุนลด และทุนเท่าเดิม โดยใช้ราคาใหม่ของระดับที่เลือก</p>
-              <div className="ep-export-buttons">{exportButtons({ rowIds: exportRowIds }, false, allRows)}</div>
-            </section>
-
-            {step === 'compare' ? <>
-              <p className="ep-hint">ตัวกรองใช้สถานะรวมต่อ SKU · คลิกแถวหรือกด Enter เพื่อดูเทียบใน Selected Results ได้สูงสุด 10 แถว · ช่อง “ตรวจแล้ว” จำไว้เมื่อเปิดใช้งานครั้งถัดไป</p>
-              <ComparisonTable rows={rows} checked={checked} selected={selected} exportRowIds={exportRowIds}
-                onCheck={toggleCheck} onSelect={toggleSelect} onSelectExportRow={toggleExportRow} />
-              {selected.size > 0 && <div className="ep-selected">
-                <div className="ep-panel-heading"><h3>Selected Results · เลือก {selected.size}/10 แถว</h3>
-                  <div className="ep-inline-actions"><label>ระดับราคา <select aria-label="ระดับราคา Selected Results" value={selectedLevel}
-                    onChange={event => setSelectedLevel(Number(event.target.value) as PriceLevel)}>{PRICE_LEVELS.map(level => <option key={level} value={level}>{level}</option>)}</select></label>
-                    <button type="button" className="ep-button ep-button--secondary" onClick={() => setSelected(new Set())}>ล้างที่เลือก</button></div>
-                </div>
-                {selectedRows.length === 0 ? <p className="ep-hint">แถวที่เลือกถูกซ่อนโดยตัวกรองหรือคำค้นปัจจุบัน</p> : <div className="ep-mini-table-wrap"><table className="ep-mini-table" aria-label="Selected Results">
-                  <thead><tr><th>SKU</th><th>ชื่อสินค้า</th><th>หน่วย</th><th>ราคาเก่า</th><th>ราคาใหม่</th></tr></thead>
-                  <tbody>{selectedRows.map(row => <tr key={row.id}><td>{row.sku}</td><td>{row.name}</td><td>{row.unit}</td>
-                    <td>{formatPrice(priceAtLevel(row, selectedLevel, 'old'))}</td><td className="ep-new">{formatPrice(priceAtLevel(row, selectedLevel, 'new'))}</td></tr>)}</tbody>
-                </table></div>}
-              </div>}
-            </> : <>
-              <div className="ep-export-note">ปุ่มส่งออกด้านล่างใช้แถวตามตัวกรองและคำค้นด้านบน · TXT ส่งออกทุกรายการที่มีราคาใหม่ของระดับนั้น รวมทุนเพิ่ม ทุนลด และทุนเท่าเดิม · Excel รวมทุกแถวที่กรองได้</div>
-              <div className="ep-export-group"><h3>TXT แยกตามระดับราคา</h3><p>SKU, ราคาใหม่ และระดับราคา คั่นด้วย Tab · UTF-8 BOM · ทศนิยม 2 ตำแหน่ง</p>
-                <div className="ep-export-buttons">{exportButtons({})}</div>
-              </div>
-              <div className="ep-export-group"><h3>BASE_UNIT · เฉพาะหน่วยฐาน</h3><p>หน่วยตรงกับคอลัมน์ BASE_UNIT ของ Product Master</p>
-                <div className="ep-export-buttons">{exportButtons({ baseUnitOnly: true }, true)}</div>
-              </div>
-              <details className="ep-unit-exports"><summary>TXT แยกตามหน่วย ({units.length.toLocaleString()} หน่วย)</summary>
-                {units.map(unit => <div className="ep-unit-row" key={unit}><strong>{unit}</strong><div className="ep-export-buttons">{exportButtons({ unit })}</div></div>)}
-              </details>
-              <div className="ep-upload-footer"><span>รายงาน Excel: {rows.length.toLocaleString()} แถว รวมทุนและราคาเก่า/ใหม่</span>
-                <button type="button" className="ep-button ep-button--secondary" disabled={rows.length === 0} onClick={exportExcel}>Export All (.xlsx)</button>
-              </div>
-              <details className="ep-export-preview" open><summary>Export Preview · 10 แถวแรกตามตัวกรอง</summary>
-                {rows.length === 0 ? <p className="ep-hint">ไม่มีข้อมูลตามตัวกรองปัจจุบัน</p> : <div className="ep-mini-table-wrap"><table className="ep-mini-table" aria-label="Export Preview">
-                  <thead><tr><th>SKU</th><th>ชื่อสินค้า</th><th>หน่วย</th><th>ทุนเก่า</th><th>ทุนใหม่</th><th>ระดับ 0 ใหม่</th><th>ระดับ 1 ใหม่</th><th>ระดับ 5 ใหม่</th></tr></thead>
-                  <tbody>{rows.slice(0, 10).map(row => <tr key={row.id}><td>{row.sku}</td><td>{row.name}</td><td>{row.unit}</td><td>{formatPrice(row.oldCost)}</td>
-                    <td>{formatPrice(row.newCost)}</td>{([0, 1, 5] as const).map(level => <td key={level}>{formatPrice(row.newPrices[level])}</td>)}</tr>)}</tbody>
-                </table></div>}
-              </details>
-              <div className="ep-export-log" aria-live="polite"><h3>Export Log</h3>
-                {exports.length === 0 ? <p className="ep-hint">ยังไม่มีประวัติการส่งออกในครั้งนี้</p> : <ul>{exports.map((entry, index) => <li key={index}>
-                  <time>{entry.time}</time><strong>{entry.filename}</strong><span>{entry.count.toLocaleString()} แถว</span>
-                </li>)}</ul>}
-              </div>
-            </>}
+        <div className="ep-matrix-header">
+          <section className="ep-summary" aria-label="สรุปผลเปรียบเทียบ">
+            {([
+              ['สินค้าทั้งหมด', result?.total, 'all'], ['ราคาไม่ตรง', result?.mismatched, 'mismatch'],
+              ['ราคาตรง', result ? result.matched - result.mismatched : undefined, 'matched'], ['ไม่พบใน R05.105', result?.notFound, 'notfound'],
+            ] as const).map(([label, value, kind]) => <div className={`ep-stat ep-stat--${kind}`} key={kind}>
+              <span>{label}</span><div><strong>{value === undefined ? '—' : value.toLocaleString()}</strong><small>SKU</small></div>
+            </div>)}
           </section>
-        </>}
+          <section className="ep-export-panel" aria-label="ส่งออกไฟล์">
+            <div className="ep-export-scope"><label><span>ขอบเขตส่งออก TXT</span>
+              <select aria-label="ขอบเขตส่งออก TXT" value={exportScope} onChange={event => setExportScope(event.target.value as ExportScope)}>
+                <option value="selected">เฉพาะหน่วยที่เลือก</option><option value="filtered">ทั้งหมดตามตัวกรอง</option>
+                <option value="base">เฉพาะหน่วยฐาน</option><option value="unit">แยกตามชื่อหน่วย</option>
+              </select></label>
+              {exportScope === 'unit' && <label><span>หน่วยสินค้า</span><select aria-label="หน่วยสินค้าสำหรับส่งออก TXT"
+                value={activeExportUnit} disabled={units.length === 0} onChange={event => setExportUnit(event.target.value)}>
+                {units.length === 0 && <option value="">ยังไม่มีหน่วยสินค้า</option>}
+                {units.map(unit => <option key={unit} value={unit}>{unit}</option>)}
+              </select></label>}
+            </div>
+            <div className="ep-export-levels">{PRICE_LEVELS.map(level => {
+              const count = posExportRows(exportSourceRows, level, exportOptions).length;
+              return <button type="button" className="ep-level-button" key={level} disabled={!result || busy || count === 0}
+                aria-label={`ส่งออก TXT ระดับ ${level} (${count.toLocaleString()} รายการ)`}
+                onClick={() => exportText(level, exportOptions, exportSourceRows)}>
+                <span className="ep-level-number">{level}</span><span className="ep-level-copy">{level === 4 ? 'ทุนใหม่' : `ราคาขายระดับ ${level}`}
+                  <small>{count.toLocaleString()} รายการ · .txt</small></span><Icon name="download" />
+              </button>;
+            })}</div>
+            <div className="ep-export-bottom">
+              <button type="button" className="ep-button ep-button--secondary ep-excel-button" disabled={!result || busy || rows.length === 0}
+                onClick={exportExcel}><Icon name="file" />รายงาน Excel (.xlsx)<Icon name="download" /></button>
+              <p><Icon name="info" />{exportScope === 'selected' ? 'TXT ใช้เฉพาะหน่วยที่เลือกไว้ รวมรายการที่ซ่อนด้วยตัวกรอง' : 'TXT ใช้รายการตามตัวกรองและคำค้น'}<br />ส่งออกได้ทั้งทุนเพิ่ม ทุนลด และทุนเท่าเดิม</p>
+            </div>
+          </section>
+        </div>
+
+        <section className="ep-result-panel" aria-label="ผลเปรียบเทียบราคา">
+          <div className="ep-panel-heading"><div><h3>ผลเปรียบเทียบราคา</h3><p>{result
+            ? `Product Master จาก SaleSupport · ${files.promaxx?.name} · ${result.promaxxRecords.toLocaleString()} แถวราคาเดิม`
+            : 'ข้อมูลที่เปรียบเทียบแล้วจะแสดงที่นี่ ราคาเก่าและใหม่อยู่คนละคอลัมน์'}</p></div>
+            <span className="ep-table-badge">PRICE MATRIX</span>
+          </div>
+          {result && result.skippedMissingUnits.length > 0 && <div className="ep-skipped-warning" role="status">
+            <strong>ข้าม {result.skippedMissingUnits.length.toLocaleString()} รายการที่ไม่มีหน่วยในคอลัมน์ PURCHASE_UNIT</strong>
+            <p>ผลเปรียบเทียบและไฟล์ส่งออกใช้เฉพาะรายการที่มีหน่วย</p>
+            <details><summary>ดูรายการที่ข้าม</summary><MissingUnitRows rows={result.skippedMissingUnits} /></details>
+          </div>}
+          {filterControls}
+          <div className="ep-selection-bar"><span className="ep-row-count">{rows.length.toLocaleString()} หน่วย <small>· สถานะนับตาม SKU</small></span>
+            <span className="ep-selection-count" role="status">เลือก {selectedExportRows.length.toLocaleString()} หน่วย</span>
+            <button type="button" className="ep-text-button" disabled={rows.length === 0} onClick={selectFilteredExportRows}>เลือกตามตัวกรอง</button>
+            <button type="button" className="ep-text-button" disabled={exportRowIds.size === 0} onClick={() => setExportRowIds(new Set())}>ล้างที่เลือก</button>
+            <span className="ep-review-count">ตรวจแล้ว {reviewedCount.toLocaleString()}/{allRows.length.toLocaleString()}</span>
+          </div>
+          {result ? <ComparisonTable rows={rows} checked={checked} selected={selected} exportRowIds={exportRowIds}
+            onCheck={toggleCheck} onSelect={toggleSelect} onSelectExportRow={toggleExportRow} />
+            : <div className="ep-empty ep-welcome"><span className="ep-welcome-icon"><Icon name="tag" /></span>
+              <h3>พร้อมตรวจราคา ในพื้นที่เดียว</h3><p>เลือกไฟล์ R05.105 แล้วกดเปรียบเทียบราคา<br />จากนั้นเลือกหน่วยที่ต้องการ และดาวน์โหลดจากแผงด้านบนได้ทันที</p>
+              <div className="ep-welcome-steps"><span>01 เตรียมข้อมูล</span><Icon name="arrow" /><span>02 ตรวจราคา</span><Icon name="arrow" /><span>03 ส่งออกไฟล์</span></div>
+            </div>}
+          <p className="ep-scroll-hint"><Icon name="arrow" />เลื่อนตารางแนวนอนเพื่อดูครบทุกระดับราคา · ตัวเลขเก่าและใหม่อยู่คนละคอลัมน์</p>
+          <div className="ep-table-note"><span>เลือกส่งออกและตรวจแล้วแยกกัน · 1 SKU มีหลายหน่วยได้</span><span>คลิกแถวหรือกด Enter / Space เพื่อดูเทียบได้สูงสุด 10 แถว</span></div>
+
+          {selected.size > 0 && <section className="ep-selected" aria-label="รายการที่เลือกดูเทียบ">
+            <div className="ep-panel-heading"><h3>Selected Results · เลือก {selected.size}/10 แถว</h3>
+              <div className="ep-inline-actions"><label>ระดับราคา <select aria-label="ระดับราคา Selected Results" value={selectedLevel}
+                onChange={event => setSelectedLevel(Number(event.target.value) as PriceLevel)}>{PRICE_LEVELS.map(level => <option key={level} value={level}>{level}</option>)}</select></label>
+                <button type="button" className="ep-text-button" onClick={() => setSelected(new Set())}>ล้างที่เลือกดูเทียบ</button></div>
+            </div>
+            {selectedRows.length === 0 ? <p className="ep-hint">แถวที่เลือกถูกซ่อนโดยตัวกรองหรือคำค้นปัจจุบัน</p> : <div className="ep-mini-table-wrap"><table className="ep-mini-table" aria-label="Selected Results">
+              <thead><tr><th>SKU</th><th>ชื่อสินค้า</th><th>หน่วย</th><th>ราคาเก่า</th><th>ราคาใหม่</th></tr></thead>
+              <tbody>{selectedRows.map(row => <tr key={row.id}><td>{row.sku}</td><td>{row.name}</td><td>{row.unit}</td>
+                <td>{formatPrice(priceAtLevel(row, selectedLevel, 'old'))}</td><td className="ep-new">{formatPrice(priceAtLevel(row, selectedLevel, 'new'))}</td></tr>)}</tbody>
+            </table></div>}
+          </section>}
+
+          {result && <details className="ep-export-preview"><summary>ตัวอย่างรายงาน Excel · 10 แถวแรกตามตัวกรอง</summary>
+            {rows.length === 0 ? <p className="ep-hint">ไม่มีข้อมูลตามตัวกรองปัจจุบัน</p> : <div className="ep-mini-table-wrap"><table className="ep-mini-table" aria-label="Export Preview">
+              <thead><tr><th>SKU</th><th>ชื่อสินค้า</th><th>หน่วย</th><th>ทุนเก่า</th><th>ทุนใหม่</th><th>ระดับ 0 ใหม่</th><th>ระดับ 1 ใหม่</th><th>ระดับ 5 ใหม่</th></tr></thead>
+              <tbody>{rows.slice(0, 10).map(row => <tr key={row.id}><td>{row.sku}</td><td>{row.name}</td><td>{row.unit}</td><td>{formatPrice(row.oldCost)}</td>
+                <td>{formatPrice(row.newCost)}</td>{([0, 1, 5] as const).map(level => <td key={level}>{formatPrice(row.newPrices[level])}</td>)}</tr>)}</tbody>
+            </table></div>}
+          </details>}
+        </section>
+        <section className="ep-export-log" aria-live="polite"><h3>ประวัติส่งออก</h3>
+          {exports.length === 0 ? <p>ยังไม่มีการส่งออกในรอบนี้</p> : <ul>{exports.map((entry, index) => <li key={index}>
+            <Icon name="file" /><time>{entry.time}</time><strong>{entry.filename}</strong><span>{entry.count.toLocaleString()} แถว</span>
+          </li>)}</ul>}
+        </section>
+        <footer className="ep-workspace-footer"><span><Icon name="check" />ไฟล์ R05.105 และผลคำนวณอยู่บนเครื่องของคุณ</span><span>TXT · UTF-8 BOM · Tab · CRLF</span></footer>
       </main>
       {missingUnitWarning && <MissingUnitDialog rows={missingUnitWarning.rows} canContinue={missingUnitWarning.canContinue}
         onCancel={() => setMissingUnitWarning(null)} onCompare={() => { void compare(true); }} />}
