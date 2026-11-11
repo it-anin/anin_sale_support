@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState, type ChangeEvent, type DragEvent 
 import * as XLSX from 'xlsx';
 import { AnimatedLogoText } from '../AnimatedLogo';
 import { PageNavRow, type NavHandlers } from '../pageAccess';
+import { supabase } from '../supabase';
+import { loadProductMaster } from './productMaster';
 import {
   buildPosText, cellText, compareSheets, filterRows, findMissingMasterUnits, formatPrice, posExportRows, priceAtLevel,
   PRICE_LEVELS, reportRows, resolveMasterColumns, type CompareFilter, type ComparisonResult, type ComparisonRow, type MissingMasterUnit,
@@ -37,13 +39,13 @@ function saveDownload(blob: Blob, filename: string) {
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-function FileUploadZone({ kind, file, busy, error, onFile }: {
-  kind: FileKind; file: UploadedSheet | null; busy: boolean; error: string;
+function FileUploadZone({ file, busy, error, onFile }: {
+  file: UploadedSheet | null; busy: boolean; error: string;
   onFile: (file: File) => void;
 }) {
   const [dragging, setDragging] = useState(false);
   const input = useRef<HTMLInputElement>(null);
-  const title = kind === 'master' ? 'Product Master' : 'R05.105';
+  const title = 'R05.105';
   const pick = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = '';
@@ -58,9 +60,9 @@ function FileUploadZone({ kind, file, busy, error, onFile }: {
     <div className={`ep-upload${dragging ? ' ep-upload--dragging' : ''}${file ? ' ep-upload--ready' : ''}`}
       onDragOver={event => { event.preventDefault(); if (!busy) setDragging(true); }}
       onDragLeave={() => setDragging(false)} onDrop={drop}>
-      <span className="ep-file-number">ไฟล์ {kind === 'master' ? '1' : '2'}</span>
+      <span className="ep-file-number">ข้อมูล 2 · ไฟล์</span>
       <h3>{title}</h3>
-      <p>{kind === 'master' ? 'ทุนใหม่จากคอลัมน์ ทุนซื้อ และหน่วยจาก PURCHASE_UNIT' : 'ทุนเก่าและราคาขายระดับ 0 / 1 / 4 / 5'}</p>
+      <p>ทุนเก่าและราคาขายระดับ 0 / 1 / 4 / 5</p>
       <div className="ep-file-detail" aria-live="polite">
         {busy ? 'กำลังอ่านไฟล์…' : file ? <><strong>{file.name}</strong><span>{file.count.toLocaleString()} แถวข้อมูล</span></> : <><strong>ลากไฟล์มาวางที่นี่</strong><span>รองรับ .xlsx, .xls, .csv · อ่านเฉพาะชีตแรก</span></>}
       </div>
@@ -72,6 +74,24 @@ function FileUploadZone({ kind, file, busy, error, onFile }: {
       {error && <p className="ep-error" role="alert">{error}</p>}
     </div>
   );
+}
+
+function ProductMasterSource({ file, busy, error, onReload }: {
+  file: UploadedSheet | null; busy: boolean; error: string; onReload: () => void;
+}) {
+  return <div className={`ep-upload${file ? ' ep-upload--ready' : ''}`} aria-busy={busy}>
+    <span className="ep-file-number">ข้อมูล 1 · SaleSupport</span>
+    <h3>Product Master</h3>
+    <p>ใช้ข้อมูลเดียวกับปุ่มอัปโหลด Product Master ในหน้า SaleSupport</p>
+    <div className="ep-file-detail" aria-live="polite">
+      {busy ? <strong>กำลังโหลด Product Master…</strong> : file
+        ? <><strong>{file.count.toLocaleString()} รายการสินค้า</strong><span>ทุนซื้อและหน่วยจัดซื้อจาก Product Master</span></>
+        : <strong>ยังไม่มีข้อมูลสำหรับเปรียบเทียบ</strong>}
+    </div>
+    <button type="button" className="ep-button ep-button--secondary" disabled={busy} onClick={onReload}>โหลดข้อมูลล่าสุด</button>
+    <p>อัปโหลดหรือแก้ไขข้อมูลที่หน้า SaleSupport แล้วกดโหลดข้อมูลล่าสุด</p>
+    {error && <p className="ep-error" role="alert">{error}</p>}
+  </div>;
 }
 
 function ComparisonTable({ rows, checked, selected, exportRowIds, onCheck, onSelect, onSelectExportRow }: {
@@ -173,8 +193,8 @@ function MissingUnitDialog({ rows, canContinue, onCancel, onCompare }: {
         <div><h2 id="ep-missing-unit-title">พบรายการที่ไม่มีหน่วยในคอลัมน์ PURCHASE_UNIT</h2><p>Product Master · {rows.length.toLocaleString()} รายการ</p></div>
       </div>
       <p id="ep-missing-unit-description">{canContinue
-        ? 'กด “เปรียบเทียบราคา” เพื่อข้ามเฉพาะรายการเหล่านี้และเปรียบเทียบรายการที่มีหน่วยต่อ หรือกด “ยกเลิก” เพื่อกลับไปแก้ไขไฟล์'
-        : 'ทุกรายการไม่มีหน่วยในคอลัมน์ PURCHASE_UNIT จึงไม่มีข้อมูลสำหรับเปรียบเทียบ กรุณายกเลิกเพื่อแก้ไขไฟล์ Product Master'}</p>
+        ? 'กด “เปรียบเทียบราคา” เพื่อข้ามเฉพาะรายการเหล่านี้และเปรียบเทียบรายการที่มีหน่วยต่อ หรือกด “ยกเลิก” เพื่อแก้ไข Product Master ที่หน้า SaleSupport แล้วโหลดข้อมูลล่าสุด'
+        : 'ทุกรายการไม่มีหน่วยในคอลัมน์ PURCHASE_UNIT จึงไม่มีข้อมูลสำหรับเปรียบเทียบ กรุณายกเลิกเพื่อแก้ไข Product Master ที่หน้า SaleSupport แล้วโหลดข้อมูลล่าสุด'}</p>
       <MissingUnitRows rows={rows} />
     </div>
     <div className="ep-missing-unit-actions">
@@ -187,9 +207,10 @@ function MissingUnitDialog({ rows, canContinue, onCancel, onCompare }: {
 export function EditPricePage({ handlers }: { handlers: NavHandlers }) {
   const [step, setStep] = useState<Step>('upload');
   const [files, setFiles] = useState<Record<FileKind, UploadedSheet | null>>({ master: null, promaxx: null });
-  const [loading, setLoading] = useState<Record<FileKind, boolean>>({ master: false, promaxx: false });
+  const [loading, setLoading] = useState<Record<FileKind, boolean>>({ master: true, promaxx: false });
   const [fileErrors, setFileErrors] = useState({ master: '', promaxx: '' });
-  const versions = useRef({ master: 0, promaxx: 0 });
+  const [masterReload, setMasterReload] = useState(0);
+  const fileVersion = useRef(0);
   const [result, setResult] = useState<ComparisonResult | null>(null);
   const [comparing, setComparing] = useState(false);
   const [elapsed, setElapsed] = useState(0);
@@ -210,11 +231,35 @@ export function EditPricePage({ handlers }: { handlers: NavHandlers }) {
   const busy = loading.master || loading.promaxx || comparing;
 
   useEffect(() => {
+    const controller = new AbortController();
+    let active = true;
+    setLoading(previous => ({ ...previous, master: true }));
+    setFiles(previous => ({ ...previous, master: null }));
+    setFileErrors(previous => ({ ...previous, master: '' }));
+    setResult(null);
+    setMissingUnitWarning(null);
+    setSelected(new Set());
+    setExportRowIds(new Set());
+    setError('');
+    void loadProductMaster(supabase, controller.signal).then(rows => {
+      if (active) setFiles(previous => ({ ...previous, master: { name: 'SaleSupport', rows, count: rows.length - 1 } }));
+    }).catch(cause => {
+      if (active) setFileErrors(previous => ({ ...previous, master: cause instanceof Error ? cause.message : 'โหลด Product Master ไม่สำเร็จ กรุณาลองอีกครั้ง' }));
+    }).finally(() => {
+      if (active) setLoading(previous => ({ ...previous, master: false }));
+    });
+    return () => { active = false; controller.abort(); };
+  }, [masterReload]);
+
+  useEffect(() => () => { fileVersion.current++; }, []);
+
+  useEffect(() => {
     try { localStorage.setItem(CHECKLIST_KEY, JSON.stringify([...checked])); } catch { /* ใช้ checklist ต่อได้เมื่อพื้นที่เก็บเต็ม */ }
   }, [checked]);
 
-  async function upload(kind: FileKind, file: File) {
-    const version = ++versions.current[kind];
+  async function upload(file: File) {
+    const kind = 'promaxx';
+    const version = ++fileVersion.current;
     setLoading(previous => ({ ...previous, [kind]: true }));
     setFiles(previous => ({ ...previous, [kind]: null }));
     setFileErrors(previous => ({ ...previous, [kind]: '' }));
@@ -231,17 +276,15 @@ export function EditPricePage({ handlers }: { handlers: NavHandlers }) {
       // raw:false คงรูปแบบรหัสสินค้าที่มีเลขศูนย์นำหน้า ส่วนราคาจะแปลงด้วย parseNum
       const rows = XLSX.utils.sheet_to_json<unknown[]>(firstSheet, { header: 1, defval: '', raw: false, blankrows: false });
       if (rows.length < 2) throw new Error('ต้องมีหัวตารางและข้อมูลสินค้า กรุณาตรวจชนิดไฟล์');
-      if (kind === 'master') {
-        resolveMasterColumns(rows[0]);
-      } else if ((rows[0]?.length ?? 0) <= 7) {
+      if ((rows[0]?.length ?? 0) <= 7) {
         throw new Error('ต้องมีหัวตารางและข้อมูลถึงคอลัมน์ H กรุณาตรวจชนิดไฟล์');
       }
       const count = rows.slice(1).filter(row => row.some(value => cellText(value))).length;
-      if (versions.current[kind] === version) setFiles(previous => ({ ...previous, [kind]: { name: file.name, rows, count } }));
+      if (fileVersion.current === version) setFiles(previous => ({ ...previous, [kind]: { name: file.name, rows, count } }));
     } catch (cause) {
-      if (versions.current[kind] === version) setFileErrors(previous => ({ ...previous, [kind]: cause instanceof Error ? cause.message : 'อ่านไฟล์ไม่สำเร็จ' }));
+      if (fileVersion.current === version) setFileErrors(previous => ({ ...previous, [kind]: cause instanceof Error ? cause.message : 'อ่านไฟล์ไม่สำเร็จ' }));
     } finally {
-      if (versions.current[kind] === version) setLoading(previous => ({ ...previous, [kind]: false }));
+      if (fileVersion.current === version) setLoading(previous => ({ ...previous, [kind]: false }));
     }
   }
 
@@ -373,16 +416,18 @@ export function EditPricePage({ handlers }: { handlers: NavHandlers }) {
         {error && <div className="ep-error ep-error--banner" role="alert">{error}</div>}
 
         {step === 'upload' && <section className="ep-panel" aria-label="อัปโหลดข้อมูลราคา">
-          <div className="ep-panel-heading"><div><h2>ข้อมูลสำหรับเปรียบเทียบราคา</h2><p>อัปโหลดสองไฟล์ โดยแถวแรกเป็นหัวตาราง ระบบอ่านและคำนวณบนเครื่องของคุณ</p></div></div>
+          <div className="ep-panel-heading"><div><h2>ข้อมูลสำหรับเปรียบเทียบราคา</h2><p>ใช้ Product Master จากหน้า SaleSupport แล้วเลือกไฟล์ R05.105 เพื่อคำนวณราคา</p></div></div>
           <div className="ep-upload-grid">
-            {(['master', 'promaxx'] as const).map(kind => <FileUploadZone key={kind} kind={kind} file={files[kind]}
-              busy={loading[kind] || comparing} error={fileErrors[kind]} onFile={file => { void upload(kind, file); }} />)}
+            <ProductMasterSource file={files.master} busy={loading.master || comparing} error={fileErrors.master}
+              onReload={() => setMasterReload(previous => previous + 1)} />
+            <FileUploadZone file={files.promaxx} busy={loading.promaxx || comparing} error={fileErrors.promaxx}
+              onFile={file => { void upload(file); }} />
           </div>
           <details className="ep-format-help"><summary>รูปแบบคอลัมน์ของไฟล์</summary>
-            <p><strong>Product Master:</strong> SKU = SKU, ชื่อสินค้า = NAME, หน่วยฐาน = BASE_UNIT, หน่วยทุนใหม่ = PURCHASE_UNIT, ทุนใหม่ = ทุนซื้อ · สลับลำดับคอลัมน์ได้ และไม่แยกตัวพิมพ์เล็ก–ใหญ่</p>
+            <p><strong>Product Master:</strong> ใช้รหัสสินค้า ชื่อสินค้า หน่วยฐาน หน่วยจัดซื้อ และทุนซื้อจากข้อมูลที่อัปโหลดในหน้า SaleSupport</p>
             <p><strong>R05.105:</strong> B = SKU, E = หน่วย, F = ระดับราคา (0/1/4/5), G = ราคาเก่าระดับ 0, H = ราคาเก่าระดับ 1/5 หรือทุนเก่าระดับ 4</p>
           </details>
-          <div className="ep-upload-footer"><span>ไฟล์ที่เลือกจะไม่ถูกอัปโหลดไปยังฐานข้อมูล</span>
+          <div className="ep-upload-footer"><span>ไฟล์ R05.105 และผลคำนวณอยู่บนเครื่องของคุณ</span>
             <button type="button" className="ep-button" disabled={!files.master || !files.promaxx || busy} onClick={() => { void compare(); }}>
               {comparing ? 'กำลังเปรียบเทียบ…' : 'เปรียบเทียบราคา (Compare Prices)'}
             </button>
