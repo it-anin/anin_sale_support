@@ -62,7 +62,7 @@ function FileUploadZone({ file, loading, disabled, error, onFile }: {
   const pick = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = '';
-    if (file) onFile(file);
+    if (file && !busy) onFile(file);
   };
   const drop = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -70,21 +70,20 @@ function FileUploadZone({ file, loading, disabled, error, onFile }: {
     if (!busy && event.dataTransfer.files[0]) onFile(event.dataTransfer.files[0]);
   };
   return (
-    <div className={`ep-upload${dragging ? ' ep-upload--dragging' : ''}${file ? ' ep-upload--ready' : ''}`} aria-busy={loading}
+    <div className={`ep-upload ep-upload--file${dragging ? ' ep-upload--dragging' : ''}${loading ? ' ep-upload--loading' : ''}${file ? ' ep-upload--ready' : ''}`} aria-busy={loading}
       onDragOver={event => { event.preventDefault(); if (!busy) setDragging(true); }}
       onDragLeave={() => setDragging(false)} onDrop={drop}>
-      <div className="ep-source-heading"><span className="ep-source-icon"><Icon name="file" /></span>
+      <div className="ep-source-heading"><span className="ep-source-icon">{loading ? <span className="ep-upload-spinner" aria-hidden="true" /> : <Icon name={file ? 'check' : 'file'} />}</span>
         <div><h3>{title}</h3><p>ไฟล์ราคาและทุนเดิม</p></div>
-        {file && <span className="ep-source-ready" title="อ่านไฟล์เรียบร้อย"><Icon name="check" /></span>}
       </div>
-      <div className="ep-file-detail" aria-live="polite">
+      <div className="ep-file-detail" aria-live="polite" aria-atomic="true">
         {loading ? <strong>กำลังอ่านไฟล์…</strong> : file ? <><strong>{file.name}</strong><span>{file.count.toLocaleString()} แถวข้อมูล</span></> : <><strong>เลือกไฟล์หรือลากมาวางที่นี่</strong><span>.xlsx / .xls / .csv</span></>}
       </div>
       <input ref={input} type="file" accept=".xlsx,.xls,.csv" aria-label={`อัปโหลด ${title}`}
         onChange={pick} disabled={busy} hidden />
       <button type="button" className="ep-button ep-button--secondary" disabled={busy} onClick={() => input.current?.click()}>
-        <Icon name="upload" />
-        {file ? 'เปลี่ยนไฟล์' : 'เลือกไฟล์'} {title}
+        {loading ? <span className="ep-upload-spinner" aria-hidden="true" /> : <Icon name="upload" />}
+        {loading ? 'กำลังอ่านไฟล์' : file ? 'เปลี่ยนไฟล์' : 'เลือกไฟล์'} {title}
       </button>
       {error && <p className="ep-error" role="alert">{error}</p>}
     </div>
@@ -275,7 +274,11 @@ export function EditPricePage({ handlers }: { handlers: NavHandlers }) {
     setError('');
     try {
       if (!/\.(xlsx|xls|csv)$/i.test(file.name)) throw new Error('กรุณาเลือกไฟล์ .xlsx, .xls หรือ .csv');
-      const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array', raw: true });
+      const buffer = await file.arrayBuffer();
+      // ให้เบราว์เซอร์วาดสถานะกำลังอ่านก่อนเริ่มแปลงชีตที่ทำงานบน main thread
+      await new Promise<void>(resolve => window.requestAnimationFrame(() => window.setTimeout(resolve, 0)));
+      if (fileVersion.current !== version) return;
+      const workbook = XLSX.read(buffer, { type: 'array', raw: true });
       const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
       if (!firstSheet) throw new Error('ไฟล์นี้ไม่มีชีตข้อมูล');
       // raw:false คงรูปแบบรหัสสินค้าที่มีเลขศูนย์นำหน้า ส่วนราคาจะแปลงด้วย parseNum

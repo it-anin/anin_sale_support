@@ -19,6 +19,23 @@
 .edit-price-page .ep-upload-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; min-width: 0; }
 .edit-price-page .ep-upload { min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 5px 10px; padding: 13px; border: 1px solid #cbdceb; border-radius: 7px; background: #fff; transition: border-color .15s, background .15s; }
 .edit-price-page .ep-upload--dragging { background: var(--ep-soft); border-style: dashed; border-color: var(--ep-accent); }
+.edit-price-page .ep-upload--file { position: relative; overflow: hidden; }
+.edit-price-page .ep-upload--loading { border-color: #85a9cb; background: #f6faff; }
+.edit-price-page .ep-upload--loading::after { content: ''; position: absolute; bottom: 0; left: 0; width: 40%; height: 3px; border-radius: 3px; background: linear-gradient(90deg, transparent, #6b9bc6, #3c6e9b, transparent); animation: ep-upload-progress 1.3s ease-in-out infinite; }
+.edit-price-page .ep-upload-spinner { display: inline-block; flex: 0 0 auto; width: 18px; height: 18px; border: 2px solid #cbdceb; border-top-color: var(--ep-accent); border-radius: 50%; animation: ep-upload-spin .8s linear infinite; }
+.edit-price-page .ep-button .ep-upload-spinner { width: 14px; height: 14px; }
+.edit-price-page .ep-upload--loading > .ep-button:disabled { opacity: 1; color: var(--ep-accent); background: var(--ep-soft); }
+.edit-price-page .ep-upload--file.ep-upload--ready { animation: ep-upload-complete .65s ease-out; }
+.edit-price-page .ep-upload--file.ep-upload--ready .ep-source-icon { color: #3d8575; background: #edf7f3; }
+.edit-price-page .ep-upload--file.ep-upload--ready .ep-source-icon .ep-icon { animation: ep-upload-check .3s ease-out; }
+@keyframes ep-upload-spin { to { transform: rotate(360deg); } }
+@keyframes ep-upload-progress { from { transform: translateX(-100%); } to { transform: translateX(350%); } }
+@keyframes ep-upload-complete { from { border-color: #74b39e; box-shadow: 0 0 0 3px #74b39e26; } to { border-color: #cbdceb; box-shadow: 0 0 0 0 #74b39e00; } }
+@keyframes ep-upload-check { from { opacity: 0; transform: scale(.7); } to { opacity: 1; transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) {
+  .edit-price-page .ep-upload--loading::after { animation: none; width: 100%; background: #85a9cb; }
+  .edit-price-page .ep-upload-spinner, .edit-price-page .ep-upload--file.ep-upload--ready, .edit-price-page .ep-upload--file.ep-upload--ready .ep-source-icon .ep-icon { animation: none; }
+}
 .edit-price-page .ep-source-heading { display: flex; align-items: center; gap: 9px; min-width: 0; grid-column: 1; }
 .edit-price-page .ep-source-icon { display: grid; place-items: center; width: 31px; height: 35px; border-radius: 6px; color: var(--ep-accent); background: var(--ep-soft); flex-shrink: 0; }
 .edit-price-page .ep-source-heading h3 { font-size: 12px; font-weight: 600; }
