@@ -4665,6 +4665,24 @@ body.ss-col-resizing { cursor: col-resize; user-select: none; }
 .price-change-arrow .is-up   { color: #b33b31; }
 .price-change-arrow .is-down { color: #2e8b47; }
 
+/* แบนเนอร์ "ตรวจราคาล้มเหลว" (2026-11-18) — ใต้ hero หน้า Price เมื่อรอบดึงราคาล่าสุดล้ม
+   หรือไม่ได้ตรวจเกิน 1 วัน · สีชุดเดียวกับ .ss-panel-msg--error (ไม่เพิ่มสีใหม่)
+   ⚠️ ไม่ย้ายเข้า .tagline-row: แถวนั้นสูงคงที่ + เลื่อนแนวนอนบนมือถือ คำเตือนอาจหลุดจอ */
+.price-sync-alert {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: #fdf1ef;
+  border-bottom: 1px solid #f3d8d3;
+  color: #b04a3a;
+  font: 700 14px/1.4 'Noto Sans Thai', sans-serif;
+  text-align: center;
+  cursor: help;   /* รายละเอียดอยู่ใน tooltip (title) */
+}
+.price-sync-alert svg { flex: 0 0 auto; width: 18px; height: 18px; }
+
 /* ช่องค้นหา toolbar (เมนู Products / Order / BackOrder) */
 .ss-panel-toolbar { position: relative; }
 .ss-search-center {

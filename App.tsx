@@ -17,6 +17,7 @@ import { LoginPage } from './LoginPage';
 import { parseR05106 } from './r05106';
 import { usePriceSync } from './usePriceSync';
 import { loadCurrentPriceRows, currentPriceProduct, refreshPriceMap } from './priceCache';
+import { describePriceSyncProblem } from './priceSyncHealth';
 import { loadPriceChangePrintProducts } from './priceChangePrint';
 import { loadAuthProfile, saveAuthProfile, clearAuthProfile, BRANCH_PROFILE_CODES, STORE_BRANCH_CODES, type Profile } from './auth';
 import { PageVisibilityContext, PageNotificationContext, PurchasingNavigationContext, PageNavRow, PAGE_NAV, DEFAULT_VISIBILITY, type PageId, type PageVisibility, type NavHandlers } from './pageAccess';
@@ -373,7 +374,7 @@ const App: React.FC = () => {
   const {
     dataVersion: priceDataVersion, updatedAt: priceUpdatedAt, available: priceSyncAvailable,
     requestRefresh: requestPriceRefresh, refreshing: priceRefreshing, refreshMessage: priceRefreshMessage,
-    refreshError: priceRefreshError,
+    refreshError: priceRefreshError, syncProblem: priceSyncProblem,
   } = usePriceSync(!!authProfile);
   const priceUpdatedAtRef = useRef(priceUpdatedAt);
   priceUpdatedAtRef.current = priceUpdatedAt;
@@ -1745,6 +1746,22 @@ ${sheetsHtml}
           <PageNavRow current="pricetag" handlers={navHandlers} />
         </div>
       </div>)}
+
+      {/* แบนเนอร์ "ตรวจราคาล้มเหลว" (2026-11-18) — ขึ้นเมื่อรอบดึงราคาล่าสุดล้ม หรือไม่ได้ตรวจเกิน 1 วัน
+          (เงื่อนไขอยู่ priceSyncHealth.ts · อ่านจากแถว price_sync ที่เว็บอ่านอยู่แล้ว ไม่เพิ่มคำขอ)
+          ⚠️ วางใต้ hero เต็มความกว้าง ไม่ใส่ใน .tagline-row: แถวนั้นเลื่อนแนวนอนได้บนมือถือ
+          คำเตือนอาจหลุดจอ และ hero สูงคงที่ · ปิดเองไม่ได้โดยตั้งใจ — หายเมื่อรอบถัดไปสำเร็จเท่านั้น
+          รายละเอียด (เหตุผล/เวลา) อยู่ใน title ข้อความที่เห็นคงสั้นตามที่ผู้ใช้กำหนด */}
+      {currentPage === 'pricetag' && priceSyncProblem && (
+        <div className="price-sync-alert" role="alert" title={describePriceSyncProblem(priceSyncProblem)}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
+            <line x1="12" y1="9" x2="12" y2="13" />
+            <line x1="12" y1="17" x2="12.01" y2="17" />
+          </svg>
+          <span>ตรวจราคาล้มเหลว</span>
+        </div>
+      )}
 
       {/* แผงราคาเปลี่ยน — reuse CSS ชุด .ss-notification-* ของ SaleSupport ทั้งหมด
           (เป็น global ใน App.css ใช้จากที่นี่ได้เลย ไม่ต้อง import อะไร)

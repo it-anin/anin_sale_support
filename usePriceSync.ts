@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from './supabase';
+import { evaluatePriceSync, samePriceSyncProblem, type PriceSyncProblem } from './priceSyncHealth';
+
+/** ประเมินสถานะแบนเนอร์ใหม่ทุก 1 นาที — ทำงานในเบราว์เซอร์อย่างเดียว ไม่ใช่คำขอ Supabase
+ *  จำเป็นเพราะ "ไม่ได้ตรวจเกิน 1 วัน" เกิดจากเวลาที่ผ่านไปเฉย ๆ โดยไม่มี event ใหม่เข้ามา */
+const HEALTH_CHECK_MS = 60_000;
 
 interface PriceSyncStatus {
   data_version: number | string;
@@ -31,6 +36,8 @@ export function usePriceSync(enabled: boolean) {
   const [requestError, setRequestError] = useState('');
   const [targetRequest, setTargetRequest] = useState<string | null>(null);
   const [waitingLong, setWaitingLong] = useState(false);
+  // แบนเนอร์ "ตรวจราคาล้มเหลว" — null = ปกติ (ดู priceSyncHealth.ts)
+  const [syncProblem, setSyncProblem] = useState<PriceSyncProblem | null>(null);
   const statusRef = useRef<PriceSyncStatus | null>(null);
   const targetRef = useRef<string | null>(null);
   const submittingRef = useRef(false);
@@ -44,12 +51,19 @@ export function usePriceSync(enabled: boolean) {
       setTargetRequest(null);
       setRequestError('');
       setAvailable(null);
+      setSyncProblem(null);
       return;
     }
     let cancelled = false;
     let reading = false;
     let lastRead = 0;
     let lastVersion: bigint | null = null;
+    // setState เฉพาะเมื่อสถานะเปลี่ยนจริง — timer ทุกนาทีจึงไม่ทำให้ App ทั้งก้อนเรนเดอร์ซ้ำ
+    const refreshProblem = () => {
+      if (cancelled) return;
+      const next = evaluatePriceSync(statusRef.current);
+      setSyncProblem(previous => (samePriceSyncProblem(previous, next) ? previous : next));
+    };
     const apply = (row: PriceSyncStatus) => {
       if (cancelled || row.data_version == null) return;
       const next = BigInt(row.data_version);
@@ -65,6 +79,7 @@ export function usePriceSync(enabled: boolean) {
       statusRef.current = row;
       setStatus(row);
       setAvailable(row.request_id != null && row.completed_request_id != null);
+      refreshProblem();
       // Queue/completion updates do not cause product queries when data is unchanged.
       if (lastVersion === null || next > lastVersion) {
         lastVersion = next;
@@ -100,11 +115,13 @@ export function usePriceSync(enabled: boolean) {
         && requestNumber(statusRef.current?.completed_request_id) < BigInt(targetRef.current));
       if (pending || Date.now() - lastRead >= 60_000) whenVisible();
     }, 3_000);
+    const healthTimer = window.setInterval(refreshProblem, HEALTH_CHECK_MS);
     window.addEventListener('focus', whenVisible);
     document.addEventListener('visibilitychange', whenVisible);
     return () => {
       cancelled = true;
       window.clearInterval(timer);
+      window.clearInterval(healthTimer);
       window.removeEventListener('focus', whenVisible);
       document.removeEventListener('visibilitychange', whenVisible);
       if (readStatusRef.current === readStatus) readStatusRef.current = async () => {};
@@ -146,5 +163,5 @@ export function usePriceSync(enabled: boolean) {
   const refreshMessage = refreshing
     ? waitingLong ? 'ยังรอเครื่องในร้าน กรุณาตรวจว่า Agent เปิดอยู่' : 'กำลังรอเครื่องในร้านดึงข้อมูลล่าสุด…'
     : error || (targetRequest != null ? 'ตรวจข้อมูลล่าสุดเรียบร้อยแล้ว' : '');
-  return { dataVersion, updatedAt, available, requestRefresh, refreshing, refreshMessage, refreshError: !!error };
+  return { dataVersion, updatedAt, available, requestRefresh, refreshing, refreshMessage, refreshError: !!error, syncProblem };
 }

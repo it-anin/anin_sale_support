@@ -71,6 +71,8 @@ node stock-agent.mjs --print-sql
 
 ตารางที่ Agent ต้องอ่าน: `TRANS`, `TRANDETAILITEM`, `VOUCHER`, `ITEMS`, `WAREHOUSE`, `ITEMUNIT`, `UNITNAME`, `ITEMPRICELEVEL`, `ITEMPRICELEVELONBRANCH`, `COMPANY` บัญชี `web_readonly` ของ Pending อาจยังไม่มีสิทธิ์ SELECT ตารางสินค้าหรือราคา ให้ผู้ดูแลตรวจและเพิ่มเฉพาะสิทธิ์อ่านตารางที่ขาด
 
+> ⚠️ **บัญชีเดียวกันนี้ถูกใช้ร่วมกับ Agent Pending และ Price** (รวมกันต้องอ่าน 14 ตาราง) แก้สิทธิ์ของบัญชีนี้เมื่อไรต้องรันตรวจใหม่ — รายการ สคริปต์ตรวจ และสคริปต์ `GRANT` อยู่ที่ [docs/mssql-readonly-grants.md](docs/mssql-readonly-grants.md) · `ITEMPRICELEVEL` / `ITEMPRICELEVELONBRANCH` ต้อง `GRANT` ทั้งตาราง (จำกัดแถวไม่ได้ และน่าจะมีราคาทุนปนอยู่ด้วย) ส่วน `COMPANY` ให้สิทธิ์เฉพาะคอลัมน์ `WORKSYSBRANCHID` ได้ เพราะ Agent อ่านคอลัมน์เดียว (query เช็กสิทธิ์ระดับตารางจะยังขึ้น `0` ที่ `COMPANY` ตามปกติ)
+
 **ไม่สร้าง/แก้ไขตาราง, view, index, trigger หรือข้อมูลใน ProMaxx และไม่ทดลองเขียนเพื่อทดสอบสิทธิ์** Query ของ Agent เป็น SELECT เดียวและตรวจด้วย `assertReadOnlySql()` ก่อนส่งทุกครั้ง
 
 ใช้ค่า `.env` เดิมของ Pending: `MSSQL_SERVER`, `MSSQL_DATABASE`, `MSSQL_USER`, `MSSQL_PASSWORD` และ `MSSQL_INSTANCE` หรือ `MSSQL_PORT` พร้อมค่า TLS/TDS เดิมหากมี แล้วตรวจแบบไม่เขียน Supabase:
@@ -80,6 +82,12 @@ node stock-agent.mjs --dry-run
 ```
 
 คำสั่งนี้บอกจำนวนสินค้าต่อคลังและเวลาที่ใช้ โดยไม่พิมพ์ข้อมูลสินค้าแต่ละรายการ ถ้าคำสั่งเกิน 60 วินาทีจะหยุดและเก็บ snapshot เดิมไว้ ไม่ตัดประวัติรายการเพื่อทำให้ query เร็วขึ้น เพราะจะทำให้ยอดคงเหลือผิด
+
+> ⚠️ **`--dry-run` (และ `--once`) ขอ lock ของ Agent ก่อนเริ่ม** ถ้า Stock Agent ตัวจริงเปิดค้างอยู่บนเครื่องนี้ (ปกติเปิดพร้อม Pending) คำสั่งจะพิมพ์ `Stock Agent อีกตัวกำลังทำงานอยู่บนเครื่องนี้ — ไม่เปิดตัวซ้ำ` แล้วออกทันที **โดยไม่ได้ทดสอบอะไร — ข้อความนี้ไม่ได้แปลว่าผ่าน** (Price ไม่มี lock จึง `--dry-run` ได้เสมอ)
+>
+> ทดสอบกับ Agent ที่เปิดค้างอยู่ด้วยการเปิดหน้า **Stock** บนเว็บ (หรือกดรีเฟรช) รอ 1–2 นาที แล้วดู `stock-agent.log` ในโฟลเดอร์เดียวกับ `stock-agent.mjs`:
+> - **ผ่าน:** `อ่านได้ N รายการ (… วิ) · คลังสินค้า … · SRC … · KKL … · SSS …` ตามด้วย `✅ ส่งชุดใหม่` หรือ `✓ ข้อมูลเหมือนเดิม ไม่ส่งซ้ำ`
+> - **ไม่ผ่าน:** บรรทัดขึ้นต้น `❌` เช่น `The SELECT permission was denied on the object '...'` → ตรวจและให้สิทธิ์ตาม [docs/mssql-readonly-grants.md](docs/mssql-readonly-grants.md)
 
 ## 2. เปลี่ยนผู้ส่งข้อมูลสต๊อคเป็น Agent
 

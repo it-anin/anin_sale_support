@@ -246,6 +246,8 @@ GRANT SELECT ON dbo.WAREHOUSE      TO web_readonly;
 - ไม่ได้เปิด `CHECK_EXPIRATION` → รหัสไม่หมดอายุ Agent ไม่หยุดทำงานกะทันหันเพราะรหัสหมดอายุ
 - สร้าง login ไม่แตะข้อมูลหรือโครงสร้างตารางของ ProMaxx และไม่ต้องรีสตาร์ทอะไร · เสร็จแล้วปิดหน้าต่าง query แบบ **Don't Save** ไม่ให้รหัสค้างเป็นไฟล์ `.sql`
 
+> ⚠️ **7 ตารางข้างบนเป็นของ Pending เท่านั้น แต่ login `web_readonly` ถูกใช้ร่วมกับ Agent Stock และ Price ด้วย** (รวมกันต้องอ่าน 14 ตาราง) และถ้าเอาไปใช้กับโปรเจ็คอื่น การแก้ `GRANT` / `REVOKE` หรือสร้าง user ใหม่จะกระทบ Agent ทั้งสามแบบเงียบ ๆ (เหตุการณ์จริง 2026-11-18: Price ล้มเพราะ `ITEMGROUPL1` หาย) — ก่อนและหลังแก้สิทธิ์ ให้ดู [docs/mssql-readonly-grants.md](docs/mssql-readonly-grants.md) แล้วรัน query ตรวจ 14 ตาราง
+
 > ตารางไม่ได้อยู่ใน schema `dbo` → เช็คด้วย `SELECT TABLE_SCHEMA, TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'TRANS';` แล้วเปลี่ยน `dbo.` ตามนั้น
 
 **ตรวจสิทธิ์** — Object Explorer → Connect → Database Engine… → SQL Server Authentication ด้วย `web_readonly` → คลิกขวาฐานข้อมูลของ ProMaxx → New Query → รัน (อ่านอย่างเดียว แค่ถามว่ามีสิทธิ์อะไร ไม่ได้ลองเขียน):
