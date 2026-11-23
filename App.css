@@ -287,6 +287,115 @@ body {
   font-family: 'outfit', sans-serif;
 }
 
+/* ===== ปุ่มลิงก์ฟอร์มภายนอกบน Hero — ดีไซน์ "Expanding Rail" =====
+   แบบที่ 9 จาก public/hero-link-btn-designs.html (2569-11-23) · ตัวปุ่มอยู่ใน HeroLinkRail (pageAccess.tsx)
+   ⚠️ ลูกตรงของ `.hero-header` (ส่งมาด้วย portal จาก PageNavRow) ไม่ใช่ลูกของ `.hero-content`
+   → top/left นับจากมุมซ้ายบนของ Hero เต็มจอ สมมาตรกับแถบผู้ใช้ `.app-userbar` มุมขวา
+   ⚠️ ห้ามแก้เป็น position: fixed — จะลอยทับตารางตอนเลื่อนหน้า (แถบผู้ใช้ fixed ได้เพราะเป็นข้อยกเว้นเดียว) */
+.hero-links {
+  position: absolute;
+  top: 12px;
+  left: 16px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  text-align: left;
+  /* Hero ตั้ง 'Noto Serif Thai' ไว้ — ปุ่มใช้ตัวไม่มีหัวเหมือนแถบผู้ใช้ */
+  font-family: 'Noto Sans Thai', sans-serif;
+}
+
+.hero-link {
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
+  height: 40px;
+  /* ⚠️ ห้ามเอา min-width ออก: ขอบ 1.5px ถูกปัดลงเป็น 1px บนจอ DPR 1 → ไอคอน 37 + ขอบ 2 = 39px
+     ปุ่มเลยกว้าง 39 สูง 40 เป็นวงรี (วัดจริงด้วย Playwright) — min-width ล็อกให้เป็นวงกลม 40×40 ทุกความละเอียดจอ */
+  min-width: 40px;
+  border-radius: 999px;
+  overflow: hidden;
+  white-space: nowrap;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1.5px solid rgba(255, 255, 255, 0.45);
+  color: #fff;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.hero-link:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+
+/* วงกลมไอคอน: 40px − ขอบ 1.5px×2 = 37px */
+.hero-link-icon {
+  flex: 0 0 37px;
+  height: 37px;
+  display: grid;
+  place-items: center;
+}
+.hero-link-icon svg {
+  display: block;
+  width: 19px;
+  height: 19px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ส่วนชื่อที่ขยายออก — ใช้เทคนิค grid 0fr → 1fr ให้ความกว้างปรับตามความยาวข้อความเอง
+   (ไม่ fix ความกว้างเป็น px: ชื่อภาษาไทยกว้างต่างกันตามฟอนต์ของแต่ละเครื่อง)
+   แยก 3 ชั้น: .hero-link-more = ตัวขยาย (grid) → .hero-link-clip = ตัวตัดส่วนที่ล้น → .hero-link-label = ข้อความ+padding
+   ⚠️ padding ต้องอยู่ชั้นในสุด ถ้าใส่ที่ .hero-link-clip ความกว้าง 0fr จะหดไม่ถึง 0 แล้วไม่ซ่อนสนิท */
+.hero-link-more {
+  display: grid;
+  grid-template-columns: 0fr;
+  opacity: 0;
+  transition: grid-template-columns 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
+}
+.hero-link-clip { min-width: 0; overflow: hidden; }
+.hero-link-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 13px 0 2px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+}
+.hero-link-ext { display: inline-flex; opacity: 0.7; }
+.hero-link-ext svg {
+  display: block;
+  width: 10px;
+  height: 10px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.hero-link:hover,
+.hero-link:focus-visible {
+  background: #fff;
+  color: #2d6cad;
+  border-color: #fff;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.2);
+}
+.hero-link:hover .hero-link-more,
+.hero-link:focus-visible .hero-link-more {
+  grid-template-columns: 1fr;
+  opacity: 1;
+}
+
+/* มือถือ: เรียงแนวนอนเพื่อไม่ชนโลโก้ (โลโก้เริ่มที่ y≈48px) และไม่ขยายชื่อ
+   — บนจอสัมผัสไม่มี hover การแตะคือเปิดลิงก์เลย ชื่อเต็มยังอยู่ใน title/aria-label */
+@media (max-width: 768px) {
+  .hero-links { top: 10px; left: 12px; flex-direction: row; }
+  .hero-link-more { display: none; }
+}
+
 .search-premium {
   max-width: 600px;
   margin: 0 auto;

@@ -1,4 +1,5 @@
-import { createContext, useContext, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 
 // รหัสหน้าทั้งหมดในแอป (ใช้เป็น currentPage + key ตาราง app_page_settings)
 export type PageId =
@@ -84,6 +85,31 @@ const IconDocClock = (
   </Svg>
 );
 
+// ขอคืนเงิน: ลูกศรย้อนกลับรอบเหรียญ · ขนส่ง: จุดเริ่ม → ปักหมุดปลายทาง
+// (ไม่ใช้รูปรถบรรทุกเพราะปุ่ม Outbound ใช้อยู่แล้ว กันสับสน)
+const IconRefund = (
+  <Svg>
+    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+    <path d="M3 3v5h5" />
+    <circle cx="12" cy="12" r="2.8" />
+  </Svg>
+);
+const IconRoute = (
+  <Svg>
+    <circle cx="6" cy="18" r="2.2" />
+    <path d="M8.2 18H15a3 3 0 0 0 3-3" />
+    <path d="M18 2.8a4 4 0 0 0-4 4c0 3.1 4 7.2 4 7.2s4-4.1 4-7.2a4 4 0 0 0-4-4Z" />
+    <circle cx="18" cy="6.8" r="1.2" />
+  </Svg>
+);
+// ลูกศร ↗ = สัญญาณว่าปุ่มนี้เปิดเว็บภายนอก
+const IconExternal = (
+  <Svg>
+    <path d="M7 17 17 7" />
+    <path d="M8 7h9v9" />
+  </Svg>
+);
+
 // ลำดับ + ไอคอน + ป้ายชื่อ ของปุ่มนำทาง (เดิม hardcode ซ้ำทุกหน้า — ย้ายมารวมที่นี่)
 export const PAGE_NAV: PageNavDef[] = [
   { id: 'pricetag',        icon: IconTag,   label: 'Price',    title: 'หน้าป้ายราคา' },
@@ -125,14 +151,69 @@ export const usePageNotifications = () => useContext(PageNotificationContext);
 
 export type NavHandlers = Record<Exclude<PageId, 'editprice'>, () => void>;
 
+// ลิงก์ไปเว็บฟอร์มภายนอก — เปิดแท็บใหม่ ทุกโปรไฟล์เห็นเหมือนกัน (ไม่ผูกกับสิทธิ์หน้า/app_page_settings)
+// เพิ่ม/แก้ลิงก์ที่นี่ที่เดียว ปุ่มบน Hero ทุกหน้าเปลี่ยนตาม
+export interface ExternalLinkDef {
+  id: string;
+  icon: ReactNode;
+  label: string;
+  href: string;
+}
+
+export const EXTERNAL_LINKS: ExternalLinkDef[] = [
+  { id: 'refund', icon: IconRefund, label: 'แบบฟอร์มขออนุมัติคืนเงิน', href: 'https://it-anin.github.io/Refund_Request_Form/' },
+  { id: 'transport', icon: IconRoute, label: 'แบบฟอร์มขออนุมัติขนส่ง', href: 'https://it-anin.github.io/transport_request_form/' },
+];
+
+// ปุ่มลิงก์แบบ "Expanding Rail" (แบบที่ 9 จาก public/hero-link-btn-designs.html, 2569-11-23)
+// ปกติเป็นวงกลมไอคอน 40px ชี้เมาส์/โฟกัสด้วยคีย์บอร์ดแล้วขยายโชว์ชื่อ — สไตล์อยู่ App.css `.hero-link*`
+// ใช้ <a target="_blank"> ไม่ใช่ปุ่ม + window.open เพื่อให้คลิกขวา/คัดลอกลิงก์ได้
+// ⚠️ ต้องมี rel="noopener noreferrer" เสมอ — กันหน้าที่เปิดใหม่เข้าถึง window.opener ของแอป
+export function HeroLinkRail() {
+  return (
+    <nav className="hero-links" aria-label="ลิงก์แบบฟอร์ม">
+      {EXTERNAL_LINKS.map(link => (
+        <a
+          key={link.id}
+          className="hero-link"
+          href={link.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          title={`${link.label} — เปิดในแท็บใหม่`}
+          aria-label={`${link.label} (เปิดในแท็บใหม่)`}
+        >
+          <span className="hero-link-icon">{link.icon}</span>
+          <span className="hero-link-more">
+            <span className="hero-link-clip">
+              <span className="hero-link-label">{link.label}<span className="hero-link-ext">{IconExternal}</span></span>
+            </span>
+          </span>
+        </a>
+      ))}
+    </nav>
+  );
+}
+
 // แถวปุ่มนำทาง (ใช้ร่วมทุกหน้า) — แสดงครบทุกเมนู หน้าที่ถูกปิดใช้ปุ่ม disabled แบบจาง
 export function PageNavRow({ current, handlers }: { current: PageId; handlers: NavHandlers }) {
   const visible = usePageVisibility();
   const notifications = usePageNotifications();
   const onGoEditPrice = useContext(PurchasingNavigationContext);
   const pages = PAGE_NAV.map(page => page.id === 'druglabel' && onGoEditPrice ? EDIT_PRICE_NAV : page);
+
+  // ปุ่มลิงก์ต้องลอยที่มุมซ้ายบนของ Hero "เต็มจอ" (`.hero-header`) แต่แถวนี้ถูกซ้อนอยู่ใน `.hero-content`
+  // ซึ่งกว้างแค่ 900px และเป็น position: relative → วาง absolute ตรงนี้ปุ่มจะไปอยู่มุมกล่อง 900px กลางจอ
+  // จึงใช้ portal ส่งปุ่มไปวางเป็นลูกของ `.hero-header` โดยตรง แล้วทุกหน้าที่ใช้ PageNavRow ได้ปุ่มเอง
+  // callback ref (ไม่ใช่ useLayoutEffect): รันตอน commit ก่อนเบราว์เซอร์วาดภาพ จึงไม่กระพริบ และไม่เตือนตอน SSR/เทส
+  const [heroEl, setHeroEl] = useState<HTMLElement | null>(null);
+  const rowRef = useCallback((node: HTMLDivElement | null) => {
+    setHeroEl(node?.closest<HTMLElement>('.hero-header') ?? null);
+  }, []);
+
   return (
-    <div className="search-nav-row">
+    <>
+    {heroEl && createPortal(<HeroLinkRail />, heroEl)}
+    <div className="search-nav-row" ref={rowRef}>
       {pages.map(p => (
         <button
           key={p.id}
@@ -151,5 +232,6 @@ export function PageNavRow({ current, handlers }: { current: PageId; handlers: N
         </button>
       ))}
     </div>
+    </>
   );
 }
