@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>เลือกดีไซน์ปุ่มลิงก์ภายนอกบน Hero Header — 10 แบบ</title>
+<link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Noto+Sans+Thai:wght@300;400;500;600;700&family=Outfit:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Noto Sans Thai', sans-serif;
+    background: #eef1f5;
+    color: #2d2a26;
+    padding: 2rem 1.5rem 4rem;
+  }
+  .page-title { text-align: center; font-size: 1.6rem; font-weight: 600; margin-bottom: 0.25rem; }
+  .page-sub { text-align: center; color: #6f7a88; margin: 0 auto 2rem; font-weight: 300; max-width: 760px; line-height: 1.7; }
+
+  .card {
+    max-width: 1000px;
+    margin: 0 auto 1.5rem;
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.07);
+    overflow: hidden;
+  }
+  .card-head { display: flex; align-items: center; flex-wrap: wrap; gap: 0.6rem 0.7rem; padding: 0.9rem 1.4rem 0.7rem; }
+  .card-num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; border-radius: 50%;
+    background: #2d6cad; color: #fff; font-weight: 600; font-size: 0.9rem; flex-shrink: 0;
+  }
+  .card-name { font-weight: 600; font-size: 1.05rem; }
+  .card-place { font-size: 0.72rem; color: #2d6cad; background: #e5eef8; padding: 2px 8px; border-radius: 6px; font-weight: 500; }
+  .card-desc { color: #6f7a88; font-size: 0.82rem; font-weight: 300; margin-left: auto; text-align: right; }
+
+  /* ═══════════ จำลอง Hero Header จริงของแอป ═══════════
+     พื้น #4891db + คลื่น SVG (เหมือน .hero-header::before ใน App.css)
+     ถ้าจอแคบกว่าตัวจำลองจะเลื่อนแนวนอนได้ */
+  .stage {
+    position: relative;
+    background: #4891db;
+    color: #faf8f5;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+  .stage::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"><path fill="%23ffffff" fill-opacity="0.05" d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,122.7C672,117,768,139,864,138.7C960,139,1056,117,1152,101.3C1248,85,1344,75,1392,69.3L1440,64L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path></svg>') bottom center no-repeat;
+    background-size: cover;
+    pointer-events: none;
+  }
+  .stage-inner {
+    position: relative; z-index: 1;
+    min-width: 820px; max-width: 900px;
+    margin: 0 auto;
+    padding: 2.2rem 1rem 2.4rem;
+    text-align: center;
+  }
+  .mock-logo {
+    font-family: 'Lilita One', cursive; font-weight: 200;
+    font-size: 34px; letter-spacing: 4px; line-height: 44px;
+    margin-bottom: 0.7rem;
+  }
+  .mock-tag {
+    display: flex; align-items: center; justify-content: center; gap: 0.75rem;
+    height: 34px; margin-bottom: 1.1rem;
+  }
+  /* เหมือน .updated-badge */
+  .badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: rgba(255,255,255,0.12); color: #faf8f5;
+    border: 1px solid rgba(255,255,255,0.25); border-radius: 20px;
+    font-size: 12px; font-weight: 500; padding: 3px 12px; letter-spacing: 0.3px; white-space: nowrap;
+  }
+  .mock-nav { display: flex; align-items: center; justify-content: center; gap: 12px; min-height: 66px; }
+
+  /* แถบผู้ใช้มุมขวาบน (เหมือน .app-userbar) */
+  .mock-user {
+    position: absolute; top: 12px; right: 16px; z-index: 3;
+    display: flex; align-items: center; gap: 8px;
+    padding: 5px 6px 5px 12px;
+    background: rgba(255,255,255,0.95); border-radius: 999px;
+    box-shadow: 0 3px 12px rgba(20,60,100,0.25);
+    font-size: 0.85rem; font-weight: 700; color: #2d6cad;
+  }
+  .mock-user .gear { width: 30px; height: 30px; border-radius: 50%; background: #eaf3fc; display: inline-flex; align-items: center; justify-content: center; font-size: 15px; }
+  .mock-user .out { border-radius: 999px; padding: 5px 12px; background: #eaf3fc; font-size: 0.8rem; font-weight: 600; }
+
+  /* ปุ่มเมนู 7 ปุ่มของจริง (.page-nav-card) — ตัวที่ 1 (Price) เป็น active */
+  .nav-card {
+    position: relative; flex-shrink: 0; width: 72px; height: 66px;
+    border-radius: 8px; border: none; background: rgba(255,255,255,0.16); color: #fff; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
+    transition: all 0.25s ease;
+  }
+  .nav-card:hover { background: #fff; color: #2d6cad; transform: translateY(-3px); box-shadow: 0 8px 18px rgba(0,0,0,0.22); }
+  .nav-card--active { background: #fff !important; color: #2d6cad !important; box-shadow: 0 6px 16px rgba(0,0,0,0.28); }
+  .nav-icon { display: flex; }
+  .nav-label { font-size: 12px; font-weight: 500; letter-spacing: 0.5px; font-family: 'Outfit', sans-serif; }
+
+  /* ไอคอนเส้น (ใช้ currentColor เหมือน .page-nav-icon svg) */
+  svg.ic { display: block; width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; overflow: visible; }
+
+  /* ═══════════ ฐานของปุ่มลิงก์ภายนอกทุกแบบ ═══════════ */
+  .nav-sep { flex: 0 0 auto; width: 1px; height: 34px; background: rgba(255,255,255,0.38); margin: 0 4px; }
+  .lk {
+    position: relative; flex: 0 0 auto;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: #fff; text-decoration: none; cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .lk:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+  /* ลูกศร ↗ = สัญญาณว่าเปิดเว็บภายนอก (แท็บใหม่) */
+  .lk .ext { position: absolute; width: 11px; height: 11px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* ═══════════ 1) Glass Mini Card ═══════════ */
+  .l1 { width: 46px; height: 46px; border-radius: 8px; background: rgba(255,255,255,0.16); transition: all 0.25s ease; }
+  .l1 .ext { top: 4px; right: 4px; opacity: 0.7; }
+  .l1:hover { background: #fff; color: #2d6cad; transform: translateY(-3px); box-shadow: 0 8px 18px rgba(0,0,0,0.22); }
+
+  /* ═══════════ 2) Dashed Nav Card ═══════════ */
+  .l2 { width: 72px; height: 66px; border-radius: 8px; flex-direction: column; gap: 5px;
+        border: 1.5px dashed rgba(255,255,255,0.7); background: rgba(255,255,255,0.08); transition: all 0.25s ease; }
+  .l2 .lab { font-size: 12px; font-weight: 500; letter-spacing: 0.5px; font-family: 'Outfit', sans-serif; }
+  .l2 .ext { top: 5px; right: 6px; opacity: 0.8; }
+  .l2:hover { background: #fff; color: #2d6cad; border-color: #fff; border-style: solid; transform: translateY(-3px); box-shadow: 0 8px 18px rgba(0,0,0,0.22); }
+
+  /* ═══════════ 3) Circle Outline + Tooltip ═══════════ */
+  .l3 { width: 46px; height: 46px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.55); background: rgba(255,255,255,0.12); transition: all 0.25s ease; }
+  .l3 .ext { top: -5px; right: -5px; width: 16px; height: 16px; padding: 3px; border-radius: 50%; background: #fff; color: #2d6cad; stroke-width: 3; box-shadow: 0 1px 4px rgba(0,0,0,0.25); }
+  .l3::after {
+    content: attr(data-tip); position: absolute; top: calc(100% + 9px); left: 50%;
+    transform: translate(-50%, -4px); background: #1d3f66; color: #fff;
+    font-size: 11px; font-weight: 500; padding: 4px 10px; border-radius: 6px; white-space: nowrap;
+    opacity: 0; pointer-events: none; transition: all 0.18s ease; z-index: 5;
+  }
+  .l3:hover, .l3:focus-visible { background: #fff; color: #2d6cad; border-color: #fff; transform: translateY(-3px); box-shadow: 0 8px 18px rgba(0,0,0,0.22); }
+  .l3:hover::after, .l3:focus-visible::after { opacity: 1; transform: translate(-50%, 0); }
+
+  /* ═══════════ 4) White Pill Dock (มุมซ้ายบน) ═══════════ */
+  .d4 { position: absolute; top: 12px; left: 16px; z-index: 3; display: flex; align-items: center; gap: 6px;
+        padding: 5px 6px 5px 12px; background: rgba(255,255,255,0.95); border-radius: 999px; box-shadow: 0 3px 12px rgba(20,60,100,0.25); }
+  .d4 .dock-label { font-size: 0.85rem; font-weight: 700; color: #2d6cad; margin-right: 2px; }
+  .l4 { width: 30px; height: 30px; border-radius: 50%; background: #eaf3fc; color: #2d6cad; transition: all 0.2s ease; }
+  .l4 svg.ic { width: 16px; height: 16px; stroke-width: 2; }
+  .l4:hover { background: #2d6cad; color: #fff; transform: translateY(-1px); }
+  .l4:focus-visible { outline-color: #2d6cad; }
+
+  /* ═══════════ 5) Flat Underline ═══════════ */
+  .l5 { width: 46px; height: 46px; color: rgba(255,255,255,0.88); transition: color 0.2s ease; }
+  .l5 svg.ic { width: 24px; height: 24px; }
+  .l5 .ext { top: 6px; right: 5px; opacity: 0.6; }
+  .l5::after { content: ''; position: absolute; bottom: 1px; left: 50%; transform: translateX(-50%); width: 0; height: 3px; border-radius: 3px; background: #fff; transition: width 0.25s ease; }
+  .l5:hover { color: #fff; }
+  .l5:hover::after, .l5:focus-visible::after { width: 62%; }
+
+  /* ═══════════ 6) 3D Tile ═══════════ */
+  .l6 { width: 46px; height: 46px; border-radius: 12px; background: linear-gradient(180deg, #ffffff, #dce9f7); color: #2d6cad;
+        box-shadow: 0 4px 0 #a9c4e2, 0 6px 12px rgba(0,0,0,0.28); transition: all 0.12s ease; }
+  .l6 .ext { top: 4px; right: 4px; opacity: 0.55; }
+  .l6:hover { filter: brightness(1.03); }
+  .l6:active { transform: translateY(3px); box-shadow: 0 1px 0 #a9c4e2, 0 2px 5px rgba(0,0,0,0.28); }
+
+  /* ═══════════ 7) Neumorphism ═══════════ */
+  .l7 { width: 48px; height: 48px; border-radius: 14px; background: #4891db; color: #eaf2fb;
+        box-shadow: 5px 5px 11px rgba(28,80,140,0.55), -5px -5px 11px rgba(120,180,240,0.55); transition: all 0.2s ease; }
+  .l7 .ext { top: 5px; right: 5px; opacity: 0.65; }
+  .l7:hover { color: #fff; box-shadow: 7px 7px 15px rgba(28,80,140,0.6), -7px -7px 15px rgba(120,180,240,0.6); }
+  .l7:active { box-shadow: inset 4px 4px 9px rgba(28,80,140,0.6), inset -4px -4px 9px rgba(120,180,240,0.6); }
+
+  /* ═══════════ 8) Badge Chip (แถว badge) ═══════════ */
+  .l8 { gap: 6px; padding: 3px 11px 3px 10px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.25); background: rgba(255,255,255,0.12);
+        font-size: 12px; font-weight: 500; letter-spacing: 0.3px; white-space: nowrap; transition: all 0.2s ease; }
+  .l8 svg.ic { width: 15px; height: 15px; stroke-width: 2; }
+  .l8 .ext { position: static; width: 10px; height: 10px; opacity: 0.7; }
+  .l8:hover { background: #fff; color: #2d6cad; border-color: #fff; }
+
+  /* ═══════════ 9) Expanding Rail (มุมซ้ายบน) ═══════════ */
+  .d9 { position: absolute; top: 12px; left: 16px; z-index: 3; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+  .l9 { justify-content: flex-start; height: 40px; width: 40px; border-radius: 999px; overflow: hidden; white-space: nowrap;
+        background: rgba(255,255,255,0.16); border: 1.5px solid rgba(255,255,255,0.45);
+        transition: width 0.3s cubic-bezier(0.4,0,0.2,1), background 0.2s ease, color 0.2s ease, border-color 0.2s ease; }
+  .l9 .ico { flex: 0 0 37px; height: 37px; display: grid; place-items: center; }
+  .l9 .ico svg.ic { width: 19px; height: 19px; }
+  .l9 .tx { font-size: 12px; font-weight: 600; padding: 0 8px 0 2px; opacity: 0; transition: opacity 0.2s ease; }
+  .l9 .ext { position: static; width: 10px; height: 10px; margin-right: 13px; opacity: 0.7; flex: 0 0 auto; }
+  .l9:hover, .l9:focus-visible { width: var(--w); background: #fff; color: #2d6cad; border-color: #fff; }
+  .l9:hover .tx, .l9:focus-visible .tx { opacity: 1; }
+
+  /* ═══════════ 10) Color-coded Tiles ═══════════ */
+  .l10 { width: 46px; height: 46px; border-radius: 12px; color: #fff; transition: all 0.2s ease; }
+  .l10.refund { background: linear-gradient(135deg, #ffa63d, #ef5a2b); box-shadow: 0 0 0 2px rgba(255,255,255,0.6), 0 6px 14px rgba(120,45,10,0.4); }
+  .l10.transport { background: linear-gradient(135deg, #3ccf9a, #139c5a); box-shadow: 0 0 0 2px rgba(255,255,255,0.6), 0 6px 14px rgba(8,80,45,0.4); }
+  .l10 .ext { top: 4px; right: 4px; opacity: 0.85; }
+  .l10:hover { transform: translateY(-3px) scale(1.05); filter: brightness(1.07); }
+
+  .notes { max-width: 1000px; margin: 2.5rem auto 0; background: #fff; border-radius: 16px; padding: 1.2rem 1.6rem; box-shadow: 0 4px 20px rgba(0,0,0,0.07); }
+  .notes h2 { font-size: 1rem; margin-bottom: 0.6rem; color: #2d6cad; }
+  .notes ul { padding-left: 1.2rem; color: #4a4f57; font-size: 0.88rem; line-height: 1.85; font-weight: 400; }
+  .notes b { color: #2d6cad; font-weight: 600; }
+  .notes code { background: #eef3f9; padding: 1px 6px; border-radius: 4px; font-size: 0.82rem; }
+</style>
+</head>
+<body>
+
+<!-- ไอคอนทั้งหมดนิยามไว้ที่นี่ครั้งเดียว แล้วเรียกด้วย <use> (ใช้ currentColor เปลี่ยนสีตามปุ่มเอง) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <!-- ลิงก์ภายนอก 2 ตัว -->
+  <symbol id="i-refund" viewBox="0 0 24 24">
+    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+    <path d="M3 3v5h5" />
+    <circle cx="12" cy="12" r="2.8" />
+  </symbol>
+  <symbol id="i-route" viewBox="0 0 24 24">
+    <circle cx="6" cy="18" r="2.2" />
+    <path d="M8.2 18H15a3 3 0 0 0 3-3" />
+    <path d="M18 2.8a4 4 0 0 0-4 4c0 3.1 4 7.2 4 7.2s4-4.1 4-7.2a4 4 0 0 0-4-4Z" />
+    <circle cx="18" cy="6.8" r="1.2" />
+  </symbol>
+  <symbol id="i-ext" viewBox="0 0 24 24">
+    <path d="M7 17 17 7" />
+    <path d="M8 7h9v9" />
+  </symbol>
+  <!-- ไอคอนปุ่มเมนูของจริง (คัดลอกจาก pageAccess.tsx) -->
+  <symbol id="n-tag" viewBox="0 0 24 24"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L2 12V2h10l8.6 8.6a2 2 0 0 1 0 2.8Z"/><circle cx="7" cy="7" r="1.4"/></symbol>
+  <symbol id="n-label" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M8 13h8"/><path d="M8 17h5"/></symbol>
+  <symbol id="n-box" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></symbol>
+  <symbol id="n-card" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><circle cx="8.5" cy="10.2" r="2"/><path d="M14 9.5h4"/><path d="M14 13h4"/><path d="M5.2 16.6c.7-1.4 1.9-2.1 3.3-2.1s2.6.7 3.3 2.1"/></symbol>
+  <symbol id="n-truck" viewBox="0 0 24 24"><path d="M1 5h13v11H1z"/><path d="M14 9h4l3 3.2V16h-7z"/><circle cx="6" cy="18.4" r="2"/><circle cx="17.5" cy="18.4" r="2"/></symbol>
+  <symbol id="n-bell" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></symbol>
+  <symbol id="n-doc" viewBox="0 0 24 24"><path d="M12 21H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h8l5 5v3"/><path d="M14 3v5h5"/><circle cx="17" cy="17" r="4"/><path d="M17 15.2V17l1.3 1"/></symbol>
+</svg>
+
+<h1 class="page-title">🔗 ดีไซน์ปุ่มลิงก์ภายนอกบน Hero Header 10 แบบ</h1>
+<p class="page-sub">ปุ่มไอคอน 2 ปุ่ม: <b>ขอคืนเงิน</b> (Refund Request Form) และ <b>ขอขนส่ง</b> (Transport Request Form) — จำลองบน Hero จริงของแอป (หน้า Price เป็นหน้า active) · ลองชี้เมาส์ / กด Tab ดู hover และ focus · <b>ปุ่มทุกแบบกดแล้วเปิดเว็บจริงในแท็บใหม่</b></p>
+
+<!-- ───────────── 1 ───────────── -->
+<div class="card">
+  <div class="card-head"><span class="card-num">1</span><span class="card-name">Glass Mini Card</span><span class="card-place">แถวเมนู · หลังเส้นคั่น</span><span class="card-desc">การ์ดกระจกย่อส่วน ไอคอนเดียว — กลมกลืนกับปุ่มเมนูเดิมที่สุด</span></div>
+  <div class="stage"><div class="stage-inner">
+    <div class="mock-user">🏪 SRC <span class="gear">⚙️</span><span class="out">ออกจากระบบ</span></div>
+    <h2 class="mock-logo">Price Tag and QR CODE</h2>
+    <div class="mock-tag"><span class="badge">Last Updated : 22/11/2569 08:00</span><span class="badge">💰 Update Price</span></div>
+    <div class="mock-nav" data-nav>
+      <i class="nav-sep"></i>
+      <a class="lk l1" href="https://it-anin.github.io/Refund_Request_Form/" target="_blank" rel="noopener noreferrer" title="แบบฟอร์มขอคืนเงิน (Refund Request) — เปิดในแท็บใหม่" aria-label="แบบฟอร์มขอคืนเงิน เปิดในแท็บใหม่"><svg class="ic"><use href="#i-refund"/></svg><svg class="ext"><use href="#i-ext"/></svg></a>
+      <a class="lk l1" href="https://it-anin.github.io/transport_request_form/" target="_blank" rel="noopener noreferrer" title="แบบฟอร์มขอขนส่ง (Transport Request) — เปิดในแท็บใหม่" aria-label="แบบฟอร์มขอขนส่ง เปิดในแท็บใหม่"><svg class="ic"><use href="#i-route"/></svg><svg class="ext"><use href="#i-ext"/></svg></a>
+    </div>
+  </div></div>
+</div>
+
+<!-- ───────────── 2 ───────────── -->
+<div class="card">
+  <div class="card-head"><span class="card-num">2</span><span class="card-name">Dashed Nav Card</span><span class="card-place">แถวเมนู · ขนาดเท่าปุ่มเมนู</span><span class="card-desc">มีป้ายชื่อใต้ไอคอน ขอบเส้นประบอกว่า "ไปเว็บอื่น" — อ่านง่ายสุดแต่กินที่มากสุด</span></div>
+  <div class="stage"><div class="stage-inner">
+    <div class="mock-user">🏪 SRC <span class="gear">⚙️</span><span class="out">ออกจากระบบ</span></div>
+    <h2 class="mock-logo">Price Tag and QR CODE</h2>
+    <div class="mock-tag"><span class="badge">Last Updated : 22/11/2569 08:00</span><span class="badge">💰 Update Price</span></div>
+    <div class="mock-nav" data-nav>
+      <i class="nav-sep"></i>
+      <a class="lk l2" href="https://it-anin.github.io/Refund_Request_Form/" target="_blank" rel="noopener noreferrer" title="แบบฟอร์มขอคืนเงิน (Refund Request) — เปิดในแท็บใหม่"><svg class="ic"><use href="#i-refund"/></svg><span class="lab">Refund</span><svg class="ext"><use href="#i-ext"/></svg></a>
+      <a class="lk l2" href="https://it-anin.github.io/transport_request_form/" target="_blank" rel="noopener noreferrer" title="แบบฟอร์มขอขนส่ง (Transport Request) — เปิดในแท็บใหม่"><svg class="ic"><use href="#i-route"/></svg><span class="lab">Transport</span><svg class="ext"><use href="#i-ext"/></svg></a>
+    </div>
+  </div></div>
+</div>
+
+<!-- ───────────── 3 ───────────── -->
+<div class="card">
+  <div class="card-head"><span class="card-num">3</span><span class="card-name">Circle Outline + Tooltip</span><span class="card-place">แถวเมนู · หลังเส้นคั่น</span><span class="card-desc">วงกลมเส้นขอบ มีป้าย ↗ มุมปุ่ม ชี้แล้วมีป้ายชื่อลอยลงมา</span></div>
+  <div class="stage"><div class="stage-inner">
+    <div class="mock-user">🏪 SRC <span class="gear">⚙️</span><span class="out">ออกจากระบบ</span></div>
+    <h2 class="mock-logo">Price Tag and QR CODE</h2>
+    <div class="mock-tag"><span class="badge">Last Updated : 22/11/2569 08:00</span><span class="badge">💰 Update Price</span></div>
+    <div class="mock-nav" data-nav>
+      <i class="nav-sep"></i>
+      <a class="lk l3" data-tip="ขอคืนเงิน (Refund)" href="https://it-anin.github.io/Refund_Request_Form/" target="_blank" rel="noopener noreferrer" aria-label="แบบฟอร์มขอคืนเงิน เปิดในแท็บใหม่"><svg class="ic"><use href="#i-refund"/></svg><svg class="ext"><use href="#i-ext"/></svg></a>
+      <a class="lk l3" data-tip="ขอขนส่ง (Transport)" href="https://it-anin.github.io/transport_request_form/" target="_blank" rel="noopener noreferrer" aria-label="แบบฟอร์มขอขนส่ง เปิดในแท็บใหม่"><svg class="ic"><use href="#i-route"/></svg><svg class="ext"><use href="#i-ext"/></svg></a>
+    </div>
+  </div></div>
+</div>
+
+<!-- ───────────── 4 ───────────── -->
+<div class="card">
+  <div class="card-head"><span class="card-num">4</span><span class="card-name">White Pill Dock</span><span class="card-place">มุมซ้ายบนของ Hero</span><span class="card-desc">แท่นขาวสมมาตรกับแถบผู้ใช้มุมขวา ไม่แย่งที่แถวเมนูเลย</span></div>
+  <div class="stage"><div class="stage-inner">
+    <div class="d4"><span class="dock-label">ฟอร์ม</span>
+      <a class="lk l4" href="https://it-anin.github.io/Refund_Request_Form/" target="_blank" rel="noopener noreferrer" title="แบบฟอร์มขอคืนเงิน (Refund Request) — เปิดในแท็บใหม่" aria-label="แบบฟอร์มขอคืนเงิน เปิดในแท็บใหม่"><svg class="ic"><use href="#i-refund"/></svg></a>
+      <a class="lk l4" href="https://it-anin.github.io/transport_request_form/" target="_blank" rel="noopener noreferrer" title="แบบฟอร์มขอขนส่ง (Transport Request) — เปิดในแท็บใหม่" aria-label="แบบฟอร์มขอขนส่ง เปิดในแท็บใหม่"><svg class="ic"><use href="#i-route"/></svg></a>
+    </div>
+    <div class="mock-user">🏪 SRC <span class="gear">⚙️</span><span class="out">ออกจากระบบ</span></div>
+    <h2 class="mock-logo">Price Tag and QR CODE</h2>
+    <div class="mock-tag"><span class="badge">Last Updated : 22/11/2569 08:00</span><span class="badge">💰 Update Price</span></div>
+    <div class="mock-nav" data-nav></div>
+  </div></div>
+</div>
+
+<!-- ───────────── 5 ───────────── -->
+<div class="card">
+  <div class="card-head"><span class="card-num">5</span><span class="card-name">Flat Underline</span><span class="card-place">แถวเมนู · หลังเส้นคั่น</span><span class="card-desc">ไอคอนลอยเรียบ ไม่มีกรอบ ขีดเส้นใต้ตอนชี้ — เบาตาสุด</span></div>
+  <div class="stage"><div class="stage-inner">
+    <div class="mock-user">🏪 SRC <span class="gear">⚙️</span><span class="out">ออกจากระบบ</span></div>
+    <h2 class="mock-logo">Price Tag and QR CODE</h2>
+    <div class="mock-tag"><span class="badge">Last Updated : 22/11/2569 08:00</span><span class="badge">💰 Update Price</span></div>
+    <div class="mock-nav" data-nav>
+      <i class="nav-sep"></i>
+      <a class="lk l5" href="https://it-anin.github.io/Refund_Request_Form/" target="_blank" rel="noopener noreferrer" title="แบบฟอร์มขอคืนเงิน (Refund Request) — เปิดในแท็บใหม่" aria-label="แบบฟอร์มขอคืนเงิน เปิดในแท็บใหม่"><svg class="ic"><use href="#i-refund"/></svg><svg class="ext"><use href="#i-ext"/></svg></a>
+      <a class="lk l5" href="https://it-anin.github.io/transport_request_form/" target="_blank" rel="noopener noreferrer" title="แบบฟอร์มขอขนส่ง (Transport Request) — เปิดในแท็บใหม่" aria-label="แบบฟอร์มขอขนส่ง เปิดในแท็บใหม่"><svg class="ic"><use href="#i-route"/></svg><svg class="ext"><use href="#i-ext"/></svg></a>
+    </div>
+  </div></div>
+</div>
+
+<!-- ───────────── 6 ───────────── -->
+<div class="card">
+  <div class="card-head"><span class="card-num">6</span><span class="card-name">3D Tile</span><span class="card-place">แถวเมนู · หลังเส้นคั่น</span><span class="card-desc">กระเบื้องขาวนูนมีขอบหนา กดแล้วยุบ — สไตล์เดียวกับปุ่มใน modal Admin</span></div>
+  <div class="stage"><div class="stage-inner">
+    <div class="mock-user">🏪 SRC <span class="gear">⚙️</span><span class="out">ออกจากระบบ</span></div>
+    <h2 class="mock-logo">Price Tag and QR CODE</h2>
+    <div class="mock-tag"><span class="badge">Last Updated : 22/11/2569 08:00</span><span class="badge">💰 Update Price</span></div>
+    <div class="mock-nav" data-nav>
+      <i class="nav-sep"></i>
+      <a class="lk l6" href="https://it-anin.github.io/Refund_Request_Form/" target="_blank" rel="noopener noreferrer" title="แบบฟอร์มขอคืนเงิน (Refund Request) — เปิดในแท็บใหม่" aria-label="แบบฟอร์มขอคืนเงิน เปิดในแท็บใหม่"><svg class="ic"><use href="#i-refund"/></svg><svg class="ext"><use href="#i-ext"/></svg></a>
+      <a class="lk l6" href="https://it-anin.github.io/transport_request_form/" target="_blank" rel="noopener noreferrer" title="แบบฟอร์มขอขนส่ง (Transport Request) — เปิดในแท็บใหม่" aria-label="แบบฟอร์มขอขนส่ง เปิดในแท็บใหม่"><svg class="ic"><use href="#i-route"/></svg><svg class="ext"><use href="#i-ext"/></svg></a>
+    </div>
+  </div></div>
+</div>
+
+<!-- ───────────── 7 ───────────── -->
+<div class="card">
+  <div class="card-head"><span class="card-num">7</span><span class="card-name">Neumorphism</span><span class="card-place">แถวเมนู · หลังเส้นคั่น</span><span class="card-desc">นูนกลืนไปกับพื้นฟ้า กดแล้วยุบเข้าไป</span></div>
+  <div class="stage"><div class="stage-inner">
+    <div class="mock-user">🏪 SRC <span class="gear">⚙️</span><span class="out">ออกจากระบบ</span></div>
+    <h2 class="mock-logo">Price Tag and QR CODE</h2>
+    <div class="mock-tag"><span class="badge">Last Updated : 22/11/2569 08:00</span><span class="badge">💰 Update Price</span></div>
+    <div class="mock-nav" data-nav>
+      <i class="nav-sep"></i>
+      <a class="lk l7" href="https://it-anin.github.io/Refund_Request_Form/" target="_blank" rel="noopener noreferrer" title="แบบฟอร์มขอคืนเงิน (Refund Request) — เปิดในแท็บใหม่" aria-label="แบบฟอร์มขอคืนเงิน เปิดในแท็บใหม่"><svg class="ic"><use href="#i-refund"/></svg><svg class="ext"><use href="#i-ext"/></svg></a>
+      <a class="lk l7" href="https://it-anin.github.io/transport_request_form/" target="_blank" rel="noopener noreferrer" title="แบบฟอร์มขอขนส่ง (Transport Request) — เปิดในแท็บใหม่" aria-label="แบบฟอร์มขอขนส่ง เปิดในแท็บใหม่"><svg class="ic"><use href="#i-route"/></svg><svg class="ext"><use href="#i-ext"/></svg></a>
+    </div>
+  </div></div>
+</div>
+
+<!-- ───────────── 8 ───────────── -->
+<div class="card">
+  <div class="card-head"><span class="card-num">8</span><span class="card-name">Badge Chip</span><span class="card-place">แถว badge · ข้าง Last Updated</span><span class="card-desc">ชิปไอคอน+ชื่อสั้น หน้าตาเดียวกับ badge เดิม ไม่แตะแถวเมนู</span></div>
+  <div class="stage"><div class="stage-inner">
+    <div class="mock-user">🏪 SRC <span class="gear">⚙️</span><span class="out">ออกจากระบบ</span></div>
+    <h2 class="mock-logo">Price Tag and QR CODE</h2>
+    <div class="mock-tag"><span class="badge">Last Updated : 22/11/2569 08:00</span><span class="badge">💰 Update Price</span>
+      <a class="lk l8" href="https://it-anin.github.io/Refund_Request_Form/" target="_blank" rel="noopener noreferrer" title="แบบฟอร์มขอคืนเงิน (Refund Request) — เปิดในแท็บใหม่"><svg class="ic"><use href="#i-refund"/></svg>Refund<svg class="ext"><use href="#i-ext"/></svg></a>
+      <a class="lk l8" href="https://it-anin.github.io/transport_request_form/" target="_blank" rel="noopener noreferrer" title="แบบฟอร์มขอขนส่ง (Transport Request) — เปิดในแท็บใหม่"><svg class="ic"><use href="#i-route"/></svg>Transport<svg class="ext"><use href="#i-ext"/></svg></a>
+    </div>
+    <div class="mock-nav" data-nav></div>
+  </div></div>
+</div>
+
+<!-- ───────────── 9 ───────────── -->
+<div class="card">
+  <div class="card-head"><span class="card-num">9</span><span class="card-name">Expanding Rail</span><span class="card-place">มุมซ้ายบนของ Hero</span><span class="card-desc">วงกลมไอคอนเรียงแนวตั้ง ชี้แล้วขยายโชว์ชื่อ — ปกติกินที่แค่ 40px</span></div>
+  <div class="stage"><div class="stage-inner">
+    <div class="d9">
+      <a class="lk l9" style="--w:168px" href="https://it-anin.github.io/Refund_Request_Form/" target="_blank" rel="noopener noreferrer" title="แบบฟอร์มขอคืนเงิน (Refund Request) — เปิดในแท็บใหม่"><span class="ico"><svg class="ic"><use href="#i-refund"/></svg></span><span class="tx">ขอคืนเงิน</span><svg class="ext"><use href="#i-ext"/></svg></a>
+      <a class="lk l9" style="--w:162px" href="https://it-anin.github.io/transport_request_form/" target="_blank" rel="noopener noreferrer" title="แบบฟอร์มขอขนส่ง (Transport Request) — เปิดในแท็บใหม่"><span class="ico"><svg class="ic"><use href="#i-route"/></svg></span><span class="tx">ขอขนส่ง</span><svg class="ext"><use href="#i-ext"/></svg></a>
+    </div>
+    <div class="mock-user">🏪 SRC <span class="gear">⚙️</span><span class="out">ออกจากระบบ</span></div>
+    <h2 class="mock-logo">Price Tag and QR CODE</h2>
+    <div class="mock-tag"><span class="badge">Last Updated : 22/11/2569 08:00</span><span class="badge">💰 Update Price</span></div>
+    <div class="mock-nav" data-nav></div>
+  </div></div>
+</div>
+
+<!-- ───────────── 10 ───────────── -->
+<div class="card">
+  <div class="card-head"><span class="card-num">10</span><span class="card-name">Color-coded Tiles</span><span class="card-place">แถวเมนู · หลังเส้นคั่น</span><span class="card-desc">กระเบื้องสีแยกบริการ ส้ม = คืนเงิน · เขียว = ขนส่ง — เด่นต่างจากเมนูในแอปชัดเจน</span></div>
+  <div class="stage"><div class="stage-inner">
+    <div class="mock-user">🏪 SRC <span class="gear">⚙️</span><span class="out">ออกจากระบบ</span></div>
+    <h2 class="mock-logo">Price Tag and QR CODE</h2>
+    <div class="mock-tag"><span class="badge">Last Updated : 22/11/2569 08:00</span><span class="badge">💰 Update Price</span></div>
+    <div class="mock-nav" data-nav>
+      <i class="nav-sep"></i>
+      <a class="lk l10 refund" href="https://it-anin.github.io/Refund_Request_Form/" target="_blank" rel="noopener noreferrer" title="แบบฟอร์มขอคืนเงิน (Refund Request) — เปิดในแท็บใหม่" aria-label="แบบฟอร์มขอคืนเงิน เปิดในแท็บใหม่"><svg class="ic"><use href="#i-refund"/></svg><svg class="ext"><use href="#i-ext"/></svg></a>
+      <a class="lk l10 transport" href="https://it-anin.github.io/transport_request_form/" target="_blank" rel="noopener noreferrer" title="แบบฟอร์มขอขนส่ง (Transport Request) — เปิดในแท็บใหม่" aria-label="แบบฟอร์มขอขนส่ง เปิดในแท็บใหม่"><svg class="ic"><use href="#i-route"/></svg><svg class="ext"><use href="#i-ext"/></svg></a>
+    </div>
+  </div></div>
+</div>
+
+<div class="notes">
+  <h2>ข้อสังเกตก่อนเลือก (สำหรับตอนใส่จริง)</h2>
+  <ul>
+    <li><b>ตำแหน่งแถวเมนู</b> (แบบ 1, 2, 3, 5, 6, 7, 10): แถวเมนูปัจจุบัน <code>.search-nav-row</code> กว้างสุด 680px แต่ปุ่มเมนู 7 ปุ่มกินไป 576px ต้องขยายเป็น ~760px (แบบ 2 ~800px) และบนมือถือต้องให้แถวเลื่อนแนวนอนได้</li>
+    <li><b>ตำแหน่งมุม / แถว badge</b> (แบบ 4, 8, 9): ไม่แตะแถวเมนูเลย ส่วนแบบ 4 และ 9 ต้องเผื่อไม่ให้ชนโลโก้บนจอแคบ</li>
+    <li>ใส่ใน <code>PageNavRow</code> (<code>pageAccess.tsx</code>) ที่เป็นแถวเมนูกลาง ปุ่มจะขึ้นครบทุกหน้าเอง ไม่ต้องแก้ทีละหน้า</li>
+    <li>ลิงก์เป็น <code>&lt;a target="_blank" rel="noopener noreferrer"&gt;</code> เปิดแท็บใหม่ ไม่ใช้ปุ่ม + <code>window.open</code> เพื่อให้คลิกขวา/คัดลอกลิงก์ได้ และไม่ทำให้หน้าแอปหลุด</li>
+    <li>ไอคอนขอคืนเงิน (ลูกศรย้อนรอบเหรียญ) และขอขนส่ง (จุดเริ่ม → ปักหมุด) เลือกให้ไม่ซ้ำกับไอคอนรถบรรทุกของปุ่ม Outbound — เปลี่ยนได้ถ้าอยากใช้ไอคอนอื่น</li>
+  </ul>
+</div>
+
+<script>
+  // ปุ่มเมนู 7 ปุ่มของจริง (ลำดับ/ไอคอน/ป้ายเหมือน PAGE_NAV ใน pageAccess.tsx) — ใส่ไว้หน้าปุ่มลิงก์ในทุกตัวอย่าง
+  var NAV = [
+    ['tag', 'Price'], ['label', 'Label'], ['box', 'Stock'], ['card', 'Customer'],
+    ['truck', 'Outbound'], ['bell', 'Support'], ['doc', 'Pending']
+  ];
+  document.querySelectorAll('[data-nav]').forEach(function (row) {
+    var frag = document.createDocumentFragment();
+    NAV.forEach(function (n, i) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'nav-card' + (i === 0 ? ' nav-card--active' : '');
+      b.innerHTML = '<span class="nav-icon"><svg class="ic"><use href="#n-' + n[0] + '"/></svg></span><span class="nav-label">' + n[1] + '</span>';
+      frag.appendChild(b);
+    });
+    row.insertBefore(frag, row.firstChild);
+  });
+</script>
+</body>
+</html>
