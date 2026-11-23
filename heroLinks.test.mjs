@@ -22,7 +22,7 @@ test('ปุ่มลิงก์มี 2 ปุ่ม ชื่อและ URL
   // EXTERNAL_LINKS ถูกสร้างใน vm.runInNewContext (คนละ "โลก" JS) → .map() คืน Array ของโลกนั้น
   // assert/strict เทียบ prototype ด้วยจึงมองว่าไม่เท่ากัน — Array.from สร้างอาร์เรย์ฝั่งเทสให้ก่อนเทียบ
   assert.deepEqual(Array.from(EXTERNAL_LINKS, link => [link.label, link.href]), [
-    ['แบบฟอร์มขออนุมัติคืนเงิน', 'https://it-anin.github.io/Refund_Request_Form/'],
+    ['แบบฟอร์มขอคืนเงิน', 'https://it-anin.github.io/Refund_Request_Form/'],
     ['แบบฟอร์มขออนุมัติขนส่ง', 'https://it-anin.github.io/transport_request_form/'],
   ]);
   assert.equal(anchors.length, 2);

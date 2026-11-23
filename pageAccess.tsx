@@ -161,7 +161,7 @@ export interface ExternalLinkDef {
 }
 
 export const EXTERNAL_LINKS: ExternalLinkDef[] = [
-  { id: 'refund', icon: IconRefund, label: 'แบบฟอร์มขออนุมัติคืนเงิน', href: 'https://it-anin.github.io/Refund_Request_Form/' },
+  { id: 'refund', icon: IconRefund, label: 'แบบฟอร์มขอคืนเงิน', href: 'https://it-anin.github.io/Refund_Request_Form/' },
   { id: 'transport', icon: IconRoute, label: 'แบบฟอร์มขออนุมัติขนส่ง', href: 'https://it-anin.github.io/transport_request_form/' },
 ];
 
